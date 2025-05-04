@@ -1,8 +1,8 @@
-package com.willyes.clemenintegra.inventario.controller;
+package com.willyes.clemenintegra.inventario.api.controller;
 
-import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
-import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
-import com.willyes.clemenintegra.inventario.service.ProductoService;
+import com.willyes.clemenintegra.inventario.application.dto.ProductoRequestDTO;
+import com.willyes.clemenintegra.inventario.application.dto.ProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.domain.service.ProductoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

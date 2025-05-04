@@ -1,10 +1,10 @@
-package com.willyes.clemenintegra.inventario.service;
+package com.willyes.clemenintegra.inventario.domain.service;
 
 import com.willyes.clemenintegra.inventario.domain.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.domain.repository.CategoriaProductoRepository;
 import com.willyes.clemenintegra.inventario.domain.repository.ProductoRepository;
-import com.willyes.clemenintegra.inventario.dto.CategoriaProductoRequestDTO;
-import com.willyes.clemenintegra.inventario.dto.CategoriaProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.application.dto.CategoriaProductoRequestDTO;
+import com.willyes.clemenintegra.inventario.application.dto.CategoriaProductoResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

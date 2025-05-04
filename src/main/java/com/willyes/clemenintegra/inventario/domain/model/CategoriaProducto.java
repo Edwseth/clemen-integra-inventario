@@ -26,5 +26,8 @@ public class CategoriaProducto {
     @Column(name = "tipo", nullable = false, length = 30)
     private TipoCategoria tipo;
 
+    public CategoriaProducto(Long id) {
+        this.id = id;
+    }
 }
 

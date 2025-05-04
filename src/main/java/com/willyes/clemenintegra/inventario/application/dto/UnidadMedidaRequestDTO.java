@@ -1,4 +1,4 @@
-package com.willyes.clemenintegra.inventario.dto;
+package com.willyes.clemenintegra.inventario.application.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

@@ -24,5 +24,9 @@ public class UnidadMedida {
 
     @Column(name = "simbolo", nullable = false, length = 5)
     private String simbolo;
+
+    public UnidadMedida(Long id) {
+        this.id = id;
+    }
 }
 

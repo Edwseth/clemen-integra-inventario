@@ -1,4 +1,4 @@
-package com.willyes.clemenintegra.inventario.dto;
+package com.willyes.clemenintegra.inventario.application.dto;
 
 import lombok.*;
 

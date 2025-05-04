@@ -4,13 +4,13 @@ Este proyecto representa el backend oficial del **módulo de inventarios** del s
 
 ## 🛠 Tecnologías y dependencias principales
 
-- Java 17
-- Spring Boot 3.2.x
-- Spring Data JPA
-- Spring Security + JWT
-- Swagger / OpenAPI 3
-- Lombok
-- MySQL
+- **Java 17**
+- **Spring Boot 3.2.x**
+- **Spring Data JPA**
+- **Spring Security + JWT**
+- **Swagger / OpenAPI 3**
+- **Lombok**
+- **MySQL**
 
 ## 📦 Estructura del proyecto
 
@@ -49,11 +49,21 @@ Authorization: Bearer <token>
 ```
 
 ## 🔍 Documentación API
-Una vez levantado el proyecto, accede a la documentación Swagger en:
+El backend de **Clemen-Integra ERP** para el módulo de **inventarios** está documentado usando **Swagger**. Puedes ver y probar la API en tiempo real a través de la siguiente URL:
+
+- **Accede a la documentación interactiva en Swagger UI**:
 
 ```bash
-http://localhost:8080/swagger-ui.html
+[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 ```
+### Autenticación en Swagger
+
+Por razones de seguridad, Swagger requiere autenticación. Usa el siguiente usuario y contraseña para acceder:
+
+- **Usuario:** `admin`
+- **Contraseña:** `admin123`
+
+---
 ## 🚀 Comandos útiles
 ```bash
 # Compilar proyecto
@@ -61,6 +71,9 @@ http://localhost:8080/swagger-ui.html
 
 # Ejecutar aplicación
 ./mvnw spring-boot:run
+
+# Generar la documentación Swagger
+# Swagger se genera automáticamente y es accesible en el navegado
 
 # Ejecutar pruebas
 ./mvnw test

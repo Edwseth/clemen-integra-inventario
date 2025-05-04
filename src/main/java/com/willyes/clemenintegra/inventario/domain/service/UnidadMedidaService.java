@@ -1,10 +1,10 @@
-package com.willyes.clemenintegra.inventario.service;
+package com.willyes.clemenintegra.inventario.domain.service;
 
 import com.willyes.clemenintegra.inventario.domain.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.domain.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.domain.repository.UnidadMedidaRepository;
-import com.willyes.clemenintegra.inventario.dto.UnidadMedidaRequestDTO;
-import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
+import com.willyes.clemenintegra.inventario.application.dto.UnidadMedidaRequestDTO;
+import com.willyes.clemenintegra.inventario.application.dto.UnidadMedidaResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

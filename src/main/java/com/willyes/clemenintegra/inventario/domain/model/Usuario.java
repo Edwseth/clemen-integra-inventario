@@ -42,5 +42,8 @@ public class Usuario {
     @Column(name = "bloqueado", nullable = false)
     private Boolean bloqueado;
 
+    public Usuario(Long id) {
+        this.id = id;
+    }
 }
 

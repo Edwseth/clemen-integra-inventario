@@ -1,4 +1,4 @@
-package com.willyes.clemenintegra.inventario.dto;
+package com.willyes.clemenintegra.inventario.application.dto;
 
 import com.willyes.clemenintegra.inventario.domain.enums.TipoCategoria;
 import lombok.*;
