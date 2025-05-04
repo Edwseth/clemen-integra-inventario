@@ -2,6 +2,15 @@
 
 Este proyecto representa el backend oficial del **módulo de inventarios** del sistema **Clemen-Integra ERP**, desarrollado por **Will Yes Solutions** para la gestión de operaciones de inventario en laboratorios de productos homeopáticos y suplementos alimenticios.
 
+## ✅ Funcionalidades implementadas
+
+- Registro de productos con sus respectivas unidades, categorías y requisitos de calidad.
+- Gestión de lotes de productos (stock, fechas de vencimiento, estado).
+- Registro de movimientos de inventario (entradas, salidas, ajustes, transferencias).
+- Consulta de movimientos con **filtros dinámicos** por producto, bodega, tipo de movimiento y fechas.
+- Paginación integrada en las consultas.
+- Documentación de API mediante Swagger.
+
 ## 🛠 Tecnologías y dependencias principales
 
 - **Java 17**
