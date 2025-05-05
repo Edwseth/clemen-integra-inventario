@@ -1,4 +1,4 @@
-package com.willyes.clemenintegra.inventario.domain.service;
+package com.willyes.clemenintegra.inventario.application.service;
 
 import com.willyes.clemenintegra.inventario.domain.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.domain.repository.ProductoRepository;

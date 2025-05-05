@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.inventario.api.controller;
 
 import com.willyes.clemenintegra.inventario.application.dto.CategoriaProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.application.dto.CategoriaProductoResponseDTO;
-import com.willyes.clemenintegra.inventario.domain.service.CategoriaProductoService;
+import com.willyes.clemenintegra.inventario.application.service.CategoriaProductoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

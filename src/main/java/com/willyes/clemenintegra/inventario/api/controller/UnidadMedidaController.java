@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.inventario.api.controller;
 
 import com.willyes.clemenintegra.inventario.application.dto.UnidadMedidaRequestDTO;
 import com.willyes.clemenintegra.inventario.application.dto.UnidadMedidaResponseDTO;
-import com.willyes.clemenintegra.inventario.domain.service.UnidadMedidaService;
+import com.willyes.clemenintegra.inventario.application.service.UnidadMedidaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

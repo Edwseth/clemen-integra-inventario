@@ -4,7 +4,7 @@ import com.willyes.clemenintegra.inventario.application.dto.MovimientoInventario
 import com.willyes.clemenintegra.inventario.application.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.domain.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.domain.model.MovimientoInventario;
-import com.willyes.clemenintegra.inventario.domain.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.inventario.application.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/movimientos")
