@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.application.mapper;
 
 import com.willyes.clemenintegra.inventario.application.dto.MovimientoInventarioDTO;
+import com.willyes.clemenintegra.inventario.domain.enums.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.domain.model.*;
 
 public class MovimientoInventarioMapper {
@@ -16,7 +17,7 @@ public class MovimientoInventarioMapper {
                 .proveedor(new Proveedor(dto.proveedorId()))
                 .ordenCompra(new OrdenCompra(dto.ordenCompraId()))
                 .motivoMovimiento(new MotivoMovimiento(dto.motivoMovimientoId()))
-                .tipoMovimientoDetalle(new TipoMovimientoDetalle(dto.tipoMovimientoDetalle()))
+                .tipoMovimientoDetalle(dto.tipoMovimientoDetalle())
                 .registradoPor(new Usuario(dto.registradoPorId()))
                 .build();
     }

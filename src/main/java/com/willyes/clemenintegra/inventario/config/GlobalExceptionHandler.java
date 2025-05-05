@@ -38,11 +38,6 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor.");
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleGeneralError(Exception ex) {
-        return ResponseEntity.status(500).body("Error interno: " + ex.getMessage());
-    }
-
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
         Map<String, Object> body = new HashMap<>();
         body.put("status", status.value());
@@ -50,4 +45,5 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, status);
     }
 }
+
 

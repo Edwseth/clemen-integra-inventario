@@ -71,7 +71,7 @@ public class MovimientoInventario {
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_motivos_movimiento1"))
     private MotivoMovimiento motivoMovimiento;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @Enumerated(EnumType.STRING)
     @JoinColumn(name = "tipos_movimiento_detalle_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_mov_inv_tipo_mov_detalle"))
     private TipoMovimientoDetalle tipoMovimientoDetalle;
