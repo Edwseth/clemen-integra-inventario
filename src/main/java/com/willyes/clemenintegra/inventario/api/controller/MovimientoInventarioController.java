@@ -31,8 +31,8 @@ public class MovimientoInventarioController {
     @Operation(summary = "Registrar un movimiento de inventario")
     @ApiResponse(responseCode = "201", description = "Movimiento registrado correctamente")
     @PostMapping
-    public ResponseEntity<MovimientoInventario> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
-        MovimientoInventario creado = service.registrarMovimiento(dto);
+    public ResponseEntity<MovimientoInventarioDTO> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
+        MovimientoInventarioDTO creado = service.registrarMovimiento(dto);
         return ResponseEntity.status(201).body(creado);
     }
 

@@ -21,5 +21,23 @@ public class MovimientoInventarioMapper {
                 .registradoPor(new Usuario(dto.registradoPorId()))
                 .build();
     }
+
+    public static MovimientoInventarioDTO toDTO(MovimientoInventario movimiento) {
+        return new MovimientoInventarioDTO(
+                movimiento.getCantidad(),
+                movimiento.getTipoMovimiento(),
+                movimiento.getDocReferencia(),
+                movimiento.getProducto() != null ? movimiento.getProducto().getId() : null,
+                movimiento.getLote() != null ? movimiento.getLote().getId() : null,
+                movimiento.getAlmacen() != null ? movimiento.getAlmacen().getId() : null,
+                movimiento.getProveedor() != null ? movimiento.getProveedor().getId() : null,
+                movimiento.getOrdenCompra() != null ? movimiento.getOrdenCompra().getId() : null,
+                movimiento.getMotivoMovimiento() != null ? movimiento.getMotivoMovimiento().getId() : null,
+                movimiento.getTipoMovimientoDetalle(),
+                movimiento.getRegistradoPor() != null ? movimiento.getRegistradoPor().getId() : null
+        );
+    }
+
+
 }
 

@@ -27,9 +27,8 @@ public class MovimientoInventarioService {
     private final MotivoMovimientoRepository motivoMovimientoRepository;
 
     @Transactional
-    public MovimientoInventario registrarMovimiento(MovimientoInventarioDTO dto) {
+    public MovimientoInventarioDTO registrarMovimiento(MovimientoInventarioDTO dto) {
 
-        // Validar existencia de entidades
         Producto producto = productoRepository.findById(dto.productoId())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
 
@@ -48,7 +47,6 @@ public class MovimientoInventarioService {
                 motivoMovimientoRepository.findById(dto.motivoMovimientoId())
                         .orElseThrow(() -> new NoSuchElementException("Motivo de movimiento no encontrado")) : null;
 
-        // Validar coherencia entre tipoMovimientoDetalle y tipoMovimiento
         TipoMovimiento tipoEsperado = TipoMovimientoMapper.obtenerTipoMovimiento(dto.tipoMovimientoDetalle());
         if (!tipoEsperado.equals(dto.tipoMovimiento())) {
             throw new IllegalArgumentException("El tipo de movimiento no corresponde con el detalle especificado");
@@ -61,8 +59,10 @@ public class MovimientoInventarioService {
         movimiento.setOrdenCompra(ordenCompra);
         movimiento.setMotivoMovimiento(motivo);
 
-        return repository.save(movimiento);
+        MovimientoInventario entidadGuardada = repository.save(movimiento);
+        return MovimientoInventarioMapper.toDTO(entidadGuardada);
     }
+
 
     public Page<MovimientoInventario> consultarMovimientosConFiltros(MovimientoInventarioFiltroDTO filtro, Pageable pageable) {
         return repository.filtrarMovimientos(
