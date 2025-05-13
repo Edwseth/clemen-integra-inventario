@@ -1,46 +1,73 @@
-# Clemen-Integra ERP - Módulo de Inventarios
+# Clemen-Integra ERP – Backend Modular
 
-Este proyecto representa el backend oficial del **módulo de inventarios** del sistema **Clemen-Integra ERP**, desarrollado por **Will Yes Solutions** para la gestión de operaciones de inventario en laboratorios de productos homeopáticos y suplementos alimenticios.
+Este repositorio contiene el backend completo del sistema **Clemen-Integra ERP**, desarrollado por **Will Yes Solutions**, diseñado para gestionar integralmente los procesos de inventario, producción, calidad y formulación (BOM) en laboratorios de productos homeopáticos y suplementos alimenticios.
 
-## ✅ Funcionalidades implementadas
-- Gestión de almacenes con categoría y tipo definidos mediante enums.
-- Registro y consulta de proveedores.
-- Registro y seguimiento de órdenes de compra con estado controlado.
-- Manejo de motivos de movimiento asociados a tipos de movimiento definidos por enums.
+## 🧱 Arquitectura
 
-- Registro de productos con sus respectivas unidades, categorías y requisitos de calidad.
-- Gestión de lotes de productos (stock, fechas de vencimiento, estado).
-- Registro de movimientos de inventario (entradas, salidas, ajustes, transferencias).
-- Consulta de movimientos con **filtros dinámicos** por producto, bodega, tipo de movimiento y fechas.
-- Paginación integrada en las consultas.
-- Documentación de API mediante Swagger.
-
-## 🛠 Tecnologías y dependencias principales
-
-- **Java 17**
-- **Spring Boot 3.2.x**
-- **Spring Data JPA**
-- **Spring Security + JWT**
-- **Swagger / OpenAPI 3**
-- **Lombok**
-- **MySQL**
-
-## 📦 Estructura del proyecto
+El proyecto sigue una arquitectura **Monolito Modular Evolutivo**, organizada por paquetes independientes según el dominio funcional:
 
 ```bash
-src/
-├── main/
-│   ├── java/com/willyes/clemenintegra/inventario/
-│   │   ├── controller/        # Controladores REST
-│   │   ├── service/           # Lógica de negocio
-│   │   ├── domain/model/      # Entidades JPA
-│   │   ├── domain/repository/ # Interfaces JPA
-│   │   ├── dto/               # Clases DTO
-│   │   ├── config/            # Configuración general (Swagger, CORS)
-│   │   └── security/          # Configuración JWT
-│   └── resources/
-│       ├── application.properties
-│       └── ...
+src/main/java/com/willyes/clemenintegra/
+├── inventario/ # Gestión de productos, almacenes, lotes, movimientos
+├── calidad/ # No conformidades, CAPA, liberación de lotes
+├── produccion/ # Órdenes, etapas, trazabilidad
+├── bom/ # Fórmulas, insumos, simulaciones
+└── shared/ # Configuración, seguridad, excepciones
+
+```
+
+Cada módulo contiene su propio conjunto de:
+- `controller`
+- `service`
+- `repository`
+- `model`
+- `dto`
+- `mapper` (cuando aplica)
+
+## ✅ Funcionalidades actuales por módulo
+
+### 📦 Inventario
+- Gestión de productos con unidades, categorías y control de calidad
+- Manejo de almacenes con tipo y categoría
+- Registro de lotes con trazabilidad y vencimientos
+- Movimientos de entrada, salida, ajustes y transferencias
+- Órdenes de compra y proveedores
+
+### 🧪 Calidad
+- Registro y control de no conformidades
+- Gestión de acciones correctivas y preventivas (CAPA)
+- Retención y liberación de lotes
+- Checklists y validación de condiciones
+
+### ⚙ Producción
+- Creación y seguimiento de órdenes de producción
+- Etapas: dispensado, mezcla, envasado, acondicionamiento, cuarentena
+- Registro de controles de calidad en proceso
+
+### 🧬 BOM (Fórmulas)
+- Registro de fórmulas por producto
+- Gestión de versiones y aprobación
+- Simulación de disponibilidad para producción
+
+## 🛠 Tecnologías utilizadas
+
+- Java 17
+- Spring Boot 3.2.x
+- Spring Security + JWT
+- Spring Data JPA (Hibernate)
+- Swagger / OpenAPI 3
+- Lombok
+- MySQL
+
+## 🔐 Seguridad y Autenticación
+
+El sistema implementa seguridad con JWT. Los roles se definen por módulo (`ROL_ADMIN`, `ROL_CALIDAD`, `ROL_PRODUCCION`, etc.).
+
+Swagger requiere autenticación:
+
+```bash
+Usuario: admin
+Contraseña: admin123
 
 ```
 
@@ -52,29 +79,15 @@ spring.datasource.username=tu_usuario
 spring.datasource.password=tu_contraseña
 spring.jpa.hibernate.ddl-auto=none
 ```
-## 🔐 Seguridad
-Este proyecto implementa seguridad basada en JWT (JSON Web Tokens).
 
-- Los endpoints protegidos deben incluir el token JWT en el header:
+## 🔍 Documentación API (Swagger)
 
-```bash
-Authorization: Bearer <token>
-```
-
-## 🔍 Documentación API
-El backend de **Clemen-Integra ERP** para el módulo de **inventarios** está documentado usando **Swagger**. Puedes ver y probar la API en tiempo real a través de la siguiente URL:
-
-- **Accede a la documentación interactiva en Swagger UI**:
+- **Disponible en:**:
 
 ```bash
 [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 ```
-### Autenticación en Swagger
-
-Por razones de seguridad, Swagger requiere autenticación. Usa el siguiente usuario y contraseña para acceder:
-
-- **Usuario:** `admin`
-- **Contraseña:** `admin123`
+Incluye documentación de todos los endpoints REST de todos los módulos integrados.
 
 ---
 ## 🚀 Comandos útiles
@@ -91,6 +104,10 @@ Por razones de seguridad, Swagger requiere autenticación. Usa el siguiente usua
 # Ejecutar pruebas
 ./mvnw test
 ```
+## ‍💻 Desarrollado por
+Will Yes Solutions
+Repositorio oficial: github.com/Edwseth/clemen-integra-inventario
+
 ## 📄 Licencia
 Este proyecto está desarrollado y mantenido por Will Yes Solutions. Todos los derechos reservados.
 

@@ -1,9 +1,11 @@
 package com.willyes.clemenintegra.inventario.application.service;
 
-import com.willyes.clemenintegra.inventario.application.dto.MovimientoInventarioDTO;
-import com.willyes.clemenintegra.inventario.domain.enums.*;
-import com.willyes.clemenintegra.inventario.domain.model.*;
-import com.willyes.clemenintegra.inventario.domain.repository.*;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
+import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
