@@ -1,10 +1,11 @@
 package com.willyes.clemenintegra.inventario.model.enums;
 
 public enum EstadoOrdenCompra {
-    PENDIENTE,
-    APROBADA,
-    RECHAZADA,
-    CANCELADA,
+    CREADA,
+    ENVIADA,
     PARCIALMENTE_RECIBIDA,
-    RECIBIDA_COMPLETAMENTE
+    RECIBIDA_COMPLETAMENTE,
+    CERRADA,
+    CANCELADA,
+    RECHAZADA
 }

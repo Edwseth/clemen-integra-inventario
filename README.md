@@ -45,9 +45,10 @@ Cada módulo contiene su propio conjunto de:
 - Registro de controles de calidad en proceso
 
 ### 🧬 BOM (Fórmulas)
-- Registro de fórmulas por producto
-- Gestión de versiones y aprobación
-- Simulación de disponibilidad para producción
+- Registro de fórmulas por producto con control de versiones y estados (BORRADOR, APROBADA, etc.)
+- Definición de insumos, cantidades y unidades por fórmula (detalle_formula)
+- Asociación de documentos técnicos: MSDS, instructivos y procedimientos
+- Preparación de estructura para simulación de disponibilidad y costos de producción
 
 ## 🛠 Tecnologías utilizadas
 

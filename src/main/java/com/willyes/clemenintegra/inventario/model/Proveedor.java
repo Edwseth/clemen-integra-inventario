@@ -18,20 +18,29 @@ public class Proveedor {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "proveedor", nullable = false, unique = true, length = 100)
     private String nombre;
 
-    @Column(name = "identificacion", nullable = false, unique = true, length = 20)
+    @Column(name = "nit_cedula", nullable = false, unique = true, length = 20)
     private String identificacion;
 
-    @Column(name = "telefono", length = 20)
+    @Column(name = "telefono_contacto", length = 20)
     private String telefono;
 
-    @Column(name = "email", length = 100)
+    @Column(name = "email", length = 100, unique = true)
     private String email;
 
-    @Column(name = "direccion", length = 255)
+    @Column(length = 150)
     private String direccion;
+
+    @Column(name = "pagina_web", length = 150)
+    private String paginaWeb;
+
+    @Column(name = "nombre_contacto", nullable = false, length = 100)
+    private String nombreContacto;
+
+    @Column(nullable = false)
+    private Boolean activo;
 
     public Proveedor(Long id) {
         this.id = id;

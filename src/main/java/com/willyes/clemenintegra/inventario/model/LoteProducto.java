@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.model;
 
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -60,6 +61,14 @@ public class LoteProducto {
     @JoinColumn(name = "usuario_liberador_id",
             foreignKey = @ForeignKey(name = "fk_lotes_productos_usuario_liberador"))
     private Usuario usuarioLiberador;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "orden_produccion_id")
+    private OrdenProduccion ordenProduccion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "produccion_id")
+    private Produccion produccion;
 
     public LoteProducto(Long id) {
         this.id = id;

@@ -1,7 +1,7 @@
 package com.willyes.clemenintegra.inventario.model;
 
-import com.willyes.clemenintegra.inventario.model.enums.CategoriaAlmacen;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAlmacen;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,12 +23,12 @@ public class Almacen {
     @Column(nullable = false, unique = true, length = 100)
     private String nombre;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 100)
     private String ubicacion;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "categoria", nullable = false, length = 30)
-    private CategoriaAlmacen categoria;
+    private TipoCategoria categoria;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo", nullable = false, length = 30)
