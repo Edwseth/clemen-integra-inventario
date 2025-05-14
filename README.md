@@ -32,6 +32,8 @@ Cada módulo contiene su propio conjunto de:
 - Registro de lotes con trazabilidad y vencimientos
 - Movimientos de entrada, salida, ajustes y transferencias
 - Órdenes de compra y proveedores
+- Historial de cambios de estado en órdenes de compra
+- Detalle de productos por orden (orden_compra_detalle)
 
 ### 🧪 Calidad
 - Registro y control de no conformidades
@@ -43,6 +45,7 @@ Cada módulo contiene su propio conjunto de:
 - Creación y seguimiento de órdenes de producción
 - Etapas: dispensado, mezcla, envasado, acondicionamiento, cuarentena
 - Registro de controles de calidad en proceso
+- Producción simple (registro directo): código de lote, fechas, usuario y producto
 
 ### 🧬 BOM (Fórmulas)
 - Registro de fórmulas por producto con control de versiones y estados (BORRADOR, APROBADA, etc.)
