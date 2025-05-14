@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.model;
 
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.Produccion;
 import jakarta.persistence.*;
 import lombok.*;
 
