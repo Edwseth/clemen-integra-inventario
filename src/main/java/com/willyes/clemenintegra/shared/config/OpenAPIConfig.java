@@ -15,9 +15,9 @@ public class OpenAPIConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Clemen-Integra ERP - API de Inventario")
+                        .title("Clemen-Integra ERP – Backend Modular")
                         .version("1.0.0")
-                        .description("Documentación de los servicios REST para el módulo de inventarios")
+                        .description("Documentación de los servicios REST para los módulos de Clemen-Integra")
                         .contact(new Contact()
                                 .name("Will Yes Solutions")
                                 .email("soporte@willyessolutions.com")))
