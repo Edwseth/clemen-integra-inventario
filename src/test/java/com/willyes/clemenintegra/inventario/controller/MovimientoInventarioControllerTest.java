@@ -3,7 +3,7 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
-import com.willyes.clemenintegra.inventario.model.enums.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -42,7 +42,7 @@ class MovimientoInventarioControllerTest {
                 1L,
                 1L,
                 1L,
-                TipoMovimientoDetalle.RECEPCION_COMPRA,
+                ClasificacionMovimientoInventario.RECEPCION_COMPRA,
                 1L
         );
 

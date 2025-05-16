@@ -3,7 +3,7 @@ package com.willyes.clemenintegra.inventario.application.service;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
-import com.willyes.clemenintegra.inventario.model.enums.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +57,7 @@ class MovimientoInventarioServiceTest {
                 1L, // ordenCompraId
                 1L, // motivoMovimientoId
                 1L, // usuarioRegistroId
-                TipoMovimientoDetalle.ENTRADA_PRODUCCION,
+                ClasificacionMovimientoInventario.ENTRADA_PRODUCCION,
                 1L  // loteId
         );
 
@@ -91,7 +91,7 @@ class MovimientoInventarioServiceTest {
         movimientoMock.setLote(lote);
         movimientoMock.setCantidad(BigDecimal.valueOf(10));
         movimientoMock.setTipoMovimiento(TipoMovimiento.ENTRADA_PRODUCCION);
-        movimientoMock.setTipoMovimientoDetalle(TipoMovimientoDetalle.ENTRADA_PRODUCCION);
+        movimientoMock.setTipoMovimientoDetalle(ClasificacionMovimientoInventario.ENTRADA_PRODUCCION);
         movimientoMock.setRegistradoPor(usuario);
 
         when(repository.save(any(MovimientoInventario.class))).thenReturn(movimientoMock);
@@ -119,7 +119,7 @@ class MovimientoInventarioServiceTest {
                 Long.valueOf(1),
                 (Long) null,
                 (Long) null,
-                TipoMovimientoDetalle.SALIDA_PRODUCCION,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 Long.valueOf(1)
         );
 
@@ -141,7 +141,7 @@ class MovimientoInventarioServiceTest {
                 (Long) null,
                 (Long) null,
                 (Long) null,
-                TipoMovimientoDetalle.ENTRADA_PRODUCCION,
+                ClasificacionMovimientoInventario.ENTRADA_PRODUCCION,
                 Long.valueOf(1)
         );
 

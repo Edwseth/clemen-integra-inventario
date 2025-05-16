@@ -1,6 +1,6 @@
 package com.willyes.clemenintegra.inventario.model.enums;
 
-public enum TipoMovimientoDetalle {
+public enum ClasificacionMovimientoInventario {
     RECEPCION_COMPRA,
     RECEPCION_DEVOLUCION_CLIENTE,
 

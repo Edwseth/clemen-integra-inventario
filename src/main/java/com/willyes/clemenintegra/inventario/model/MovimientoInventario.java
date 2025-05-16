@@ -1,7 +1,7 @@
 package com.willyes.clemenintegra.inventario.model;
 
-import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
-import com.willyes.clemenintegra.inventario.model.enums.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,7 +28,7 @@ public class MovimientoInventario {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_mov", nullable = false, length = 20)
-    private TipoMovimiento tipoMovimiento;
+    private ClasificacionMovimientoInventario tipoMovimiento;
 
     @Column(name = "fecha_ingreso", nullable = false, updatable = false)
     private LocalDateTime fechaIngreso;
@@ -71,7 +71,7 @@ public class MovimientoInventario {
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_motivos_movimiento1"))
     private MotivoMovimiento motivoMovimiento;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne
     @JoinColumn(name = "tipos_movimiento_detalle_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_mov_inv_tipo_mov_detalle"))
     private TipoMovimientoDetalle tipoMovimientoDetalle;

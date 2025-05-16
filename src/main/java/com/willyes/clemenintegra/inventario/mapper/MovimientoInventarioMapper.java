@@ -11,13 +11,13 @@ public class MovimientoInventarioMapper {
                 .tipoMovimiento(dto.tipoMovimiento())
                 .docReferencia(dto.docReferencia())
                 .producto(new Producto(dto.productoId()))
-                .lote(new LoteProducto(dto.loteId()))
+                .lote(new LoteProducto(dto.loteProductoId()))
                 .almacen(new Almacen(dto.almacenId()))
                 .proveedor(new Proveedor(dto.proveedorId()))
                 .ordenCompra(new OrdenCompra(dto.ordenCompraId()))
                 .motivoMovimiento(new MotivoMovimiento(dto.motivoMovimientoId()))
-                .tipoMovimientoDetalle(dto.tipoMovimientoDetalle())
-                .registradoPor(new Usuario(dto.registradoPorId()))
+                .tipoMovimientoDetalle(TipoMovimientoDetalle.builder().id(dto.tipoMovimientoDetalleId()).build())
+                .registradoPor(new Usuario(dto.usuarioId()))
                 .build();
     }
 
@@ -32,7 +32,7 @@ public class MovimientoInventarioMapper {
                 movimiento.getProveedor() != null ? movimiento.getProveedor().getId() : null,
                 movimiento.getOrdenCompra() != null ? movimiento.getOrdenCompra().getId() : null,
                 movimiento.getMotivoMovimiento() != null ? movimiento.getMotivoMovimiento().getId() : null,
-                movimiento.getTipoMovimientoDetalle(),
+                movimiento.getTipoMovimientoDetalle().getId(),
                 movimiento.getRegistradoPor() != null ? movimiento.getRegistradoPor().getId() : null
         );
     }

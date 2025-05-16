@@ -19,7 +19,7 @@ public class MotivoMovimiento {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true, length = 255)
     private String descripcion;
 
     @Enumerated(EnumType.STRING)
