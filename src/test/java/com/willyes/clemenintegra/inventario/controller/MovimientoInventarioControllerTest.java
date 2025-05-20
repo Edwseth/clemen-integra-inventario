@@ -33,18 +33,19 @@ class MovimientoInventarioControllerTest {
     @Test
     void registrarMovimiento_DeberiaRetornar201() throws Exception {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                new BigDecimal("10.5"),
-                TipoMovimiento.RECEPCION_COMPRA,
-                "DOC-456",
-                1L,
-                1L,
-                1L,
-                1L,
-                1L,
-                1L,
-                ClasificacionMovimientoInventario.RECEPCION_COMPRA,
-                1L
+                BigDecimal.valueOf(10.5),                            // 1) cantidad
+                ClasificacionMovimientoInventario.RECEPCION_COMPRA,  // 2) tipoMovimiento (enum correcto)
+                "DOC-456",                                           // 3) docReferencia
+                1L, // 4) productoId
+                1L, // 5) loteProductoId
+                1L, // 6) almacenId
+                1L, // 7) proveedorId
+                1L, // 8) ordenCompraId
+                1L, // 9) motivoMovimientoId
+                1L, // 10) tipoMovimientoDetalleId
+                1L  // 11) usuarioRegistroId
         );
+
 
         Mockito.when(movimientoInventarioService.registrarMovimiento(Mockito.any())).thenReturn(dto);
 
