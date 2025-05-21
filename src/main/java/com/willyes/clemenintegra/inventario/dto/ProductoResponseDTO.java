@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.willyes.clemenintegra.inventario.model.Producto;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -21,5 +22,21 @@ public class ProductoResponseDTO {
     private String unidadMedida;
     private String categoria;
     private LocalDateTime fechaCreacion;
+
+    public ProductoResponseDTO(Producto producto) {
+        this.id = producto.getId();
+        this.codigoSku = producto.getCodigoSku();
+        this.nombre = producto.getNombre();
+        this.descripcionProducto = producto.getDescripcionProducto();
+        this.stockActual = producto.getStockActual();
+        this.stockMinimo = producto.getStockMinimo();
+        this.activo = producto.getActivo();
+        this.requiereInspeccion = producto.getRequiereInspeccion();
+        this.unidadMedida = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null;
+        this.categoria = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null;
+        this.fechaCreacion = producto.getFechaCreacion();
+    }
+
+
 }
 

@@ -1,10 +1,12 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,6 +27,14 @@ public class ProductoService {
         return productoRepository.findAll()
                 .stream()
                 .map(this::mapearADTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<ProductoResponseDTO> buscarPorCategoria(String categoria) {
+        TipoCategoria tipo = TipoCategoria.valueOf(categoria.toUpperCase());
+        return productoRepository.findByCategoriaProducto_Tipo(tipo)
+                .stream()
+                .map(ProductoResponseDTO::new)
                 .collect(Collectors.toList());
     }
 
@@ -61,7 +71,7 @@ public class ProductoService {
 
     private void validarDuplicados(String sku, String nombre) {
         if (productoRepository.existsByCodigoSku(sku)) {
-            throw new IllegalArgumentException("Ya existe un producto con ese código SKU.");
+            throw new DataIntegrityViolationException("Ya existe un producto con ese código SKU.");
         }
         if (productoRepository.existsByNombre(nombre)) {
             throw new IllegalArgumentException("Ya existe un producto con ese nombre.");
