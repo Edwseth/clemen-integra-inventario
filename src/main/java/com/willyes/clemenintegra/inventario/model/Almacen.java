@@ -27,11 +27,11 @@ public class Almacen {
     private String ubicacion;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "categoria", nullable = false, length = 30)
+    @Column(name = "categoria_almacen", nullable = false, length = 30)
     private TipoCategoria categoria;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo", nullable = false, length = 30)
+    @Column(name = "tipo_almacen", nullable = false, length = 30)
     private TipoAlmacen tipo;
 
     public Almacen(Long id) {

@@ -21,17 +21,25 @@ public class AlmacenController {
 
     @PostMapping
     public ResponseEntity<?> crear(@RequestBody AlmacenRequestDTO dto) {
-        if (almacenRepository.existsByNombre(dto.getNombre())) {
-            throw new EntityExistsException("Ya existe un almacén con ese nombre.");
+        try {
+            if (almacenRepository.existsByNombre(dto.getNombre())) {
+                throw new EntityExistsException("Ya existe un almacén con ese nombre.");
+            }
+            Almacen almacen = Almacen.builder()
+                    .nombre(dto.getNombre())
+                    .ubicacion(dto.getUbicacion())
+                    .categoria(dto.getCategoria())
+                    .tipo(dto.getTipo())
+                    .build();
+            return ResponseEntity.status(201).body(new AlmacenResponseDTO(almacenRepository.save(almacen)));
+        } catch (EntityExistsException e) {
+            return ResponseEntity.status(409).body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace(); // útil en pruebas
+            return ResponseEntity.status(500).body("Error inesperado: " + e.getMessage());
         }
-        Almacen almacen = Almacen.builder()
-                .nombre(dto.getNombre())
-                .ubicacion(dto.getUbicacion())
-                .categoria(dto.getCategoria())
-                .tipo(dto.getTipo())
-                .build();
-        return ResponseEntity.status(201).body(new AlmacenResponseDTO(almacenRepository.save(almacen)));
     }
+
 
     @GetMapping
     public ResponseEntity<List<AlmacenResponseDTO>> buscarPorTipoYCategoria(
