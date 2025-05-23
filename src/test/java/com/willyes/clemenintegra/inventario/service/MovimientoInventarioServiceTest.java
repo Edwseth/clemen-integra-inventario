@@ -3,7 +3,6 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
-import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +29,7 @@ class MovimientoInventarioServiceTest {
     @Mock private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
 
     @InjectMocks
-    private MovimientoInventarioService service;
+    private MovimientoInventarioServiceImpl service;
 
     @BeforeEach
     void setUp() {
