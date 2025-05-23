@@ -7,8 +7,11 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.*;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,11 +33,13 @@ public class LoteProductoService {
     public LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto) {
         Producto producto = productoRepo.findById(dto.getProductoId())
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
+
         Almacen almacen = almacenRepo.findById(dto.getAlmacenId())
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado"));
 
         LoteProducto lote = LoteProductoMapper.toEntity(dto, producto, almacen);
-        lote = loteRepo.save(lote);
+        lote = loteRepo.saveAndFlush(lote); // sin try-catch, lo maneja el ControllerAdvice
+
         return LoteProductoMapper.toDto(lote);
     }
 

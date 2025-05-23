@@ -10,11 +10,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -52,6 +54,32 @@ class LoteProductoControllerTest {
                 .andDo(print());
 
     }
+
+    @Test
+    void crearLote_CodigoLoteDuplicado_RetornaConflict() throws Exception {
+        LoteProductoRequestDTO dto = new LoteProductoRequestDTO();
+        dto.setCodigoLote("LOTE-DUPLICADO");
+        dto.setFechaFabricacion(LocalDate.of(2025, 5, 20));
+        dto.setFechaVencimiento(LocalDate.of(2026, 5, 23));
+        dto.setStockLote(new BigDecimal("100.00")); // obligatorio
+        dto.setEstado(EstadoLote.DISPONIBLE);
+        dto.setProductoId(1L); // producto de data-test.sql
+        dto.setAlmacenId(1L);  // almacén de data-test.sql
+
+        // 1. Crear el primer lote
+        mockMvc.perform(post("/api/lotes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated());
+
+        // 2. Intentar crear otro lote con el mismo código
+        mockMvc.perform(post("/api/lotes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("Ya existe un lote con el código")));
+    }
+
 
 }
 

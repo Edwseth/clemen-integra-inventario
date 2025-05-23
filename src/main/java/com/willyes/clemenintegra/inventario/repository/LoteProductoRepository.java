@@ -13,7 +13,7 @@ import java.util.List;
 public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long> {
 
     boolean existsByProducto(Producto producto);
-
+    boolean existsByCodigoLote(String codigoLote);
     List<LoteProducto> findByEstado(EstadoLote estado);
 }
 

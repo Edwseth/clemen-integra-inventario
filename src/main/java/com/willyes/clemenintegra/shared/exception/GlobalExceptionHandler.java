@@ -44,6 +44,17 @@ public class GlobalExceptionHandler {
         body.put("message", message);
         return new ResponseEntity<>(body, status);
     }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
+        String mensaje = "Violación de integridad de datos.";
+        if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("codigo_lote")) {
+            mensaje = "Ya existe un lote con el código ingresado.";
+            return buildResponse(HttpStatus.CONFLICT, mensaje);
+        }
+        return buildResponse(HttpStatus.BAD_REQUEST, mensaje);
+    }
+
 }
 
 
