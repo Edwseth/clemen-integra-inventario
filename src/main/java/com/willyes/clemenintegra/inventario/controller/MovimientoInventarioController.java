@@ -2,8 +2,12 @@ package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,13 +17,18 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/movimientos")
@@ -27,14 +36,41 @@ import java.time.LocalDate;
 public class MovimientoInventarioController {
 
     private final MovimientoInventarioService service;
+    private final ProductoRepository productoRepo;
+    private final LoteProductoRepository loteRepo;
 
     @Operation(summary = "Registrar un movimiento de inventario")
     @ApiResponse(responseCode = "201", description = "Movimiento registrado correctamente")
+    @ApiResponse(responseCode = "409", description = "No hay suficiente stock disponible")
     @PostMapping
-    public ResponseEntity<MovimientoInventarioDTO> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
+    public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
+        // 1) Validación de stock aquí, antes de llamar al servicio:
+        var tipo = dto.tipoMovimiento();
+        boolean isSalida = tipo.name().startsWith("SALIDA")
+                || tipo == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
+
+        if (isSalida) {
+            Producto prod = productoRepo.findById(dto.productoId())
+                    .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
+            LoteProducto lote = loteRepo.findById(dto.loteProductoId())
+                    .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+
+            BigDecimal cant = dto.cantidad();
+            BigDecimal stockProd = BigDecimal.valueOf(prod.getStockActual());
+            BigDecimal stockLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+
+            if (stockProd.compareTo(cant) < 0 || stockLote.compareTo(cant) < 0) {
+                return ResponseEntity
+                        .status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", "No hay suficiente stock disponible"));
+            }
+        }
+
+        // 2) Si pasa validación, delegamos al servicio para grabar
         MovimientoInventarioDTO creado = service.registrarMovimiento(dto);
-        return ResponseEntity.status(201).body(creado);
+        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
+
 
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
@@ -53,7 +89,5 @@ public class MovimientoInventarioController {
         Page<MovimientoInventario> resultados = service.consultarMovimientosConFiltros(filtro, pageable);
         return ResponseEntity.ok(resultados);
     }
-
-
 }
 

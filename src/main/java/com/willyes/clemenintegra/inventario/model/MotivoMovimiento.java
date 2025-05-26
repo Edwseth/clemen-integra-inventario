@@ -26,6 +26,11 @@ public class MotivoMovimiento {
     @Column(name = "tipo_movimiento", nullable = false, length = 50)
     private TipoMovimiento tipoMovimiento;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "motivo", nullable = false, unique = true, length = 50)
+    private TipoMovimiento motivo;
+
+
     public MotivoMovimiento(Long id) {
         this.id = id;
     }
