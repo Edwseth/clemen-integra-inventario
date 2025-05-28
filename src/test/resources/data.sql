@@ -60,3 +60,22 @@ INSERT INTO motivos_movimiento (
 ) VALUES (
     'RECEPCION_COMPRA', 'Recepción de productos por orden de compra', 'RECEPCION_COMPRA'
 );
+
+-- Insertar un ajuste de inventario de ejemplo
+INSERT INTO ajustes_inventario (
+    fecha,
+    cantidad,
+    motivo,
+    observaciones,
+    productos_id,
+    almacenes_id,
+    usuarios_id
+) VALUES (
+    CURRENT_TIMESTAMP,      -- fecha de ajuste
+    5.00,                   -- cantidad ajustada
+    'AJUSTE_INICIAL',       -- motivo
+    'Ajuste de stock inicial para pruebas',
+    1,                      -- productos_id (el SKU001 pre-cargado)
+    1,                      -- almacenes_id (Almacen Central)
+    1                       -- usuarios_id (testuser)
+);

@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.model;
 
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Entity
@@ -31,7 +32,12 @@ public class MotivoMovimiento {
     private TipoMovimiento motivo;
 
 
-    public MotivoMovimiento(Long id) {
+   /* public MotivoMovimiento(Long id, String descripcion, TipoMovimiento tipoMovimiento, TipoMovimiento motivo) {
         this.id = id;
-    }
+        this.descripcion = descripcion;
+        this.tipoMovimiento = tipoMovimiento;
+        this.motivo = motivo;
+    }*/
+
+
 }

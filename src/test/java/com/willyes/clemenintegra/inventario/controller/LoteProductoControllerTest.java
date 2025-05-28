@@ -63,8 +63,8 @@ class LoteProductoControllerTest {
         dto.setFechaVencimiento(LocalDate.of(2026, 5, 23));
         dto.setStockLote(new BigDecimal("100.00")); // obligatorio
         dto.setEstado(EstadoLote.DISPONIBLE);
-        dto.setProductoId(1L); // producto de data-test.sql
-        dto.setAlmacenId(1L);  // almacén de data-test.sql
+        dto.setProductoId(1L);
+        dto.setAlmacenId(1L);
 
         // 1. Crear el primer lote
         mockMvc.perform(post("/api/lotes")

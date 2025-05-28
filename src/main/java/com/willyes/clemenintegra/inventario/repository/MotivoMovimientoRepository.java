@@ -8,6 +8,4 @@ import java.util.Optional;
 
 public interface MotivoMovimientoRepository extends JpaRepository<MotivoMovimiento, Long> {
 
-    Optional<MotivoMovimiento> findByMotivo(TipoMovimiento motivo);
-
 }
