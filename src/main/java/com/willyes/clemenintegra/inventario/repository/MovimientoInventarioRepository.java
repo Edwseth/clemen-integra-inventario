@@ -29,5 +29,8 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             @Param("fechaFin") LocalDate fechaFin,
             Pageable pageable
     );
+
+    boolean existsByProductoId(Long productoId);
+
 }
 

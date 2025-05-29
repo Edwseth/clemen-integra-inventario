@@ -1,6 +1,9 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.UnidadMedidaRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
@@ -8,9 +11,11 @@ import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +27,7 @@ public class ProductoService {
     private final CategoriaProductoRepository categoriaProductoRepository;
     private final UsuarioRepository usuarioRepository;
     private final LoteProductoRepository loteProductoRepository;
+    private final MovimientoInventarioRepository movimientoInventarioRepository;
 
     public List<ProductoResponseDTO> listarTodos() {
         return productoRepository.findAll()
@@ -142,6 +148,26 @@ public class ProductoService {
 
         return mapearADTO(producto);
     }
+
+    @Transactional
+    public UnidadMedidaResponseDTO cambiarUnidadMedida(Long productoId, UnidadMedidaRequestDTO dto) {
+        Producto producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
+
+        boolean tieneMovimientos = movimientoInventarioRepository.existsByProductoId(productoId);
+        if (tieneMovimientos) {
+            throw new IllegalStateException("No se puede modificar la unidad de medida: existen movimientos asociados");
+        }
+
+        UnidadMedida unidad = unidadMedidaRepository.findByNombre(dto.getNombre())
+                .orElseGet(() -> unidadMedidaRepository.save(new UnidadMedida(null, dto.getNombre(), dto.getSimbolo())));
+
+        producto.setUnidadMedida(unidad);
+        productoRepository.save(producto);
+
+        return new UnidadMedidaResponseDTO(unidad.getId(), unidad.getNombre(), unidad.getSimbolo());
+    }
+
 
     public void eliminarProducto(Long id) {
         Producto producto = productoRepository.findById(id)

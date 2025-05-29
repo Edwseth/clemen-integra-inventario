@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.*;
 import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
@@ -57,6 +58,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null;
         Usuario usuario = dto.usuarioId() != null
                 ? entityManager.getReference(Usuario.class, dto.usuarioId()) : null;
+
+        // Validar estado del lote
+        if (lote.getEstado() == EstadoLote.EN_CUARENTENA || lote.getEstado() == EstadoLote.RETENIDO) {
+            throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
+        }
+
+        if (lote.getEstado() == EstadoLote.VENCIDO) {
+            throw new IllegalStateException("No se puede mover: el lote está vencido");
+        }
+
 
         // Actualización de stock (usando BigDecimal)
         BigDecimal cantidad = dto.cantidad();

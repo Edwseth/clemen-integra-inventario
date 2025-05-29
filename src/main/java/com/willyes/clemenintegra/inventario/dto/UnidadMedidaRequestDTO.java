@@ -17,5 +17,6 @@ public class UnidadMedidaRequestDTO {
     @NotBlank
     @Size(max = 5)
     private String simbolo;
+
 }
 

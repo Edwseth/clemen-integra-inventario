@@ -5,7 +5,6 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.*;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,17 +12,19 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.Commit;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static com.willyes.clemenintegra.util.TestUtil.asJsonString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -32,70 +33,36 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(com.willyes.clemenintegra.inventario.config.TestSecurityConfig.class)
 class MovimientoInventarioControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ProductoRepository productoRepository;
+    @Autowired private UnidadMedidaRepository unidadMedidaRepository;
+    @Autowired private CategoriaProductoRepository categoriaProductoRepository;
+    @Autowired private AlmacenRepository almacenRepository;
+    @Autowired private LoteProductoRepository loteProductoRepository;
+    @Autowired private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
+    @Autowired private ProveedorRepository proveedorRepository;
+    @Autowired private OrdenCompraRepository ordenCompraRepository;
+    @Autowired private MotivoMovimientoRepository motivoMovimientoRepository;
+    @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private EntityManager entityManager;
 
-    @Autowired
-    private MovimientoInventarioService movimientoInventarioService;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private ProductoRepository productoRepository;
-
-    @Autowired
-    private UnidadMedidaRepository unidadMedidaRepository;
-
-    @Autowired
-    private CategoriaProductoRepository categoriaProductoRepository;
-
-    @Autowired
-    private AlmacenRepository almacenRepository;
-
-    @Autowired
-    private LoteProductoRepository loteProductoRepository;
-
-    @Autowired
-    private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
-
-    @Autowired
-    private ProveedorRepository proveedorRepository;
-
-    @Autowired
-    private OrdenCompraRepository ordenCompraRepository;
-
-    @Autowired
-    private MotivoMovimientoRepository motivoMovimientoRepository;
-
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private EntityManager entityManager;
-
-
-    @Test
-    @Commit  //Temporal
-    @Transactional
-    void registrarEntradaDebeIncrementarStock() throws Exception {
-        // 1) Usuario existente y valores base
+    private Producto prepararProductoConEntrada() throws Exception {
         Usuario usuario = usuarioRepository.findById(1L).orElseThrow();
-
         UnidadMedida unidad = unidadMedidaRepository.findById(1L).orElseThrow();
         CategoriaProducto categoria = categoriaProductoRepository.findById(1L).orElseThrow();
 
-        Producto producto = new Producto();
-        producto.setCodigoSku("PRD-IN-001");
-        producto.setNombre("Producto Entrada");
-        producto.setUnidadMedida(unidad);
-        producto.setCategoriaProducto(categoria);
-        producto.setStockActual(5); // ← stock inicial
-        producto.setStockMinimo(1);
-        producto.setActivo(true);
-        producto.setRequiereInspeccion(false);
-        producto.setCreadoPor(usuario);
-        producto = productoRepository.saveAndFlush(producto); // flush garantiza persistencia inmediata
+        Producto producto = Producto.builder()
+                .codigoSku("PRD-IN-001")
+                .nombre("Producto Entrada")
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .stockActual(5)
+                .stockMinimo(1)
+                .activo(true)
+                .requiereInspeccion(false)
+                .creadoPor(usuario)
+                .build();
+        producto = productoRepository.saveAndFlush(producto);
 
         Almacen almacen = almacenRepository.saveAndFlush(
                 new Almacen(null, "A1", "Ubicación X", TipoCategoria.MATERIA_PRIMA, TipoAlmacen.PRINCIPAL)
@@ -109,8 +76,7 @@ class MovimientoInventarioControllerTest {
                 .fechaFabricacion(LocalDate.now().minusDays(1))
                 .fechaVencimiento(LocalDate.now().plusDays(10))
                 .estado(EstadoLote.DISPONIBLE)
-                .build()
-        );
+                .build());
 
         TipoMovimientoDetalle detalle = tipoMovimientoDetalleRepository
                 .findByDescripcion("ENTRADA_PRODUCCION")
@@ -126,8 +92,7 @@ class MovimientoInventarioControllerTest {
                 .estado(EstadoOrdenCompra.CREADA)
                 .fechaOrden(LocalDate.now())
                 .proveedor(proveedor)
-                .build()
-        );
+                .build());
 
         MotivoMovimiento motivo = motivoMovimientoRepository.saveAndFlush(
                 new MotivoMovimiento(null, "Motivo Entrada", TipoMovimiento.ENTRADA_PRODUCCION, TipoMovimiento.ENTRADA_PRODUCCION)
@@ -147,61 +112,61 @@ class MovimientoInventarioControllerTest {
                 usuario.getId()
         );
 
-        // 6) Ejecuta la petición y valida status 201
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(asJsonString(dto)))
                 .andExpect(status().isCreated());
 
-        // 7) Forzar sincronización y limpiar caché
         entityManager.flush();
         entityManager.clear();
 
-        // 8) Verifica el incremento de stock directamente
+        return producto;
+    }
+
+    @Test
+    @Transactional
+    public void validarIncrementoStockEntrada() throws Exception {
+        Producto producto = prepararProductoConEntrada();
         Producto actualizado = productoRepository.findById(producto.getId()).orElseThrow();
         assertEquals(15, actualizado.getStockActual());
     }
 
-    /*@Test
-    void impedirCambioUnidadMedidaConMovimientosRegistrados_DebeRetornarError() throws Exception {
-        // 1) Crea un producto y registra al menos un movimiento sobre él
-        // (puedes reutilizar el test de entrada o salida para dejar datos)
-        registrarEntradaDebeIncrementarStock(); // deja un movimiento en BD
+    @Test
+    @Transactional
+    public void impedirCambioUnidadMedidaConMovimientosRegistrados_DebeRetornarError() throws Exception {
+        Producto producto = prepararProductoConEntrada();
 
-        // 2) Intenta cambiar la unidad de medida del mismo producto
-        Long productoId = 1L; // el ID del producto que ya tiene movimientos
         String payload = """
         {
           "nombre": "Kilogramo Modificado",
-          "simbolo": "kg_mod"
+          "simbolo": "kgm"
         }
         """;
 
-        mockMvc.perform(put("/api/productos/{id}/unidad-medida", productoId)
+        mockMvc.perform(put("/api/productos/{id}/unidad-medida", producto.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("No se puede modificar la unidad de medida: existen movimientos asociados"));
     }
 
-
-    /*@Test
-    void registrarMovimientoConLoteRetenidoOEnCuarentena_DebeFallar() throws Exception {
-        // 1) Prepara producto/lote pero marcándolo en CUARENTENA
+    @Test
+    @Transactional
+    public void registrarMovimientoConLoteRetenidoOEnCuarentena_DebeFallar() throws Exception {
         Usuario usuario = usuarioRepository.findById(1L).orElseThrow();
-        Producto p = crearProductoConStock(5, usuario); // helper
-        Almacen a = crearAlmacen();
+        Producto producto = crearProductoConStock(5, usuario);
+        Almacen almacen = crearAlmacen();
         LoteProducto lote = loteProductoRepository.save(LoteProducto.builder()
                 .codigoLote("LOTE-CUA-001")
-                .producto(p)
-                .almacen(a)
+                .producto(producto)
+                .almacen(almacen)
                 .stockLote(BigDecimal.valueOf(5))
                 .fechaFabricacion(LocalDate.now().minusDays(1))
                 .fechaVencimiento(LocalDate.now().plusDays(5))
-                .estado(EstadoLote.CUARENTENA)
+                .estado(EstadoLote.EN_CUARENTENA)
                 .build());
-        // resto de DTO igual al test de salida
-        MovimientoInventarioDTO dto = buildSalidaDTO(p, lote, a, usuario);
+
+        MovimientoInventarioDTO dto = buildSalidaDTO(producto, lote, almacen, usuario);
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -211,24 +176,23 @@ class MovimientoInventarioControllerTest {
                         .value("No se puede mover: el lote está en cuarentena o retenido"));
     }
 
-
     @Test
-    void registrarMovimientoConLoteVencido_DebeFallar() throws Exception {
-        // 1) Prepara lote vencido
+    @Transactional
+    public void registrarMovimientoConLoteVencido_DebeFallar() throws Exception {
         Usuario usuario = usuarioRepository.findById(1L).orElseThrow();
-        Producto p = crearProductoConStock(5, usuario);
-        Almacen a = crearAlmacen();
+        Producto producto = crearProductoConStock(5, usuario);
+        Almacen almacen = crearAlmacen();
         LoteProducto lote = loteProductoRepository.save(LoteProducto.builder()
                 .codigoLote("LOTE-VEN-001")
-                .producto(p)
-                .almacen(a)
+                .producto(producto)
+                .almacen(almacen)
                 .stockLote(BigDecimal.valueOf(5))
                 .fechaFabricacion(LocalDate.now().minusDays(30))
                 .fechaVencimiento(LocalDate.now().minusDays(1))
                 .estado(EstadoLote.VENCIDO)
                 .build());
-        // DTO de salida
-        MovimientoInventarioDTO dto = buildSalidaDTO(p, lote, a, usuario);
+
+        MovimientoInventarioDTO dto = buildSalidaDTO(producto, lote, almacen, usuario);
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -236,9 +200,56 @@ class MovimientoInventarioControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
                         .value("No se puede mover: el lote está vencido"));
-    }*/
+    }
 
 
+    private Producto crearProductoConStock(int cantidad, Usuario usuario) {
+        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder().nombre("Unidad Test").simbolo("UT").build());
+        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder().nombre("Categoria Test").tipo(TipoCategoria.MATERIA_PRIMA).build());
+
+        Producto producto = Producto.builder()
+                .codigoSku("SKU-TEST-" + System.currentTimeMillis())
+                .nombre("Producto Test " + System.currentTimeMillis())
+                .descripcionProducto("Producto de prueba")
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .stockActual(cantidad)
+                .stockMinimo(5)
+                .stockMinimoProveedor(10)
+                .activo(true)
+                .requiereInspeccion(true)
+                .fechaCreacion(LocalDateTime.now())
+                .creadoPor(usuario)
+                .build();
+
+        return productoRepository.save(producto);
+    }
+
+    private Almacen crearAlmacen() {
+        return almacenRepository.save(Almacen.builder()
+                .nombre("Almacen Test " + System.currentTimeMillis())
+                .ubicacion("Ubicación test")
+                .categoria(TipoCategoria.SUMINISTROS)
+                .tipo(TipoAlmacen.SATELITE)
+                .build());
+    }
+
+    private MovimientoInventarioDTO buildSalidaDTO(Producto producto, LoteProducto lote, Almacen almacen, Usuario usuario) {
+        return new MovimientoInventarioDTO(
+                BigDecimal.valueOf(2),
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                "DOC-PRUEBA-" + System.currentTimeMillis(),
+                producto.getId(),
+                lote.getId(),
+                almacen.getId(),
+                1L,
+                1L,
+                1L,
+                1L,
+                usuario.getId()
+        );
+    }
 }
+
 
 
