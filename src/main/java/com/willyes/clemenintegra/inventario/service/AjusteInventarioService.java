@@ -1,6 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
-import com.willyes.clemenintegra.inventario.dto.AjusteInventarioDTO;
+import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.mapper.AjusteInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.AjusteInventarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,16 +16,17 @@ public class AjusteInventarioService {
     private final AjusteInventarioRepository repository;
     private final AjusteInventarioMapper mapper;
 
-    public List<AjusteInventarioDTO> listar() {
+    public List<AjusteInventarioResponseDTO> listar() {
         return repository.findAll()
                 .stream()
-                .map(mapper::toDTO)
+                .map(mapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public AjusteInventarioDTO crear(AjusteInventarioDTO dto) {
+    public AjusteInventarioResponseDTO crear(AjusteInventarioRequestDTO dto) {
         var entity = mapper.toEntity(dto);
-        return mapper.toDTO(repository.save(entity));
+        var guardado = repository.save(entity);
+        return mapper.toResponseDTO(guardado);
     }
 
     public void eliminar(Long id) {

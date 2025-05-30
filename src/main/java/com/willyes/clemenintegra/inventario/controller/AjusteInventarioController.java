@@ -1,7 +1,8 @@
 package com.willyes.clemenintegra.inventario.controller;
 
-import com.willyes.clemenintegra.inventario.dto.AjusteInventarioDTO;
+import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.service.AjusteInventarioService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,12 +17,12 @@ public class AjusteInventarioController {
     private final AjusteInventarioService service;
 
     @GetMapping
-    public ResponseEntity<List<AjusteInventarioDTO>> listar() {
+    public ResponseEntity<List<AjusteInventarioResponseDTO>> listar() {
         return ResponseEntity.ok(service.listar());
     }
 
     @PostMapping
-    public ResponseEntity<AjusteInventarioDTO> crear(@RequestBody AjusteInventarioDTO dto) {
+    public ResponseEntity<AjusteInventarioResponseDTO> crear(@RequestBody @Valid AjusteInventarioRequestDTO dto) {
         return ResponseEntity.ok(service.crear(dto));
     }
 

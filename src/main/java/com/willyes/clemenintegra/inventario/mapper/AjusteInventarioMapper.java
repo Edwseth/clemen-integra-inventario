@@ -1,29 +1,14 @@
 package com.willyes.clemenintegra.inventario.mapper;
 
-import com.willyes.clemenintegra.inventario.dto.AjusteInventarioDTO;
+import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.*;
 import org.springframework.stereotype.Component;
 
 @Component
 public class AjusteInventarioMapper {
 
-    public AjusteInventarioDTO toDTO(AjusteInventario entity) {
-        return AjusteInventarioDTO.builder()
-                .id(entity.getId())
-                .fecha(entity.getFecha())
-                .cantidad(entity.getCantidad())
-                .motivo(entity.getMotivo())
-                .observaciones(entity.getObservaciones())
-                .productoId(entity.getProducto().getId())
-                .almacenId(entity.getAlmacen().getId())
-                .usuarioId(entity.getUsuario().getId())
-                .build();
-    }
-
-    public AjusteInventario toEntity(AjusteInventarioDTO dto) {
+    public AjusteInventario toEntity(AjusteInventarioRequestDTO dto) {
         return AjusteInventario.builder()
-                .id(dto.getId())
-                .fecha(dto.getFecha())
                 .cantidad(dto.getCantidad())
                 .motivo(dto.getMotivo())
                 .observaciones(dto.getObservaciones())
@@ -32,5 +17,17 @@ public class AjusteInventarioMapper {
                 .usuario(Usuario.builder().id(dto.getUsuarioId()).build())
                 .build();
     }
-}
 
+    public AjusteInventarioResponseDTO toResponseDTO(AjusteInventario entity) {
+        return AjusteInventarioResponseDTO.builder()
+                .id(entity.getId())
+                .fecha(entity.getFecha())
+                .cantidad(entity.getCantidad())
+                .motivo(entity.getMotivo())
+                .observaciones(entity.getObservaciones())
+                .productoNombre(entity.getProducto().getNombre())
+                .almacenNombre(entity.getAlmacen().getNombre())
+                .usuarioNombre(entity.getUsuario().getNombreCompleto())
+                .build();
+    }
+}

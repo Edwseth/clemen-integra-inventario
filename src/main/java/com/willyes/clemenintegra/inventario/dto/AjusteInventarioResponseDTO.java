@@ -9,13 +9,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AjusteInventarioDTO {
+public class AjusteInventarioResponseDTO {
     private Long id;
     private LocalDateTime fecha;
     private BigDecimal cantidad;
     private String motivo;
     private String observaciones;
-    private Long productoId;
-    private Long almacenId;
-    private Long usuarioId;
+    private String productoNombre;
+    private String almacenNombre;
+    private String usuarioNombre;
 }
+
