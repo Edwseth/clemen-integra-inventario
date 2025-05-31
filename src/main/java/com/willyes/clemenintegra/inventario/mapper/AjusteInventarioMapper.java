@@ -4,11 +4,14 @@ import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.*;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 @Component
 public class AjusteInventarioMapper {
 
     public AjusteInventario toEntity(AjusteInventarioRequestDTO dto) {
         return AjusteInventario.builder()
+                .fecha(LocalDateTime.now())
                 .cantidad(dto.getCantidad())
                 .motivo(dto.getMotivo())
                 .observaciones(dto.getObservaciones())

@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 public class AjusteInventarioRequestDTO {
 
     @NotNull(message = "La cantidad no puede ser nula")
-    @DecimalMin(value = "0.01", message = "La cantidad debe ser mayor a cero")
+    //@DecimalMin(value = "0.01", message = "La cantidad debe ser mayor a cero")
     private BigDecimal cantidad;
 
     @NotBlank(message = "El motivo es obligatorio")
