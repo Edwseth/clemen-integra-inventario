@@ -28,7 +28,7 @@ INSERT INTO productos (
     activo, requiere_inspeccion, fecha_creacion, usuarios_id
 ) VALUES (
     'SKU001', 'Producto Test', 'Producto para pruebas', 1,
-    1, 100, 10, 20, true, true, CURRENT_DATE, 1
+    1, 100, 150, 20, true, true, CURRENT_DATE, 1               --Se módifico 10 por 150
 );
 
 -- Insertar almacén
@@ -79,3 +79,51 @@ INSERT INTO ajustes_inventario (
     1,                      -- almacenes_id (Almacen Central)
     1                       -- usuarios_id (testuser)
 );
+
+-- Insertar lote vencido
+INSERT INTO lotes_productos (
+    codigo_lote,
+    fecha_fabricacion,
+    fecha_vencimiento,
+    stock_lote,
+    estado,
+    temperatura_almacenamiento,
+    fecha_liberacion,
+    producto_id,
+    almacen_id
+) VALUES (
+    'LOTE-VENCIDO-001',
+    '2024-04-01',  -- fabricación
+    '2024-05-01',  -- vencimiento (ya pasó)
+    50,
+    'DISPONIBLE',
+    25.0,
+    NULL,
+    1,
+    1
+);
+
+-- Insertar lote en CUARENTENA con más de 15 días de antigüedad
+INSERT INTO lotes_productos (
+    codigo_lote,
+    fecha_fabricacion,
+    fecha_vencimiento,
+    stock_lote,
+    estado,
+    temperatura_almacenamiento,
+    fecha_liberacion,
+    producto_id,
+    almacen_id
+) VALUES (
+    'LOTE-EN_CUARENTENA-001',
+    '2024-04-01',  -- fabricación
+    '2024-08-01',  -- aún no vencido
+    40,
+    'EN_CUARENTENA',
+    18.0,
+    NULL,
+    1,
+    1
+);
+
+
