@@ -68,17 +68,24 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new IllegalStateException("No se puede mover: el lote está vencido");
         }
 
-
-        // Actualización de stock (usando BigDecimal)
+// Actualización de stock (usando BigDecimal)
         BigDecimal cantidad = dto.cantidad();
         switch (dto.tipoMovimiento()) {
             case ENTRADA_PRODUCCION, RECEPCION_COMPRA, AJUSTE_POSITIVO -> {
-                producto.setStockActual(producto.getStockActual() + cantidad.intValue());
-                lote.setStockLote(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad));
+                producto.setStockActual(
+                        Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad)
+                );
+                lote.setStockLote(
+                        Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad)
+                );
             }
             case SALIDA_PRODUCCION, AJUSTE_NEGATIVO, SALIDA_VENCIDO -> {
-                producto.setStockActual(producto.getStockActual() - cantidad.intValue());
-                lote.setStockLote(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).subtract(cantidad));
+                producto.setStockActual(
+                        Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad)
+                );
+                lote.setStockLote(
+                        Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).subtract(cantidad)
+                );
             }
             default -> throw new IllegalArgumentException("Tipo de movimiento no soportado: " + dto.tipoMovimiento());
         }

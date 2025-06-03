@@ -56,7 +56,7 @@ public class MovimientoInventarioController {
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
             BigDecimal cant = dto.cantidad();
-            BigDecimal stockProd = BigDecimal.valueOf(prod.getStockActual());
+            BigDecimal stockProd = prod.getStockActual();
             BigDecimal stockLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
 
             if (stockProd.compareTo(cant) < 0 || stockLote.compareTo(cant) < 0) {

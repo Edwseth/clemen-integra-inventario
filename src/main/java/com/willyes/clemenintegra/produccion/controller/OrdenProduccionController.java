@@ -40,7 +40,7 @@ public class OrdenProduccionController {
         Producto producto = new Producto(); producto.setId(request.productoId);
         Usuario responsable = new Usuario(); responsable.setId(request.responsableId);
         OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
-        return ResponseEntity.ok(ProduccionMapper.toResponse(service.guardar(entidad)));
+        return ResponseEntity.ok(ProduccionMapper.toResponse(service.guardarConValidacionStock(entidad)));
     }
 
     @PutMapping("/{id}")
@@ -51,7 +51,7 @@ public class OrdenProduccionController {
                     Usuario responsable = new Usuario(); responsable.setId(request.responsableId);
                     OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
                     entidad.setId(existente.getId());
-                    return ResponseEntity.ok(ProduccionMapper.toResponse(service.guardar(entidad)));
+                    return ResponseEntity.ok(ProduccionMapper.toResponse(service.guardarConValidacionStock(entidad)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

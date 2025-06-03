@@ -40,9 +40,9 @@ CREATE TABLE IF NOT EXISTS productos (
     descripcion_producto VARCHAR(255),
     unidades_medida_id BIGINT NOT NULL,
     categorias_producto_id BIGINT NOT NULL,
-    stock_actual INT NOT NULL,
-    stock_minimo INT NOT NULL,
-    stock_minimo_proveedor INT,
+    stock_actual DECIMAL(12,3) NOT NULL,
+    stock_minimo DECIMAL(12,3) NOT NULL,
+    stock_minimo_proveedor DECIMAL(12,3),
     activo BIT NOT NULL,
     fecha_creacion DATE NOT NULL,
     requiere_inspeccion BIT NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS lotes_productos (
     codigo_lote VARCHAR(100) NOT NULL UNIQUE,
     fecha_fabricacion DATE,
     fecha_vencimiento DATE,
-    stock_lote DECIMAL(10, 2) NOT NULL,
+    stock_lote DECIMAL(10, 3) NOT NULL,
     estado VARCHAR(20) NOT NULL,
     temperatura_almacenamiento DOUBLE,
     fecha_liberacion DATE,
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS motivos_movimiento (
 CREATE TABLE IF NOT EXISTS ajustes_inventario (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     fecha DATETIME NOT NULL,
-    cantidad DECIMAL(10,2) NOT NULL,
+    cantidad DECIMAL(10,3) NOT NULL,
     motivo VARCHAR(100) NOT NULL,
     observaciones VARCHAR(255),
     productos_id BIGINT NOT NULL,
@@ -161,7 +161,7 @@ ALTER TABLE ajustes_inventario
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS movimientos_inventario (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    cantidad DECIMAL(10,2) NOT NULL,
+    cantidad DECIMAL(10,3) NOT NULL,
     tipo_mov VARCHAR(50) NOT NULL,
     doc_referencia VARCHAR(100),
     fecha_ingreso TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -184,5 +184,97 @@ CREATE TABLE IF NOT EXISTS movimientos_inventario (
     FOREIGN KEY (tipos_movimiento_detalle_id) REFERENCES tipos_movimiento_detalle(id),
     FOREIGN KEY (registrado_por_id) REFERENCES usuarios(id)
 );
+
+-- -----------------------------------------------------
+-- Tabla: formula_producto
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS formula_producto (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    producto_id INT NOT NULL,
+    version VARCHAR(50) NOT NULL,
+    estado ENUM('BORRADOR','EN_REVISION','APROBADA','RECHAZADA') DEFAULT 'BORRADOR',
+    fecha_creacion DATETIME NOT NULL,
+    creado_por_id INT NOT NULL,
+    FOREIGN KEY (producto_id) REFERENCES productos(id),
+    FOREIGN KEY (creado_por_id) REFERENCES usuarios(id)
+);
+
+-- -----------------------------------------------------
+-- Tabla: detalle_fórmula
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS detalle_formula (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    formula_id INT NOT NULL,
+    insumo_id INT NOT NULL,
+    cantidad_necesaria DECIMAL(10,3) NOT NULL,
+    unidad_medida_id INT NOT NULL,
+    obligatorio TINYINT DEFAULT 1,
+    FOREIGN KEY (formula_id) REFERENCES formula_producto(id),
+    FOREIGN KEY (insumo_id) REFERENCES productos(id),
+    FOREIGN KEY (unidad_medida_id) REFERENCES unidades_medida(id)
+);
+
+
+-- -----------------------------------------------------
+-- Tabla: orden_produccion
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS orden_produccion (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    lote_produccion VARCHAR(50) NOT NULL UNIQUE,
+    producto_id INT NOT NULL,
+    responsable_id INT NOT NULL,
+    fecha_inicio DATETIME NOT NULL,
+    fecha_fin DATETIME,
+    cantidad_programada INT NOT NULL,
+    cantidad_producida INT DEFAULT 0,
+    estado ENUM('EN_PROCESO','FINALIZADA','CANCELADA') DEFAULT 'EN_PROCESO',
+    FOREIGN KEY (producto_id) REFERENCES productos(id),
+    FOREIGN KEY (responsable_id) REFERENCES usuarios(id)
+);
+
+-- -----------------------------------------------------
+-- Tabla: etapa_produccion
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS etapa_produccion (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre_etapa VARCHAR(100) NOT NULL UNIQUE,
+    secuencia INT NOT NULL,
+    orden_produccion_id INT NOT NULL,
+    FOREIGN KEY (orden_produccion_id) REFERENCES orden_produccion(id)
+);
+
+-- -----------------------------------------------------
+-- Tabla: detalle_etapa
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS detalle_etapa (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    orden_produccion_id INT NOT NULL,
+    etapa_id INT NOT NULL,
+    fecha_inicio DATETIME NOT NULL,
+    fecha_fin DATETIME,
+    observaciones TEXT,
+    usuario_id INT,
+    FOREIGN KEY (orden_produccion_id) REFERENCES orden_produccion(id),
+    FOREIGN KEY (etapa_id) REFERENCES etapa_produccion(id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- -----------------------------------------------------
+-- Tabla: control_calidad_proceso
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS control_calidad_proceso (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    detalle_etapa_id INT NOT NULL,
+    parametro VARCHAR(100) NOT NULL,
+    valor_medido VARCHAR(100) NOT NULL,
+    cumple TINYINT DEFAULT 0,
+    evaluado_por_id INT NOT NULL,
+    FOREIGN KEY (detalle_etapa_id) REFERENCES detalle_etapa(id),
+    FOREIGN KEY (evaluado_por_id) REFERENCES usuarios(id)
+);
+
+
+
+
 
 

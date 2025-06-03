@@ -21,6 +21,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -80,9 +82,9 @@ class ProductoControllerTest {
         producto1.setDescripcionProducto("Desc 1");
         producto1.setUnidadMedidaId(unidadId);
         producto1.setCategoriaProductoId(categoriaId);
-        producto1.setStockActual(100);
-        producto1.setStockMinimo(20);
-        producto1.setStockMinimoProveedor(50);
+        producto1.setStockActual(BigDecimal.valueOf(100));
+        producto1.setStockMinimo(BigDecimal.valueOf(20));
+        producto1.setStockMinimoProveedor(BigDecimal.valueOf(50));
         producto1.setActivo(true);
         producto1.setRequiereInspeccion(false);
         producto1.setUsuarioId(usuarioId);
@@ -98,9 +100,9 @@ class ProductoControllerTest {
         producto2.setDescripcionProducto("Otro");
         producto2.setUnidadMedidaId(unidadId);
         producto2.setCategoriaProductoId(categoriaId);
-        producto2.setStockActual(30);
-        producto2.setStockMinimo(5);
-        producto2.setStockMinimoProveedor(10);
+        producto2.setStockActual(BigDecimal.valueOf(30));
+        producto2.setStockMinimo(BigDecimal.valueOf(5));
+        producto2.setStockMinimoProveedor(BigDecimal.valueOf(10));
         producto2.setActivo(true);
         producto2.setRequiereInspeccion(false);
         producto2.setUsuarioId(usuarioId);
@@ -121,9 +123,9 @@ class ProductoControllerTest {
         producto.setDescripcionProducto("Producto con calidad");
         producto.setUnidadMedidaId(unidadId);
         producto.setCategoriaProductoId(categoriaId);
-        producto.setStockActual(50);
-        producto.setStockMinimo(10);
-        producto.setStockMinimoProveedor(20);
+        producto.setStockActual(BigDecimal.valueOf(50));
+        producto.setStockMinimo(BigDecimal.valueOf(10));
+        producto.setStockMinimoProveedor(BigDecimal.valueOf(20));
         producto.setActivo(true);
         producto.setRequiereInspeccion(true);
         producto.setUsuarioId(usuarioId);

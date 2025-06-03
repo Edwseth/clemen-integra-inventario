@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.dto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -15,8 +16,8 @@ public class ProductoResponseDTO {
     private String codigoSku;
     private String nombre;
     private String descripcionProducto;
-    private Integer stockActual;
-    private Integer stockMinimo;
+    private BigDecimal stockActual;
+    private BigDecimal stockMinimo;
     private Boolean activo;
     private Boolean requiereInspeccion;
     private String unidadMedida;

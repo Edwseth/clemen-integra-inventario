@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.bom.model.*;
 import com.willyes.clemenintegra.bom.model.enums.*;
 import com.willyes.clemenintegra.inventario.model.*;
 
+import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
 public class BomMapper {
@@ -40,7 +41,7 @@ public class BomMapper {
         return DetalleFormula.builder()
                 .formula(formula)
                 .insumo(insumo)
-                .cantidadNecesaria(dto.cantidadNecesaria)
+                .cantidadNecesaria(BigDecimal.valueOf(dto.cantidadNecesaria))
                 .unidadMedida(unidad)
                 .obligatorio(dto.obligatorio)
                 .build();
@@ -50,7 +51,7 @@ public class BomMapper {
         DetalleFormulaResponse dto = new DetalleFormulaResponse();
         dto.id = entidad.getId();
         dto.insumoNombre = entidad.getInsumo() != null ? entidad.getInsumo().getNombre() : null;
-        dto.cantidadNecesaria = entidad.getCantidadNecesaria();
+        dto.cantidadNecesaria = entidad.getCantidadNecesaria().doubleValue();
         dto.unidad = entidad.getUnidadMedida() != null ? entidad.getUnidadMedida().getSimbolo() : null;
         dto.obligatorio = entidad.getObligatorio();
         return dto;

@@ -5,6 +5,8 @@ import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Getter
 @Setter
@@ -29,7 +31,7 @@ public class DetalleFormula {
     private UnidadMedida unidadMedida;
 
     @Column(name = "cantidad_necesaria")
-    private Double cantidadNecesaria;
+    private BigDecimal cantidadNecesaria;
 
     private Boolean obligatorio;
 }

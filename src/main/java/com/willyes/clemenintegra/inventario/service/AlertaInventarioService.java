@@ -29,7 +29,7 @@ public class AlertaInventarioService {
     }
 
     private boolean tieneStockPorDebajoDelMinimo(Producto producto) {
-        return producto.getStockActual() < producto.getStockMinimo();
+        return producto.getStockActual().compareTo(producto.getStockMinimo()) < 0;
     }
 
     private ProductoAlertaResponseDTO mapToResponse(Producto producto) {

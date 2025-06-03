@@ -2,6 +2,8 @@ package com.willyes.clemenintegra.inventario.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -9,6 +11,6 @@ import lombok.*;
 public class ProductoAlertaResponseDTO {
     private Long productoId;
     private String nombreProducto;
-    private int stockActual;
-    private int stockMinimo;
+    private BigDecimal stockActual;
+    private BigDecimal stockMinimo;
 }

@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -33,13 +34,13 @@ public class Producto {
     private String descripcionProducto;
 
     @Column(name = "stock_actual", nullable = false)
-    private Integer stockActual = 0;
+    private BigDecimal stockActual = BigDecimal.ZERO;
 
     @Column(name = "stock_minimo", nullable = false)
-    private Integer stockMinimo = 0;
+    private BigDecimal stockMinimo = BigDecimal.ZERO;
 
     @Column(name = "stock_minimo_proveedor")
-    private Integer stockMinimoProveedor;
+    private BigDecimal stockMinimoProveedor;
 
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;

@@ -199,8 +199,8 @@ class MovimientoInventarioControllerUnitTest {
         producto.setNombre("Producto de prueba");
         producto.setUnidadMedida(unidadMedidaRepository.findById(1L).orElseThrow());
         producto.setCategoriaProducto(categoriaProductoRepository.findById(1L).orElseThrow());
-        producto.setStockActual(5);
-        producto.setStockMinimo(2);
+        producto.setStockActual(BigDecimal.valueOf(5));
+        producto.setStockMinimo(BigDecimal.valueOf(2));
         producto.setActivo(true);
         producto.setRequiereInspeccion(false);
         producto.setCreadoPor(usuario);

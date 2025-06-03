@@ -3,6 +3,8 @@ package com.willyes.clemenintegra.inventario.dto;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,12 +24,12 @@ public class ProductoRequestDTO {
     private String descripcionProducto;
 
     @NotNull
-    private Integer stockActual;
+    private BigDecimal stockActual;
 
     @NotNull
-    private Integer stockMinimo;
+    private BigDecimal stockMinimo;
 
-    private Integer stockMinimoProveedor;
+    private BigDecimal stockMinimoProveedor;
 
     private Boolean activo = true;
 
