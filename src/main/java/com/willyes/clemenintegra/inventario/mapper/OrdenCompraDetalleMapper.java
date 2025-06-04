@@ -5,18 +5,6 @@ import com.willyes.clemenintegra.inventario.model.*;
 
 public class OrdenCompraDetalleMapper {
 
-    public static OrdenCompraDetalle toEntity(OrdenCompraDetalleRequest dto, OrdenCompra orden, Producto producto) {
-        return OrdenCompraDetalle.builder()
-                .cantidad(dto.cantidad)
-                .valorUnitario(dto.valorUnitario)
-                .valorTotal(dto.valorTotal)
-                .iva(dto.iva)
-                .cantidadRecibida(dto.cantidadRecibida)
-                .ordenCompra(orden)
-                .producto(producto)
-                .build();
-    }
-
     public static OrdenCompraDetalleResponse toResponse(OrdenCompraDetalle entity) {
         OrdenCompraDetalleResponse dto = new OrdenCompraDetalleResponse();
         dto.id = entity.getId();

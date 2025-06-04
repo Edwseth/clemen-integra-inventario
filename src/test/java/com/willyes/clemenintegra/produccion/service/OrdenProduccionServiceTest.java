@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -67,5 +68,36 @@ class OrdenProduccionServiceTest {
 
         assertThat(agua.getStockActual()).isEqualByComparingTo(new BigDecimal("43.867")); // 300 - 256.133
     }
+
+    @Test
+    void guardarConInsumoInsuficiente_debeFallar() {
+        // 1. Configurar insumo con stock muy bajo
+        Producto agua = productoRepository.findByCodigoSku("PV000")
+                .orElseThrow(() -> new RuntimeException("Insumo Agua no encontrado"));
+        agua.setStockActual(new BigDecimal("10")); // Muy por debajo de los 256.133 necesarios
+        productoRepository.save(agua);
+
+        // 2. Buscar producto final y usuario
+        Producto productoFinal = productoRepository.findByCodigoSku("SKU-BEBIDA-001")
+                .orElseThrow(() -> new RuntimeException("Producto final no encontrado"));
+
+        Usuario responsable = usuarioRepository.findByNombreUsuario("testuser")
+                .orElseThrow(() -> new RuntimeException("Usuario responsable no encontrado"));
+
+        // 3. Construir orden de producción con fórmula ya aprobada
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .producto(productoFinal)
+                .responsable(responsable)
+                .cantidadProgramada(300)
+                .fechaInicio(LocalDateTime.now())
+                .loteProduccion("LOTE-INSUFICIENTE-001")
+                .build();
+
+        // 4. Ejecutar y verificar que falle
+        assertThrows(IllegalStateException.class, () -> {
+            ordenProduccionService.guardarConValidacionStock(orden);
+        });
+    }
+
 }
 

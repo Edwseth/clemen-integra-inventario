@@ -54,6 +54,17 @@ INSERT INTO ordenes_compra (
     'CREADA', CURRENT_DATE, 'Prueba orden', 1
 );
 
+-- Insertar detalle de orden de compra
+INSERT INTO orden_compra_detalle (
+    cantidad, valor_unitario, valor_total, iva, cantidad_recibida,
+    ordenes_compra_id, productos_id
+) VALUES (
+    10.0, 1000.0, 11900.0, 19.0, 5.0, -- 5.0, 1000.0, 5000.0, 19.0, 0.0,
+    1, -- ordenes_compra_id
+    1  -- productos_id (Producto Test)
+);
+
+
 -- Insertar motivo de movimiento
 INSERT INTO motivos_movimiento (
     motivo, descripcion, tipo_movimiento

@@ -1,8 +1,8 @@
 package com.willyes.clemenintegra.shared.exception;
 
+import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,12 +14,12 @@ import java.util.NoSuchElementException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleIllegalArgument(IllegalArgumentException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleIllegalState(IllegalStateException ex) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
 
@@ -36,19 +36,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleUnexpectedErrors(Exception ex) {
+    public ResponseEntity<ErrorResponseDTO> handleUnexpectedErrors(Exception ex) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor.");
     }
 
-    private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", status.value());
-        body.put("message", message);
-        return new ResponseEntity<>(body, status);
+    private ResponseEntity<ErrorResponseDTO> buildResponse(HttpStatusCode status, String message) {
+        ErrorResponseDTO error = new ErrorResponseDTO(status.value(), message);
+        return new ResponseEntity<>(error, status);
     }
 
+
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
-    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
         String mensaje = "Violación de integridad de datos.";
         if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("codigo_lote")) {
             mensaje = "Ya existe un lote con el código ingresado.";
@@ -58,13 +57,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NoSuchElementException.class)
-    public ResponseEntity<Map<String, Object>> handleNoSuchElement(NoSuchElementException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleNoSuchElement(NoSuchElementException ex) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleEntityNotFound(EntityNotFoundException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleEntityNotFound(EntityNotFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponseDTO> handleResponseStatusException(org.springframework.web.server.ResponseStatusException ex) {
+        return buildResponse(ex.getStatusCode(), ex.getReason());
     }
 
 }

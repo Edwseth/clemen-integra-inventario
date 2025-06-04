@@ -8,5 +8,7 @@ import java.util.Optional;
 public interface ProveedorRepository extends JpaRepository<Proveedor, Long> {
 
     Optional<Proveedor> findByIdentificacion(String identificacion);
+    boolean existsByIdentificacion(String identificacion);
+    boolean existsByEmail(String email);
 
 }

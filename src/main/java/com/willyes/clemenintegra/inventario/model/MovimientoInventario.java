@@ -76,6 +76,11 @@ public class MovimientoInventario {
             foreignKey = @ForeignKey(name = "fk_mov_inv_tipo_mov_detalle"))
     private TipoMovimientoDetalle tipoMovimientoDetalle;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "orden_compra_detalle_id", nullable = true,
+            foreignKey = @ForeignKey(name = "fk_movimientos_inventario_orden_compra_detalle"))
+    private OrdenCompraDetalle ordenCompraDetalle;
+
     @PrePersist
     public void prePersist() {
         if (this.fechaIngreso == null) {

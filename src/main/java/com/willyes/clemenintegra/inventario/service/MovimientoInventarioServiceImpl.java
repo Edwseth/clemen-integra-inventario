@@ -58,6 +58,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null;
         Usuario usuario = dto.usuarioId() != null
                 ? entityManager.getReference(Usuario.class, dto.usuarioId()) : null;
+        OrdenCompraDetalle ordenCompraDetalle = dto.ordenCompraDetalleId() != null
+                ? entityManager.getReference(OrdenCompraDetalle.class, dto.ordenCompraDetalleId()) : null;
 
         // Validar estado del lote
         if (lote.getEstado() == EstadoLote.EN_CUARENTENA || lote.getEstado() == EstadoLote.RETENIDO) {
@@ -68,9 +70,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new IllegalStateException("No se puede mover: el lote está vencido");
         }
 
-// Actualización de stock (usando BigDecimal)
         BigDecimal cantidad = dto.cantidad();
-        switch (dto.tipoMovimiento()) {
+        if (ordenCompraDetalle != null) {
+            BigDecimal cantidadRecibida = Optional.ofNullable(ordenCompraDetalle.getCantidadRecibida()).orElse(BigDecimal.ZERO);
+            BigDecimal cantidadSolicitada = Optional.ofNullable(ordenCompraDetalle.getCantidad()).orElse(BigDecimal.ZERO);
+            BigDecimal nuevaCantidad = cantidadRecibida.add(cantidad);
+
+            if (nuevaCantidad.compareTo(cantidadSolicitada) > 0) {
+                throw new IllegalStateException("La cantidad recibida excede la cantidad solicitada en la orden.");
+            }
+
+            ordenCompraDetalle.setCantidadRecibida(nuevaCantidad);
+            entityManager.merge(ordenCompraDetalle); // Actualizar cantidad recibida
+        }
+
+// Actualización de stock (usando BigDecimal)
+            switch (dto.tipoMovimiento()) {
             case ENTRADA_PRODUCCION, RECEPCION_COMPRA, AJUSTE_POSITIVO -> {
                 producto.setStockActual(
                         Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad)
@@ -101,6 +116,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setAlmacen(almacen);
         movimiento.setProveedor(proveedor);
         movimiento.setOrdenCompra(ordenCompra);
+        movimiento.setOrdenCompraDetalle(ordenCompraDetalle);
         movimiento.setMotivoMovimiento(motivo);
         movimiento.setTipoMovimientoDetalle(detalle);
         movimiento.setRegistradoPor(usuario);
@@ -110,7 +126,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         return MovimientoInventarioMapper.toDTO(guardado);
     }
-
 
     @Override
     public Page<MovimientoInventario> consultarMovimientosConFiltros(

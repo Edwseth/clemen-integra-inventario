@@ -16,6 +16,7 @@ public class MovimientoInventarioMapper {
 
     public static MovimientoInventarioDTO toDTO(MovimientoInventario movimiento) {
         return new MovimientoInventarioDTO(
+                movimiento.getId(),
                 movimiento.getCantidad(),
                 movimiento.getTipoMovimiento(),
                 movimiento.getDocReferencia(),
@@ -26,7 +27,8 @@ public class MovimientoInventarioMapper {
                 movimiento.getOrdenCompra() != null ? movimiento.getOrdenCompra().getId() : null,
                 movimiento.getMotivoMovimiento().getId(),
                 movimiento.getTipoMovimientoDetalle().getId(),
-                movimiento.getRegistradoPor().getId()
+                movimiento.getRegistradoPor().getId(),
+                movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null
         );
     }
 }

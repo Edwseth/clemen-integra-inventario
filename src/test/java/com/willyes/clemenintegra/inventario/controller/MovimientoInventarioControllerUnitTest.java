@@ -36,51 +36,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(com.willyes.clemenintegra.inventario.config.TestSecurityConfig.class)
 class MovimientoInventarioControllerUnitTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
-    private MovimientoInventarioService movimientoInventarioService;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private ProductoRepository productoRepository;
-
-    @Autowired
-    private UnidadMedidaRepository unidadMedidaRepository;
-
-    @Autowired
-    private CategoriaProductoRepository categoriaProductoRepository;
-
-    @Autowired
-    private AlmacenRepository almacenRepository;
-
-    @Autowired
-    private LoteProductoRepository loteProductoRepository;
-
-    @Autowired
-    private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
-
-    @Autowired
-    private ProveedorRepository proveedorRepository;
-
-    @Autowired
-    private OrdenCompraRepository ordenCompraRepository;
-
-    @Autowired
-    private MotivoMovimientoRepository motivoMovimientoRepository;
-
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private EntityManager entityManager;
+    @Autowired private MockMvc mockMvc;
+    @MockBean private MovimientoInventarioService movimientoInventarioService;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private ProductoRepository productoRepository;
+    @Autowired private UnidadMedidaRepository unidadMedidaRepository;
+    @Autowired private CategoriaProductoRepository categoriaProductoRepository;
+    @Autowired private AlmacenRepository almacenRepository;
+    @Autowired private LoteProductoRepository loteProductoRepository;
+    @Autowired private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
+    @Autowired private ProveedorRepository proveedorRepository;
+    @Autowired private OrdenCompraRepository ordenCompraRepository;
+    @Autowired private MotivoMovimientoRepository motivoMovimientoRepository;
+    @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private EntityManager entityManager;
+    @Autowired private OrdenCompraDetalleRepository ordenCompraDetalleRepository;
 
     @Test
     void registrarMovimiento_DeberiaRetornar201() throws Exception {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(10.5),                            // 1) cantidad
                 ClasificacionMovimientoInventario.RECEPCION_COMPRA,  // 2) tipoMovimiento (enum correcto)
                 "DOC-456",                                           // 3) docReferencia
@@ -91,7 +66,8 @@ class MovimientoInventarioControllerUnitTest {
                 1L, // 8) ordenCompraId
                 1L, // 9) motivoMovimientoId
                 1L, // 10) tipoMovimientoDetalleId
-                1L  // 11) usuarioRegistroId
+                1L, // 11) usuarioRegistroId
+                1L  // 12) ordenCompraDetalleId
         );
 
 
@@ -109,11 +85,13 @@ class MovimientoInventarioControllerUnitTest {
     @Test
     void registrarMovimiento_ProductoInexistente_DeberiaRetornar404() throws Exception {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(5),
                 ClasificacionMovimientoInventario.RECEPCION_COMPRA,
                 "DOC-404",
                 999L, // producto inexistente
-                1L, 1L, 1L, 1L, 1L, 1L, 1L
+                1L, 1L, 1L, 1L, 1L,
+                1L, 1L,1L
         );
 
         Mockito.when(movimientoInventarioService.registrarMovimiento(Mockito.any()))
@@ -131,10 +109,12 @@ class MovimientoInventarioControllerUnitTest {
     @Test
     void registrarMovimiento_CantidadInvalida_DeberiaRetornar400() throws Exception {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(0), // ❌ Cantidad inválida
                 ClasificacionMovimientoInventario.RECEPCION_COMPRA,
                 "DOC-VAL-001",
-                1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L
+                1L, 1L, 1L, 1L, 1L, 1L,
+                1L, 1L, 1L
         );
 
         mockMvc.perform(post("/api/movimientos")
@@ -148,10 +128,12 @@ class MovimientoInventarioControllerUnitTest {
     @Test
     void registrarMovimiento_LoteInexistente_DeberiaRetornar404() throws Exception {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(5),
                 ClasificacionMovimientoInventario.RECEPCION_COMPRA,
                 "DOC-LOTE-404",
-                1L, 999L, 1L, 1L, 1L, 1L, 1L, 1L
+                1L, 999L, 1L, 1L, 1L, 1L,
+                1L, 1L, 1L
         );
 
         Mockito.when(movimientoInventarioService.registrarMovimiento(Mockito.any()))
@@ -167,10 +149,12 @@ class MovimientoInventarioControllerUnitTest {
     @Test
     void registrarMovimiento_CodigoLoteDuplicado_DeberiaRetornar409() throws Exception {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(10),
                 ClasificacionMovimientoInventario.RECEPCION_COMPRA,
                 "DOC-DUP",
-                1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L
+                1L, 1L, 1L, 1L, 1L, 1L,
+                1L, 1L, 1L
         );
 
         Mockito.when(movimientoInventarioService.registrarMovimiento(Mockito.any()))
@@ -253,9 +237,13 @@ class MovimientoInventarioControllerUnitTest {
         // 4) Ya existe en data.sql el motivo con ID=1 para RECEPCION_COMPRA
         MotivoMovimiento motivoMovimiento = motivoMovimientoRepository.findById(1L)
                 .orElseThrow(() -> new AssertionError("Se esperaba motivo con ID=1"));
+        OrdenCompraDetalle ordenCompraDetalle = ordenCompraDetalleRepository.findById(1L)
+                .orElseThrow(() -> new IllegalStateException("Detalle de orden de compra no encontrado"));
+
 
         // 5) Construye el DTO usando ese motivo
         MovimientoInventarioDTO request = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(10),
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "PRUEBA-STOCK",
@@ -266,7 +254,8 @@ class MovimientoInventarioControllerUnitTest {
                 ordenCompra.getId(),
                 motivoMovimiento.getId(), // == 1L
                 detalle.getId(),
-                usuario.getId()
+                usuario.getId(),
+                ordenCompraDetalle.getId()
         );
 
         // 6) Ejecuta y espera conflicto por stock insuficiente

@@ -25,6 +25,7 @@ import static com.willyes.clemenintegra.util.TestUtil.asJsonString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -45,11 +46,15 @@ class MovimientoInventarioControllerTest {
     @Autowired private MotivoMovimientoRepository motivoMovimientoRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private EntityManager entityManager;
+    @Autowired private OrdenCompraDetalleRepository ordenCompraDetalleRepository;
 
     private Producto prepararProductoConEntrada() throws Exception {
         Usuario usuario = usuarioRepository.findById(1L).orElseThrow();
         UnidadMedida unidad = unidadMedidaRepository.findById(1L).orElseThrow();
         CategoriaProducto categoria = categoriaProductoRepository.findById(1L).orElseThrow();
+        OrdenCompraDetalle ordenCompraDetalle = ordenCompraDetalleRepository.findById(1L)
+                .orElseThrow(() -> new IllegalStateException("Detalle de orden de compra no encontrado"));
+
 
         Producto producto = Producto.builder()
                 .codigoSku("PRD-IN-001")
@@ -99,6 +104,7 @@ class MovimientoInventarioControllerTest {
         );
 
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(10),
                 ClasificacionMovimientoInventario.ENTRADA_PRODUCCION,
                 "DOC-ENTRADA",
@@ -109,7 +115,8 @@ class MovimientoInventarioControllerTest {
                 orden.getId(),
                 motivo.getId(),
                 detalle.getId(),
-                usuario.getId()
+                usuario.getId(),
+                ordenCompraDetalle.getId()
         );
 
         mockMvc.perform(post("/api/movimientos")
@@ -235,7 +242,10 @@ class MovimientoInventarioControllerTest {
     }
 
     private MovimientoInventarioDTO buildSalidaDTO(Producto producto, LoteProducto lote, Almacen almacen, Usuario usuario) {
+        OrdenCompraDetalle ordenCompraDetalle = ordenCompraDetalleRepository.findById(1L)
+                .orElseThrow(() -> new IllegalStateException("Detalle de orden de compra no encontrado"));
         return new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(2),
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-PRUEBA-" + System.currentTimeMillis(),
@@ -246,9 +256,66 @@ class MovimientoInventarioControllerTest {
                 1L,
                 1L,
                 1L,
-                usuario.getId()
+                usuario.getId(),
+                ordenCompraDetalle.getId()
         );
     }
+
+    @Test
+    void registrarMovimientoAsociadoAOrdenCompraYDetalle_debeRetornarCreated() throws Exception {
+        String payload = """
+    {
+      "productoId": 1,
+      "loteProductoId": 1,
+      "almacenId": 1,
+      "proveedorId": 1,
+      "ordenCompraId": 1,
+      "motivoMovimientoId": 1,
+      "tipoMovimientoDetalleId": 1,
+      "usuarioId": 1,
+      "cantidad": 5.0,
+      "tipoMovimiento": "RECEPCION_COMPRA",
+      "docReferencia": "OC-001",
+      "ordenCompraDetalleId": 1
+    }
+    """;
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists());
+    }
+
+    @Test
+    @Transactional
+    void registrarMovimientoQueExcedeCantidadSolicitada_DebeFallar() throws Exception {
+        String payload = """
+    {
+      "productoId": 1,
+      "loteProductoId": 1,
+      "almacenId": 1,
+      "proveedorId": 1,
+      "ordenCompraId": 1,
+      "ordenCompraDetalleId": 1,
+      "motivoMovimientoId": 1,
+      "tipoMovimientoDetalleId": 1,
+      "usuarioId": 1,
+      "cantidad": 9999.0,
+      "tipoMovimiento": "RECEPCION_COMPRA",
+      "docReferencia": "OC-EXCESO"
+    }
+    """;
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("La cantidad recibida excede la cantidad solicitada en la orden."));
+    }
+
 }
 
 

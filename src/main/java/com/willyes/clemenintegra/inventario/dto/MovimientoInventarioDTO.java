@@ -5,6 +5,8 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 
 public record MovimientoInventarioDTO(
+        Long id,
+
         @NotNull(message = "La cantidad es obligatoria")
         @Positive(message = "La cantidad debe ser mayor a cero")
         BigDecimal cantidad,
@@ -36,7 +38,10 @@ public record MovimientoInventarioDTO(
         Long tipoMovimientoDetalleId, // ✅ CORREGIDO
 
         @NotNull(message = "El usuario es obligatorio")
-        Long usuarioId
+        Long usuarioId,
+
+        @NotNull(message = "El detalle de la orden de compra es obligatorio")
+        Long ordenCompraDetalleId
 ) { }
 
 

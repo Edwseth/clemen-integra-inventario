@@ -114,7 +114,6 @@ class ProductoControllerTest {
                 .andExpect(status().isConflict());
     }
 
-
     @Test
     void crearProducto_RequiereInspeccion_True_RetornaCreated() throws Exception {
         ProductoRequestDTO producto = new ProductoRequestDTO();

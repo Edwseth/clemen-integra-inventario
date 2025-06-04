@@ -53,6 +53,49 @@ CREATE TABLE IF NOT EXISTS productos (
 );
 
 -- -----------------------------------------------------
+-- Tabla: proveedores
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS proveedores (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    proveedor VARCHAR(255) NOT NULL UNIQUE,
+    nit_cedula VARCHAR(255) NOT NULL UNIQUE,
+    direccion VARCHAR(255) NOT NULL,
+    telefono_contacto VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    pagina_web VARCHAR(255),
+    nombre_contacto VARCHAR(255),
+    activo BOOLEAN NOT NULL
+);
+
+-- -----------------------------------------------------
+-- Tabla: ordenes_compra
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ordenes_compra (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    estado VARCHAR(50) NOT NULL,
+    fecha_orden DATE NOT NULL,
+    observaciones VARCHAR(255),
+    proveedor_id BIGINT NOT NULL,
+    FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
+);
+
+-- -----------------------------------------------------
+-- Tabla: orden_compra_detalle
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS orden_compra_detalle (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    cantidad DECIMAL(10,3),
+    valor_unitario DECIMAL(10,3),
+    valor_total DECIMAL(12,3),
+    iva DECIMAL(5,3),
+    cantidad_recibida DECIMAL(10,3),
+    ordenes_compra_id INT NOT NULL,
+    productos_id INT NOT NULL,
+    FOREIGN KEY (ordenes_compra_id) REFERENCES ordenes_compra(id),
+    FOREIGN KEY (productos_id) REFERENCES productos(id)
+);
+
+-- -----------------------------------------------------
 -- Tabla: almacenes
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS almacenes (
@@ -90,33 +133,6 @@ CREATE TABLE IF NOT EXISTS lotes_productos (
 CREATE TABLE IF NOT EXISTS tipos_movimiento_detalle (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     descripcion VARCHAR(100) NOT NULL UNIQUE
-);
-
--- -----------------------------------------------------
--- Tabla: proveedores
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS proveedores (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    proveedor VARCHAR(255) NOT NULL UNIQUE,
-    nit_cedula VARCHAR(255) NOT NULL UNIQUE,
-    direccion VARCHAR(255) NOT NULL,
-    telefono_contacto VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    pagina_web VARCHAR(255),
-    nombre_contacto VARCHAR(255),
-    activo BOOLEAN NOT NULL
-);
-
--- -----------------------------------------------------
--- Tabla: ordenes_compra
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS ordenes_compra (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    estado VARCHAR(50) NOT NULL,
-    fecha_orden DATE NOT NULL,
-    observaciones VARCHAR(255),
-    proveedor_id BIGINT NOT NULL,
-    FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
 );
 
 -- -----------------------------------------------------
@@ -159,30 +175,31 @@ ALTER TABLE ajustes_inventario
 -- -----------------------------------------------------
 -- Tabla: movimientos_inventario
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS movimientos_inventario (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE movimientos_inventario (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     cantidad DECIMAL(10,3) NOT NULL,
-    tipo_mov VARCHAR(50) NOT NULL,
-    doc_referencia VARCHAR(100),
-    fecha_ingreso TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    tipo_mov ENUM('RECEPCION_COMPRA','RECEPCION_DEVOLUCION_CLIENTE','AJUSTE_POSITIVO','AJUSTE_NEGATIVO','SALIDA_PRODUCCION','ENTRADA_PRODUCCION','TRANSFERENCIA_ENTRADA','TRANSFERENCIA_SALIDA','DEVOLUCION_PROVEEDOR','SALIDA_MUESTRA','SALIDA_OBSOLETO','SALIDA_DONACION') NOT NULL,
+    tipos_movimiento_detalle_id INT NOT NULL,
+    fecha_ingreso DATETIME NOT NULL,
+    doc_referencia VARCHAR(45),
+    registrado_por_id INT NOT NULL,
+    productos_id INT NOT NULL,
+    lotes_productos_id INT NOT NULL,
+    almacenes_id INT NOT NULL,
+    proveedores_id INT NOT NULL,
+    ordenes_compra_id INT NOT NULL,
+    motivos_movimiento_id INT NOT NULL,
+    orden_compra_detalle_id INT,
 
-    productos_id BIGINT NOT NULL,
-    lotes_productos_id BIGINT NOT NULL,
-    almacenes_id BIGINT NOT NULL,
-    proveedores_id BIGINT NOT NULL,
-    ordenes_compra_id BIGINT NOT NULL,
-    motivos_movimiento_id BIGINT NOT NULL,
-    tipos_movimiento_detalle_id BIGINT NOT NULL,
-    registrado_por_id BIGINT NOT NULL,
-
-    FOREIGN KEY (productos_id) REFERENCES productos(id),
-    FOREIGN KEY (lotes_productos_id) REFERENCES lotes_productos(id),
-    FOREIGN KEY (almacenes_id) REFERENCES almacenes(id),
-    FOREIGN KEY (proveedores_id) REFERENCES proveedores(id),
-    FOREIGN KEY (ordenes_compra_id) REFERENCES ordenes_compra(id),
-    FOREIGN KEY (motivos_movimiento_id) REFERENCES motivos_movimiento(id),
-    FOREIGN KEY (tipos_movimiento_detalle_id) REFERENCES tipos_movimiento_detalle(id),
-    FOREIGN KEY (registrado_por_id) REFERENCES usuarios(id)
+    CONSTRAINT fk_movimientos_inventario_tipo_mov_detalle FOREIGN KEY (tipos_movimiento_detalle_id) REFERENCES tipos_movimiento_detalle(id),
+    CONSTRAINT fk_movimientos_inventario_productos FOREIGN KEY (productos_id) REFERENCES productos(id),
+    CONSTRAINT fk_movimientos_inventario_lotes FOREIGN KEY (lotes_productos_id) REFERENCES lotes_productos(id),
+    CONSTRAINT fk_movimientos_inventario_almacenes FOREIGN KEY (almacenes_id) REFERENCES almacenes(id),
+    CONSTRAINT fk_movimientos_inventario_proveedores FOREIGN KEY (proveedores_id) REFERENCES proveedores(id),
+    CONSTRAINT fk_movimientos_inventario_ordenes FOREIGN KEY (ordenes_compra_id) REFERENCES ordenes_compra(id),
+    CONSTRAINT fk_movimientos_inventario_motivos FOREIGN KEY (motivos_movimiento_id) REFERENCES motivos_movimiento(id),
+    CONSTRAINT fk_movimientos_inventario_orden_compra_detalle FOREIGN KEY (orden_compra_detalle_id) REFERENCES orden_compra_detalle(id),
+    CONSTRAINT fk_movimientos_inventario_usuario FOREIGN KEY (registrado_por_id) REFERENCES usuarios(id)
 );
 
 -- -----------------------------------------------------
@@ -213,7 +230,6 @@ CREATE TABLE IF NOT EXISTS detalle_formula (
     FOREIGN KEY (insumo_id) REFERENCES productos(id),
     FOREIGN KEY (unidad_medida_id) REFERENCES unidades_medida(id)
 );
-
 
 -- -----------------------------------------------------
 -- Tabla: orden_produccion
@@ -273,7 +289,16 @@ CREATE TABLE IF NOT EXISTS control_calidad_proceso (
     FOREIGN KEY (evaluado_por_id) REFERENCES usuarios(id)
 );
 
-
+-- -----------------------------------------------------
+-- Tabla: documento_fórmula
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS documento_formula (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    formula_id BIGINT NOT NULL,
+    tipo_documento VARCHAR(50) NOT NULL CHECK (tipo_documento IN ('MSDS', 'INSTRUCTIVO', 'PROCEDIMIENTO')),
+    ruta_archivo VARCHAR(255) NOT NULL,
+    CONSTRAINT fk_documento_formula_formula FOREIGN KEY (formula_id) REFERENCES formula_producto(id) ON DELETE CASCADE
+);
 
 
 

@@ -3,11 +3,16 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.mapper.OrdenCompraDetalleMapper;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraDetalleService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,6 +21,8 @@ import java.util.stream.Collectors;
 public class OrdenCompraDetalleController {
 
     @Autowired private OrdenCompraDetalleService service;
+    @Autowired private OrdenCompraRepository ordenCompraRepository;
+    @Autowired private ProductoRepository productoRepository;
 
     @GetMapping
     public List<OrdenCompraDetalleResponse> listarTodos() {
@@ -25,10 +32,26 @@ public class OrdenCompraDetalleController {
     }
 
     @PostMapping
-    public ResponseEntity<OrdenCompraDetalleResponse> crear(@RequestBody OrdenCompraDetalleRequest request) {
-        OrdenCompra orden = new OrdenCompra(); orden.setId(request.ordenCompraId);
-        Producto producto = new Producto(); producto.setId(request.productoId);
-        OrdenCompraDetalle entidad = OrdenCompraDetalleMapper.toEntity(request, orden, producto);
+    public ResponseEntity<OrdenCompraDetalleResponse> crear(@RequestBody OrdenCompraDetalleRequestDTO request) {
+        OrdenCompra orden = ordenCompraRepository.findById(request.getOrdenCompraId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Orden de compra no encontrada"));
+
+        Producto producto = productoRepository.findById(request.getProductoId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Producto no encontrado"));
+
+        BigDecimal valorTotal = request.getValorUnitario().multiply(request.getCantidad());
+        BigDecimal cantidadRecibida = BigDecimal.ZERO;
+
+        OrdenCompraDetalle entidad = OrdenCompraDetalle.builder()
+                .cantidad(request.getCantidad())
+                .valorUnitario(request.getValorUnitario())
+                .valorTotal(valorTotal)
+                .iva(request.getIva())
+                .cantidadRecibida(cantidadRecibida)
+                .ordenCompra(orden)
+                .producto(producto)
+                .build();
+
         return ResponseEntity.ok(OrdenCompraDetalleMapper.toResponse(service.guardar(entidad)));
     }
 
@@ -46,4 +69,5 @@ public class OrdenCompraDetalleController {
         return ResponseEntity.noContent().build();
     }
 }
+
 

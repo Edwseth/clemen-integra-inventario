@@ -40,10 +40,12 @@ class MovimientoInventarioServiceTest {
     void registrarMovimiento_DeberiaGuardarMovimientoCorrectamente() {
         // Arrange
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.valueOf(10),
                 ClasificacionMovimientoInventario.ENTRADA_PRODUCCION,
                 "DOC-REF-001",
-                1L,1L,1L,1L,1L,1L,1L, 1L
+                1L,1L,1L,1L,1L,1L,
+                1L, 1L, 1L
         );
 
         // Entidades
@@ -88,10 +90,12 @@ class MovimientoInventarioServiceTest {
     @Test
     void registrarMovimiento_DeberiaLanzarExceptionCuandoProductoNoExiste() {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.ONE,                                      // 1) cantidad
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,// 2) tipoMovimiento
                 "DOC-REF-002",                                       // 3) docReferencia
-                999L,1L,1L,1L,1L,1L,1L, 1L
+                999L,1L,1L,1L,1L,1L,
+                1L, 1L, 1L
         );
 
         when(productoRepository.findById(999L)).thenReturn(Optional.empty());
@@ -104,10 +108,12 @@ class MovimientoInventarioServiceTest {
     @Test
     void registrarMovimiento_DeberiaLanzarExcepcionPorInconsistenciaTipoYDetalle() {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
                 BigDecimal.ONE,                                     // cantidad
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION, // tipoMovimiento
                 "DOC-REF-003",                                       // docReferencia
-                1L,1L,1L,1L,1L,1L,1L,1L
+                1L,1L,1L,1L,1L,1L,
+                1L,1L, 1L
         );
 
         // Stub repos antes de validación

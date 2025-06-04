@@ -18,19 +18,19 @@ public class OrdenCompraDetalle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 10, scale = 3)
     private BigDecimal cantidad;
 
-    @Column(name = "valor_unitario", nullable = false, precision = 10, scale = 2)
+    @Column(name = "valor_unitario", nullable = false, precision = 10, scale = 3)
     private BigDecimal valorUnitario;
 
-    @Column(name = "valor_total", nullable = false, precision = 12, scale = 2)
+    @Column(name = "valor_total", nullable = false, precision = 12, scale = 3)
     private BigDecimal valorTotal;
 
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal iva;
 
-    @Column(name = "cantidad_recibida", nullable = false, precision = 10, scale = 2)
+    @Column(name = "cantidad_recibida", nullable = false, precision = 10, scale = 3)
     private BigDecimal cantidadRecibida;
 
     @ManyToOne(optional = false)
