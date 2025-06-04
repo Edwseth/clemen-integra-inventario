@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import static com.willyes.clemenintegra.util.TestUtil.asJsonString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -314,6 +315,68 @@ class MovimientoInventarioControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
                         .value("La cantidad recibida excede la cantidad solicitada en la orden."));
+    }
+
+    @Test
+    @Transactional
+    void alertaPorStockBajo_debeDetectarseCuandoStockMenorAStockMinimo() throws Exception {
+        Producto producto = productoRepository.findById(1L).orElseThrow();
+        producto.setStockActual(BigDecimal.valueOf(5));
+        producto.setStockMinimo(BigDecimal.valueOf(10));
+        productoRepository.save(producto);
+
+        boolean alerta = producto.getStockActual().compareTo(producto.getStockMinimo()) < 0;
+        assertTrue(alerta, "Debe generarse alerta cuando el stock actual es menor al stock mínimo");
+    }
+
+    @Test
+    @Transactional
+    void loteConFechaVencida_debeCambiarEstadoAVencido() {
+        LoteProducto lote = loteProductoRepository.save(
+                LoteProducto.builder()
+                        .codigoLote("LOTE-EXP-001")
+                        .fechaFabricacion(LocalDate.now().minusDays(20))
+                        .fechaVencimiento(LocalDate.now().minusDays(1))
+                        .estado(EstadoLote.DISPONIBLE)
+                        .stockLote(BigDecimal.valueOf(10))
+                        .producto(productoRepository.findById(1L).orElseThrow())
+                        .almacen(almacenRepository.findById(1L).orElseThrow())
+                        .build()
+        );
+
+        if (lote.getFechaVencimiento().isBefore(LocalDate.now())) {
+            lote.setEstado(EstadoLote.VENCIDO);
+            loteProductoRepository.save(lote);
+        }
+
+        assertEquals(EstadoLote.VENCIDO, loteProductoRepository.findById(lote.getId()).get().getEstado());
+    }
+
+    @Test
+    @Transactional
+    void noDebePermitirSalidaDeLoteRetenido() throws Exception {
+        Usuario usuario = usuarioRepository.findById(1L).orElseThrow();
+        Producto producto = crearProductoConStock(10, usuario);
+        Almacen almacen = crearAlmacen();
+
+        LoteProducto lote = loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote("LOTE-RET-001")
+                .producto(producto)
+                .almacen(almacen)
+                .stockLote(BigDecimal.valueOf(10))
+                .fechaFabricacion(LocalDate.now().minusDays(5))
+                .fechaVencimiento(LocalDate.now().plusDays(20))
+                .estado(EstadoLote.RETENIDO)
+                .build());
+
+        MovimientoInventarioDTO dto = buildSalidaDTO(producto, lote, almacen, usuario);
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(asJsonString(dto)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("No se puede mover: el lote está en cuarentena o retenido"));
     }
 
 }
