@@ -1,7 +1,7 @@
 package com.willyes.clemenintegra.inventario.model;
 
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
-import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 

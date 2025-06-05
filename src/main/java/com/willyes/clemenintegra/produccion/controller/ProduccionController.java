@@ -1,7 +1,7 @@
 package com.willyes.clemenintegra.produccion.controller;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionSimpleMapper;
 import com.willyes.clemenintegra.produccion.model.Produccion;

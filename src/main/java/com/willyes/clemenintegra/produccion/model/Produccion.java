@@ -1,7 +1,7 @@
 package com.willyes.clemenintegra.produccion.model;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccionSimple;
 import jakarta.persistence.*;
 import lombok.*;

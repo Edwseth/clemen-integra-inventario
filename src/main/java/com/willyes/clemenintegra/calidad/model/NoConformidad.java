@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.calidad.model;
 
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.calidad.model;
 
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 

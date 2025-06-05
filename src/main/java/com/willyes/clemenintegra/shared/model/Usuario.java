@@ -1,4 +1,4 @@
-package com.willyes.clemenintegra.inventario.model;
+package com.willyes.clemenintegra.shared.model;
 
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import jakarta.persistence.*;

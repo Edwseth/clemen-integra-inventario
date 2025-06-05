@@ -5,8 +5,12 @@ import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.UsuarioRepository;
+import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.mapper.OrdenProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,9 +28,11 @@ public class OrdenProduccionService {
 
     private final FormulaProductoRepository formulaProductoRepository;
     private final ProductoRepository productoRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    @Autowired
-    private OrdenProduccionRepository repository;
+    @Autowired private OrdenProduccionRepository repository;
+    @Autowired private OrdenProduccionMapper ordenProduccionMapper;
+
 
     @Transactional
     public OrdenProduccion guardarConValidacionStock(OrdenProduccion orden) {
@@ -66,6 +72,17 @@ public class OrdenProduccionService {
         // 4. Guardar la orden
         return repository.save(orden);
     }
+
+    public OrdenProduccion crearOrden(OrdenProduccionRequestDTO dto) {
+        Producto producto = productoRepository.findById(dto.getProductoId())
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
+        Usuario responsable = usuarioRepository.findById(dto.getResponsableId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        OrdenProduccion orden = ordenProduccionMapper.toEntity(dto, producto, responsable);
+        return guardarConValidacionStock(orden);
+    }
+
 
     public List<OrdenProduccion> listarTodas() {
         return repository.findAll();

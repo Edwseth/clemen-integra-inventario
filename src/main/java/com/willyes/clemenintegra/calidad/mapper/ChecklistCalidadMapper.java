@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.calidad.mapper;
 
 import com.willyes.clemenintegra.calidad.dto.ChecklistCalidadDTO;
 import com.willyes.clemenintegra.calidad.model.ChecklistCalidad;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.stereotype.Component;
 
 @Component

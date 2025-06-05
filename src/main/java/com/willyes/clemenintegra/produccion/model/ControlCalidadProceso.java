@@ -1,6 +1,6 @@
 package com.willyes.clemenintegra.produccion.model;
 
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 

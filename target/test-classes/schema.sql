@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS orden_produccion (
     fecha_fin DATETIME,
     cantidad_programada INT NOT NULL,
     cantidad_producida INT DEFAULT 0,
-    estado ENUM('EN_PROCESO','FINALIZADA','CANCELADA') DEFAULT 'EN_PROCESO',
+    estado ENUM('CREADA','EN_PROCESO','FINALIZADA','CANCELADA') DEFAULT 'EN_PROCESO',
     FOREIGN KEY (producto_id) REFERENCES productos(id),
     FOREIGN KEY (responsable_id) REFERENCES usuarios(id)
 );

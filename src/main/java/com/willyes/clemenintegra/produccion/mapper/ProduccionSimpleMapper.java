@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.model.Produccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccionSimple;
+import com.willyes.clemenintegra.shared.model.Usuario;
 
 public class ProduccionSimpleMapper {
 

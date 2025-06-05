@@ -4,7 +4,7 @@ import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
 import com.willyes.clemenintegra.calidad.mapper.NoConformidadMapper;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.inventario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

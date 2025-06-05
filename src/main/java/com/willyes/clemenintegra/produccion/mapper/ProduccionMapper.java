@@ -1,28 +1,28 @@
 package com.willyes.clemenintegra.produccion.mapper;
 
 import com.willyes.clemenintegra.produccion.dto.*;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 
 public class ProduccionMapper {
 
-    public static OrdenProduccion toEntity(OrdenProduccionRequest dto, Producto producto, Usuario responsable) {
+    public static OrdenProduccion toEntity(OrdenProduccionRequestDTO dto, Producto producto, Usuario responsable) {
         return OrdenProduccion.builder()
-                .loteProduccion(dto.loteProduccion)
-                .fechaInicio(dto.fechaInicio)
-                .fechaFin(dto.fechaFin)
-                .cantidadProgramada(dto.cantidadProgramada)
-                .cantidadProducida(dto.cantidadProducida)
-                .estado(EstadoProduccion.valueOf(dto.estado))
+                .loteProduccion(dto.getLoteProduccion())
+                .fechaInicio(dto.getFechaInicio())
+                .fechaFin(dto.getFechaFin())
+                .cantidadProgramada(dto.getCantidadProgramada())
+                .cantidadProducida(dto.getCantidadProducida())
+                .estado(EstadoProduccion.valueOf(dto.getEstado()))
                 .producto(producto)
                 .responsable(responsable)
                 .build();
     }
 
-    public static OrdenProduccionResponse toResponse(OrdenProduccion entidad) {
-        OrdenProduccionResponse dto = new OrdenProduccionResponse();
+    public static OrdenProduccionResponseDTO toResponse(OrdenProduccion entidad) {
+        OrdenProduccionResponseDTO dto = new OrdenProduccionResponseDTO();
         dto.id = entidad.getId();
         dto.loteProduccion = entidad.getLoteProduccion();
         dto.fechaInicio = entidad.getFechaInicio();

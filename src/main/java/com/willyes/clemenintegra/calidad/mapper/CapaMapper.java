@@ -2,8 +2,7 @@ package com.willyes.clemenintegra.calidad.mapper;
 
 import com.willyes.clemenintegra.calidad.dto.CapaDTO;
 import com.willyes.clemenintegra.calidad.model.Capa;
-import com.willyes.clemenintegra.calidad.model.enums.*;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.stereotype.Component;
 
 @Component

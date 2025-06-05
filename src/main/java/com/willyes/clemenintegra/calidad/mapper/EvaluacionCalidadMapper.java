@@ -3,7 +3,7 @@ package com.willyes.clemenintegra.calidad.mapper;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDTO;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.stereotype.Component;
 
 @Component

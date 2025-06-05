@@ -1,6 +1,6 @@
 package com.willyes.clemenintegra.produccion.controller;
 
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.dto.ControlCalidadProcesoRequest;
 import com.willyes.clemenintegra.produccion.dto.ControlCalidadProcesoResponse;
 import com.willyes.clemenintegra.produccion.mapper.ControlCalidadProcesoMapper;
@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController

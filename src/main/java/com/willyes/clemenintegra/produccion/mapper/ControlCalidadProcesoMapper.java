@@ -1,6 +1,6 @@
 package com.willyes.clemenintegra.produccion.mapper;
 
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.dto.ControlCalidadProcesoRequest;
 import com.willyes.clemenintegra.produccion.dto.ControlCalidadProcesoResponse;
 import com.willyes.clemenintegra.produccion.model.ControlCalidadProceso;

@@ -1,12 +1,13 @@
 package com.willyes.clemenintegra.produccion.controller;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.Usuario;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,14 +22,14 @@ public class OrdenProduccionController {
     private OrdenProduccionService service;
 
     @GetMapping
-    public List<OrdenProduccionResponse> listarTodas() {
+    public List<OrdenProduccionResponseDTO> listarTodas() {
         return service.listarTodas().stream()
                 .map(ProduccionMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrdenProduccionResponse> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<OrdenProduccionResponseDTO> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
                 .map(ProduccionMapper::toResponse)
                 .map(ResponseEntity::ok)
@@ -36,19 +37,19 @@ public class OrdenProduccionController {
     }
 
     @PostMapping
-    public ResponseEntity<OrdenProduccionResponse> crear(@RequestBody OrdenProduccionRequest request) {
-        Producto producto = new Producto(); producto.setId(request.productoId);
-        Usuario responsable = new Usuario(); responsable.setId(request.responsableId);
+    public ResponseEntity<OrdenProduccionResponseDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {
+        Producto producto = new Producto(); producto.setId(request.getProductoId());
+        Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
         OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
-        return ResponseEntity.ok(ProduccionMapper.toResponse(service.guardarConValidacionStock(entidad)));
+        return new ResponseEntity<>(ProduccionMapper.toResponse(service.guardarConValidacionStock(entidad)), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrdenProduccionResponse> actualizar(@PathVariable Long id, @RequestBody OrdenProduccionRequest request) {
+    public ResponseEntity<OrdenProduccionResponseDTO> actualizar(@PathVariable Long id, @RequestBody OrdenProduccionRequestDTO request) {
         return service.buscarPorId(id)
                 .map(existente -> {
-                    Producto producto = new Producto(); producto.setId(request.productoId);
-                    Usuario responsable = new Usuario(); responsable.setId(request.responsableId);
+                    Producto producto = new Producto(); producto.setId(request.getProductoId());
+                    Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
                     OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
                     entidad.setId(existente.getId());
                     return ResponseEntity.ok(ProduccionMapper.toResponse(service.guardarConValidacionStock(entidad)));

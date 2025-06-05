@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.produccion.dto;
 
 import java.time.LocalDateTime;
 
-public class OrdenProduccionResponse {
+public class OrdenProduccionResponseDTO {
     public Long id;
     public String loteProduccion;
     public LocalDateTime fechaInicio;

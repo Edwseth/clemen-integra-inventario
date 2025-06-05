@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.bom.model;
 
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 
