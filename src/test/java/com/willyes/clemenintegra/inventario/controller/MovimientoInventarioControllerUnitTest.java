@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.*;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -55,22 +56,26 @@ class MovimientoInventarioControllerUnitTest {
     void registrarMovimiento_DeberiaRetornar201() throws Exception {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null,
-                BigDecimal.valueOf(10.5),                            // 1) cantidad
-                ClasificacionMovimientoInventario.RECEPCION_COMPRA,  // 2) tipoMovimiento (enum correcto)
-                "DOC-456",                                           // 3) docReferencia
-                1L, // 4) productoId
-                1L, // 5) loteProductoId
-                1L, // 6) almacenId
-                1L, // 7) proveedorId
-                1L, // 8) ordenCompraId
-                1L, // 9) motivoMovimientoId
-                1L, // 10) tipoMovimientoDetalleId
-                1L, // 11) usuarioRegistroId
-                1L  // 12) ordenCompraDetalleId
+                BigDecimal.valueOf(10.5),
+                ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                "DOC-456",
+                1L, 1L, 1L, 1L, 1L, 1L,
+                1L, 1L, 1L
         );
 
+        // ✅ Respuesta esperada simulada
+        MovimientoInventarioResponseDTO respuesta = new MovimientoInventarioResponseDTO(
+                100L,
+                BigDecimal.valueOf(10.5),
+                1L,
+                "RECEPCION_COMPRA",
+                "Producto A",
+                "LOTE-001",
+                "Almacén Central"
+        );
 
-        Mockito.when(movimientoInventarioService.registrarMovimiento(Mockito.any())).thenReturn(dto);
+        Mockito.when(movimientoInventarioService.registrarMovimiento(Mockito.any()))
+                .thenReturn(respuesta);
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -78,8 +83,11 @@ class MovimientoInventarioControllerUnitTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.cantidad").value("10.5"))
                 .andExpect(jsonPath("$.tipoMovimiento").value("RECEPCION_COMPRA"))
-                .andExpect(jsonPath("$.docReferencia").value("DOC-456"));
+                .andExpect(jsonPath("$.nombreProducto").value("Producto A"))
+                .andExpect(jsonPath("$.nombreLote").value("LOTE-001"))
+                .andExpect(jsonPath("$.nombreAlmacen").value("Almacén Central"));
     }
+
 
     @Test
     void registrarMovimiento_ProductoInexistente_DeberiaRetornar404() throws Exception {

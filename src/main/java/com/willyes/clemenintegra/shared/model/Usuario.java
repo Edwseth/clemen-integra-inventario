@@ -37,10 +37,10 @@ public class Usuario {
     private RolUsuario rol;
 
     @Column(name = "activo", nullable = false)
-    private Boolean activo;
+    private boolean activo;
 
     @Column(name = "bloqueado", nullable = false)
-    private Boolean bloqueado;
+    private boolean bloqueado;
 
     public Usuario(Long id) {
         this.id = id;

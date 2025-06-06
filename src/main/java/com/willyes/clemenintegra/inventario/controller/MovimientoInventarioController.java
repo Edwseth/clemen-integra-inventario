@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
@@ -67,7 +68,7 @@ public class MovimientoInventarioController {
         }
 
         // 2) Si pasa validación, delegamos al servicio para grabar
-        MovimientoInventarioDTO creado = service.registrarMovimiento(dto);
+        MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 

@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
@@ -33,13 +34,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     private final MovimientoInventarioRepository repository;
+    private final MovimientoInventarioMapper mapper;
 
     @Resource
     private final EntityManager entityManager;
 
     @Transactional
     @Override
-    public MovimientoInventarioDTO registrarMovimiento(MovimientoInventarioDTO dto) {
+    public MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto) {
         MovimientoInventario movimiento = MovimientoInventarioMapper.toEntity(dto);
 
         // Recuperar entidades
@@ -126,7 +128,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         // Guardar movimiento
         MovimientoInventario guardado = repository.save(movimiento);
 
-        return MovimientoInventarioMapper.toDTO(guardado);
+        return mapper.toResponseDTO(guardado);
     }
 
     @Override

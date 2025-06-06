@@ -44,13 +44,13 @@ public class Producto {
     private BigDecimal stockMinimoProveedor;
 
     @Column(name = "activo", nullable = false)
-    private Boolean activo = true;
+    private boolean activo = true;
 
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
     @Column(name = "requiere_inspeccion", nullable = false)
-    private Boolean requiereInspeccion = false;
+    private boolean requiereInspeccion = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unidades_medida_id", nullable = false,

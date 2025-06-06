@@ -1,13 +1,13 @@
 package com.willyes.clemenintegra.inventario.service;
 
-import com.willyes.clemenintegra.inventario.dto.UnidadMedidaRequestDTO;
-import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.*;
+import com.willyes.clemenintegra.inventario.mapper.ProductoMapper;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
-import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +31,7 @@ public class ProductoService {
     private final UsuarioRepository usuarioRepository;
     private final LoteProductoRepository loteProductoRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
+    private final ProductoMapper productoMapper;
 
     public List<ProductoResponseDTO> listarTodos() {
         return productoRepository.findAll()
@@ -93,8 +96,8 @@ public class ProductoService {
                 .descripcionProducto(producto.getDescripcionProducto())
                 .stockActual(producto.getStockActual())
                 .stockMinimo(producto.getStockMinimo())
-                .activo(producto.getActivo())
-                .requiereInspeccion(producto.getRequiereInspeccion())
+                .activo(producto.isActivo())
+                .requiereInspeccion(producto.isRequiereInspeccion())
                 .unidadMedida(producto.getUnidadMedida().getNombre())
                 .categoria(producto.getCategoriaProducto().getNombre())
                 .fechaCreacion(producto.getFechaCreacion())
@@ -182,5 +185,57 @@ public class ProductoService {
 
         productoRepository.delete(producto);
     }
+
+    public List<ProductoConEstadoLoteDTO> buscarProductosConLotesPorEstado(String estado) {
+        EstadoLote estadoEnum = EstadoLote.valueOf(estado.toUpperCase());
+
+        List<LoteProducto> lotes = loteProductoRepository.findByEstado(estadoEnum);
+
+        return lotes.stream()
+                .map(lote -> {
+                    Producto producto = lote.getProducto();
+                    return new ProductoConEstadoLoteDTO(
+                            producto.getId(),
+                            producto.getCodigoSku(),
+                            producto.getNombre(),
+                            lote.getEstado().name()
+                    );
+                })
+                .distinct() // evitar duplicados si hay múltiples lotes de un mismo producto
+                .toList();
+    }
+
+    public List<ProductoConLotesDTO> buscarProductosConLotesAgrupadosPorEstado(String estado) {
+        EstadoLote estadoEnum = EstadoLote.valueOf(estado.toUpperCase());
+
+        List<LoteProducto> lotes = loteProductoRepository.findByEstado(estadoEnum);
+
+        // Agrupar lotes por producto
+        Map<Producto, List<LoteProducto>> agrupados = lotes.stream()
+                .collect(Collectors.groupingBy(LoteProducto::getProducto));
+
+        // Convertir a DTOs
+        return agrupados.entrySet().stream()
+                .map(entry -> {
+                    Producto producto = entry.getKey();
+                    List<LoteSimpleDTO> loteDTOs = entry.getValue().stream().map(l -> {
+                        return new LoteSimpleDTO(
+                                l.getId(),
+                                l.getCodigoLote(),
+                                l.getEstado().name(),
+                                l.getFechaFabricacion(),
+                                l.getFechaVencimiento()
+                        );
+                    }).toList();
+
+                    return new ProductoConLotesDTO(
+                            producto.getId(),
+                            producto.getCodigoSku(),
+                            producto.getNombre(),
+                            loteDTOs
+                    );
+                }).toList();
+    }
+
 }
 

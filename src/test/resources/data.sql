@@ -222,3 +222,15 @@ INSERT INTO lotes_productos (
     1
 );
 
+-- Agrega lote retenido
+INSERT INTO lotes_productos (
+    codigo_lote, fecha_fabricacion, fecha_vencimiento, stock_lote,
+    estado, temperatura_almacenamiento, producto_id, almacen_id
+) VALUES (
+    'LOTE-RETENIDO-001', '2024-04-01', '2024-08-01', 50.00,
+    'RETENIDO', 20.0, 1, 1
+);
+
+INSERT INTO usuarios (id, nombre_usuario, clave, nombre_completo, correo, rol, activo, bloqueado)
+VALUES (99, 'usuarioInactivo', 'clave123', 'Usuario Inactivo', 'inactivo@demo.com', 'ROL_ALMACENISTA', false, false);
+

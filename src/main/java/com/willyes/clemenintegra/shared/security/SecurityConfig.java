@@ -2,17 +2,39 @@ package com.willyes.clemenintegra.shared.security;
 
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final CustomUserDetailsService customUserDetailsService;
+    private final UsuarioInactivoFilter usuarioInactivoFilter;
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -20,52 +42,40 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos (si aplica alguno)
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Productos: accesible solo por jefes y operarios de almacén
                         .requestMatchers("/api/productos/**").hasAnyRole(
                                 RolUsuario.ROL_JEFE_ALMACENES.name(),
                                 RolUsuario.ROL_ALMACENISTA.name()
                         )
-
-                        // Movimientos: accesible por jefes de almacén y producción
                         .requestMatchers("/api/movimientos/**").hasAnyRole(
                                 RolUsuario.ROL_JEFE_ALMACENES.name(),
                                 RolUsuario.ROL_ALMACENISTA.name(),
                                 RolUsuario.ROL_JEFE_PRODUCCION.name()
                         )
-
-                        // Calidad: accesible por analistas, microbiólogos y jefes de calidad
                         .requestMatchers("/api/calidad/**").hasAnyRole(
                                 RolUsuario.ROL_JEFE_CALIDAD.name(),
                                 RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                                 RolUsuario.ROL_MICROBIOLOGO.name()
                         )
-
-                        // Producción: accesible por líderes y jefe de producción
                         .requestMatchers("/api/produccion/**").hasAnyRole(
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                                 RolUsuario.ROL_LIDER_HOMEOPATICOS.name()
                         )
-
-                        // BOM: solo jefe de producción y líderes
                         .requestMatchers("/api/bom/**").hasAnyRole(
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                                 RolUsuario.ROL_LIDER_HOMEOPATICOS.name()
                         )
-
-                        // Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
                 )
-                .exceptionHandling(exception -> exception
+                .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) ->
                                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autorizado"))
-                );
+                )
+                .addFilterBefore(usuarioInactivoFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 }
-

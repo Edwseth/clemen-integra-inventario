@@ -37,7 +37,7 @@ public record MovimientoInventarioDTO(
         @NotNull(message = "El detalle del movimiento es obligatorio")
         Long tipoMovimientoDetalleId, // ✅ CORREGIDO
 
-        @NotNull(message = "El usuario es obligatorio")
+        //@NotNull(message = "El usuario es obligatorio")
         Long usuarioId,
 
         @NotNull(message = "El detalle de la orden de compra es obligatorio")

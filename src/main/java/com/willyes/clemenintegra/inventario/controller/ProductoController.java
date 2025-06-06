@@ -1,20 +1,27 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.*;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-import java.util.Map;
+import java.math.BigDecimal;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -25,14 +32,20 @@ public class ProductoController {
     private final ProductoRepository productoRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final UnidadMedidaRepository unidadMedidaRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final MovimientoInventarioService service;
+    private final ProductoRepository productoRepo;
+    private final LoteProductoRepository loteRepo;
 
-    @GetMapping
-    public ResponseEntity<List<ProductoResponseDTO>> obtenerTodos(
-            @RequestParam(required = false) String categoria) {
-        if (categoria != null) {
-            return ResponseEntity.ok(productoService.buscarPorCategoria(categoria));
+
+    @GetMapping("/categoria/{nombre}")
+    public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
+            @PathVariable String nombre) {
+        List<ProductoResponseDTO> productos = productoService.buscarPorCategoria(nombre);
+        if (productos.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(productos);
         }
-        return ResponseEntity.ok(productoService.listarTodos());
+        return ResponseEntity.ok(productos);
     }
 
     @PostMapping
@@ -93,5 +106,32 @@ public class ProductoController {
         return ResponseEntity.ok(new UnidadMedidaResponseDTO(unidad.getId(), unidad.getNombre(), unidad.getSimbolo()));
     }
 
+    @GetMapping("/con-lotes")
+    public ResponseEntity<List<ProductoConEstadoLoteDTO>> productosConLotesPorEstado(
+            @RequestParam String estado) {
+        try {
+            List<ProductoConEstadoLoteDTO> productos = productoService.buscarProductosConLotesPorEstado(estado);
+            return ResponseEntity.ok(productos);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Collections.emptyList()); // estado inválido
+        }
+    }
+
+    @GetMapping("/agrupado-por-lotes")
+    public ResponseEntity<List<ProductoConLotesDTO>> productosAgrupadosPorLotesEnEstado(
+            @RequestParam String estado) {
+        try {
+            List<ProductoConLotesDTO> productos = productoService.buscarProductosConLotesAgrupadosPorEstado(estado);
+            return ResponseEntity.ok(productos);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Collections.emptyList());
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ProductoResponseDTO>> obtenerTodos() {
+        List<ProductoResponseDTO> productos = productoService.listarTodos();
+        return ResponseEntity.ok(productos);
+    }
 }
 

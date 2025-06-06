@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.shared.exception;
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
@@ -70,6 +71,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleResponseStatusException(org.springframework.web.server.ResponseStatusException ex) {
         return buildResponse(ex.getStatusCode(), ex.getReason());
     }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(AccessDeniedException ex) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("status", 403);
+        error.put("message", "Acceso denegado");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
 
 }
 

@@ -5,7 +5,9 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -63,5 +65,49 @@ public class OrdenCompraController {
 
         return ResponseEntity.status(CREATED).body(orden);
     }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ROL_JEFE_ALMACENES')")
+    public ResponseEntity<OrdenCompra> actualizar(@PathVariable Long id,
+                                                  @RequestBody OrdenCompraRequestDTO dto) {
+        OrdenCompra orden = ordenCompraRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Orden no encontrada"));
+
+        // Actualizar proveedor si cambió
+        if (!orden.getProveedor().getId().equals(dto.getProveedorId())) {
+            Proveedor proveedor = proveedorRepository.findById(dto.getProveedorId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proveedor no encontrado"));
+            orden.setProveedor(proveedor);
+        }
+
+        orden.setObservaciones(dto.getObservaciones());
+
+        // Eliminar detalles anteriores
+        detalleRepository.deleteByOrdenCompra_Id(id);
+
+        // Crear y guardar nuevos detalles
+        List<OrdenCompraDetalle> nuevosDetalles = dto.getDetalles().stream().map(d -> {
+            Producto producto = productoRepository.findById(d.getProductoId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Producto no encontrado"));
+
+            BigDecimal valorTotal = d.getValorUnitario().multiply(d.getCantidad());
+
+            return OrdenCompraDetalle.builder()
+                    .ordenCompra(orden)
+                    .producto(producto)
+                    .cantidad(d.getCantidad())
+                    .valorUnitario(d.getValorUnitario())
+                    .valorTotal(valorTotal)
+                    .iva(d.getIva())
+                    .cantidadRecibida(BigDecimal.ZERO)
+                    .build();
+        }).toList();
+
+        detalleRepository.saveAll(nuevosDetalles);
+
+        ordenCompraRepository.save(orden);
+        return ResponseEntity.ok(orden);
+    }
+
 }
 

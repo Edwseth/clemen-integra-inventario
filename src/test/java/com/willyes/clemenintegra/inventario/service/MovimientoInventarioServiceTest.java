@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -48,18 +49,15 @@ class MovimientoInventarioServiceTest {
                 1L, 1L, 1L
         );
 
-        // Entidades
-        Producto producto = new Producto(); producto.setId(1L);
-        Almacen almacen = new Almacen(); almacen.setId(1L);
+        Producto producto = new Producto(); producto.setId(1L); producto.setNombre("Producto A");
+        Almacen almacen = new Almacen(); almacen.setId(1L); almacen.setNombre("Almacén 1");
         Proveedor proveedor = new Proveedor(); proveedor.setId(1L);
         OrdenCompra ordenCompra = new OrdenCompra(); ordenCompra.setId(1L);
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(1L);
-        LoteProducto lote = new LoteProducto(); lote.setId(1L);
-        TipoMovimientoDetalle detalle = new TipoMovimientoDetalle();
-        detalle.setId(1L);
-        detalle.setDescripcion(dto.tipoMovimiento().name());
+        LoteProducto lote = new LoteProducto(); lote.setId(1L); lote.setCodigoLote("LOTE-001");
+        TipoMovimientoDetalle detalle = new TipoMovimientoDetalle(); detalle.setId(1L); detalle.setDescripcion(dto.tipoMovimiento().name());
 
-        // Stubs de repos
+        // Stubs
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(almacenRepository.findById(1L)).thenReturn(Optional.of(almacen));
         when(proveedorRepository.findById(1L)).thenReturn(Optional.of(proveedor));
@@ -68,24 +66,27 @@ class MovimientoInventarioServiceTest {
         when(loteProductoRepository.findById(1L)).thenReturn(Optional.of(lote));
         when(tipoMovimientoDetalleRepository.findById(1L)).thenReturn(Optional.of(detalle));
 
-        // Aquí: devolver el mismo mv con id seteado
+        // Mock de save
         when(repository.save(any())).thenAnswer(invocation -> {
             MovimientoInventario mv = invocation.getArgument(0);
             mv.setId(42L);
+            mv.setProducto(producto);
+            mv.setAlmacen(almacen);
+            mv.setLote(lote);
             return mv;
         });
 
         // Act
-        MovimientoInventarioDTO result = service.registrarMovimiento(dto);
+        MovimientoInventarioResponseDTO result = service.registrarMovimiento(dto);
 
         // Assert
         assertNotNull(result);
         assertEquals(BigDecimal.valueOf(10), result.cantidad());
-        assertEquals(1L, result.loteProductoId());
-        assertEquals(1L, result.tipoMovimientoDetalleId());
+        assertEquals("Producto A", result.nombreProducto());
+        assertEquals("LOTE-001", result.nombreLote());
+        assertEquals("Almacén 1", result.nombreAlmacen());
         verify(repository).save(any(MovimientoInventario.class));
     }
-
 
     @Test
     void registrarMovimiento_DeberiaLanzarExceptionCuandoProductoNoExiste() {
