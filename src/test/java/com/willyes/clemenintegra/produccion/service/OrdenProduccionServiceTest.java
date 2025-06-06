@@ -3,7 +3,7 @@ package com.willyes.clemenintegra.produccion.service;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
-import com.willyes.clemenintegra.inventario.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import jakarta.transaction.Transactional;

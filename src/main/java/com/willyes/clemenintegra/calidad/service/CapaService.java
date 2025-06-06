@@ -4,7 +4,7 @@ import com.willyes.clemenintegra.calidad.dto.CapaDTO;
 import com.willyes.clemenintegra.calidad.mapper.CapaMapper;
 import com.willyes.clemenintegra.calidad.model.Capa;
 import com.willyes.clemenintegra.calidad.repository.*;
-import com.willyes.clemenintegra.inventario.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.enums.*;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;

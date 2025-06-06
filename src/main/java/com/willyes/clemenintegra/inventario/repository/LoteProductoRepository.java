@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long> {
@@ -15,5 +16,7 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     boolean existsByProducto(Producto producto);
     boolean existsByCodigoLote(String codigoLote);
     List<LoteProducto> findByEstado(EstadoLote estado);
+    Optional<LoteProducto> findByCodigoLote(String codigoLote);
+
 }
 

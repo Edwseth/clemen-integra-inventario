@@ -1,4 +1,4 @@
-package com.willyes.clemenintegra.inventario.repository;
+package com.willyes.clemenintegra.shared.repository;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;

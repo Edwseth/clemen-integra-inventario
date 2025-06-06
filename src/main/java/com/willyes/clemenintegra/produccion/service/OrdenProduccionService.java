@@ -5,7 +5,7 @@ import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
-import com.willyes.clemenintegra.inventario.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.mapper.OrdenProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;

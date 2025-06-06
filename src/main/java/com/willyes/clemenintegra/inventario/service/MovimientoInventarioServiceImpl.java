@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;

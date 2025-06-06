@@ -128,6 +128,22 @@ CREATE TABLE IF NOT EXISTS lotes_productos (
 );
 
 -- -----------------------------------------------------
+-- Tabla: evaluaciones_calidad
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS evaluaciones_calidad (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    resultado ENUM('APROBADO','RECHAZADO','CONDICIONADO') NOT NULL,
+    fecha_evaluacion DATETIME NOT NULL,
+    observaciones TEXT NOT NULL,
+    archivo_adjunto VARCHAR(255),
+    lotes_productos_id INT NOT NULL,
+    usuarios_id INT NOT NULL,
+    FOREIGN KEY (lotes_productos_id) REFERENCES lotes_productos(id),
+    FOREIGN KEY (usuarios_id) REFERENCES usuarios(id)
+);
+
+
+-- -----------------------------------------------------
 -- Tabla: tipos_movimiento_detalle
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS tipos_movimiento_detalle (

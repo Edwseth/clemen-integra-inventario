@@ -10,7 +10,7 @@ import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.CategoriaProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
-import com.willyes.clemenintegra.inventario.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

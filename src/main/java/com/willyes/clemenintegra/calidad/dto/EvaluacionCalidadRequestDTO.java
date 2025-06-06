@@ -4,21 +4,14 @@ import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EvaluacionCalidadDTO {
-
-    private Long id;
+public class EvaluacionCalidadRequestDTO {
 
     @NotNull(message = "El resultado es obligatorio")
     private ResultadoEvaluacion resultado;
-
-    @NotNull(message = "La fecha de evaluación es obligatoria")
-    private LocalDateTime fechaEvaluacion;
 
     @NotNull(message = "Las observaciones son obligatorias")
     private String observaciones;
@@ -31,5 +24,6 @@ public class EvaluacionCalidadDTO {
     @NotNull(message = "El evaluador es obligatorio")
     private Long usuarioEvaluadorId;
 }
+
 
 

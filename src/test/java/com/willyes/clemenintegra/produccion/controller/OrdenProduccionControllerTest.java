@@ -10,8 +10,7 @@ import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
-import org.junit.jupiter.api.BeforeEach;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -44,83 +43,6 @@ public class OrdenProduccionControllerTest {
     @Autowired private OrdenProduccionRepository ordenProduccionRepository;
     @Autowired private UnidadMedidaRepository unidadMedidaRepository;
     @Autowired private CategoriaProductoRepository categoriaProductoRepository;
-
-    /*@BeforeEach
-    void setUp() {
-        // Unidad de medida
-        UnidadMedida unidad = unidadMedidaRepository.findByNombre("Kilogramo")
-                .orElseGet(() -> {
-                    UnidadMedida nueva = new UnidadMedida();
-                    nueva.setNombre("Kilogramo");
-                    nueva.setSimbolo("kg");
-                    return unidadMedidaRepository.save(nueva);
-                });
-
-        // Categoría de producto
-        CategoriaProducto categoria = categoriaProductoRepository.findByNombre("Materia Prima")
-                .orElseGet(() -> {
-                    CategoriaProducto nueva = new CategoriaProducto();
-                    nueva.setNombre("Materia Prima");
-                    nueva.setTipo(TipoCategoria.MATERIA_PRIMA);
-                    return categoriaProductoRepository.save(nueva);
-                });
-
-        // Usuario admin
-        Usuario admin = usuarioRepository.findByNombreUsuario("admin")
-                .orElseGet(() -> {
-                    if (usuarioRepository.existsByCorreo("admin@erp.com")) {
-                        throw new IllegalStateException("Ya existe un usuario con el correo 'admin@erp.com'");
-                    }
-                    Usuario nuevo = new Usuario();
-                    nuevo.setNombreUsuario("admin");
-                    nuevo.setClave("admin123");
-                    nuevo.setNombreCompleto("Administrador");
-                    nuevo.setCorreo("admin@erp.com");
-                    nuevo.setRol(RolUsuario.ROL_ALMACENISTA);
-                    nuevo.setActivo(true);
-                    nuevo.setBloqueado(false);
-                    return usuarioRepository.save(nuevo);
-                });
-
-        // Usuario de prueba
-        usuarioRepository.findByNombreUsuario("usuario.test")
-                .or(() -> usuarioRepository.findByCorreo("usuario@test.com"))
-                .orElseGet(() -> {
-                    Usuario usuario = new Usuario();
-                    usuario.setNombreUsuario("usuario.test");
-                    usuario.setClave("clave123");
-                    usuario.setNombreCompleto("Usuario de Prueba");
-                    usuario.setCorreo("usuario@test.com");
-                    usuario.setRol(RolUsuario.ROL_JEFE_PRODUCCION);
-                    usuario.setActivo(true);
-                    usuario.setBloqueado(false);
-                    return usuarioRepository.save(usuario);
-                });
-
-        // Producto
-        productoRepository.findByNombre("Producto Test").orElseGet(() -> {
-            Producto producto = new Producto();
-            producto.setNombre("Producto Test");
-            producto.setCodigoSku("SKU-TEST-001");
-            producto.setStockActual(new BigDecimal("500"));
-            producto.setActivo(true);
-            producto.setUnidadMedida(unidadMedidaRepository.findByNombre("Kilogramo").get());
-            producto.setCategoriaProducto(categoriaProductoRepository.findByNombre("Materia Prima").get());
-            producto.setCreadoPor(usuarioRepository.findByNombreUsuario("admin").get());
-            return productoRepository.save(producto);
-        });
-
-
-        // Almacén
-        if (!almacenRepository.existsByNombre("Almacén Principal")) {
-            Almacen almacen = new Almacen();
-            almacen.setNombre("Almacén Principal");
-            almacen.setUbicacion("Zona A");
-            almacen.setCategoria(TipoCategoria.MATERIA_PRIMA);
-            almacen.setTipo(TipoAlmacen.PRINCIPAL);
-            almacenRepository.save(almacen);
-        }
-    }*/
 
     @Test
     void crearOrdenProduccion_conLoteAsignado_debeRegistrarCorrectamente() throws Exception {

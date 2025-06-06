@@ -4,7 +4,7 @@ import com.willyes.clemenintegra.calidad.dto.ItemChecklistDTO;
 import com.willyes.clemenintegra.calidad.mapper.ItemChecklistMapper;
 import com.willyes.clemenintegra.calidad.model.*;
 import com.willyes.clemenintegra.calidad.repository.*;
-import com.willyes.clemenintegra.inventario.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

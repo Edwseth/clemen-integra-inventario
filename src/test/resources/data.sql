@@ -198,6 +198,27 @@ INSERT INTO orden_produccion (
     'EN_PROCESO'
 );
 
-
-
+INSERT INTO lotes_productos (
+    codigo_lote,
+    fecha_fabricacion,
+    fecha_vencimiento,
+    stock_lote,
+    estado,
+    temperatura_almacenamiento,
+    fecha_liberacion,
+    producto_id,
+    almacen_id,
+    orden_produccion_id
+) VALUES (
+    'LOTE-PRUEBA-001',
+    DATEADD('DAY', -3, CURRENT_DATE),
+    DATEADD('DAY', 60, CURRENT_DATE),
+    100.00,
+    'EN_CUARENTENA',
+    18.0,
+    NULL,
+    2,
+    1,
+    1
+);
 
