@@ -12,19 +12,20 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
-
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
@@ -37,6 +38,7 @@ import java.util.Optional;
 public class MovimientoInventarioController {
 
     private final MovimientoInventarioService service;
+    private final MovimientoInventarioService movimientoInventarioService;
     private final ProductoRepository productoRepo;
     private final LoteProductoRepository loteRepo;
 
@@ -72,7 +74,6 @@ public class MovimientoInventarioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
-
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
@@ -90,5 +91,28 @@ public class MovimientoInventarioController {
         Page<MovimientoInventario> resultados = service.consultarMovimientosConFiltros(filtro, pageable);
         return ResponseEntity.ok(resultados);
     }
+
+    @GetMapping("/reporte-excel")
+    @PreAuthorize("hasAnyRole('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION')")
+    public ResponseEntity<byte[]> exportarReporteMovimientos() throws IOException {
+        byte[] contenido;
+
+        try (Workbook workbook = movimientoInventarioService.generarReporteMovimientosExcel();
+             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            workbook.write(bos);
+            contenido = bos.toByteArray();
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDisposition(ContentDisposition
+                .attachment()
+                .filename("reporte_movimientos.xlsx")
+                .build());
+
+        return new ResponseEntity<>(contenido, headers, HttpStatus.OK);
+    }
+
+
 }
 

@@ -11,8 +11,12 @@ import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,6 +24,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -133,5 +138,22 @@ public class ProductoController {
         List<ProductoResponseDTO> productos = productoService.listarTodos();
         return ResponseEntity.ok(productos);
     }
+
+    @GetMapping("/reporte-stock")
+    @PreAuthorize("hasAnyRole('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA')")
+    @Operation(summary = "Exportar reporte de stock actual de productos a Excel")
+    @ApiResponse(responseCode = "200", description = "Reporte generado correctamente")
+    public void exportarStockActual(HttpServletResponse response) throws IOException {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=stock_actual.xlsx");
+
+        Workbook workbook = productoService.generarReporteStockActualExcel();
+        try (ServletOutputStream out = response.getOutputStream()) {
+            workbook.write(out);
+            out.flush();
+        }
+        workbook.close();
+    }
+
 }
 

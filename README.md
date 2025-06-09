@@ -53,6 +53,23 @@ Cada módulo contiene su propio conjunto de:
 - Asociación de documentos técnicos: MSDS, instructivos y procedimientos
 - Preparación de estructura para simulación de disponibilidad y costos de producción
 
+### 🧪 Pruebas Unitarias
+Se han implementado pruebas automatizadas con Spring Boot Test, JUnit 5 y MockMvc, cubriendo los principales flujos del módulo de Inventario:
+
+#### 🔍 Casos probados:
+- Creación de productos y validación de SKU duplicado
+- Validación de campos obligatorios y relaciones
+- Registro de movimientos de inventario (entrada/salida)
+- Restricción por unidades de medida inmutables
+- Control de stock negativo y estados del lote (vencido, en cuarentena)
+- Generación de reportes exportables en formato Excel:
+  - Movimientos de inventario
+  - Stock actual
+  - Productos próximos a vencer
+  - Alertas activas
+
+Todos los tests se ejecutan bajo el perfil test con configuración personalizada de seguridad (TestSecurityConfig).
+
 ## 🛠 Tecnologías utilizadas
 
 - Java 17

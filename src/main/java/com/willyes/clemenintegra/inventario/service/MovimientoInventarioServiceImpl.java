@@ -12,12 +12,22 @@ import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -88,7 +98,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             entityManager.merge(ordenCompraDetalle); // Actualizar cantidad recibida
         }
 
-// Actualización de stock (usando BigDecimal)
+           // Actualización de stock (usando BigDecimal)
             switch (dto.tipoMovimiento()) {
             case ENTRADA_PRODUCCION, RECEPCION_COMPRA, AJUSTE_POSITIVO -> {
                 producto.setStockActual(
@@ -143,4 +153,81 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 pageable
         );
     }
+
+    @Override
+    public Workbook generarReporteMovimientosExcel() {
+        List<MovimientoInventario> movimientos = repository.findAll();
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Movimientos Inventario");
+
+        // Cabecera
+        String[] encabezados = {
+                "ID", "Fecha", "Tipo Movimiento", "Producto", "SKU", "Cantidad", "Unidad Medida",
+                "Lote", "Almacén", "Proveedor", "Orden Compra", "Motivo", "Detalle Tipo Movimiento", "Usuario"
+        };
+
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < encabezados.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(encabezados[i]);
+        }
+
+        // Cuerpo
+        int fila = 1;
+        for (MovimientoInventario mov : movimientos) {
+            Row row = sheet.createRow(fila++);
+
+            row.createCell(0).setCellValue(mov.getId());
+            row.createCell(1).setCellValue(mov.getFechaIngreso() != null ? mov.getFechaIngreso().toString() : "");
+            row.createCell(2).setCellValue(mov.getTipoMovimiento().name());
+            row.createCell(3).setCellValue(mov.getProducto().getNombre());
+            row.createCell(4).setCellValue(mov.getProducto().getCodigoSku());
+            row.createCell(5).setCellValue(mov.getCantidad().doubleValue());
+            row.createCell(6).setCellValue(mov.getProducto().getUnidadMedida().getNombre());
+            row.createCell(7).setCellValue(mov.getLote() != null ? mov.getLote().getCodigoLote() : "");
+            row.createCell(8).setCellValue(mov.getAlmacen().getNombre());
+            row.createCell(9).setCellValue(mov.getProveedor() != null ? mov.getProveedor().getNombre() : "");
+            row.createCell(10).setCellValue(mov.getOrdenCompra() != null ? mov.getOrdenCompra().getId().toString() : "");
+            row.createCell(11).setCellValue(mov.getMotivoMovimiento() != null ? mov.getMotivoMovimiento().getDescripcion() : "");
+            row.createCell(12).setCellValue(mov.getTipoMovimientoDetalle() != null ? mov.getTipoMovimientoDetalle().getDescripcion() : "");
+            row.createCell(13).setCellValue(mov.getRegistradoPor() != null ? mov.getRegistradoPor().getNombreCompleto() : "");
+        }
+
+        // Autosize columnas
+        for (int i = 0; i < encabezados.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        return workbook;
+    }
+
+    public ByteArrayInputStream exportarMovimientosAExcel(List<MovimientoInventario> movimientos) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Movimientos");
+            Row header = sheet.createRow(0);
+            String[] columnas = {"ID", "Producto", "Cantidad", "Tipo Movimiento", "Fecha"};
+            for (int i = 0; i < columnas.length; i++) {
+                header.createCell(i).setCellValue(columnas[i]);
+            }
+
+            int rowNum = 1;
+            for (MovimientoInventario mov : movimientos) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(mov.getId());
+                row.createCell(1).setCellValue(mov.getProducto().getNombre());
+                row.createCell(2).setCellValue(mov.getCantidad().doubleValue());
+                row.createCell(3).setCellValue(mov.getTipoMovimiento().name());
+                row.createCell(4).setCellValue(mov.getFechaIngreso().toString());
+            }
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+
+        } catch (IOException e) {
+            throw new IllegalStateException("Error generando el archivo Excel", e);
+        }
+    }
+
 }

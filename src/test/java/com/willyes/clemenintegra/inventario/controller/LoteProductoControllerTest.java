@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +22,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -78,6 +81,38 @@ class LoteProductoControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message", containsString("Ya existe un lote con el código")));
+    }
+
+    @Test
+    @WithMockUser(username = "jefeCalidad", roles = {"ROL_JEFE_CALIDAD"})
+    void exportarLotesPorVencer_UsuarioAutorizado_RetornaExcel() throws Exception {
+        mockMvc.perform(get("/api/lotes/reporte-vencimiento"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("attachment;")))
+                .andExpect(header().string("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+    }
+
+    @Test
+    @WithMockUser(username = "almacenista", roles = {"ROL_ALMACENISTA"})
+    void exportarLotesPorVencer_UsuarioNoAutorizado_RetornaForbidden() throws Exception {
+        mockMvc.perform(get("/api/lotes/reporte-vencimiento"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "jefeCalidad", roles = {"ROL_JEFE_CALIDAD"})
+    void exportarAlertasActivas_UsuarioAutorizado_RetornaExcel() throws Exception {
+        mockMvc.perform(get("/api/lotes/reporte-alertas"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("attachment;")))
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+    }
+
+    @Test
+    @WithMockUser(username = "visitante", roles = {"ROL_ALMACENISTA"})
+    void exportarAlertasActivas_UsuarioNoAutorizado_RetornaForbidden() throws Exception {
+        mockMvc.perform(get("/api/lotes/reporte-alertas"))
+                .andExpect(status().isForbidden());
     }
 
 

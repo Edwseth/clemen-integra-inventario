@@ -10,6 +10,10 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +36,7 @@ public class ProductoService {
     private final LoteProductoRepository loteProductoRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final ProductoMapper productoMapper;
+
 
     public List<ProductoResponseDTO> listarTodos() {
         return productoRepository.findAll()
@@ -235,6 +240,41 @@ public class ProductoService {
                             loteDTOs
                     );
                 }).toList();
+    }
+
+    public Workbook generarReporteStockActualExcel() {
+        List<Producto> productos = productoRepository.findAll();
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Stock Actual");
+
+        Row header = sheet.createRow(0);
+        String[] columnas = {
+                "ID", "Código SKU", "Nombre", "Stock Actual",
+                "Unidad de Medida", "Stock Mínimo", "Activo", "Categoría"
+        };
+        for (int i = 0; i < columnas.length; i++) {
+            header.createCell(i).setCellValue(columnas[i]);
+        }
+
+        int rowNum = 1;
+        for (Producto producto : productos) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(producto.getId());
+            row.createCell(1).setCellValue(producto.getCodigoSku());
+            row.createCell(2).setCellValue(producto.getNombre());
+            row.createCell(3).setCellValue(producto.getStockActual() != null ? producto.getStockActual().doubleValue() : 0);
+            row.createCell(4).setCellValue(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : "");
+            row.createCell(5).setCellValue(producto.getStockMinimo() != null ? producto.getStockMinimo().doubleValue() : 0);
+            row.createCell(6).setCellValue(producto.isActivo());
+            row.createCell(7).setCellValue(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : "");
+        }
+
+        for (int i = 0; i < columnas.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        return workbook;
     }
 
 }

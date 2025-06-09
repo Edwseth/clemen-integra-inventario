@@ -4,6 +4,8 @@ DELETE FROM ordenes_compra;
 DELETE FROM proveedores;
 DELETE FROM tipos_movimiento_detalle;
 DELETE FROM almacenes;
+DELETE FROM orden_compra_detalle;
+DELETE FROM ordenes_compra;
 DELETE FROM productos;
 DELETE FROM categorias_producto;
 DELETE FROM unidades_medida;

@@ -1,15 +1,16 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.willyes.clemenintegra.bom.repository.DetalleFormulaRepository;
+import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
-import com.willyes.clemenintegra.inventario.repository.CategoriaProductoRepository;
-import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,11 +19,13 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -38,6 +41,14 @@ class ProductoControllerTest {
     @Autowired private CategoriaProductoRepository categoriaProductoRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private ProductoRepository productoRepository;
+    @Autowired private OrdenCompraDetalleRepository ordenCompraDetalleRepository;
+    @Autowired private OrdenCompraRepository ordenCompraRepository;
+    @Autowired private LoteProductoRepository loteProductoRepository;
+    @Autowired private AjusteInventarioRepository ajusteInventarioRepository;
+    @Autowired private DetalleFormulaRepository detalleFormulaRepository;
+    @Autowired private FormulaProductoRepository formulaProductoRepository;
+    @Autowired private MovimientoInventarioRepository movimientoInventarioRepository;
+    @Autowired private OrdenProduccionRepository ordenProduccionRepository;
 
     private Long unidadId;
     private Long categoriaId;
@@ -45,10 +56,18 @@ class ProductoControllerTest {
 
     @BeforeEach
     void setUp() {
+        ordenProduccionRepository.deleteAll();
+        ajusteInventarioRepository.deleteAll();
+        movimientoInventarioRepository.deleteAll();
+        loteProductoRepository.deleteAll();
+        detalleFormulaRepository.deleteAll();
+        formulaProductoRepository.deleteAll();
+        ordenCompraDetalleRepository.deleteAll();
+        ordenCompraRepository.deleteAll();
         productoRepository.deleteAll();
+        usuarioRepository.deleteAll();
         unidadMedidaRepository.deleteAll();
         categoriaProductoRepository.deleteAll();
-        usuarioRepository.deleteAll();
 
         UnidadMedida unidad = new UnidadMedida();
         unidad.setNombre("Kilogramo");
@@ -141,5 +160,21 @@ class ProductoControllerTest {
         mockMvc.perform(get("/api/productos?categoria=MATERIA_PRIMA"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    @WithMockUser(username = "jefeAlmacen", roles = {"ROL_JEFE_ALMACENES"})
+    void exportarStockActual_UsuarioAutorizado_RetornaExcel() throws Exception {
+        mockMvc.perform(get("/api/productos/reporte-stock"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("attachment;")))
+                .andExpect(header().string("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+    }
+
+    @Test
+    @WithMockUser(username = "analista", roles = {"ROL_ANALISTA_CALIDAD"})
+    void exportarStockActual_UsuarioNoAutorizado_RetornaForbidden() throws Exception {
+        mockMvc.perform(get("/api/productos/reporte-stock"))
+                .andExpect(status().isForbidden());
     }
 }
