@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.shared.exception;
 
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -37,7 +38,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseDTO> handleUnexpectedErrors(Exception ex) {
+    public ResponseEntity<?> handleUnexpectedErrors(Exception ex, HttpServletRequest request) {
+        String path = request.getRequestURI();
+
+        if (path.contains("/v3/api-docs") || path.contains("/swagger") || path.contains("/webjars")) {
+            // No capturar el error, dejarlo pasar
+            return null;
+        }
+
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor.");
     }
 
