@@ -49,6 +49,12 @@ public class AuthService {
         Usuario usuario = usuarioRepository.findByNombreUsuario(dto.nombreUsuario())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
+        System.out.println("Validando código 2FA...");
+        System.out.println("Usuario: " + usuario.getNombreUsuario());
+        System.out.println("Codigo 2FA almacenado: " + usuario.getCodigo2FA());
+        System.out.println("Codigo 2FA recibido: " + dto.codigo());
+        System.out.println("Fecha expiración: " + usuario.getCodigo2FAExpiraEn());
+        System.out.println("Fecha actual: " + LocalDateTime.now());
         if (usuario.getCodigo2FA() == null || usuario.getCodigo2FAExpiraEn() == null ||
                 !usuario.getCodigo2FA().equals(dto.codigo()) ||
                 usuario.getCodigo2FAExpiraEn().isBefore(LocalDateTime.now())) {
