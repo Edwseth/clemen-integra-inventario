@@ -87,7 +87,6 @@ public class ProductoService {
         var usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-
         Producto producto = Producto.builder()
                 .codigoSku(dto.getCodigoSku())
                 .nombre(dto.getNombre())
@@ -113,6 +112,15 @@ public class ProductoService {
         }
         if (productoRepository.existsByNombre(nombre)) {
             throw new IllegalArgumentException("Ya existe un producto con ese nombre.");
+        }
+    }
+
+    private void validarDuplicadosAlActualizar(Long id, String sku, String nombre) {
+        if (productoRepository.existsByCodigoSkuAndIdNot(sku, id)) {
+            throw new DataIntegrityViolationException("Ya existe otro producto con ese código SKU.");
+        }
+        if (productoRepository.existsByNombreAndIdNot(nombre, id)) {
+            throw new IllegalArgumentException("Ya existe otro producto con ese nombre.");
         }
     }
 
@@ -143,16 +151,8 @@ public class ProductoService {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
-        // Validar duplicidad si se cambia el nombre o SKU
-        if (!producto.getCodigoSku().equals(dto.getCodigoSku()) &&
-                productoRepository.existsByCodigoSku(dto.getCodigoSku())) {
-            throw new IllegalArgumentException("Ya existe otro producto con el mismo código SKU.");
-        }
-
-        if (!producto.getNombre().equals(dto.getNombre()) &&
-                productoRepository.existsByNombre(dto.getNombre())) {
-            throw new IllegalArgumentException("Ya existe otro producto con el mismo nombre.");
-        }
+        // Validar duplicados de SKU y nombre excluyendo el mismo producto actual
+        validarDuplicadosAlActualizar(id, dto.getCodigoSku(), dto.getNombre());
 
         var unidad = unidadMedidaRepository.findById(dto.getUnidadMedidaId())
                 .orElseThrow(() -> new IllegalArgumentException("Unidad de medida no encontrada"));
@@ -161,7 +161,6 @@ public class ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
 
         Long usuarioId = obtenerUsuarioIdDesdeToken();
-
         var usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
@@ -177,9 +176,9 @@ public class ProductoService {
         producto.setCreadoPor(usuario);
 
         productoRepository.save(producto);
-
         return mapearADTO(producto);
     }
+
 
     @Transactional
     public UnidadMedidaResponseDTO cambiarUnidadMedida(Long productoId, UnidadMedidaRequestDTO dto) {

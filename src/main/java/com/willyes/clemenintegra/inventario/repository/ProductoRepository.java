@@ -24,5 +24,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
     Optional<Producto> findByNombre(String nombre);
 
+    boolean existsByCodigoSkuAndIdNot(String codigoSku, Long id);
+
+    boolean existsByNombreAndIdNot(String nombre, Long id);
 }
 

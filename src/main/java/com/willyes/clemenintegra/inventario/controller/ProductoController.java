@@ -54,6 +54,7 @@ public class ProductoController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_ROL_JEFE_ALMACENES')")
     public ResponseEntity<?> crear(@Valid @RequestBody ProductoRequestDTO dto) {
         try {
             ProductoResponseDTO creado = productoService.crearProducto(dto);
@@ -75,12 +76,14 @@ public class ProductoController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ROL_JEFE_ALMACENES')")
     public ResponseEntity<ProductoResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ProductoRequestDTO dto) {
         ProductoResponseDTO actualizado = productoService.actualizarProducto(id, dto);
         return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ROL_JEFE_ALMACENES')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         productoService.eliminarProducto(id);
         return ResponseEntity.noContent().build();
