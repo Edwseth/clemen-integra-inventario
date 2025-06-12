@@ -56,10 +56,11 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/productos/**").hasAnyRole(
-                                RolUsuario.ROL_JEFE_ALMACENES.name(),
-                                RolUsuario.ROL_ALMACENISTA.name()
+                        .requestMatchers("/api/productos/**").hasAnyAuthority(
+                                "ROLE_" + RolUsuario.ROL_ALMACENISTA.name(),
+                                "ROLE_" + RolUsuario.ROL_JEFE_ALMACENES.name()
                         )
+
                         .requestMatchers("/api/movimientos/**").hasAnyRole(
                                 RolUsuario.ROL_JEFE_ALMACENES.name(),
                                 RolUsuario.ROL_ALMACENISTA.name(),
@@ -86,7 +87,9 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) ->
                                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autorizado"))
                 )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(usuarioInactivoFilter, UsernamePasswordAuthenticationFilter.class);
+
 
         return http.build();
     }

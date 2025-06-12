@@ -39,7 +39,5 @@ public class ProductoResponseDTO {
         this.categoria = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null;
         this.fechaCreacion = producto.getFechaCreacion();
     }
-
-
 }
 
