@@ -24,14 +24,9 @@ public class ProductoRequestDTO {
     private String descripcionProducto;
 
     @NotNull
-    private BigDecimal stockActual;
-
-    @NotNull
     private BigDecimal stockMinimo;
 
     private BigDecimal stockMinimoProveedor;
-
-    private Boolean activo = true;
 
     private Boolean requiereInspeccion = false;
 
@@ -40,7 +35,4 @@ public class ProductoRequestDTO {
 
     @NotNull
     private Long categoriaProductoId;
-
-    @NotNull
-    private Long usuarioId;
 }

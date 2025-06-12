@@ -8,21 +8,25 @@ import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +40,22 @@ public class ProductoService {
     private final LoteProductoRepository loteProductoRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final ProductoMapper productoMapper;
+    private final JwtTokenService jwtTokenService;
+
+    private Long obtenerUsuarioIdDesdeToken() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null) {
+            throw new IllegalStateException("No hay autenticación en el contexto");
+        }
+
+        if (authentication.getCredentials() instanceof String token) {
+            Claims claims = jwtTokenService.extraerClaims(token);
+            return claims.get("usuarioId", Long.class);
+        }
+
+        throw new IllegalStateException("No se pudo extraer el token JWT");
+    }
 
 
     public List<ProductoResponseDTO> listarTodos() {
@@ -62,17 +82,20 @@ public class ProductoService {
         var categoria = categoriaProductoRepository.findById(dto.getCategoriaProductoId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
 
-        var usuario = usuarioRepository.findById(dto.getUsuarioId())
+        Long usuarioId = obtenerUsuarioIdDesdeToken();
+
+        var usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
 
         Producto producto = Producto.builder()
                 .codigoSku(dto.getCodigoSku())
                 .nombre(dto.getNombre())
                 .descripcionProducto(dto.getDescripcionProducto())
-                .stockActual(dto.getStockActual())
+                .stockActual(BigDecimal.ZERO)
                 .stockMinimo(dto.getStockMinimo())
                 .stockMinimoProveedor(dto.getStockMinimoProveedor())
-                .activo(dto.getActivo())
+                .activo(true)
                 .requiereInspeccion(dto.getRequiereInspeccion())
                 .fechaCreacion(LocalDateTime.now())
                 .unidadMedida(unidad)
@@ -137,17 +160,17 @@ public class ProductoService {
         var categoria = categoriaProductoRepository.findById(dto.getCategoriaProductoId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
 
-        var usuario = usuarioRepository.findById(dto.getUsuarioId())
+        Long usuarioId = obtenerUsuarioIdDesdeToken();
+
+        var usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         // Actualizar campos
         producto.setCodigoSku(dto.getCodigoSku());
         producto.setNombre(dto.getNombre());
         producto.setDescripcionProducto(dto.getDescripcionProducto());
-        producto.setStockActual(dto.getStockActual());
         producto.setStockMinimo(dto.getStockMinimo());
         producto.setStockMinimoProveedor(dto.getStockMinimoProveedor());
-        producto.setActivo(dto.getActivo());
         producto.setRequiereInspeccion(dto.getRequiereInspeccion());
         producto.setUnidadMedida(unidad);
         producto.setCategoriaProducto(categoria);
