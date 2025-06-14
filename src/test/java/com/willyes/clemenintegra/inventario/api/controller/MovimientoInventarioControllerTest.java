@@ -49,7 +49,7 @@ class MovimientoInventarioControllerTest {
 
         Mockito.when(movimientoInventarioService.registrarMovimiento(Mockito.any())).thenReturn(dto);
 
-        mockMvc.perform(post("/movimientos-inventario")
+        mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
