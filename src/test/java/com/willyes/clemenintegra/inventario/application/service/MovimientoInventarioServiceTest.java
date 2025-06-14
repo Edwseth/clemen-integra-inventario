@@ -6,9 +6,10 @@ import com.willyes.clemenintegra.inventario.domain.model.*;
 import com.willyes.clemenintegra.inventario.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mapstruct.factory.Mappers;
+import com.willyes.clemenintegra.inventario.application.mapper.MovimientoInventarioMapper;
 
 import java.math.BigDecimal;
 import java.util.NoSuchElementException;
@@ -34,12 +35,23 @@ class MovimientoInventarioServiceTest {
     @Mock
     private LoteProductoRepository loteProductoRepository;
 
-    @InjectMocks
     private MovimientoInventarioService service;
+
+    private final MovimientoInventarioMapper mapper =
+            Mappers.getMapper(MovimientoInventarioMapper.class);
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        service = new MovimientoInventarioService(
+                repository,
+                productoRepository,
+                almacenRepository,
+                proveedorRepository,
+                ordenCompraRepository,
+                motivoMovimientoRepository,
+                mapper
+        );
     }
 
     @Test
