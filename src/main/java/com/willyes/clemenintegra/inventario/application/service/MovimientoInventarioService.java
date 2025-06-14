@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.application.mapper.MovimientoInventa
 import com.willyes.clemenintegra.inventario.domain.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.domain.model.*;
 import com.willyes.clemenintegra.inventario.domain.repository.*;
+import com.willyes.clemenintegra.inventario.application.exception.LoteProductoNotFoundException;
 import com.willyes.clemenintegra.inventario.application.mapper.TipoMovimientoMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,8 @@ public class MovimientoInventarioService {
     private final ProveedorRepository proveedorRepository;
     private final OrdenCompraRepository ordenCompraRepository;
     private final MotivoMovimientoRepository motivoMovimientoRepository;
+    private final LoteProductoRepository loteProductoRepository;
+    private final MovimientoInventarioMapper mapper;
 
     @Transactional
     public MovimientoInventarioDTO registrarMovimiento(MovimientoInventarioDTO dto) {
@@ -47,20 +50,24 @@ public class MovimientoInventarioService {
                 motivoMovimientoRepository.findById(dto.motivoMovimientoId())
                         .orElseThrow(() -> new NoSuchElementException("Motivo de movimiento no encontrado")) : null;
 
+        LoteProducto lote = loteProductoRepository.findById(dto.loteId())
+                .orElseThrow(() -> new LoteProductoNotFoundException("Lote de producto no encontrado"));
+
         TipoMovimiento tipoEsperado = TipoMovimientoMapper.obtenerTipoMovimiento(dto.tipoMovimientoDetalle());
         if (!tipoEsperado.equals(dto.tipoMovimiento())) {
             throw new IllegalArgumentException("El tipo de movimiento no corresponde con el detalle especificado");
         }
 
-        MovimientoInventario movimiento = MovimientoInventarioMapper.toEntity(dto);
+        MovimientoInventario movimiento = mapper.toEntity(dto);
         movimiento.setProducto(producto);
+        movimiento.setLote(lote);
         movimiento.setAlmacen(almacen);
         movimiento.setProveedor(proveedor);
         movimiento.setOrdenCompra(ordenCompra);
         movimiento.setMotivoMovimiento(motivo);
 
         MovimientoInventario entidadGuardada = repository.save(movimiento);
-        return MovimientoInventarioMapper.toDTO(entidadGuardada);
+        return mapper.toDTO(entidadGuardada);
     }
 
 
