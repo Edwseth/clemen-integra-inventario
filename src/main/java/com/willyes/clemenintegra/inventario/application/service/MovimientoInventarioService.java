@@ -25,6 +25,7 @@ public class MovimientoInventarioService {
     private final ProveedorRepository proveedorRepository;
     private final OrdenCompraRepository ordenCompraRepository;
     private final MotivoMovimientoRepository motivoMovimientoRepository;
+    private final MovimientoInventarioMapper mapper;
 
     @Transactional
     public MovimientoInventarioDTO registrarMovimiento(MovimientoInventarioDTO dto) {
@@ -52,7 +53,7 @@ public class MovimientoInventarioService {
             throw new IllegalArgumentException("El tipo de movimiento no corresponde con el detalle especificado");
         }
 
-        MovimientoInventario movimiento = MovimientoInventarioMapper.toEntity(dto);
+        MovimientoInventario movimiento = mapper.toEntity(dto);
         movimiento.setProducto(producto);
         movimiento.setAlmacen(almacen);
         movimiento.setProveedor(proveedor);
@@ -60,7 +61,7 @@ public class MovimientoInventarioService {
         movimiento.setMotivoMovimiento(motivo);
 
         MovimientoInventario entidadGuardada = repository.save(movimiento);
-        return MovimientoInventarioMapper.toDTO(entidadGuardada);
+        return mapper.toDTO(entidadGuardada);
     }
 
 
