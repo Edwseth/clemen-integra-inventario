@@ -13,7 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -22,8 +22,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(com.willyes.clemenintegra.inventario.config.TestSecurityConfig.class)
 class AjusteInventarioControllerTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     // IDs precargados desde data.sql
     private final Long productoId = 1L;
@@ -69,13 +71,30 @@ class AjusteInventarioControllerTest {
     }
 
     @Test
+    void registrarAjusteNegativoSinStockDebeFallar() throws Exception {
+        AjusteInventarioRequestDTO dto = AjusteInventarioRequestDTO.builder()
+                .cantidad(new BigDecimal("-1000.00"))
+                .motivo("Ajuste sin stock")
+                .productoId(productoId)
+                .almacenId(almacenId)
+                .usuarioId(usuarioId)
+                .build();
+
+        mockMvc.perform(post("/api/inventario/ajustes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("No hay suficiente stock disponible"));
+    }
+
+    @Test
     void registrarAjusteConCantidadCeroDebeFallar() throws Exception {
         AjusteInventarioRequestDTO dto = AjusteInventarioRequestDTO.builder()
                 .cantidad(BigDecimal.ZERO)
                 .motivo("Sin cambios")
-                .productoId(1L)
-                .almacenId(1L)
-                .usuarioId(1L)
+                .productoId(productoId)
+                .almacenId(almacenId)
+                .usuarioId(usuarioId)
                 .build();
 
         mockMvc.perform(post("/api/inventario/ajustes")
@@ -90,9 +109,9 @@ class AjusteInventarioControllerTest {
         AjusteInventarioRequestDTO dto = AjusteInventarioRequestDTO.builder()
                 .cantidad(new BigDecimal("5.00"))
                 .motivo("Prueba producto inexistente")
-                .productoId(9999L)  // ID que no existe
-                .almacenId(1L)
-                .usuarioId(1L)
+                .productoId(9999L)
+                .almacenId(almacenId)
+                .usuarioId(usuarioId)
                 .build();
 
         mockMvc.perform(post("/api/inventario/ajustes")
@@ -107,9 +126,9 @@ class AjusteInventarioControllerTest {
         AjusteInventarioRequestDTO dto = AjusteInventarioRequestDTO.builder()
                 .cantidad(new BigDecimal("3.00"))
                 .motivo("Usuario no válido")
-                .productoId(1L)
-                .almacenId(1L)
-                .usuarioId(9999L)  // ID inexistente
+                .productoId(productoId)
+                .almacenId(almacenId)
+                .usuarioId(9999L)
                 .build();
 
         mockMvc.perform(post("/api/inventario/ajustes")
@@ -124,9 +143,9 @@ class AjusteInventarioControllerTest {
         AjusteInventarioRequestDTO dto = AjusteInventarioRequestDTO.builder()
                 .cantidad(new BigDecimal("2.50"))
                 .motivo("Almacén no válido")
-                .productoId(1L)
-                .almacenId(9999L)  // ID inexistente
-                .usuarioId(1L)
+                .productoId(productoId)
+                .almacenId(9999L)
+                .usuarioId(usuarioId)
                 .build();
 
         mockMvc.perform(post("/api/inventario/ajustes")
@@ -136,4 +155,23 @@ class AjusteInventarioControllerTest {
                 .andExpect(jsonPath("$.message").value("Almacén no encontrado"));
     }
 
+    @Test
+    void obtenerAjustePorIdExistenteDebeRetornarOk() throws Exception {
+        mockMvc.perform(get("/api/inventario/ajustes/{id}", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L));
+    }
+
+    @Test
+    void obtenerAjustePorIdNoExistenteDebeRetornarNotFound() throws Exception {
+        mockMvc.perform(get("/api/inventario/ajustes/{id}", 9999L))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void listarTodosLosAjustesDebeRetornarLista() throws Exception {
+        mockMvc.perform(get("/api/inventario/ajustes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").exists());
+    }
 }
