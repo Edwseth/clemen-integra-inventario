@@ -7,6 +7,9 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.*;
 
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.service.UsuarioService;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -32,6 +35,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final ProductoRepository productoRepo;
     private final AlmacenRepository almacenRepo;
     private final LoteProductoMapper loteProductoMapper;
+    private final UsuarioService usuarioService;
 
     @Transactional
     public LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto) {
@@ -41,7 +45,9 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         Almacen almacen = almacenRepo.findById(dto.getAlmacenId())
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado"));
 
-        LoteProducto lote = loteProductoMapper.toEntity(dto, producto, almacen);
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+
+        LoteProducto lote = loteProductoMapper.toEntity(dto, producto, almacen, usuario);
         lote = loteRepo.saveAndFlush(lote); // sin try-catch, lo maneja el ControllerAdvice
 
         return loteProductoMapper.toDto(lote);

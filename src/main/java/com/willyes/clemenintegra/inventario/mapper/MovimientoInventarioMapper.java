@@ -23,7 +23,7 @@ public interface MovimientoInventarioMapper {
     MovimientoInventarioDTO toDTO(MovimientoInventario movimiento);
 
     @Mapping(target = "productoId", source = "producto.id")
-    @Mapping(target = "tipoMovimiento", source = "tipoMovimiento.name")
+    @Mapping(target = "tipoMovimiento", expression = "java(movimiento.getTipoMovimiento().name())")
     @Mapping(target = "nombreProducto", source = "producto.nombre")
     @Mapping(target = "nombreLote", source = "lote.codigoLote")
     @Mapping(target = "nombreAlmacen", source = "almacen.nombre")

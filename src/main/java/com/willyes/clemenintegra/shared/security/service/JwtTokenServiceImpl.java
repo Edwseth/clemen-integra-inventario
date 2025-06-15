@@ -17,7 +17,7 @@ public class JwtTokenServiceImpl implements JwtTokenService {
     private static final long EXPIRATION_MS = 3600_000; // 1 hora
     private final Key secretKey;
 
-    public JwtTokenService(@Value("${clemen.jwt.secret}") String secret) {
+    public JwtTokenServiceImpl(@Value("${clemen.jwt.secret}") String secret) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
     }
 
