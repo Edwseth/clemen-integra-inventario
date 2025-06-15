@@ -1,134 +1,54 @@
-# Clemen-Integra ERP – Backend Modular
+# Clemen-Integra ERP – Backend
 
-Este repositorio contiene el backend completo del sistema **Clemen-Integra ERP**, desarrollado por **Will Yes Solutions**, diseñado para gestionar integralmente los procesos de inventario, producción, calidad y formulación (BOM) en laboratorios de productos homeopáticos y suplementos alimenticios.
+Clemen-Integra es un ERP para laboratorios de productos homeopáticos y suplementos alimenticios. El backend está desarrollado en Java y concentra los módulos de Inventario, Producción, Calidad, Fórmulas (BOM) y Seguridad con autenticación 2FA.
 
-## 🧱 Arquitectura
+## Módulos Funcionales
+- **Inventario:** control de productos, almacenes, lotes, movimientos y órdenes de compra.
+- **Producción:** gestión de órdenes, etapas y trazabilidad de lotes.
+- **Calidad:** registro de no conformidades, acciones correctivas/preventivas y liberación de lotes.
+- **Fórmulas (BOM):** definición de recetas e insumos por producto.
+- **Seguridad:** control de usuarios, roles y autenticación con JWT y código 2FA.
 
-El proyecto sigue una arquitectura **Monolito Modular Evolutivo**, organizada por paquetes independientes según el dominio funcional:
-
-```bash
-src/main/java/com/willyes/clemenintegra/
-├── inventario/ # Gestión de productos, almacenes, lotes, movimientos
-├── calidad/ # No conformidades, CAPA, liberación de lotes
-├── produccion/ # Órdenes, etapas, trazabilidad
-├── bom/ # Fórmulas, insumos, simulaciones
-└── shared/ # Configuración, seguridad, excepciones
+## Arquitectura Técnica
+El proyecto utiliza una arquitectura **monolito modular evolutivo**. Cada dominio funcional se implementa en paquetes independientes bajo `com.willyes.clemenintegra`:
 
 ```
+com.willyes.clemenintegra
+├── inventario
+├── produccion
+├── calidad
+├── bom
+└── shared    (configuración común, seguridad y excepciones)
+```
 
-Cada módulo contiene su propio conjunto de:
-- `controller`
-- `service`
-- `repository`
-- `model`
-- `dto`
-- `mapper` (cuando aplica)
-
-## ✅ Funcionalidades actuales por módulo
-
-### 📦 Inventario
-- Gestión de productos con unidades, categorías y control de calidad
-- Manejo de almacenes con tipo y categoría
-- Registro de lotes con trazabilidad y vencimientos
-- Movimientos de entrada, salida, ajustes y transferencias
-- Órdenes de compra y proveedores
-- Historial de cambios de estado en órdenes de compra
-- Detalle de productos por orden (orden_compra_detalle)
-
-### 🧪 Calidad
-- Registro y control de no conformidades
-- Gestión de acciones correctivas y preventivas (CAPA)
-- Retención y liberación de lotes
-- Checklists y validación de condiciones
-
-### ⚙ Producción
-- Creación y seguimiento de órdenes de producción
-- Etapas: dispensado, mezcla, envasado, acondicionamiento, cuarentena
-- Registro de controles de calidad en proceso
-- Producción simple (registro directo): código de lote, fechas, usuario y producto
-
-### 🧬 BOM (Fórmulas)
-- Registro de fórmulas por producto con control de versiones y estados (BORRADOR, APROBADA, etc.)
-- Definición de insumos, cantidades y unidades por fórmula (detalle_formula)
-- Asociación de documentos técnicos: MSDS, instructivos y procedimientos
-- Preparación de estructura para simulación de disponibilidad y costos de producción
-
-## 🧪 Pruebas Unitarias
-Se han implementado pruebas automatizadas con Spring Boot Test, JUnit 5 y MockMvc, cubriendo los principales flujos del módulo de Inventario:
-
-### 🔍 Casos probados:
-- Creación de productos y validación de SKU duplicado
-- Validación de campos obligatorios y relaciones
-- Registro de movimientos de inventario (entrada/salida)
-- Restricción por unidades de medida inmutables
-- Control de stock negativo y estados del lote (vencido, en cuarentena)
-- Generación de reportes exportables en formato Excel:
-  - Movimientos de inventario
-  - Stock actual
-  - Productos próximos a vencer
-  - Alertas activas
-
-Todos los tests se ejecutan bajo el perfil test con configuración personalizada de seguridad (TestSecurityConfig).
-
-## 🛠 Tecnologías utilizadas
-
-- Java 17
-- Spring Boot 3.2.x
-- Spring Security + JWT
-- Spring Data JPA (Hibernate)
-- Swagger / OpenAPI 3
-- Lombok
+## Tecnologías Principales
+- Spring Boot 3
+- Spring Security y JWT
+- Autenticación 2FA
+- Jakarta Validation
+- Lombok y MapStruct
+- JPA (Hibernate)
+- SLF4J para registros
 - MySQL
 
-## 🔐 Seguridad y Autenticación
+## Patrones Aplicados
+- Inyección de dependencias por constructor.
+- Separación de interfaces para servicios y repositorios.
+- Centralización de manejo de excepciones.
 
-El sistema implementa seguridad con JWT. Los roles se definen por módulo (`ROL_ADMIN`, `ROL_CALIDAD`, `ROL_PRODUCCION`, etc.).
+## Calidad de Código
+El código ha sido refactorizado mediante **Codex Workspace**, mejorando la legibilidad y eliminando clases obsoletas.
 
-Swagger requiere autenticación:
+## Requisitos de Compilación y Despliegue
+- JDK 17
+- Maven 3.8+
+- Base de datos MySQL en funcionamiento
 
+Configurar las credenciales de base de datos en `src/main/resources/application.properties` mediante las variables `DB_USERNAME` y `DB_PASS`.
+
+## Ejecución Básica
 ```bash
-Usuario: admin
-Contraseña: admin123
-
+mvn clean install
+mvn spring-boot:run
 ```
-
-## ⚙️ Configuración de base de datos
-En src/main/resources/application.properties:
-```bash
-spring.datasource.url=jdbc:mysql://localhost:3306/clemen_integra_db
-spring.datasource.username=tu_usuario
-spring.datasource.password=tu_contraseña
-spring.jpa.hibernate.ddl-auto=none
-```
-
-## 🔍 Documentación API (Swagger)
-
-- **Disponible en:**:
-
-```bash
-[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-```
-Incluye documentación de todos los endpoints REST de todos los módulos integrados.
-
----
-## 🚀 Comandos útiles
-```bash
-# Compilar proyecto
-./mvnw clean install
-
-# Ejecutar aplicación
-./mvnw spring-boot:run
-
-# Generar la documentación Swagger
-# Swagger se genera automáticamente y es accesible en el navegado
-
-# Ejecutar pruebas
-./mvnw test
-```
-## ‍💻 Desarrollado por
-Will Yes Solutions
-Repositorio oficial: github.com/Edwseth/clemen-integra-inventario
-
-## 📄 Licencia
-Este proyecto está desarrollado y mantenido por Will Yes Solutions. Todos los derechos reservados.
-
+La API REST estará disponible en `http://localhost:8080/swagger-ui.html`.
