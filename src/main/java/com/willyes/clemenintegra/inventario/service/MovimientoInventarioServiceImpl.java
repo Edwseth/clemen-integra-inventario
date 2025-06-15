@@ -52,7 +52,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     @Transactional
     @Override
     public MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto) {
-        MovimientoInventario movimiento = MovimientoInventarioMapper.toEntity(dto);
+        MovimientoInventario movimiento = mapper.toEntity(dto);
 
         // Recuperar entidades
         Producto producto = productoRepository.findById(dto.productoId())

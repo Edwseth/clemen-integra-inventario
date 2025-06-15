@@ -1,37 +1,25 @@
 package com.willyes.clemenintegra.inventario.mapper;
 
-import com.willyes.clemenintegra.inventario.dto.*;
-import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.AjusteInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.model.AjusteInventario;
+import com.willyes.clemenintegra.inventario.model.Almacen;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.shared.model.Usuario;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-import java.time.LocalDateTime;
+@Mapper(componentModel = "spring")
+public interface AjusteInventarioMapper {
 
-@Component
-public class AjusteInventarioMapper {
+    @Mapping(target = "fecha", expression = "java(java.time.LocalDateTime.now())")
+    @Mapping(target = "producto", source = "producto")
+    @Mapping(target = "almacen", source = "almacen")
+    @Mapping(target = "usuario", source = "usuario")
+    AjusteInventario toEntity(AjusteInventarioRequestDTO dto, Producto producto, Almacen almacen, Usuario usuario);
 
-    public AjusteInventario toEntity(AjusteInventarioRequestDTO dto) {
-        return AjusteInventario.builder()
-                .fecha(LocalDateTime.now())
-                .cantidad(dto.getCantidad())
-                .motivo(dto.getMotivo())
-                .observaciones(dto.getObservaciones())
-                .producto(Producto.builder().id(dto.getProductoId()).build())
-                .almacen(Almacen.builder().id(dto.getAlmacenId()).build())
-                .usuario(Usuario.builder().id(dto.getUsuarioId()).build())
-                .build();
-    }
-
-    public AjusteInventarioResponseDTO toResponseDTO(AjusteInventario entity) {
-        return AjusteInventarioResponseDTO.builder()
-                .id(entity.getId())
-                .fecha(entity.getFecha())
-                .cantidad(entity.getCantidad())
-                .motivo(entity.getMotivo())
-                .observaciones(entity.getObservaciones())
-                .productoNombre(entity.getProducto().getNombre())
-                .almacenNombre(entity.getAlmacen().getNombre())
-                .usuarioNombre(entity.getUsuario().getNombreCompleto())
-                .build();
-    }
+    @Mapping(target = "productoNombre", source = "producto.nombre")
+    @Mapping(target = "almacenNombre", source = "almacen.nombre")
+    @Mapping(target = "usuarioNombre", source = "usuario.nombreCompleto")
+    AjusteInventarioResponseDTO toResponseDTO(AjusteInventario entity);
 }

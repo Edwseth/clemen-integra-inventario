@@ -6,11 +6,11 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraDetalleService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,16 +18,18 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/inventario/ordenes-compra-detalle")
+@RequiredArgsConstructor
 public class OrdenCompraDetalleController {
 
-    @Autowired private OrdenCompraDetalleService service;
-    @Autowired private OrdenCompraRepository ordenCompraRepository;
-    @Autowired private ProductoRepository productoRepository;
+    private final OrdenCompraDetalleService service;
+    private final OrdenCompraRepository ordenCompraRepository;
+    private final ProductoRepository productoRepository;
+    private final OrdenCompraDetalleMapper mapper;
 
     @GetMapping
     public List<OrdenCompraDetalleResponse> listarTodos() {
         return service.listarTodos().stream()
-                .map(OrdenCompraDetalleMapper::toResponse)
+                .map(mapper::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -52,13 +54,13 @@ public class OrdenCompraDetalleController {
                 .producto(producto)
                 .build();
 
-        return ResponseEntity.ok(OrdenCompraDetalleMapper.toResponse(service.guardar(entidad)));
+        return ResponseEntity.ok(mapper.toResponse(service.guardar(entidad)));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<OrdenCompraDetalleResponse> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
-                .map(OrdenCompraDetalleMapper::toResponse)
+                .map(mapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

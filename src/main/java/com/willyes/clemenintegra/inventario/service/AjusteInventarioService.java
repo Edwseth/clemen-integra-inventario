@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,15 +42,7 @@ public class AjusteInventarioService {
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado"));
         var usuario = usuarioRepository.findById(dto.getUsuarioId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
-        var entity = AjusteInventario.builder()
-                .fecha(LocalDateTime.now())
-                .cantidad(dto.getCantidad())
-                .motivo(dto.getMotivo())
-                .observaciones(dto.getObservaciones())
-                .producto(producto)
-                .almacen(almacen)
-                .usuario(usuario)
-                .build();
+        var entity = mapper.toEntity(dto, producto, almacen, usuario);
         var guardado = repository.save(entity);
         return mapper.toResponseDTO(guardado);
     }

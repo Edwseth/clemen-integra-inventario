@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.repository.CategoriaProductoReposito
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.dto.CategoriaProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.CategoriaProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.mapper.CategoriaProductoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,18 +18,19 @@ public class CategoriaProductoService {
 
     private final CategoriaProductoRepository categoriaProductoRepository;
     private final ProductoRepository productoRepository;
+    private final CategoriaProductoMapper categoriaProductoMapper;
 
     public List<CategoriaProductoResponseDTO> listarTodas() {
         return categoriaProductoRepository.findAll()
                 .stream()
-                .map(this::mapearADTO)
+                .map(categoriaProductoMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     public CategoriaProductoResponseDTO obtenerPorId(Long id) {
         CategoriaProducto categoria = categoriaProductoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
-        return mapearADTO(categoria);
+        return categoriaProductoMapper.toDto(categoria);
     }
 
     public CategoriaProductoResponseDTO crear(CategoriaProductoRequestDTO dto) {
@@ -37,7 +39,7 @@ public class CategoriaProductoService {
                 .tipo(dto.getTipo())
                 .build();
         categoriaProductoRepository.save(categoria);
-        return mapearADTO(categoria);
+        return categoriaProductoMapper.toDto(categoria);
     }
 
     public CategoriaProductoResponseDTO actualizar(Long id, CategoriaProductoRequestDTO dto) {
@@ -48,7 +50,7 @@ public class CategoriaProductoService {
         categoria.setTipo(dto.getTipo());
 
         categoriaProductoRepository.save(categoria);
-        return mapearADTO(categoria);
+        return categoriaProductoMapper.toDto(categoria);
     }
 
     public void eliminar(Long id) {
@@ -62,11 +64,5 @@ public class CategoriaProductoService {
         categoriaProductoRepository.delete(categoria);
     }
 
-    private CategoriaProductoResponseDTO mapearADTO(CategoriaProducto categoria) {
-        return CategoriaProductoResponseDTO.builder()
-                .id(categoria.getId())
-                .nombre(categoria.getNombre())
-                .tipo(categoria.getTipo())
-                .build();
-    }
+    // Mapeo delegado a MapStruct
 }

@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import lombok.RequiredArgsConstructor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -24,17 +25,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class LoteProductoService {
 
     private final LoteProductoRepository loteRepo;
     private final ProductoRepository productoRepo;
     private final AlmacenRepository almacenRepo;
-
-    public LoteProductoService(LoteProductoRepository loteRepo, ProductoRepository productoRepo, AlmacenRepository almacenRepo) {
-        this.loteRepo = loteRepo;
-        this.productoRepo = productoRepo;
-        this.almacenRepo = almacenRepo;
-    }
+    private final LoteProductoMapper loteProductoMapper;
 
     @Transactional
     public LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto) {
@@ -44,16 +41,16 @@ public class LoteProductoService {
         Almacen almacen = almacenRepo.findById(dto.getAlmacenId())
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado"));
 
-        LoteProducto lote = LoteProductoMapper.toEntity(dto, producto, almacen);
+        LoteProducto lote = loteProductoMapper.toEntity(dto, producto, almacen);
         lote = loteRepo.saveAndFlush(lote); // sin try-catch, lo maneja el ControllerAdvice
 
-        return LoteProductoMapper.toDto(lote);
+        return loteProductoMapper.toDto(lote);
     }
 
     public List<LoteProductoResponseDTO> obtenerLotesPorEstado(String estado) {
         EstadoLote estadoEnum = EstadoLote.valueOf(estado.toUpperCase());
         return loteRepo.findByEstado(estadoEnum).stream()
-                .map(LoteProductoMapper::toDto)
+                .map(loteProductoMapper::toDto)
                 .collect(Collectors.toList());
     }
 

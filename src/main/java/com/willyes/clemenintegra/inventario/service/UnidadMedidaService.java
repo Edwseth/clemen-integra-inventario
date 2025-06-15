@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
+import com.willyes.clemenintegra.inventario.mapper.UnidadMedidaMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,18 +18,19 @@ public class UnidadMedidaService {
 
     private final UnidadMedidaRepository unidadMedidaRepository;
     private final ProductoRepository productoRepository;
+    private final UnidadMedidaMapper unidadMedidaMapper;
 
     public List<UnidadMedidaResponseDTO> listarTodas() {
         return unidadMedidaRepository.findAll()
                 .stream()
-                .map(this::mapearADTO)
+                .map(unidadMedidaMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     public UnidadMedidaResponseDTO obtenerPorId(Long id) {
         UnidadMedida unidad = unidadMedidaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Unidad de medida no encontrada"));
-        return mapearADTO(unidad);
+        return unidadMedidaMapper.toDto(unidad);
     }
 
     public UnidadMedidaResponseDTO crear(UnidadMedidaRequestDTO dto) {
@@ -38,7 +40,7 @@ public class UnidadMedidaService {
                 .build();
 
         unidadMedidaRepository.save(unidad);
-        return mapearADTO(unidad);
+        return unidadMedidaMapper.toDto(unidad);
     }
 
     public UnidadMedidaResponseDTO actualizar(Long id, UnidadMedidaRequestDTO dto) {
@@ -49,7 +51,7 @@ public class UnidadMedidaService {
         unidad.setSimbolo(dto.getSimbolo());
 
         unidadMedidaRepository.save(unidad);
-        return mapearADTO(unidad);
+        return unidadMedidaMapper.toDto(unidad);
     }
 
     public void eliminar(Long id) {
@@ -63,12 +65,6 @@ public class UnidadMedidaService {
         unidadMedidaRepository.delete(unidad);
     }
 
-    private UnidadMedidaResponseDTO mapearADTO(UnidadMedida unidad) {
-        return UnidadMedidaResponseDTO.builder()
-                .id(unidad.getId())
-                .nombre(unidad.getNombre())
-                .simbolo(unidad.getSimbolo())
-                .build();
-    }
+    // Mapeo delegado a MapStruct
 }
 

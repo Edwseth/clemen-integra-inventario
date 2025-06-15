@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.media.*;
 public class ProveedorController {
 
     private final ProveedorRepository proveedorRepository;
+    private final ProveedorMapper proveedorMapper;
 
     @Operation(summary = "Crear un nuevo proveedor")
     @ApiResponses(value = {
@@ -38,7 +39,7 @@ public class ProveedorController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un proveedor con esa identificación o correo");
         }
 
-        Proveedor proveedor = ProveedorMapper.toEntity(dto);
+        Proveedor proveedor = proveedorMapper.toEntity(dto);
         proveedorRepository.save(proveedor);
         return ResponseEntity.status(HttpStatus.CREATED).body(proveedor);
     }

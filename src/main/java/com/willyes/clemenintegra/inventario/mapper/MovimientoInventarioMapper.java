@@ -3,49 +3,29 @@ package com.willyes.clemenintegra.inventario.mapper;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class MovimientoInventarioMapper {
+@Mapper(componentModel = "spring")
+public interface MovimientoInventarioMapper {
 
-    public static MovimientoInventario toEntity(MovimientoInventarioDTO dto) {
-        MovimientoInventario m = new MovimientoInventario();
-        m.setCantidad(dto.cantidad());
-        m.setTipoMovimiento(dto.tipoMovimiento());
-        m.setDocReferencia(dto.docReferencia());
-        // Nota: No creamos aquí Producto, Almacén, Motivo, etc.
-        return m;
-    }
+    MovimientoInventario toEntity(MovimientoInventarioDTO dto);
 
-    public static MovimientoInventarioDTO toDTO(MovimientoInventario movimiento) {
-        return new MovimientoInventarioDTO(
-                movimiento.getId(),
-                movimiento.getCantidad(),
-                movimiento.getTipoMovimiento(),
-                movimiento.getDocReferencia(),
-                movimiento.getProducto().getId(),
-                movimiento.getLote() != null ? movimiento.getLote().getId() : null,
-                movimiento.getAlmacen().getId(),
-                movimiento.getProveedor() != null ? movimiento.getProveedor().getId() : null,
-                movimiento.getOrdenCompra() != null ? movimiento.getOrdenCompra().getId() : null,
-                movimiento.getMotivoMovimiento().getId(),
-                movimiento.getTipoMovimientoDetalle().getId(),
-                movimiento.getRegistradoPor().getId(),
-                movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null
-        );
-    }
+    @Mapping(target = "productoId", source = "producto.id")
+    @Mapping(target = "loteProductoId", source = "lote.id")
+    @Mapping(target = "almacenId", source = "almacen.id")
+    @Mapping(target = "proveedorId", source = "proveedor.id")
+    @Mapping(target = "ordenCompraId", source = "ordenCompra.id")
+    @Mapping(target = "motivoMovimientoId", source = "motivoMovimiento.id")
+    @Mapping(target = "tipoMovimientoDetalleId", source = "tipoMovimientoDetalle.id")
+    @Mapping(target = "usuarioId", source = "registradoPor.id")
+    @Mapping(target = "ordenCompraDetalleId", source = "ordenCompraDetalle.id")
+    MovimientoInventarioDTO toDTO(MovimientoInventario movimiento);
 
-    public MovimientoInventarioResponseDTO toResponseDTO(MovimientoInventario movimiento) {
-        return new MovimientoInventarioResponseDTO(
-                movimiento.getId(),
-                movimiento.getCantidad(),
-                movimiento.getProducto().getId(),
-                movimiento.getTipoMovimiento().name(),
-                movimiento.getProducto().getNombre(),
-                movimiento.getLote().getCodigoLote(),
-                movimiento.getAlmacen().getNombre()
-        );
-    }
-
-
+    @Mapping(target = "productoId", source = "producto.id")
+    @Mapping(target = "tipoMovimiento", source = "tipoMovimiento.name")
+    @Mapping(target = "nombreProducto", source = "producto.nombre")
+    @Mapping(target = "nombreLote", source = "lote.codigoLote")
+    @Mapping(target = "nombreAlmacen", source = "almacen.nombre")
+    MovimientoInventarioResponseDTO toResponseDTO(MovimientoInventario movimiento);
 }

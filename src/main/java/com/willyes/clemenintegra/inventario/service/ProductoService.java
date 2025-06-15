@@ -61,7 +61,7 @@ public class ProductoService {
     public List<ProductoResponseDTO> listarTodos() {
         return productoRepository.findAll()
                 .stream()
-                .map(this::mapearADTO)
+                .map(productoMapper::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -103,7 +103,7 @@ public class ProductoService {
                 .build();
 
         productoRepository.save(producto);
-        return mapearADTO(producto);
+        return productoMapper.toDto(producto);
     }
 
     private void validarDuplicados(String sku, String nombre) {
@@ -124,27 +124,13 @@ public class ProductoService {
         }
     }
 
-    private ProductoResponseDTO mapearADTO(Producto producto) {
-        return ProductoResponseDTO.builder()
-                .id(producto.getId())
-                .codigoSku(producto.getCodigoSku())
-                .nombre(producto.getNombre())
-                .descripcionProducto(producto.getDescripcionProducto())
-                .stockActual(producto.getStockActual())
-                .stockMinimo(producto.getStockMinimo())
-                .activo(producto.isActivo())
-                .requiereInspeccion(producto.isRequiereInspeccion())
-                .unidadMedida(producto.getUnidadMedida().getNombre())
-                .categoria(producto.getCategoriaProducto().getNombre())
-                .fechaCreacion(producto.getFechaCreacion())
-                .build();
-    }
+    // Mapeo delegado a MapStruct
 
     public ProductoResponseDTO obtenerPorId(Long id) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
-        return mapearADTO(producto);
+        return productoMapper.toDto(producto);
     }
 
     public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto) {
@@ -176,7 +162,7 @@ public class ProductoService {
         producto.setCreadoPor(usuario);
 
         productoRepository.save(producto);
-        return mapearADTO(producto);
+        return productoMapper.toDto(producto);
     }
 
 
