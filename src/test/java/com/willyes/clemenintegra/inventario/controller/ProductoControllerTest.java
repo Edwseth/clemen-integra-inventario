@@ -14,6 +14,8 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Import(com.willyes.clemenintegra.inventario.config.TestSecurityConfig.class)
 class ProductoControllerTest {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductoControllerTest.class);
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -129,7 +133,7 @@ class ProductoControllerTest {
         mockMvc.perform(post("/api/productos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(producto2)))
-                .andDo(result -> System.out.println("SEGUNDO POST - BODY:" + result.getResponse().getContentAsString()))
+                .andDo(result -> log.info("SEGUNDO POST - BODY: {}", result.getResponse().getContentAsString()))
                 .andExpect(status().isConflict());
     }
 

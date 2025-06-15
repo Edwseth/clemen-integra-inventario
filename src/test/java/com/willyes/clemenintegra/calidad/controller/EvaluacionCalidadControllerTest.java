@@ -16,6 +16,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -26,6 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Import(com.willyes.clemenintegra.inventario.config.TestSecurityConfig.class)
 class EvaluacionCalidadControllerTest {
+
+    private static final Logger log = LoggerFactory.getLogger(EvaluacionCalidadControllerTest.class);
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,7 +46,7 @@ class EvaluacionCalidadControllerTest {
     @Test
     void crearEvaluacionCalidad_debeRegistrarCorrectamente() throws Exception {
         loteProductoRepository.findAll().forEach(lp -> {
-            System.out.println("📦 Lote: " + lp.getCodigoLote() + " | Producto ID: " + lp.getProducto().getId());
+            log.info("📦 Lote: {} | Producto ID: {}", lp.getCodigoLote(), lp.getProducto().getId());
         });
 
         // Buscar lote por código

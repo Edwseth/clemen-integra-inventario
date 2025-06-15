@@ -8,6 +8,8 @@ import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/almacenes")
 @RequiredArgsConstructor
 public class AlmacenController {
+
+    private static final Logger log = LoggerFactory.getLogger(AlmacenController.class);
 
     private final AlmacenRepository almacenRepository;
 
@@ -35,7 +39,7 @@ public class AlmacenController {
         } catch (EntityExistsException e) {
             return ResponseEntity.status(409).body(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace(); // útil en pruebas
+            log.error("Error inesperado al crear almacén", e);
             return ResponseEntity.status(500).body("Error inesperado: " + e.getMessage());
         }
     }

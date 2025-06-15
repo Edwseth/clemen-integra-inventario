@@ -18,6 +18,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,6 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Import(com.willyes.clemenintegra.inventario.config.TestSecurityConfig.class)
 class MovimientoInventarioControllerUnitTest {
+
+    private static final Logger log = LoggerFactory.getLogger(MovimientoInventarioControllerUnitTest.class);
 
     @Autowired private MockMvc mockMvc;
     @MockBean private MovimientoInventarioService movimientoInventarioService;
@@ -170,7 +174,7 @@ class MovimientoInventarioControllerUnitTest {
                 ));
 
         String json = asJsonString(dto);  // 📌 usar dto, no request
-        System.out.println("TEST ▶ JSON enviado: " + json);
+        log.info("TEST ▶ JSON enviado: {}", json);
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)

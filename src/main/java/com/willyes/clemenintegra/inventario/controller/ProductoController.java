@@ -23,6 +23,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -32,6 +34,8 @@ import java.util.*;
 @RequestMapping("/api/productos")
 @RequiredArgsConstructor
 public class ProductoController {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductoController.class);
 
     private final ProductoService productoService;
     private final ProductoRepository productoRepository;
@@ -64,7 +68,7 @@ public class ProductoController {
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(404).body(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace(); // para debugging en consola
+            log.error("Error interno al crear producto", e);
             return ResponseEntity.status(500).body("Error interno: " + e.getMessage());
         }
     }
