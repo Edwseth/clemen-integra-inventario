@@ -12,7 +12,6 @@ import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 
@@ -30,8 +29,8 @@ public class OrdenProduccionService {
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
 
-    @Autowired private OrdenProduccionRepository repository;
-    @Autowired private OrdenProduccionMapper ordenProduccionMapper;
+    private final OrdenProduccionRepository repository;
+    private final OrdenProduccionMapper ordenProduccionMapper;
 
 
     @Transactional

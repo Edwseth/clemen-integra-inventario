@@ -5,19 +5,19 @@ import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.service.*;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.dto.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/produccion/detalles")
+@RequiredArgsConstructor
 public class DetalleEtapaController {
 
-    @Autowired
-    private DetalleEtapaService service;
+    private final DetalleEtapaService service;
 
     @GetMapping
     public List<DetalleEtapaResponse> listarTodas() {

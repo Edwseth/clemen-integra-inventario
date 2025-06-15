@@ -2,17 +2,17 @@ package com.willyes.clemenintegra.bom.service;
 
 import com.willyes.clemenintegra.bom.model.DocumentoFormula;
 import com.willyes.clemenintegra.bom.repository.DocumentoFormulaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class DocumentoFormulaService {
 
-    @Autowired
-    private DocumentoFormulaRepository documentoRepository;
+    private final DocumentoFormulaRepository documentoRepository;
 
     public List<DocumentoFormula> listarTodas() {
         return documentoRepository.findAll();

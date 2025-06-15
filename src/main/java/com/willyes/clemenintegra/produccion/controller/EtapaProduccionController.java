@@ -4,21 +4,20 @@ import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.service.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/produccion/etapas")
+@RequiredArgsConstructor
 public class EtapaProduccionController {
 
-    @Autowired
-    private EtapaProduccionService service;
-    @Autowired
-    private OrdenProduccionService ordenService;
+    private final EtapaProduccionService service;
+    private final OrdenProduccionService ordenService;
 
     @GetMapping
     public List<EtapaProduccionResponse> listarTodas() {

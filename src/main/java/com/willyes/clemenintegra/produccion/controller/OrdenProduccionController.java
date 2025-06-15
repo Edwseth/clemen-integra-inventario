@@ -6,20 +6,20 @@ import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.service.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/produccion/ordenes")
+@RequiredArgsConstructor
 public class OrdenProduccionController {
 
-    @Autowired
-    private OrdenProduccionService service;
+    private final OrdenProduccionService service;
 
     @GetMapping
     public List<OrdenProduccionResponseDTO> listarTodas() {

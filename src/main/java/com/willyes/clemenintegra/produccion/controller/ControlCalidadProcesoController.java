@@ -7,19 +7,19 @@ import com.willyes.clemenintegra.produccion.mapper.ControlCalidadProcesoMapper;
 import com.willyes.clemenintegra.produccion.model.ControlCalidadProceso;
 import com.willyes.clemenintegra.produccion.model.DetalleEtapa;
 import com.willyes.clemenintegra.produccion.service.ControlCalidadProcesoService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/produccion/calidad")
+@RequiredArgsConstructor
 public class ControlCalidadProcesoController {
 
-    @Autowired
-    private ControlCalidadProcesoService service;
+    private final ControlCalidadProcesoService service;
 
     @GetMapping
     public List<ControlCalidadProcesoResponse> listarTodas() {

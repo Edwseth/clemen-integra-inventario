@@ -5,18 +5,19 @@ import com.willyes.clemenintegra.inventario.mapper.HistorialEstadoOrdenMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.service.HistorialEstadoOrdenService;
 import com.willyes.clemenintegra.shared.model.Usuario;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/inventario/historial-ordenes")
+@RequiredArgsConstructor
 public class HistorialEstadoOrdenController {
 
-    @Autowired private HistorialEstadoOrdenService service;
+    private final HistorialEstadoOrdenService service;
 
     @GetMapping
     public List<HistorialEstadoOrdenResponse> listarTodos() {

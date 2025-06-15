@@ -6,18 +6,19 @@ import com.willyes.clemenintegra.bom.model.*;
 import com.willyes.clemenintegra.bom.service.*;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bom/formulas")
+@RequiredArgsConstructor
 public class FormulaProductoController {
 
-    @Autowired private FormulaProductoService formulaService;
+    private final FormulaProductoService formulaService;
 
     @GetMapping
     public List<FormulaProductoResponse> listarTodas() {
