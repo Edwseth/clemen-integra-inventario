@@ -1,7 +1,14 @@
 package com.willyes.clemenintegra.bom.dto;
 
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class DocumentoFormulaResponse {
-    public Long id;
-    public String tipoDocumento;
-    public String rutaArchivo;
+    private Long id;
+    private String tipoDocumento;
+    private String rutaArchivo;
 }

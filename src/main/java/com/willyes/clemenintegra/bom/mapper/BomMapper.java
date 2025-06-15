@@ -61,17 +61,17 @@ public class BomMapper {
     public static DocumentoFormula toEntity(DocumentoFormulaRequest dto, FormulaProducto formula) {
         return DocumentoFormula.builder()
                 .formula(formula)
-                .tipoDocumento(TipoDocumento.valueOf(dto.tipoDocumento))
-                .rutaArchivo(dto.rutaArchivo)
+                .tipoDocumento(TipoDocumento.valueOf(dto.getTipoDocumento()))
+                .rutaArchivo(dto.getRutaArchivo())
                 .build();
     }
 
     public static DocumentoFormulaResponse toResponse(DocumentoFormula entidad) {
-        DocumentoFormulaResponse dto = new DocumentoFormulaResponse();
-        dto.id = entidad.getId();
-        dto.tipoDocumento = entidad.getTipoDocumento().name();
-        dto.rutaArchivo = entidad.getRutaArchivo();
-        return dto;
+        return DocumentoFormulaResponse.builder()
+                .id(entidad.getId())
+                .tipoDocumento(entidad.getTipoDocumento().name())
+                .rutaArchivo(entidad.getRutaArchivo())
+                .build();
     }
 }
 
