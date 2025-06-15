@@ -11,5 +11,5 @@ public class FormulaProductoResponse {
     public LocalDateTime fechaCreacion;
     public String creadoPorNombre;
     public List<DetalleFormulaResponse> detalles;
-    public List<DocumentoFormulaResponse> documentos;
+    public List<DocumentoFormulaResponseDTO> documentos;
 }

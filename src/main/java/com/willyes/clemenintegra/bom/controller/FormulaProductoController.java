@@ -19,18 +19,19 @@ import java.util.stream.Collectors;
 public class FormulaProductoController {
 
     private final FormulaProductoService formulaService;
+    private final BomMapper bomMapper;
 
     @GetMapping
     public List<FormulaProductoResponse> listarTodas() {
         return formulaService.listarTodas().stream()
-                .map(BomMapper::toResponse)
+                .map(formula -> bomMapper.toResponse(formula))
                 .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<FormulaProductoResponse> obtenerPorId(@PathVariable Long id) {
         return formulaService.buscarPorId(id)
-                .map(BomMapper::toResponse)
+                .map(formula -> bomMapper.toResponse(formula))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -39,8 +40,8 @@ public class FormulaProductoController {
     public ResponseEntity<FormulaProductoResponse> crear(@RequestBody FormulaProductoRequest request) {
         Producto producto = new Producto(); producto.setId(request.productoId);
         Usuario creador = new Usuario(); creador.setId(request.creadoPorId);
-        FormulaProducto entidad = BomMapper.toEntity(request, producto, creador);
-        return ResponseEntity.ok(BomMapper.toResponse(formulaService.guardar(entidad)));
+        FormulaProducto entidad = bomMapper.toEntity(request, producto, creador);
+        return ResponseEntity.ok(bomMapper.toResponse(formulaService.guardar(entidad)));
     }
 
     @PutMapping("/{id}")
@@ -49,9 +50,9 @@ public class FormulaProductoController {
                 .map(existente -> {
                     Producto producto = new Producto(); producto.setId(request.productoId);
                     Usuario creador = new Usuario(); creador.setId(request.creadoPorId);
-                    FormulaProducto entidad = BomMapper.toEntity(request, producto, creador);
+                    FormulaProducto entidad = bomMapper.toEntity(request, producto, creador);
                     entidad.setId(existente.getId());
-                    return ResponseEntity.ok(BomMapper.toResponse(formulaService.guardar(entidad)));
+                    return ResponseEntity.ok(bomMapper.toResponse(formulaService.guardar(entidad)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

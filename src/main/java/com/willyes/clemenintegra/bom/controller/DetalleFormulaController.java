@@ -18,18 +18,19 @@ import java.util.stream.Collectors;
 public class DetalleFormulaController {
 
     private final DetalleFormulaService detalleService;
+    private final BomMapper bomMapper;
 
     @GetMapping
     public List<DetalleFormulaResponse> listarTodas() {
         return detalleService.listarTodas().stream()
-                .map(BomMapper::toResponse)
+                .map(detalle -> bomMapper.toResponse(detalle))
                 .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<DetalleFormulaResponse> obtenerPorId(@PathVariable Long id) {
         return detalleService.buscarPorId(id)
-                .map(BomMapper::toResponse)
+                .map(detalle -> bomMapper.toResponse(detalle))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -39,8 +40,8 @@ public class DetalleFormulaController {
         FormulaProducto formula = new FormulaProducto(); formula.setId(request.formulaId);
         Producto insumo = new Producto(); insumo.setId(request.insumoId);
         UnidadMedida unidad = new UnidadMedida(); unidad.setId(request.unidadMedidaId);
-        DetalleFormula entidad = BomMapper.toEntity(request, formula, insumo, unidad);
-        return ResponseEntity.ok(BomMapper.toResponse(detalleService.guardar(entidad)));
+        DetalleFormula entidad = bomMapper.toEntity(request, formula, insumo, unidad);
+        return ResponseEntity.ok(bomMapper.toResponse(detalleService.guardar(entidad)));
     }
 
     @PutMapping("/{id}")
@@ -50,9 +51,9 @@ public class DetalleFormulaController {
                     FormulaProducto formula = new FormulaProducto(); formula.setId(request.formulaId);
                     Producto insumo = new Producto(); insumo.setId(request.insumoId);
                     UnidadMedida unidad = new UnidadMedida(); unidad.setId(request.unidadMedidaId);
-                    DetalleFormula entidad = BomMapper.toEntity(request, formula, insumo, unidad);
+                    DetalleFormula entidad = bomMapper.toEntity(request, formula, insumo, unidad);
                     entidad.setId(existente.getId());
-                    return ResponseEntity.ok(BomMapper.toResponse(detalleService.guardar(entidad)));
+                    return ResponseEntity.ok(bomMapper.toResponse(detalleService.guardar(entidad)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

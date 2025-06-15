@@ -1,7 +1,7 @@
 package com.willyes.clemenintegra.bom.service;
 
-import com.willyes.clemenintegra.bom.model.DocumentoFormula;
-import com.willyes.clemenintegra.bom.repository.DocumentoFormulaRepository;
+import com.willyes.clemenintegra.bom.model.*;
+import com.willyes.clemenintegra.bom.repository.*;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 

@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.bom.dto;
 
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 @Getter
@@ -7,8 +8,14 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DocumentoFormulaResponse {
-    private Long id;
+public class DocumentoFormulaRequestDTO {
+
+    @NotNull
+    private Long formulaId;
+
+    @NotBlank
     private String tipoDocumento;
+
+    @NotBlank
     private String rutaArchivo;
 }

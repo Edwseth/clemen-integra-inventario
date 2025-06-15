@@ -1,17 +1,11 @@
 package com.willyes.clemenintegra.bom.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.willyes.clemenintegra.bom.dto.DocumentoFormulaRequest;
-import com.willyes.clemenintegra.bom.dto.DocumentoFormulaResponse;
-import com.willyes.clemenintegra.bom.model.DocumentoFormula;
-import com.willyes.clemenintegra.bom.model.FormulaProducto;
-import com.willyes.clemenintegra.bom.model.enums.TipoDocumento;
-import com.willyes.clemenintegra.bom.service.DocumentoFormulaService;
-import com.willyes.clemenintegra.inventario.service.ProductoService;
-import com.willyes.clemenintegra.shared.security.SecurityConfig;
-import com.willyes.clemenintegra.shared.security.CustomUserDetailsService;
-import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
-import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
+import com.willyes.clemenintegra.bom.dto.*;
+import com.willyes.clemenintegra.bom.service.*;
+import com.willyes.clemenintegra.inventario.service.*;
+import com.willyes.clemenintegra.shared.security.*;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -21,10 +15,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -32,7 +26,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(DocumentoFormulaController.class)
-@Import(SecurityConfig.class)
+//@Import(SecurityConfig.class)
+@ActiveProfiles("test")
+@Import(com.willyes.clemenintegra.inventario.config.TestSecurityConfig.class)
 class DocumentoFormulaControllerTest {
 
     @Autowired
@@ -41,7 +37,8 @@ class DocumentoFormulaControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private DocumentoFormulaService documentoService;
+    private DocumentoFormulaApplicationService documentoService;
+
     @MockBean
     private ProductoService productoService;
 
@@ -58,20 +55,19 @@ class DocumentoFormulaControllerTest {
     @Test
     @WithMockUser(roles = "ROL_JEFE_PRODUCCION")
     void registrarDocumentoValido_retornaOk() throws Exception {
-        DocumentoFormulaRequest request = DocumentoFormulaRequest.builder()
+        DocumentoFormulaRequestDTO request = DocumentoFormulaRequestDTO.builder()
                 .formulaId(1L)
                 .tipoDocumento("MSDS")
                 .rutaArchivo("/docs/msds.pdf")
                 .build();
 
-        DocumentoFormula saved = DocumentoFormula.builder()
+        DocumentoFormulaResponseDTO response = DocumentoFormulaResponseDTO.builder()
                 .id(10L)
-                .tipoDocumento(TipoDocumento.MSDS)
+                .tipoDocumento("MSDS")
                 .rutaArchivo("/docs/msds.pdf")
-                .formula(FormulaProducto.builder().id(1L).build())
                 .build();
 
-        when(documentoService.guardar(any())).thenReturn(saved);
+        when(documentoService.guardar(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/bom/documentos")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -85,7 +81,7 @@ class DocumentoFormulaControllerTest {
     @Test
     @WithMockUser(roles = "ROL_JEFE_PRODUCCION")
     void registrarDocumento_formulaInexistente_retornaBadRequest() throws Exception {
-        DocumentoFormulaRequest request = DocumentoFormulaRequest.builder()
+        DocumentoFormulaRequestDTO request = DocumentoFormulaRequestDTO.builder()
                 .formulaId(99L)
                 .tipoDocumento("MSDS")
                 .rutaArchivo("/docs/msds.pdf")
@@ -103,14 +99,13 @@ class DocumentoFormulaControllerTest {
     @Test
     @WithMockUser(roles = "ROL_JEFE_PRODUCCION")
     void obtenerDocumentoPorId_existente_retornaOk() throws Exception {
-        DocumentoFormula entidad = DocumentoFormula.builder()
+        DocumentoFormulaResponseDTO response = DocumentoFormulaResponseDTO.builder()
                 .id(5L)
-                .tipoDocumento(TipoDocumento.INSTRUCTIVO)
+                .tipoDocumento("INSTRUCTIVO")
                 .rutaArchivo("/docs/instr.pdf")
-                .formula(FormulaProducto.builder().id(1L).build())
                 .build();
 
-        when(documentoService.buscarPorId(5L)).thenReturn(Optional.of(entidad));
+        when(documentoService.buscarPorId(5L)).thenReturn(response);
 
         mockMvc.perform(get("/api/bom/documentos/5"))
                 .andExpect(status().isOk())
@@ -121,7 +116,7 @@ class DocumentoFormulaControllerTest {
     @Test
     @WithMockUser(roles = "ROL_JEFE_PRODUCCION")
     void obtenerDocumentoPorId_inexistente_retornaNotFound() throws Exception {
-        when(documentoService.buscarPorId(99L)).thenReturn(Optional.empty());
+        when(documentoService.buscarPorId(99L)).thenThrow(new EntityNotFoundException("Documento no encontrado"));
 
         mockMvc.perform(get("/api/bom/documentos/99"))
                 .andExpect(status().isNotFound());
@@ -130,13 +125,13 @@ class DocumentoFormulaControllerTest {
     @Test
     @WithMockUser(roles = "ROL_JEFE_PRODUCCION")
     void listarDocumentos_retornaLista() throws Exception {
-        DocumentoFormula entidad = DocumentoFormula.builder()
+        DocumentoFormulaResponseDTO response = DocumentoFormulaResponseDTO.builder()
                 .id(3L)
-                .tipoDocumento(TipoDocumento.PROCEDIMIENTO)
+                .tipoDocumento("PROCEDIMIENTO")
                 .rutaArchivo("/docs/proc.pdf")
-                .formula(FormulaProducto.builder().id(1L).build())
                 .build();
-        when(documentoService.listarTodas()).thenReturn(List.of(entidad));
+
+        when(documentoService.listarTodas()).thenReturn(List.of(response));
 
         mockMvc.perform(get("/api/bom/documentos"))
                 .andExpect(status().isOk())

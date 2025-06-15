@@ -1,57 +1,40 @@
 package com.willyes.clemenintegra.bom.controller;
 
 import com.willyes.clemenintegra.bom.dto.*;
-import com.willyes.clemenintegra.bom.mapper.BomMapper;
-import com.willyes.clemenintegra.bom.model.*;
 import com.willyes.clemenintegra.bom.service.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bom/documentos")
 @RequiredArgsConstructor
 public class DocumentoFormulaController {
 
-    private final DocumentoFormulaService documentoService;
+    private final DocumentoFormulaApplicationService documentoService;
 
     @GetMapping
-    public List<DocumentoFormulaResponse> listarTodas() {
-        return documentoService.listarTodas().stream()
-                .map(BomMapper::toResponse)
-                .collect(Collectors.toList());
+    public List<DocumentoFormulaResponseDTO> listarTodas() {
+        return documentoService.listarTodas();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DocumentoFormulaResponse> obtenerPorId(@PathVariable Long id) {
-        return documentoService.buscarPorId(id)
-                .map(BomMapper::toResponse)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<DocumentoFormulaResponseDTO> obtenerPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(documentoService.buscarPorId(id));
     }
 
+
     @PostMapping
-    public ResponseEntity<DocumentoFormulaResponse> crear(@RequestBody DocumentoFormulaRequest request) {
-        FormulaProducto formula = new FormulaProducto();
-        formula.setId(request.getFormulaId());
-        DocumentoFormula entidad = BomMapper.toEntity(request, formula);
-        return ResponseEntity.ok(BomMapper.toResponse(documentoService.guardar(entidad)));
+    public ResponseEntity<DocumentoFormulaResponseDTO> crear(@RequestBody DocumentoFormulaRequestDTO request) {
+        return ResponseEntity.ok(documentoService.guardar(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DocumentoFormulaResponse> actualizar(@PathVariable Long id, @RequestBody DocumentoFormulaRequest request) {
-        return documentoService.buscarPorId(id)
-                .map(existente -> {
-                    FormulaProducto formula = new FormulaProducto();
-                    formula.setId(request.getFormulaId());
-                    DocumentoFormula entidad = BomMapper.toEntity(request, formula);
-                    entidad.setId(existente.getId());
-                    return ResponseEntity.ok(BomMapper.toResponse(documentoService.guardar(entidad)));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<DocumentoFormulaResponseDTO> actualizar(@PathVariable Long id, @RequestBody DocumentoFormulaRequestDTO request) {
+        DocumentoFormulaResponseDTO actualizado = documentoService.actualizar(id, request);
+        return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
