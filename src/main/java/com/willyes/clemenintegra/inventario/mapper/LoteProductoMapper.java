@@ -1,36 +1,19 @@
 package com.willyes.clemenintegra.inventario.mapper;
 
-import com.willyes.clemenintegra.inventario.dto.*;
+import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class LoteProductoMapper {
+@Mapper(componentModel = "spring")
+public interface LoteProductoMapper {
 
-    public static LoteProducto toEntity(LoteProductoRequestDTO dto, Producto producto, Almacen almacen) {
-        LoteProducto lote = new LoteProducto();
-        lote.setCodigoLote(dto.getCodigoLote());
-        lote.setFechaFabricacion(dto.getFechaFabricacion());
-        lote.setFechaVencimiento(dto.getFechaVencimiento());
-        lote.setStockLote(dto.getStockLote());
-        lote.setEstado(dto.getEstado());
-        lote.setTemperaturaAlmacenamiento(dto.getTemperaturaAlmacenamiento());
-        lote.setProducto(producto);
-        lote.setAlmacen(almacen);
-        return lote;
-    }
+    @Mapping(target = "producto", source = "producto")
+    @Mapping(target = "almacen", source = "almacen")
+    LoteProducto toEntity(LoteProductoRequestDTO dto, Producto producto, Almacen almacen);
 
-    public static LoteProductoResponseDTO toDto(LoteProducto lote) {
-        LoteProductoResponseDTO dto = new LoteProductoResponseDTO();
-        dto.setId(lote.getId());
-        dto.setCodigoLote(lote.getCodigoLote());
-        dto.setFechaFabricacion(lote.getFechaFabricacion());
-        dto.setFechaVencimiento(lote.getFechaVencimiento());
-        dto.setStockLote(lote.getStockLote());
-        dto.setEstado(lote.getEstado());
-        dto.setTemperaturaAlmacenamiento(lote.getTemperaturaAlmacenamiento());
-        dto.setFechaLiberacion(lote.getFechaLiberacion());
-        dto.setNombreProducto(lote.getProducto().getNombre());
-        dto.setNombreAlmacen(lote.getAlmacen().getNombre());
-        return dto;
-    }
+    @Mapping(target = "nombreProducto", source = "producto.nombre")
+    @Mapping(target = "nombreAlmacen", source = "almacen.nombre")
+    LoteProductoResponseDTO toDto(LoteProducto lote);
 }
-

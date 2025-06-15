@@ -1,19 +1,13 @@
 package com.willyes.clemenintegra.inventario.mapper;
 
-import com.willyes.clemenintegra.inventario.dto.*;
-import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.dto.OrdenCompraDetalleResponse;
+import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class OrdenCompraDetalleMapper {
+@Mapper(componentModel = "spring")
+public interface OrdenCompraDetalleMapper {
 
-    public static OrdenCompraDetalleResponse toResponse(OrdenCompraDetalle entity) {
-        OrdenCompraDetalleResponse dto = new OrdenCompraDetalleResponse();
-        dto.id = entity.getId();
-        dto.cantidad = entity.getCantidad();
-        dto.valorUnitario = entity.getValorUnitario();
-        dto.valorTotal = entity.getValorTotal();
-        dto.iva = entity.getIva();
-        dto.cantidadRecibida = entity.getCantidadRecibida();
-        dto.productoNombre = entity.getProducto().getNombre();
-        return dto;
-    }
+    @Mapping(target = "productoNombre", source = "producto.nombre")
+    OrdenCompraDetalleResponse toResponse(OrdenCompraDetalle entity);
 }
