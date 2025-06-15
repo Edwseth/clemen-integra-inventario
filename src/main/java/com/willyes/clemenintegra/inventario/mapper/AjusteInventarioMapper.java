@@ -12,10 +12,14 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface AjusteInventarioMapper {
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "fecha", ignore = true)
     @Mapping(target = "producto", source = "producto")
     @Mapping(target = "almacen", source = "almacen")
     @Mapping(target = "usuario", source = "usuario")
     AjusteInventario toEntity(AjusteInventarioRequestDTO dto, Producto producto, Almacen almacen, Usuario usuario);
 
+    @Mapping(target = "productoNombre", source = "producto.nombre")
+    @Mapping(target = "almacenNombre", source = "almacen.nombre")
+    @Mapping(target = "usuarioNombre", source = "usuario.nombreCompleto")
     AjusteInventarioResponseDTO toResponseDTO(AjusteInventario entity);
 }
