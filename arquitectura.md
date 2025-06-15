@@ -34,6 +34,19 @@ Esta arquitectura permite entregar valor rápidamente sin perder la posibilidad 
 - **Gestión de dependencias:** Maven
 - **Control de versiones:** Git + GitHub
 
+## Organización de Paquetes
+
+La estructura del código se organiza por dominio siguiendo el paquete raíz `com.willyes.clemenintegra`:
+
+```
+com.willyes.clemenintegra
+├── inventario    # API y lógica de inventario
+├── produccion    # Órdenes y etapas de producción
+├── calidad       # Procesos de calidad y CAPA
+├── bom           # Fórmulas y materias primas
+└── shared        # Configuración, seguridad 2FA y excepciones
+```
+
 ## 4. Consideraciones de Escalabilidad
 
 - Las entidades están organizadas por contexto funcional, permitiendo futura extracción de microservicios.
