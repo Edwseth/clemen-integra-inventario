@@ -38,7 +38,6 @@ import java.util.Optional;
 public class MovimientoInventarioController {
 
     private final MovimientoInventarioService service;
-    private final MovimientoInventarioService movimientoInventarioService;
     private final ProductoRepository productoRepo;
     private final LoteProductoRepository loteRepo;
 
@@ -97,7 +96,7 @@ public class MovimientoInventarioController {
     public ResponseEntity<byte[]> exportarReporteMovimientos() throws IOException {
         byte[] contenido;
 
-        try (Workbook workbook = movimientoInventarioService.generarReporteMovimientosExcel();
+        try (Workbook workbook = service.generarReporteMovimientosExcel();
              ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             workbook.write(bos);
             contenido = bos.toByteArray();
