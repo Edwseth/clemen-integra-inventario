@@ -1,13 +1,21 @@
 package com.willyes.clemenintegra.bom.dto;
 
 import jakarta.validation.constraints.*;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class DocumentoFormulaRequest {
+
     @NotNull
-    public Long formulaId;
+    private Long formulaId;
 
     @NotBlank
-    public String tipoDocumento;
+    private String tipoDocumento;
 
     @NotBlank
-    public String rutaArchivo;
+    private String rutaArchivo;
 }
