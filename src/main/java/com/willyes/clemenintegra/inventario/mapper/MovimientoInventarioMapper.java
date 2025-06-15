@@ -9,6 +9,16 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface MovimientoInventarioMapper {
 
+    @Mapping(target = "producto", ignore = true)
+    @Mapping(target = "lote", ignore = true)
+    @Mapping(target = "almacen", ignore = true)
+    @Mapping(target = "proveedor", ignore = true)
+    @Mapping(target = "ordenCompra", ignore = true)
+    @Mapping(target = "motivoMovimiento", ignore = true)
+    @Mapping(target = "tipoMovimientoDetalle", ignore = true)
+    @Mapping(target = "registradoPor", ignore = true)
+    @Mapping(target = "ordenCompraDetalle", ignore = true)
+    @Mapping(target = "fechaIngreso", ignore = true)
     MovimientoInventario toEntity(MovimientoInventarioDTO dto);
 
     @Mapping(target = "productoId", source = "producto.id")

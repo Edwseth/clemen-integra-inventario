@@ -13,7 +13,11 @@ public interface LoteProductoMapper {
     @Mapping(target = "producto", source = "producto")
     @Mapping(target = "almacen", source = "almacen")
     @Mapping(target = "usuarioLiberador", source = "usuario")
+    @Mapping(target = "ordenProduccion", ignore = true)
+    @Mapping(target = "produccion", ignore = true)
     LoteProducto toEntity(LoteProductoRequestDTO dto, Producto producto, Almacen almacen, Usuario usuario);
 
+    @Mapping(target = "nombreProducto", source = "producto.nombre")
+    @Mapping(target = "nombreAlmacen", source = "almacen.nombre")
     LoteProductoResponseDTO toDto(LoteProducto lote);
 }
