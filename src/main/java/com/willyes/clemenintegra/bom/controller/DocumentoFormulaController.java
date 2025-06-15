@@ -4,18 +4,19 @@ import com.willyes.clemenintegra.bom.dto.*;
 import com.willyes.clemenintegra.bom.mapper.BomMapper;
 import com.willyes.clemenintegra.bom.model.*;
 import com.willyes.clemenintegra.bom.service.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bom/documentos")
+@RequiredArgsConstructor
 public class DocumentoFormulaController {
 
-    @Autowired private DocumentoFormulaService documentoService;
+    private final DocumentoFormulaService documentoService;
 
     @GetMapping
     public List<DocumentoFormulaResponse> listarTodas() {

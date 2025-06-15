@@ -2,17 +2,17 @@ package com.willyes.clemenintegra.bom.service;
 
 import com.willyes.clemenintegra.bom.model.*;
 import com.willyes.clemenintegra.bom.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class FormulaProductoService {
 
-    @Autowired
-    private FormulaProductoRepository formulaRepository;
+    private final FormulaProductoRepository formulaRepository;
 
     public List<FormulaProducto> listarTodas() {
         return formulaRepository.findAll();

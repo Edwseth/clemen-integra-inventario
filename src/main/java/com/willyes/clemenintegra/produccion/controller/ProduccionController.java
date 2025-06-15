@@ -6,18 +6,19 @@ import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionSimpleMapper;
 import com.willyes.clemenintegra.produccion.model.Produccion;
 import com.willyes.clemenintegra.produccion.service.ProduccionService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/produccion/registro")
+@RequiredArgsConstructor
 public class ProduccionController {
 
-    @Autowired private ProduccionService service;
+    private final ProduccionService service;
 
     @GetMapping
     public List<ProduccionResponse> listarTodas() {

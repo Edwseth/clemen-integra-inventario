@@ -2,17 +2,17 @@ package com.willyes.clemenintegra.produccion.service;
 
 import com.willyes.clemenintegra.produccion.model.Produccion;
 import com.willyes.clemenintegra.produccion.repository.ProduccionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ProduccionService {
 
-    @Autowired
-    private ProduccionRepository repository;
+    private final ProduccionRepository repository;
 
     public List<Produccion> listarTodas() {
         return repository.findAll();

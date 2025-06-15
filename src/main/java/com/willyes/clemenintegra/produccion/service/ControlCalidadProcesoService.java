@@ -2,17 +2,17 @@ package com.willyes.clemenintegra.produccion.service;
 
 import com.willyes.clemenintegra.produccion.model.ControlCalidadProceso;
 import com.willyes.clemenintegra.produccion.repository.ControlCalidadProcesoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ControlCalidadProcesoService {
 
-    @Autowired
-    private ControlCalidadProcesoRepository repository;
+    private final ControlCalidadProcesoRepository repository;
 
     public List<ControlCalidadProceso> listarTodas() {
         return repository.findAll();
