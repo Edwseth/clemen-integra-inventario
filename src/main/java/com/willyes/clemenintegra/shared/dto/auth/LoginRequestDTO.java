@@ -1,4 +1,9 @@
 package com.willyes.clemenintegra.shared.dto.auth;
 
-public record LoginRequestDTO(String nombreUsuario, String clave) { }
+import jakarta.validation.constraints.NotBlank;
+
+public record LoginRequestDTO(
+        @NotBlank String nombreUsuario,
+        @NotBlank String clave
+) { }
 
