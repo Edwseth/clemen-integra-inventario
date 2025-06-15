@@ -19,6 +19,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,6 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Import(com.willyes.clemenintegra.inventario.config.TestSecurityConfig.class)
 public class OrdenProduccionControllerTest {
+
+    private static final Logger log = LoggerFactory.getLogger(OrdenProduccionControllerTest.class);
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -85,7 +89,7 @@ public class OrdenProduccionControllerTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.loteProduccion").value("LOTE-TEST-001"));
         } catch (Exception ex) {
-            ex.printStackTrace(); // ✅ Esto imprimirá la causa exacta del error 500
+            log.error("Error al crear orden de producción", ex);
             throw ex;
         }
     }
@@ -93,7 +97,7 @@ public class OrdenProduccionControllerTest {
     @Test
     void asignarLoteAOrdenProduccion_debeGuardarRelacionCorrectamente() throws Exception {
         productoRepository.findAll().forEach(p ->
-                System.out.println("📦 Producto: nombre=" + p.getNombre() + " | SKU=" + p.getCodigoSku())
+                log.info("📦 Producto: nombre={} | SKU={}", p.getNombre(), p.getCodigoSku())
         );
 
         Producto producto = productoRepository.findByCodigoSku("SKU-BEBIDA-001")

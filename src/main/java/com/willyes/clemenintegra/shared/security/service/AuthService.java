@@ -5,6 +5,8 @@ import com.willyes.clemenintegra.shared.dto.auth.Codigo2FARequestDTO;
 import com.willyes.clemenintegra.shared.dto.auth.LoginRequestDTO;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +18,8 @@ import java.util.Random;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -41,7 +45,7 @@ public class AuthService {
         usuarioRepository.save(usuario);
 
         // Aquí podrías enviar el código por email o WhatsApp si se desea
-        System.out.println("🔐 Código 2FA generado: " + codigo);
+        log.info("\uD83D\uDD10 Código 2FA generado: {}", codigo);
     }
 
     @Transactional
@@ -49,12 +53,12 @@ public class AuthService {
         Usuario usuario = usuarioRepository.findByNombreUsuario(dto.nombreUsuario())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        System.out.println("Validando código 2FA...");
-        System.out.println("Usuario: " + usuario.getNombreUsuario());
-        System.out.println("Codigo 2FA almacenado: " + usuario.getCodigo2FA());
-        System.out.println("Codigo 2FA recibido: " + dto.codigo());
-        System.out.println("Fecha expiración: " + usuario.getCodigo2FAExpiraEn());
-        System.out.println("Fecha actual: " + LocalDateTime.now());
+        log.info("Validando código 2FA...");
+        log.info("Usuario: {}", usuario.getNombreUsuario());
+        log.info("Codigo 2FA almacenado: {}", usuario.getCodigo2FA());
+        log.info("Codigo 2FA recibido: {}", dto.codigo());
+        log.info("Fecha expiración: {}", usuario.getCodigo2FAExpiraEn());
+        log.info("Fecha actual: {}", LocalDateTime.now());
         if (usuario.getCodigo2FA() == null || usuario.getCodigo2FAExpiraEn() == null ||
                 !usuario.getCodigo2FA().equals(dto.codigo()) ||
                 usuario.getCodigo2FAExpiraEn().isBefore(LocalDateTime.now())) {
