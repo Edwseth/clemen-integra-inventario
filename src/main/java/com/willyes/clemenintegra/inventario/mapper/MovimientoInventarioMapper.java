@@ -3,39 +3,51 @@ package com.willyes.clemenintegra.inventario.mapper;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import org.mapstruct.*;
 
 @Mapper(componentModel = "spring")
 public interface MovimientoInventarioMapper {
 
-    @Mapping(target = "producto", ignore = true)
-    @Mapping(target = "lote", ignore = true)
-    @Mapping(target = "almacen", ignore = true)
-    @Mapping(target = "proveedor", ignore = true)
-    @Mapping(target = "ordenCompra", ignore = true)
-    @Mapping(target = "motivoMovimiento", ignore = true)
-    @Mapping(target = "tipoMovimientoDetalle", ignore = true)
-    @Mapping(target = "registradoPor", ignore = true)
-    @Mapping(target = "ordenCompraDetalle", ignore = true)
-    @Mapping(target = "fechaIngreso", ignore = true)
+    // Convertir DTO plano a entidad ignorando relaciones complejas
+    //@Mapping(target = "producto", ignore = true)
+    //@Mapping(target = "lote", ignore = true)
+    //@Mapping(target = "almacen", ignore = true)
+    //@Mapping(target = "proveedor", ignore = true)
+    //@Mapping(target = "ordenCompra", ignore = true)
+    //@Mapping(target = "motivoMovimiento", ignore = true)
+    //@Mapping(target = "tipoMovimientoDetalle", ignore = true)
+    //@Mapping(target = "registradoPor", ignore = true)
+    //@Mapping(target = "ordenCompraDetalle", ignore = true)
+    //@Mapping(target = "fechaIngreso", ignore = true)
     MovimientoInventario toEntity(MovimientoInventarioDTO dto);
 
-    @Mapping(target = "productoId", source = "producto.id")
-    @Mapping(target = "loteProductoId", source = "lote.id")
-    @Mapping(target = "almacenId", source = "almacen.id")
-    @Mapping(target = "proveedorId", source = "proveedor.id")
-    @Mapping(target = "ordenCompraId", source = "ordenCompra.id")
-    @Mapping(target = "motivoMovimientoId", source = "motivoMovimiento.id")
-    @Mapping(target = "tipoMovimientoDetalleId", source = "tipoMovimientoDetalle.id")
-    @Mapping(target = "usuarioId", source = "registradoPor.id")
-    @Mapping(target = "ordenCompraDetalleId", source = "ordenCompraDetalle.id")
+    // Convertir entidad a DTO básico (para uso interno)
+    @Mapping(target = "productoId", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getId() : null)")
+    @Mapping(target = "loteProductoId", expression = "java(movimiento.getLote() != null ? movimiento.getLote().getId() : null)")
+    @Mapping(target = "almacenId", expression = "java(movimiento.getAlmacen() != null ? movimiento.getAlmacen().getId() : null)")
+    @Mapping(target = "proveedorId", expression = "java(movimiento.getProveedor() != null ? movimiento.getProveedor().getId() : null)")
+    @Mapping(target = "ordenCompraId", expression = "java(movimiento.getOrdenCompra() != null ? movimiento.getOrdenCompra().getId() : null)")
+    @Mapping(target = "motivoMovimientoId", expression = "java(movimiento.getMotivoMovimiento() != null ? movimiento.getMotivoMovimiento().getId() : null)")
+    @Mapping(target = "tipoMovimientoDetalleId", expression = "java(movimiento.getTipoMovimientoDetalle() != null ? movimiento.getTipoMovimientoDetalle().getId() : null)")
+    @Mapping(target = "usuarioId", expression = "java(movimiento.getRegistradoPor() != null ? movimiento.getRegistradoPor().getId() : null)")
+    @Mapping(target = "ordenCompraDetalleId", expression = "java(movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null)")
     MovimientoInventarioDTO toDTO(MovimientoInventario movimiento);
 
-    @Mapping(target = "productoId", source = "producto.id")
-    @Mapping(target = "tipoMovimiento", expression = "java(movimiento.getTipoMovimiento().name())")
-    @Mapping(target = "nombreProducto", source = "producto.nombre")
-    @Mapping(target = "nombreLote", source = "lote.codigoLote")
-    @Mapping(target = "nombreAlmacen", source = "almacen.nombre")
+
+    // Convertir a DTO de respuesta (más completo para vistas)
+    @Mapping(target = "productoId", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getId() : null)")
+    @Mapping(target = "tipoMovimiento", expression = "java(convertTipoMovimiento(movimiento.getTipoMovimiento()))")
+    @Mapping(target = "nombreProducto", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null)")
+    @Mapping(target = "nombreLote", expression = "java(movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null)")
+    @Mapping(target = "nombreAlmacen", expression = "java(movimiento.getAlmacen() != null ? movimiento.getAlmacen().getNombre() : null)")
     MovimientoInventarioResponseDTO toResponseDTO(MovimientoInventario movimiento);
+
+
+    // Método auxiliar para convertir enum a String (para MapStruct)
+    default String convertTipoMovimiento(ClasificacionMovimientoInventario tipoMovimiento) {
+        return (tipoMovimiento != null) ? tipoMovimiento.name() : null;
+    }
 }
+

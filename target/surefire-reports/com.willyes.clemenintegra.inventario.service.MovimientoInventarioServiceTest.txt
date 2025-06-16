@@ -1,0 +1,44 @@
+-------------------------------------------------------------------------------
+Test set: com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 2, Errors: 1, Skipped: 0, Time elapsed: 0.495 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest
+com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaLanzarExceptionCuandoProductoNoExiste -- Time elapsed: 0.482 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: <java.util.NoSuchElementException> but was: <java.lang.NullPointerException>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:67)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:35)
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3115)
+	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaLanzarExceptionCuandoProductoNoExiste(MovimientoInventarioServiceTest.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: java.lang.NullPointerException: Cannot invoke "com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper.toEntity(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO)" because "this.mapper" is null
+	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceImpl.registrarMovimiento(MovimientoInventarioServiceImpl.java:55)
+	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.lambda$registrarMovimiento_DeberiaLanzarExceptionCuandoProductoNoExiste$1(MovimientoInventarioServiceTest.java:105)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:53)
+	... 6 more
+
+com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaGuardarMovimientoCorrectamente -- Time elapsed: 0.004 s <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper.toEntity(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO)" because "this.mapper" is null
+	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceImpl.registrarMovimiento(MovimientoInventarioServiceImpl.java:55)
+	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaGuardarMovimientoCorrectamente(MovimientoInventarioServiceTest.java:80)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaLanzarExcepcionPorInconsistenciaTipoYDetalle -- Time elapsed: 0.005 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: <java.lang.IllegalArgumentException> but was: <java.lang.NullPointerException>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:67)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:35)
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3115)
+	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaLanzarExcepcionPorInconsistenciaTipoYDetalle(MovimientoInventarioServiceTest.java:135)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: java.lang.NullPointerException: Cannot invoke "com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper.toEntity(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO)" because "this.mapper" is null
+	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceImpl.registrarMovimiento(MovimientoInventarioServiceImpl.java:55)
+	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.lambda$registrarMovimiento_DeberiaLanzarExcepcionPorInconsistenciaTipoYDetalle$2(MovimientoInventarioServiceTest.java:136)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:53)
+	... 6 more
+

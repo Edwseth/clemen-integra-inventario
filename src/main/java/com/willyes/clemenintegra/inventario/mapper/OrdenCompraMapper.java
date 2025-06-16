@@ -6,14 +6,21 @@ import com.willyes.clemenintegra.inventario.model.Proveedor;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface OrdenCompraMapper {
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "proveedor", source = "proveedor")
-    @Mapping(target = "estado", source = "estado")
-    @Mapping(target = "fechaOrden", expression = "java(java.time.LocalDate.now())")
-    @Mapping(target = "observaciones", source = "dto.observaciones")
-    @Mapping(target = "detalles", ignore = true)
-    OrdenCompra toEntity(OrdenCompraRequestDTO dto, Proveedor proveedor, EstadoOrdenCompra estado);
+
+    default OrdenCompra toEntity(OrdenCompraRequestDTO dto, Proveedor proveedor, EstadoOrdenCompra estado) {
+        OrdenCompra entity = new OrdenCompra();
+        entity.setProveedor(proveedor);
+        entity.setEstado(estado);
+        entity.setFechaOrden(java.time.LocalDate.now());
+        entity.setObservaciones(dto.getObservaciones());
+        // los detalles los dejamos null o vacíos según corresponda
+        return entity;
+    }
 }
+
+
+
