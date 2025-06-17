@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.inventario.controller.SeguridadPermisosTest
 -------------------------------------------------------------------------------
-Tests run: 7, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 0.119 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.SeguridadPermisosTest
+Tests run: 7, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 0.116 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.SeguridadPermisosTest
 com.willyes.clemenintegra.inventario.controller.SeguridadPermisosTest.jefeCalidadPuedeVerProductosRetenidos -- Time elapsed: 0.015 s <<< FAILURE!
 java.lang.AssertionError: No value at JSON path "$[0].estadoLote"
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:302)
@@ -14,7 +14,7 @@ java.lang.AssertionError: No value at JSON path "$[0].estadoLote"
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 Caused by: com.jayway.jsonpath.PathNotFoundException: No results for path: $[0]['estadoLote']
 
-com.willyes.clemenintegra.inventario.controller.SeguridadPermisosTest.jefeCalidadPuedeVerProductosAgrupadosPorLotesRetenidos -- Time elapsed: 0.010 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.SeguridadPermisosTest.jefeCalidadPuedeVerProductosAgrupadosPorLotesRetenidos -- Time elapsed: 0.016 s <<< FAILURE!
 java.lang.AssertionError: No value at JSON path "$[0].lotes[0].estado"
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:302)
 	at org.springframework.test.util.JsonPathExpectationsHelper.assertValue(JsonPathExpectationsHelper.java:99)
@@ -26,7 +26,7 @@ java.lang.AssertionError: No value at JSON path "$[0].lotes[0].estado"
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 Caused by: com.jayway.jsonpath.PathNotFoundException: No results for path: $[0]['lotes'][0]['estado']
 
-com.willyes.clemenintegra.inventario.controller.SeguridadPermisosTest.almacenistaPuedeRegistrarMovimiento -- Time elapsed: 0.036 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.SeguridadPermisosTest.almacenistaPuedeRegistrarMovimiento -- Time elapsed: 0.041 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<201> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)

@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.inventario.controller.ProductoControllerTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 5, Skipped: 0, Time elapsed: 0.055 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.ProductoControllerTest
-com.willyes.clemenintegra.inventario.controller.ProductoControllerTest.obtenerProductoNoExistente_debeRetornarNotFound -- Time elapsed: 0.009 s <<< ERROR!
+Tests run: 5, Failures: 0, Errors: 5, Skipped: 0, Time elapsed: 0.057 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.ProductoControllerTest
+com.willyes.clemenintegra.inventario.controller.ProductoControllerTest.obtenerProductoNoExistente_debeRetornarNotFound -- Time elapsed: 0.018 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Violación de una restricción de Integridad Referencial: "CONSTRAINT_EB6: PUBLIC.ORDEN_COMPRA_DETALLE FOREIGN KEY(PRODUCTOS_ID) REFERENCES PUBLIC.PRODUCTOS(ID) (1)"
 Referential integrity constraint violation: "CONSTRAINT_EB6: PUBLIC.ORDEN_COMPRA_DETALLE FOREIGN KEY(PRODUCTOS_ID) REFERENCES PUBLIC.PRODUCTOS(ID) (1)"; SQL statement:
@@ -80,7 +80,7 @@ delete from productos where id=? [23503-224]
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:194)
 	... 39 more
 
-com.willyes.clemenintegra.inventario.controller.ProductoControllerTest.obtenerProductoPorId_debeRetornarProducto -- Time elapsed: 0.009 s <<< ERROR!
+com.willyes.clemenintegra.inventario.controller.ProductoControllerTest.obtenerProductoPorId_debeRetornarProducto -- Time elapsed: 0.006 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Violación de una restricción de Integridad Referencial: "CONSTRAINT_EB6: PUBLIC.ORDEN_COMPRA_DETALLE FOREIGN KEY(PRODUCTOS_ID) REFERENCES PUBLIC.PRODUCTOS(ID) (1)"
 Referential integrity constraint violation: "CONSTRAINT_EB6: PUBLIC.ORDEN_COMPRA_DETALLE FOREIGN KEY(PRODUCTOS_ID) REFERENCES PUBLIC.PRODUCTOS(ID) (1)"; SQL statement:
@@ -158,7 +158,7 @@ delete from productos where id=? [23503-224]
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:194)
 	... 39 more
 
-com.willyes.clemenintegra.inventario.controller.ProductoControllerTest.listarTodosLosProductos_debeRetornarLista -- Time elapsed: 0.008 s <<< ERROR!
+com.willyes.clemenintegra.inventario.controller.ProductoControllerTest.listarTodosLosProductos_debeRetornarLista -- Time elapsed: 0.012 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Violación de una restricción de Integridad Referencial: "CONSTRAINT_EB6: PUBLIC.ORDEN_COMPRA_DETALLE FOREIGN KEY(PRODUCTOS_ID) REFERENCES PUBLIC.PRODUCTOS(ID) (1)"
 Referential integrity constraint violation: "CONSTRAINT_EB6: PUBLIC.ORDEN_COMPRA_DETALLE FOREIGN KEY(PRODUCTOS_ID) REFERENCES PUBLIC.PRODUCTOS(ID) (1)"; SQL statement:
@@ -236,7 +236,7 @@ delete from productos where id=? [23503-224]
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:194)
 	... 39 more
 
-com.willyes.clemenintegra.inventario.controller.ProductoControllerTest.crearProductoValido_debeRetornarCreated -- Time elapsed: 0.009 s <<< ERROR!
+com.willyes.clemenintegra.inventario.controller.ProductoControllerTest.crearProductoValido_debeRetornarCreated -- Time elapsed: 0.007 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Violación de una restricción de Integridad Referencial: "CONSTRAINT_EB6: PUBLIC.ORDEN_COMPRA_DETALLE FOREIGN KEY(PRODUCTOS_ID) REFERENCES PUBLIC.PRODUCTOS(ID) (1)"
 Referential integrity constraint violation: "CONSTRAINT_EB6: PUBLIC.ORDEN_COMPRA_DETALLE FOREIGN KEY(PRODUCTOS_ID) REFERENCES PUBLIC.PRODUCTOS(ID) (1)"; SQL statement:

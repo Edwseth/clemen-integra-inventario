@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.produccion.controller.OrdenProduccionControllerTest
 -------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.048 s <<< FAILURE! -- in com.willyes.clemenintegra.produccion.controller.OrdenProduccionControllerTest
-com.willyes.clemenintegra.produccion.controller.OrdenProduccionControllerTest.crearOrdenProduccion_conLoteAsignado_debeRegistrarCorrectamente -- Time elapsed: 0.012 s <<< ERROR!
+Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.037 s <<< FAILURE! -- in com.willyes.clemenintegra.produccion.controller.OrdenProduccionControllerTest
+com.willyes.clemenintegra.produccion.controller.OrdenProduccionControllerTest.crearOrdenProduccion_conLoteAsignado_debeRegistrarCorrectamente -- Time elapsed: 0.016 s <<< ERROR!
 org.springframework.dao.InvalidDataAccessResourceUsageException: 
 could not prepare statement [Columna "U1_0.CODIGO_2FA" no encontrada
 Column "U1_0.CODIGO_2FA" not found; SQL statement:
@@ -96,7 +96,7 @@ select u1_0.id,u1_0.activo,u1_0.bloqueado,u1_0.clave,u1_0.codigo_2fa,u1_0.codigo
 	at org.hibernate.engine.jdbc.internal.StatementPreparerImpl$StatementPreparationTemplate.prepareStatement(StatementPreparerImpl.java:183)
 	... 51 more
 
-com.willyes.clemenintegra.produccion.controller.OrdenProduccionControllerTest.asignarLoteAOrdenProduccion_debeGuardarRelacionCorrectamente -- Time elapsed: 0.011 s <<< ERROR!
+com.willyes.clemenintegra.produccion.controller.OrdenProduccionControllerTest.asignarLoteAOrdenProduccion_debeGuardarRelacionCorrectamente -- Time elapsed: 0.009 s <<< ERROR!
 org.springframework.dao.InvalidDataAccessResourceUsageException: 
 could not prepare statement [Columna "U1_0.CODIGO_2FA" no encontrada
 Column "U1_0.CODIGO_2FA" not found; SQL statement:

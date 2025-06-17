@@ -80,7 +80,7 @@ delete from almacenes where id=? [23503-224]
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:194)
 	... 39 more
 
-com.willyes.clemenintegra.inventario.controller.AlmacenControllerTest.crearAlmacenInvalido_debeRetornarBadRequest -- Time elapsed: 0.008 s <<< ERROR!
+com.willyes.clemenintegra.inventario.controller.AlmacenControllerTest.crearAlmacenInvalido_debeRetornarBadRequest -- Time elapsed: 0.010 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Violación de una restricción de Integridad Referencial: "CONSTRAINT_B41D: PUBLIC.LOTES_PRODUCTOS FOREIGN KEY(ALMACEN_ID) REFERENCES PUBLIC.ALMACENES(ID) (CAST(1 AS BIGINT))"
 Referential integrity constraint violation: "CONSTRAINT_B41D: PUBLIC.LOTES_PRODUCTOS FOREIGN KEY(ALMACEN_ID) REFERENCES PUBLIC.ALMACENES(ID) (CAST(1 AS BIGINT))"; SQL statement:
@@ -158,7 +158,7 @@ delete from almacenes where id=? [23503-224]
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:194)
 	... 39 more
 
-com.willyes.clemenintegra.inventario.controller.AlmacenControllerTest.obtenerAlmacenNoExistente_debeRetornarNotFound -- Time elapsed: 0.007 s <<< ERROR!
+com.willyes.clemenintegra.inventario.controller.AlmacenControllerTest.obtenerAlmacenNoExistente_debeRetornarNotFound -- Time elapsed: 0.006 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Violación de una restricción de Integridad Referencial: "CONSTRAINT_B41D: PUBLIC.LOTES_PRODUCTOS FOREIGN KEY(ALMACEN_ID) REFERENCES PUBLIC.ALMACENES(ID) (CAST(1 AS BIGINT))"
 Referential integrity constraint violation: "CONSTRAINT_B41D: PUBLIC.LOTES_PRODUCTOS FOREIGN KEY(ALMACEN_ID) REFERENCES PUBLIC.ALMACENES(ID) (CAST(1 AS BIGINT))"; SQL statement:
@@ -314,7 +314,7 @@ delete from almacenes where id=? [23503-224]
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:194)
 	... 39 more
 
-com.willyes.clemenintegra.inventario.controller.AlmacenControllerTest.obtenerAlmacenPorId_debeRetornarAlmacen -- Time elapsed: 0.008 s <<< ERROR!
+com.willyes.clemenintegra.inventario.controller.AlmacenControllerTest.obtenerAlmacenPorId_debeRetornarAlmacen -- Time elapsed: 0.009 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Violación de una restricción de Integridad Referencial: "CONSTRAINT_B41D: PUBLIC.LOTES_PRODUCTOS FOREIGN KEY(ALMACEN_ID) REFERENCES PUBLIC.ALMACENES(ID) (CAST(1 AS BIGINT))"
 Referential integrity constraint violation: "CONSTRAINT_B41D: PUBLIC.LOTES_PRODUCTOS FOREIGN KEY(ALMACEN_ID) REFERENCES PUBLIC.ALMACENES(ID) (CAST(1 AS BIGINT))"; SQL statement:
@@ -392,7 +392,7 @@ delete from almacenes where id=? [23503-224]
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:194)
 	... 39 more
 
-com.willyes.clemenintegra.inventario.controller.AlmacenControllerTest.crearAlmacenValido_debeRetornarCreated -- Time elapsed: 0.009 s <<< ERROR!
+com.willyes.clemenintegra.inventario.controller.AlmacenControllerTest.crearAlmacenValido_debeRetornarCreated -- Time elapsed: 0.006 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Violación de una restricción de Integridad Referencial: "CONSTRAINT_B41D: PUBLIC.LOTES_PRODUCTOS FOREIGN KEY(ALMACEN_ID) REFERENCES PUBLIC.ALMACENES(ID) (CAST(1 AS BIGINT))"
 Referential integrity constraint violation: "CONSTRAINT_B41D: PUBLIC.LOTES_PRODUCTOS FOREIGN KEY(ALMACEN_ID) REFERENCES PUBLIC.ALMACENES(ID) (CAST(1 AS BIGINT))"; SQL statement:

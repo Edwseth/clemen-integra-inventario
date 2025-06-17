@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest
 -------------------------------------------------------------------------------
-Tests run: 10, Failures: 7, Errors: 0, Skipped: 0, Time elapsed: 0.377 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest
-com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.obtenerAjustePorIdExistenteDebeRetornarOk -- Time elapsed: 0.027 s <<< FAILURE!
+Tests run: 10, Failures: 7, Errors: 0, Skipped: 0, Time elapsed: 0.342 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest
+com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.obtenerAjustePorIdExistenteDebeRetornarOk -- Time elapsed: 0.028 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<200> but was:<405>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -13,7 +13,7 @@ java.lang.AssertionError: Status expected:<200> but was:<405>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.registrarAjusteConUsuarioInvalidoDebeFallar -- Time elapsed: 0.160 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.registrarAjusteConUsuarioInvalidoDebeFallar -- Time elapsed: 0.125 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<400> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -24,7 +24,7 @@ java.lang.AssertionError: Status expected:<400> but was:<500>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.registrarAjustePositivoDebeSerExitoso -- Time elapsed: 0.015 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.registrarAjustePositivoDebeSerExitoso -- Time elapsed: 0.018 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<200> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -35,7 +35,7 @@ java.lang.AssertionError: Status expected:<200> but was:<500>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.registrarAjusteNegativoSinStockDebeFallar -- Time elapsed: 0.017 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.registrarAjusteNegativoSinStockDebeFallar -- Time elapsed: 0.019 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<409> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -46,7 +46,7 @@ java.lang.AssertionError: Status expected:<409> but was:<500>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.obtenerAjustePorIdNoExistenteDebeRetornarNotFound -- Time elapsed: 0.006 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.obtenerAjustePorIdNoExistenteDebeRetornarNotFound -- Time elapsed: 0.009 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<404> but was:<405>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -57,7 +57,7 @@ java.lang.AssertionError: Status expected:<404> but was:<405>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.registrarAjusteNegativoDebeSerExitoso -- Time elapsed: 0.020 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.registrarAjusteNegativoDebeSerExitoso -- Time elapsed: 0.014 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<200> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -68,7 +68,7 @@ java.lang.AssertionError: Status expected:<200> but was:<500>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.listarTodosLosAjustesDebeRetornarLista -- Time elapsed: 0.018 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.AjusteInventarioControllerTest.listarTodosLosAjustesDebeRetornarLista -- Time elapsed: 0.026 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<200> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)

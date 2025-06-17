@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 5, Errors: 0, Skipped: 0, Time elapsed: 4.229 s <<< FAILURE! -- in com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest
-com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest.registrarDocumento_formulaInexistente_retornaBadRequest -- Time elapsed: 0.167 s <<< FAILURE!
+Tests run: 5, Failures: 5, Errors: 0, Skipped: 0, Time elapsed: 4.111 s <<< FAILURE! -- in com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest
+com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest.registrarDocumento_formulaInexistente_retornaBadRequest -- Time elapsed: 0.180 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<400> but was:<200>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -30,7 +30,7 @@ Caused by: java.lang.IllegalArgumentException: json can not be null or empty
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:299)
 	... 7 more
 
-com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest.registrarDocumentoValido_retornaOk -- Time elapsed: 0.012 s <<< FAILURE!
+com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest.registrarDocumentoValido_retornaOk -- Time elapsed: 0.010 s <<< FAILURE!
 java.lang.AssertionError: No value at JSON path "$.id"
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:302)
 	at org.springframework.test.util.JsonPathExpectationsHelper.assertValue(JsonPathExpectationsHelper.java:99)
@@ -47,7 +47,7 @@ Caused by: java.lang.IllegalArgumentException: json can not be null or empty
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:299)
 	... 7 more
 
-com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest.obtenerDocumentoPorId_inexistente_retornaNotFound -- Time elapsed: 0.011 s <<< FAILURE!
+com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest.obtenerDocumentoPorId_inexistente_retornaNotFound -- Time elapsed: 0.009 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<404> but was:<200>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -58,7 +58,7 @@ java.lang.AssertionError: Status expected:<404> but was:<200>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest.obtenerDocumentoPorId_existente_retornaOk -- Time elapsed: 0.010 s <<< FAILURE!
+com.willyes.clemenintegra.bom.controller.DocumentoFormulaControllerTest.obtenerDocumentoPorId_existente_retornaOk -- Time elapsed: 0.004 s <<< FAILURE!
 java.lang.AssertionError: No value at JSON path "$.id"
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:302)
 	at org.springframework.test.util.JsonPathExpectationsHelper.assertValue(JsonPathExpectationsHelper.java:99)

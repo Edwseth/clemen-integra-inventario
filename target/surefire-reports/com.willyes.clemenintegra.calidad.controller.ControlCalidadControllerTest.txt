@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest
 -------------------------------------------------------------------------------
-Tests run: 6, Failures: 6, Errors: 0, Skipped: 0, Time elapsed: 1.043 s <<< FAILURE! -- in com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest
-com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.consultarEvaluacion_inexistente_retornarNotFound -- Time elapsed: 0.008 s <<< FAILURE!
+Tests run: 6, Failures: 6, Errors: 0, Skipped: 0, Time elapsed: 0.977 s <<< FAILURE! -- in com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest
+com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.consultarEvaluacion_inexistente_retornarNotFound -- Time elapsed: 0.007 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<404> but was:<200>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -13,7 +13,7 @@ java.lang.AssertionError: Status expected:<404> but was:<200>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.evaluarLoteInexistente_retornarNotFound -- Time elapsed: 0.017 s <<< FAILURE!
+com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.evaluarLoteInexistente_retornarNotFound -- Time elapsed: 0.018 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<404> but was:<200>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -24,7 +24,7 @@ java.lang.AssertionError: Status expected:<404> but was:<200>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.consultarEvaluacion_existente_retornarOk -- Time elapsed: 0.011 s <<< FAILURE!
+com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.consultarEvaluacion_existente_retornarOk -- Time elapsed: 0.008 s <<< FAILURE!
 java.lang.AssertionError: No value at JSON path "$.id"
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:302)
 	at org.springframework.test.util.JsonPathExpectationsHelper.assertValue(JsonPathExpectationsHelper.java:99)
@@ -41,7 +41,7 @@ Caused by: java.lang.IllegalArgumentException: json can not be null or empty
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:299)
 	... 7 more
 
-com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.evaluarLote_usuarioSinRolCalidad_retornarForbidden -- Time elapsed: 0.010 s <<< FAILURE!
+com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.evaluarLote_usuarioSinRolCalidad_retornarForbidden -- Time elapsed: 0.006 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<403> but was:<200>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -52,7 +52,7 @@ java.lang.AssertionError: Status expected:<403> but was:<200>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.evaluarLoteRechazado_retornarOk -- Time elapsed: 0.021 s <<< FAILURE!
+com.willyes.clemenintegra.calidad.controller.ControlCalidadControllerTest.evaluarLoteRechazado_retornarOk -- Time elapsed: 0.011 s <<< FAILURE!
 java.lang.AssertionError: No value at JSON path "$.resultado"
 	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:302)
 	at org.springframework.test.util.JsonPathExpectationsHelper.assertValue(JsonPathExpectationsHelper.java:99)

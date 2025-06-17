@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest
 -------------------------------------------------------------------------------
-Tests run: 10, Failures: 5, Errors: 0, Skipped: 0, Time elapsed: 1.042 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest
-com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.crearLote_ConDatosValidos_RetornaCreated -- Time elapsed: 0.025 s <<< FAILURE!
+Tests run: 10, Failures: 5, Errors: 0, Skipped: 0, Time elapsed: 0.901 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest
+com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.crearLote_ConDatosValidos_RetornaCreated -- Time elapsed: 0.016 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<201> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -13,7 +13,7 @@ java.lang.AssertionError: Status expected:<201> but was:<500>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.crearLote_FechaVencimientoAnterior_RetornaBadRequest -- Time elapsed: 0.008 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.crearLote_FechaVencimientoAnterior_RetornaBadRequest -- Time elapsed: 0.025 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<400> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -24,7 +24,7 @@ java.lang.AssertionError: Status expected:<400> but was:<500>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.obtenerLotePorId_Existente_RetornaOk -- Time elapsed: 0.026 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.obtenerLotePorId_Existente_RetornaOk -- Time elapsed: 0.030 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<200> but was:<404>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -35,7 +35,7 @@ java.lang.AssertionError: Status expected:<200> but was:<404>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.listarTodosLosLotes_RetornaLista -- Time elapsed: 0.008 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.listarTodosLosLotes_RetornaLista -- Time elapsed: 0.023 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<200> but was:<405>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
@@ -46,7 +46,7 @@ java.lang.AssertionError: Status expected:<200> but was:<405>
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.crearLote_CodigoLoteDuplicado_RetornaConflict -- Time elapsed: 0.012 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.controller.LoteProductoControllerTest.crearLote_CodigoLoteDuplicado_RetornaConflict -- Time elapsed: 0.010 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<201> but was:<500>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)

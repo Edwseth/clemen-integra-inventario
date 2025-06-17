@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest
 -------------------------------------------------------------------------------
-Tests run: 3, Failures: 2, Errors: 1, Skipped: 0, Time elapsed: 0.495 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest
-com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaLanzarExceptionCuandoProductoNoExiste -- Time elapsed: 0.482 s <<< FAILURE!
+Tests run: 3, Failures: 2, Errors: 1, Skipped: 0, Time elapsed: 0.440 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest
+com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaLanzarExceptionCuandoProductoNoExiste -- Time elapsed: 0.416 s <<< FAILURE!
 org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: <java.util.NoSuchElementException> but was: <java.lang.NullPointerException>
 	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
 	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:67)
@@ -18,7 +18,7 @@ Caused by: java.lang.NullPointerException: Cannot invoke "com.willyes.clemeninte
 	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:53)
 	... 6 more
 
-com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaGuardarMovimientoCorrectamente -- Time elapsed: 0.004 s <<< ERROR!
+com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaGuardarMovimientoCorrectamente -- Time elapsed: 0.016 s <<< ERROR!
 java.lang.NullPointerException: Cannot invoke "com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper.toEntity(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO)" because "this.mapper" is null
 	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceImpl.registrarMovimiento(MovimientoInventarioServiceImpl.java:55)
 	at com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaGuardarMovimientoCorrectamente(MovimientoInventarioServiceTest.java:80)
@@ -26,7 +26,7 @@ java.lang.NullPointerException: Cannot invoke "com.willyes.clemenintegra.inventa
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaLanzarExcepcionPorInconsistenciaTipoYDetalle -- Time elapsed: 0.005 s <<< FAILURE!
+com.willyes.clemenintegra.inventario.service.MovimientoInventarioServiceTest.registrarMovimiento_DeberiaLanzarExcepcionPorInconsistenciaTipoYDetalle -- Time elapsed: 0.004 s <<< FAILURE!
 org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: <java.lang.IllegalArgumentException> but was: <java.lang.NullPointerException>
 	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
 	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:67)

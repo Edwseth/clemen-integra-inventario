@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.willyes.clemenintegra.inventario.controller.ProveedorControllerTest
 -------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.040 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.ProveedorControllerTest
-com.willyes.clemenintegra.inventario.controller.ProveedorControllerTest.crearProveedor_identificacionODuplicada_debeRetornarConflict -- Time elapsed: 0.022 s <<< ERROR!
+Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.038 s <<< FAILURE! -- in com.willyes.clemenintegra.inventario.controller.ProveedorControllerTest
+com.willyes.clemenintegra.inventario.controller.ProveedorControllerTest.crearProveedor_identificacionODuplicada_debeRetornarConflict -- Time elapsed: 0.012 s <<< ERROR!
 org.springframework.dao.InvalidDataAccessResourceUsageException: 
 could not prepare statement [Columna "U1_0.CODIGO_2FA" no encontrada
 Column "U1_0.CODIGO_2FA" not found; SQL statement:
@@ -127,7 +127,7 @@ select u1_0.id,u1_0.activo,u1_0.bloqueado,u1_0.clave,u1_0.codigo_2fa,u1_0.codigo
 	at org.hibernate.engine.jdbc.internal.StatementPreparerImpl$StatementPreparationTemplate.prepareStatement(StatementPreparerImpl.java:183)
 	... 82 more
 
-com.willyes.clemenintegra.inventario.controller.ProveedorControllerTest.crearProveedor_valido_debeRetornarCreated -- Time elapsed: 0.009 s <<< ERROR!
+com.willyes.clemenintegra.inventario.controller.ProveedorControllerTest.crearProveedor_valido_debeRetornarCreated -- Time elapsed: 0.016 s <<< ERROR!
 org.springframework.dao.InvalidDataAccessResourceUsageException: 
 could not prepare statement [Columna "U1_0.CODIGO_2FA" no encontrada
 Column "U1_0.CODIGO_2FA" not found; SQL statement:
