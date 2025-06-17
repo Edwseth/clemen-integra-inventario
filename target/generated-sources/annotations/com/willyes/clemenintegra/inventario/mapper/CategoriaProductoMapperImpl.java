@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-06-16T19:05:30-0500",
+    date = "2025-06-17T15:07:50-0500",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 21.0.7 (Eclipse Adoptium)"
 )
 @Component
@@ -19,8 +19,12 @@ public class CategoriaProductoMapperImpl implements CategoriaProductoMapper {
             return null;
         }
 
-        CategoriaProductoResponseDTO categoriaProductoResponseDTO = new CategoriaProductoResponseDTO();
+        CategoriaProductoResponseDTO.CategoriaProductoResponseDTOBuilder categoriaProductoResponseDTO = CategoriaProductoResponseDTO.builder();
 
-        return categoriaProductoResponseDTO;
+        categoriaProductoResponseDTO.id( categoria.getId() );
+        categoriaProductoResponseDTO.nombre( categoria.getNombre() );
+        categoriaProductoResponseDTO.tipo( categoria.getTipo() );
+
+        return categoriaProductoResponseDTO.build();
     }
 }
