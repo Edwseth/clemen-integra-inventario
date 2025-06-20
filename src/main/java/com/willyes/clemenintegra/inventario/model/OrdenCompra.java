@@ -21,6 +21,9 @@ public class OrdenCompra {
     @EqualsAndHashCode.Include
     private Long id;
 
+    @Column(name = "codigo_orden", nullable = false, unique = true)
+    private String codigoOrden;
+
     @Column(name = "fecha_orden", nullable = false)
     private LocalDate fechaOrden;
 

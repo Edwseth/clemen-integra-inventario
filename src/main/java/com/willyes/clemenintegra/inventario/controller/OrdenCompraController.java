@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.*;
+import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -14,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.*;
 
@@ -26,6 +28,7 @@ public class OrdenCompraController {
     private final OrdenCompraDetalleRepository detalleRepository;
     private final ProveedorRepository proveedorRepository;
     private final ProductoRepository productoRepository;
+    private final OrdenCompraMapper ordenCompraMapper;
 
     @PostMapping
     public ResponseEntity<OrdenCompra> crear(@RequestBody OrdenCompraRequestDTO dto) {
@@ -108,6 +111,14 @@ public class OrdenCompraController {
         ordenCompraRepository.save(orden);
         return ResponseEntity.ok(orden);
     }
+
+    @GetMapping
+    public List<OrdenCompraResponseDTO> listar() {
+        return ordenCompraRepository.findAll().stream()
+                .map(ordenCompraMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
 
 }
 

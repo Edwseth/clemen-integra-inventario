@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.ProveedorRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.ProveedorResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.ProveedorMapper;
 import com.willyes.clemenintegra.inventario.model.Proveedor;
 import com.willyes.clemenintegra.inventario.repository.ProveedorRepository;
@@ -14,6 +15,9 @@ import org.springframework.web.server.ResponseStatusException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.media.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/proveedores")
@@ -43,5 +47,13 @@ public class ProveedorController {
         proveedorRepository.save(proveedor);
         return ResponseEntity.status(HttpStatus.CREATED).body(proveedor);
     }
+
+    @GetMapping
+    public List<ProveedorResponseDTO> listar() {
+        return proveedorRepository.findAll().stream()
+                .map(proveedorMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
 }
 

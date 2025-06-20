@@ -13,6 +13,9 @@ import java.util.List;
 public class OrdenCompraRequestDTO {
 
     @NotNull
+    public String getCodigoOrden;
+
+    @NotNull
     private Long proveedorId;
 
     private String observaciones;
