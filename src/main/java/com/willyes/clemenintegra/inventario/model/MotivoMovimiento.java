@@ -31,13 +31,4 @@ public class MotivoMovimiento {
     @Column(name = "motivo", nullable = false, unique = true, length = 50)
     private TipoMovimiento motivo;
 
-
-   /* public MotivoMovimiento(Long id, String descripcion, TipoMovimiento tipoMovimiento, TipoMovimiento motivo) {
-        this.id = id;
-        this.descripcion = descripcion;
-        this.tipoMovimiento = tipoMovimiento;
-        this.motivo = motivo;
-    }*/
-
-
 }
