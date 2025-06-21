@@ -8,8 +8,7 @@ import lombok.*;
 @Table(name = "categorias_producto", uniqueConstraints = {
         @UniqueConstraint(name = "un_nombre_categoria_UNIQUE", columnNames = "nombre")
 })
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -29,5 +28,12 @@ public class CategoriaProducto {
     public CategoriaProducto(Long id) {
         this.id = id;
     }
+
+    public Long getId() {return id;}
+    public String getNombre() {return nombre;}
+    public TipoCategoria getTipo() {return tipo;}
+    public void setId(Long id) {this.id = id;}
+    public void setNombre(String nombre) {this.nombre = nombre;}
+    public void setTipo(TipoCategoria tipo) {this.tipo = tipo;}
 }
 

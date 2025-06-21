@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-06-16T19:05:30-0500",
+    date = "2025-06-20T19:27:31-0500",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 21.0.7 (Eclipse Adoptium)"
 )
 @Component
@@ -23,11 +23,21 @@ public class LoteProductoMapperImpl implements LoteProductoMapper {
             return null;
         }
 
-        Long id = null;
+        LoteProducto.LoteProductoBuilder loteProducto = LoteProducto.builder();
 
-        LoteProducto loteProducto = new LoteProducto( id );
+        if ( dto != null ) {
+            loteProducto.codigoLote( dto.getCodigoLote() );
+            loteProducto.fechaFabricacion( dto.getFechaFabricacion() );
+            loteProducto.fechaVencimiento( dto.getFechaVencimiento() );
+            loteProducto.stockLote( dto.getStockLote() );
+            loteProducto.estado( dto.getEstado() );
+            loteProducto.temperaturaAlmacenamiento( dto.getTemperaturaAlmacenamiento() );
+            loteProducto.fechaLiberacion( dto.getFechaLiberacion() );
+        }
+        loteProducto.producto( producto );
+        loteProducto.almacen( almacen );
 
-        return loteProducto;
+        return loteProducto.build();
     }
 
     @Override
@@ -36,8 +46,17 @@ public class LoteProductoMapperImpl implements LoteProductoMapper {
             return null;
         }
 
-        LoteProductoResponseDTO loteProductoResponseDTO = new LoteProductoResponseDTO();
+        LoteProductoResponseDTO.LoteProductoResponseDTOBuilder loteProductoResponseDTO = LoteProductoResponseDTO.builder();
 
-        return loteProductoResponseDTO;
+        loteProductoResponseDTO.id( lote.getId() );
+        loteProductoResponseDTO.codigoLote( lote.getCodigoLote() );
+        loteProductoResponseDTO.fechaFabricacion( lote.getFechaFabricacion() );
+        loteProductoResponseDTO.fechaVencimiento( lote.getFechaVencimiento() );
+        loteProductoResponseDTO.stockLote( lote.getStockLote() );
+        loteProductoResponseDTO.estado( lote.getEstado() );
+        loteProductoResponseDTO.temperaturaAlmacenamiento( lote.getTemperaturaAlmacenamiento() );
+        loteProductoResponseDTO.fechaLiberacion( lote.getFechaLiberacion() );
+
+        return loteProductoResponseDTO.build();
     }
 }

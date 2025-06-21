@@ -1,6 +1,6 @@
 package com.willyes.clemenintegra.inventario.model;
 
-import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,8 +12,7 @@ import java.time.LocalDateTime;
         @UniqueConstraint(name = "un_sku_UNIQUE", columnNames = "codigo_sku"),
         @UniqueConstraint(name = "un_nombre_producto_UNIQUE", columnNames = "nombre")
 })
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

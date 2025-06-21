@@ -8,8 +8,7 @@ import lombok.*;
         @UniqueConstraint(name = "un_nombre_UNIQUE", columnNames = "nombre"),
         @UniqueConstraint(name = "un_simbolo_UNIQUE", columnNames = "simbolo")
 })
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -28,5 +27,12 @@ public class UnidadMedida {
     public UnidadMedida(Long id) {
         this.id = id;
     }
+
+    public Long getId() {return id;}
+    public String getNombre() {return nombre;}
+    public String getSimbolo() {return simbolo;}
+    public void setId(Long id) {this.id = id;}
+    public void setNombre(String nombre) {this.nombre = nombre;}
+    public void setSimbolo(String simbolo) {this.simbolo = simbolo;}
 }
 

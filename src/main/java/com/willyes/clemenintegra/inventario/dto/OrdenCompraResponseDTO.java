@@ -1,8 +1,7 @@
 package com.willyes.clemenintegra.inventario.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 
 @Data
 @NoArgsConstructor
@@ -10,5 +9,13 @@ import lombok.NoArgsConstructor;
 public class OrdenCompraResponseDTO {
     private Long id;
     private String codigoOrden;
+    private String estado;
+    private String proveedorNombre;
+
+    public String getEstado() {return estado;}
+    public String getProveedorNombre() {return proveedorNombre;}
+
+    public void setProveedorNombre(String proveedorNombre) {this.proveedorNombre = proveedorNombre;}
+    public void setEstado(String estado) {this.estado = estado;}
 }
 

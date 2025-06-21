@@ -7,8 +7,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "motivos_movimiento")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

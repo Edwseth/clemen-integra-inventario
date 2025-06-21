@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-06-16T19:05:30-0500",
+    date = "2025-06-20T19:27:31-0500",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 21.0.7 (Eclipse Adoptium)"
 )
 @Component
@@ -22,9 +22,14 @@ public class MovimientoInventarioMapperImpl implements MovimientoInventarioMappe
             return null;
         }
 
-        MovimientoInventario movimientoInventario = new MovimientoInventario();
+        MovimientoInventario.MovimientoInventarioBuilder movimientoInventario = MovimientoInventario.builder();
 
-        return movimientoInventario;
+        movimientoInventario.id( dto.id() );
+        movimientoInventario.cantidad( dto.cantidad() );
+        movimientoInventario.tipoMovimiento( dto.tipoMovimiento() );
+        movimientoInventario.docReferencia( dto.docReferencia() );
+
+        return movimientoInventario.build();
     }
 
     @Override
@@ -32,6 +37,16 @@ public class MovimientoInventarioMapperImpl implements MovimientoInventarioMappe
         if ( movimiento == null ) {
             return null;
         }
+
+        Long id = null;
+        BigDecimal cantidad = null;
+        ClasificacionMovimientoInventario tipoMovimiento = null;
+        String docReferencia = null;
+
+        id = movimiento.getId();
+        cantidad = movimiento.getCantidad();
+        tipoMovimiento = movimiento.getTipoMovimiento();
+        docReferencia = movimiento.getDocReferencia();
 
         Long productoId = movimiento.getProducto() != null ? movimiento.getProducto().getId() : null;
         Long loteProductoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
@@ -42,10 +57,6 @@ public class MovimientoInventarioMapperImpl implements MovimientoInventarioMappe
         Long tipoMovimientoDetalleId = movimiento.getTipoMovimientoDetalle() != null ? movimiento.getTipoMovimientoDetalle().getId() : null;
         Long usuarioId = movimiento.getRegistradoPor() != null ? movimiento.getRegistradoPor().getId() : null;
         Long ordenCompraDetalleId = movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null;
-        Long id = null;
-        BigDecimal cantidad = null;
-        ClasificacionMovimientoInventario tipoMovimiento = null;
-        String docReferencia = null;
 
         MovimientoInventarioDTO movimientoInventarioDTO = new MovimientoInventarioDTO( id, cantidad, tipoMovimiento, docReferencia, productoId, loteProductoId, almacenId, proveedorId, ordenCompraId, motivoMovimientoId, tipoMovimientoDetalleId, usuarioId, ordenCompraDetalleId );
 
@@ -58,13 +69,17 @@ public class MovimientoInventarioMapperImpl implements MovimientoInventarioMappe
             return null;
         }
 
+        Long id = null;
+        BigDecimal cantidad = null;
+
+        id = movimiento.getId();
+        cantidad = movimiento.getCantidad();
+
         Long productoId = movimiento.getProducto() != null ? movimiento.getProducto().getId() : null;
         String tipoMovimiento = convertTipoMovimiento(movimiento.getTipoMovimiento());
         String nombreProducto = movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null;
         String nombreLote = movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null;
         String nombreAlmacen = movimiento.getAlmacen() != null ? movimiento.getAlmacen().getNombre() : null;
-        Long id = null;
-        BigDecimal cantidad = null;
 
         MovimientoInventarioResponseDTO movimientoInventarioResponseDTO = new MovimientoInventarioResponseDTO( id, cantidad, productoId, tipoMovimiento, nombreProducto, nombreLote, nombreAlmacen );
 

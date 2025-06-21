@@ -28,6 +28,7 @@ C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\ja
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\calidad\mapper\EspecificacionCalidadMapper.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\produccion\service\ControlCalidadProcesoService.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\calidad\model\enums\TipoChecklist.java
+C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\controller\MotivoMovimientoController.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\service\OrdenCompraDetalleServiceImpl.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\produccion\model\ControlCalidadProceso.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\bom\service\DetalleFormulaService.java
@@ -96,6 +97,7 @@ C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\ja
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\calidad\service\ItemChecklistServiceImpl.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\bom\repository\FormulaProductoRepository.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\dto\LoteProductoRequestDTO.java
+C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\dto\MotivoMovimientoResponseDTO.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\dto\ProductoRequestDTO.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\calidad\controller\RetencionLoteController.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\calidad\service\EvaluacionCalidadServiceImpl.java
@@ -103,6 +105,7 @@ C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\ja
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\model\Almacen.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\service\AlertaInventarioServiceImpl.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\bom\dto\DocumentoFormulaRequestDTO.java
+C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\dto\ProveedorResponseDTO.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\model\enums\EstadoLote.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\shared\security\SecurityConfig.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\calidad\repository\EvaluacionCalidadRepository.java
@@ -138,6 +141,7 @@ C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\ja
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\service\AlertaInventarioService.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\produccion\model\OrdenProduccion.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\service\MovimientoInventarioService.java
+C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\dto\OrdenCompraResponseDTO.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\shared\security\JwtAuthenticationProvider.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\dto\reportes\MovimientoInventarioReporteDTO.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\produccion\dto\DetalleEtapaRequest.java
@@ -153,6 +157,7 @@ C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\ja
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\bom\dto\FormulaProductoRequest.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\calidad\model\enums\ResultadoEvaluacion.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\dto\ProductoConEstadoLoteDTO.java
+C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\mapper\MotivoMovimientoMapper.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\repository\AlmacenRepository.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\controller\AlertaInventarioController.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\repository\HistorialEstadoOrdenRepository.java
@@ -253,6 +258,7 @@ C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\ja
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\bom\controller\DocumentoFormulaController.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\model\AjusteInventario.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\controller\AlmacenController.java
+C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\dto\TipoMovimientoDetalleResponseDTO.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\shared\exception\CustomBusinessException.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\inventario\model\HistorialEstadoOrden.java
 C:\Users\Yuset\Proyectos\EdwTech Solutions\clemen-integra-inventario\src\main\java\com\willyes\clemenintegra\calidad\controller\EspecificacionCalidadController.java

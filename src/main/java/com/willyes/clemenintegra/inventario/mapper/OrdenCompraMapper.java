@@ -7,7 +7,6 @@ import com.willyes.clemenintegra.inventario.model.Proveedor;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface OrdenCompraMapper {
@@ -23,7 +22,14 @@ public interface OrdenCompraMapper {
         return entity;
     }
 
+    @Mapping(target = "estado", source = "estado", qualifiedByName = "enumName")
+    @Mapping(target = "proveedorNombre", source = "proveedor.nombre")
     OrdenCompraResponseDTO toDTO(OrdenCompra orden);
+
+    @org.mapstruct.Named("enumName")
+    default String enumName(Enum<?> e) {
+        return e != null ? e.name() : null;
+    }
 }
 
 
