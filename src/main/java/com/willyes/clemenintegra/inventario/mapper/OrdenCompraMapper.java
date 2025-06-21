@@ -22,6 +22,8 @@ public interface OrdenCompraMapper {
         return entity;
     }
 
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "codigoOrden", source = "codigoOrden")
     @Mapping(target = "estado", source = "estado", qualifiedByName = "enumName")
     @Mapping(target = "proveedorNombre", source = "proveedor.nombre")
     OrdenCompraResponseDTO toDTO(OrdenCompra orden);
