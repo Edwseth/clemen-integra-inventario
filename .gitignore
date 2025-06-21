@@ -1,20 +1,40 @@
-# Java
+# Compiled class files
 *.class
 
-# Maven
+# Log files
+*.log
+
+# Maven output
 target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Maven wrapper
 !.mvn/wrapper/maven-wrapper.jar
 .mvn/wrapper/maven-wrapper.properties
 
 # IntelliJ IDEA
 .idea/
+*.iws
 *.iml
 *.ipr
-*.iws
+out/
 
 # VSCode
 .vscode/
 
-# Logs
-*.log
+# OS-specific files
+.DS_Store
+Thumbs.db
 
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test output
+test-output/
+surefire-reports/

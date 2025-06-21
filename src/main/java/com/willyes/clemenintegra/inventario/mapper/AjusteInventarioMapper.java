@@ -12,7 +12,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface AjusteInventarioMapper {
 
-    //@Mapping(target = "id", ignore = true)
+    @Mapping(target = "id", ignore = true)
     //@Mapping(target = "fecha", ignore = true)
     //@Mapping(target = "producto", source = "producto")
     //@Mapping(target = "almacen", source = "almacen")

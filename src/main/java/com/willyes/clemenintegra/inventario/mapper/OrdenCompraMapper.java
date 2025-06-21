@@ -1,12 +1,14 @@
 package com.willyes.clemenintegra.inventario.mapper;
 
-import com.willyes.clemenintegra.inventario.dto.OrdenCompraRequestDTO;
-import com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
+import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.model.Proveedor;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+
+import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface OrdenCompraMapper {
@@ -32,6 +34,13 @@ public interface OrdenCompraMapper {
     default String enumName(Enum<?> e) {
         return e != null ? e.name() : null;
     }
+
+    @Mapping(target = "proveedor", source = "proveedor")
+    //@Mapping(target = "observaciones", source = "observaciones")
+    OrdenCompraConDetallesResponse toOrdenCompraConDetallesResponse(OrdenCompra orden);
+    ProveedorMinResponse toProveedorMinResponse(Proveedor proveedor);
+    OrdenCompraDetalleResponse toOrdenCompraDetalleResponse(OrdenCompraDetalle detalle);
+    List<OrdenCompraDetalleResponse> toDetalleList(List<OrdenCompraDetalle> detalles);
 }
 
 

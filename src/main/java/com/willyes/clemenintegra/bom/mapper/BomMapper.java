@@ -8,12 +8,13 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface BomMapper {
 
-    //@Mapping(target = "id", ignore = true)
-    //@Mapping(source = "dto.fechaCreacion", target = "fechaCreacion")
+    @Mapping(target = "id", ignore = true)
+    @Mapping(source = "dto.fechaCreacion", target = "fechaCreacion")
     //@Mapping(source = "producto", target = "producto")
     //@Mapping(source = "usuario", target = "creadoPor")
     //@Mapping(target = "estado", expression = "java(EstadoFormula.valueOf(dto.estado))")
@@ -26,7 +27,7 @@ public interface BomMapper {
     //@Mapping(target = "creadoPorNombre", source = "creadoPor", qualifiedByName = "mapNombreUsuario")
     FormulaProductoResponse toResponse(FormulaProducto entidad);
 
-    //@Mapping(target = "id", ignore = true)
+    @Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
     //@Mapping(target = "insumo", source = "insumo")
     //@Mapping(target = "unidadMedida", source = "unidad")

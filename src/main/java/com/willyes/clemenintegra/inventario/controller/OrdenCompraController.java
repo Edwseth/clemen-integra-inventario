@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +29,8 @@ public class OrdenCompraController {
     private final OrdenCompraDetalleRepository detalleRepository;
     private final ProveedorRepository proveedorRepository;
     private final ProductoRepository productoRepository;
-    private final OrdenCompraMapper ordenCompraMapper;
+    private final OrdenCompraService ordenCompraService;
+    private final OrdenCompraMapper mapper;
 
     @PostMapping
     public ResponseEntity<OrdenCompra> crear(@RequestBody OrdenCompraRequestDTO dto) {
@@ -115,10 +117,16 @@ public class OrdenCompraController {
     @GetMapping
     public List<OrdenCompraResponseDTO> listar() {
         return ordenCompraRepository.findAll().stream()
-                .map(ordenCompraMapper::toDTO)
+                .map(mapper::toDTO)
                 .collect(Collectors.toList());
     }
 
-
+    @GetMapping("/{id}/detalles")
+    public ResponseEntity<OrdenCompraConDetallesResponse> obtenerOrdenConDetalles(@PathVariable Long id) {
+        return ordenCompraService.buscarPorIdConDetalles(id)
+                .map(mapper::toOrdenCompraConDetallesResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
 
