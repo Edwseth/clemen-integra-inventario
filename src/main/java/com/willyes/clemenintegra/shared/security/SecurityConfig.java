@@ -56,16 +56,17 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/productos/**").hasAnyAuthority(
+                        .requestMatchers("/api/productos/**", "/api/ordenes-compra/**", "/api/motivos/**").hasAnyAuthority(
                                 "ROLE_" + RolUsuario.ROL_ALMACENISTA.name(),
                                 "ROLE_" + RolUsuario.ROL_JEFE_ALMACENES.name()
                         )
 
-                        .requestMatchers("/api/movimientos/**").hasAnyRole(
-                                RolUsuario.ROL_JEFE_ALMACENES.name(),
-                                RolUsuario.ROL_ALMACENISTA.name(),
-                                RolUsuario.ROL_JEFE_PRODUCCION.name()
+                        .requestMatchers("/api/movimientos/**").hasAnyAuthority(
+                                "ROLE_" + RolUsuario.ROL_JEFE_ALMACENES.name(),
+                                "ROLE_" + RolUsuario.ROL_ALMACENISTA.name(),
+                                "ROLE_" + RolUsuario.ROL_JEFE_PRODUCCION.name()
                         )
+
                         .requestMatchers("/api/calidad/**").hasAnyRole(
                                 RolUsuario.ROL_JEFE_CALIDAD.name(),
                                 RolUsuario.ROL_ANALISTA_CALIDAD.name(),

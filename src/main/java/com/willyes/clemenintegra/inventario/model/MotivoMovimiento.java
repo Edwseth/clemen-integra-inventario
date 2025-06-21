@@ -22,10 +22,9 @@ public class MotivoMovimiento {
     @Column(nullable = false, unique = true, length = 255)
     private String descripcion;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_movimiento", nullable = false, length = 50)
-    private TipoMovimiento tipoMovimiento;
-
+    //@Enumerated(EnumType.STRING)
+    //@Column(name = "tipo_movimiento", nullable = false, length = 50)
+    //private TipoMovimiento tipoMovimiento;
     @Enumerated(EnumType.STRING)
     @Column(name = "motivo", nullable = false, unique = true, length = 50)
     private TipoMovimiento motivo;

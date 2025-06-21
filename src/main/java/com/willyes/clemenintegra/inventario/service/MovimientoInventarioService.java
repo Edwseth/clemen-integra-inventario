@@ -8,6 +8,8 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 public interface MovimientoInventarioService {
 
     MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto);
@@ -15,4 +17,7 @@ public interface MovimientoInventarioService {
     Page<MovimientoInventario> consultarMovimientosConFiltros(MovimientoInventarioFiltroDTO filtro, Pageable pageable);
 
     Workbook generarReporteMovimientosExcel(); // 👈 nuevo método para exportar
+
+    List<MovimientoInventario> listarTodos();
+
 }

@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -112,6 +113,11 @@ public class MovimientoInventarioController {
         return new ResponseEntity<>(contenido, headers, HttpStatus.OK);
     }
 
+    @GetMapping
+    public ResponseEntity<List<MovimientoInventario>> listarTodos() {
+        List<MovimientoInventario> movimientos = service.listarTodos(); // crea este método en tu servicio si no existe
+        return ResponseEntity.ok(movimientos);
+    }
 
 }
 

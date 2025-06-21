@@ -48,6 +48,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     @Resource
     private final EntityManager entityManager;
+    private final MovimientoInventarioRepository movimientoRepo;
 
     @Transactional
     @Override
@@ -139,6 +140,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         MovimientoInventario guardado = repository.save(movimiento);
 
         return mapper.toResponseDTO(guardado);
+    }
+
+    @Override
+    public List<MovimientoInventario> listarTodos() {
+        return movimientoRepo.findAll();
     }
 
     @Override
