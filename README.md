@@ -40,7 +40,7 @@ com.willyes.clemenintegra
 El código ha sido refactorizado mediante **Codex Workspace**, mejorando la legibilidad y eliminando clases obsoletas.
 
 ## Requisitos de Compilación y Despliegue
-- JDK 17
+- JDK 21
 - Maven 3.8+
 - Base de datos MySQL en funcionamiento
 
