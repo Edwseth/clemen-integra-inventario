@@ -135,9 +135,10 @@
             <exclude>
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
-              <version>1.18.30</version>
             </exclude>
           </excludes>
+          <!-- Prevent spring-boot:run from compiling test sources -->
+          <useTestClasspath>false</useTestClasspath>
         </configuration>
       </plugin>
     </plugins>

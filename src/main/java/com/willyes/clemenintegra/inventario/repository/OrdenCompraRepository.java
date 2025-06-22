@@ -15,6 +15,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
             "LEFT JOIN FETCH d.producto p " +
             "LEFT JOIN FETCH p.unidadMedida " +
             "WHERE o.id = :id")
+    //@Query("SELECT o FROM OrdenCompra o LEFT JOIN FETCH o.detalles d LEFT JOIN FETCH d.producto p WHERE o.id = :id")
     Optional<OrdenCompra> findByIdWithDetalles(@Param("id") Long id);
 
 }

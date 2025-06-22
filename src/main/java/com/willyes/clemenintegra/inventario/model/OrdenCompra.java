@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "ordenes_compra")
@@ -37,6 +38,10 @@ public class OrdenCompra {
 
     @Column(name = "observaciones", length = 255)
     private String observaciones;
+
+    @OneToMany(mappedBy = "ordenCompra", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrdenCompraDetalle> detalles;
+
 
     public OrdenCompra(Long id) {
         this.id = id;
