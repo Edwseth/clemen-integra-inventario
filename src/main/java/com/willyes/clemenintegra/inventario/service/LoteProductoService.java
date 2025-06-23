@@ -12,4 +12,5 @@ public interface LoteProductoService {
     List<LoteProductoResponseDTO> obtenerLotesPorEstado(String estado);
     Workbook generarReporteLotesPorVencerExcel();
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
+    List<LoteProductoResponseDTO> listarTodos();
 }

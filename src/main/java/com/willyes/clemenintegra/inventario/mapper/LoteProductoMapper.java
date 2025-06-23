@@ -20,9 +20,10 @@ public interface LoteProductoMapper {
     LoteProducto toEntity(LoteProductoRequestDTO dto, Producto producto, Almacen almacen, Usuario usuario);
 
     // Mapeo de respuesta
-    //@Mapping(target = "nombreProducto", source = "producto", qualifiedByName = "mapNombreProducto")
-    //@Mapping(target = "nombreAlmacen", source = "almacen", qualifiedByName = "mapNombreAlmacen")
-    LoteProductoResponseDTO toDto(LoteProducto lote);
+    @Mapping(target = "nombreProducto", expression = "java(mapNombreProducto(lote.getProducto()))")
+    @Mapping(target = "nombreAlmacen", expression = "java(mapNombreAlmacen(lote.getAlmacen()))")
+    @Mapping(target = "nombreUsuarioLiberador", expression = "java(mapNombreUsuario(lote.getUsuarioLiberador()))")
+    LoteProductoResponseDTO toResponseDTO(LoteProducto lote);
 
     @Named("mapNombreProducto")
     default String mapNombreProducto(Producto producto) {
@@ -33,6 +34,10 @@ public interface LoteProductoMapper {
     default String mapNombreAlmacen(Almacen almacen) {
         return (almacen != null) ? almacen.getNombre() : null;
     }
+
+    @Named("mapNombreUsuario")
+    default String mapNombreUsuario(Usuario usuario) {return (usuario != null) ? usuario.getNombreCompleto() : null;}
+
 }
 
 

@@ -50,17 +50,17 @@ public class LoteProducto {
     private LocalDate fechaLiberacion;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_id", nullable = false,
+    @JoinColumn(name = "productos_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_lotes_productos_producto"))
     private Producto producto;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "almacen_id", nullable = false,
+    @JoinColumn(name = "almacenes_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_lotes_productos_almacen"))
     private Almacen almacen;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_liberador_id",
+    @JoinColumn(name = "usuarios_liberador_id",
             foreignKey = @ForeignKey(name = "fk_lotes_productos_usuario_liberador"))
     private Usuario usuarioLiberador;
 

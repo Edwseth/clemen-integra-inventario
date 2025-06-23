@@ -76,6 +76,11 @@ public class Producto {
             this.fechaCreacion = LocalDateTime.now();
         }
     }
+
+    public Boolean getRequiereInspeccion() {return requiereInspeccion;}
+    public void setRequiereInspeccion(Boolean requiereInspeccion) {
+        this.requiereInspeccion = requiereInspeccion;}
+
 }
 
 

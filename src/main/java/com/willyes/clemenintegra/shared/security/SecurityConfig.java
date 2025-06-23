@@ -56,7 +56,8 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/productos/**", "/api/ordenes-compra/**", "/api/motivos/**").hasAnyAuthority(
+                        .requestMatchers("/api/productos/**", "/api/ordenes-compra/**",
+                                "/api/motivos/**", "/api/lotes/**").hasAnyAuthority(
                                 "ROLE_" + RolUsuario.ROL_ALMACENISTA.name(),
                                 "ROLE_" + RolUsuario.ROL_JEFE_ALMACENES.name()
                         )

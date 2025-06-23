@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -27,6 +28,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -58,11 +61,47 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         // Recuperar entidades
         Producto producto = productoRepository.findById(dto.productoId())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
-
-        LoteProducto lote = loteProductoRepository.findById(dto.loteProductoId())
-                .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
-
         Almacen almacen = entityManager.getReference(Almacen.class, dto.almacenId());
+        Usuario usuario = dto.usuarioId() != null
+                ? entityManager.getReference(Usuario.class, dto.usuarioId()) : null;
+
+        LoteProducto lote;
+
+        if (dto.tipoMovimiento() == ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
+
+            // Crear nuevo lote
+            lote = LoteProducto.builder()
+                    .codigoLote(dto.codigoLote())
+                    .fechaFabricacion(LocalDate.now())
+                    .fechaVencimiento(dto.fechaVencimiento())
+                    .fechaLiberacion(producto.getRequiereInspeccion() != null && producto.getRequiereInspeccion()
+                            ? null
+                            : LocalDate.now())
+                    .estado(dto.estadoLote()) // aún puedes permitir que el frontend indique esto
+                    .producto(producto)
+                    .almacen(almacen)
+                    .usuarioLiberador(
+                            producto.getRequiereInspeccion() != null && producto.getRequiereInspeccion()
+                                    ? null
+                                    : usuario
+                    )
+                    .stockLote(dto.cantidad())
+                    .build();
+
+            loteProductoRepository.save(lote);
+
+        } else {
+            // Validar que el lote fue enviado
+            if (dto.loteProductoId() == null) {
+                throw new IllegalArgumentException("Debe especificar el ID del lote para este tipo de movimiento.");
+            }
+
+            // Buscar lote existente
+            lote = loteProductoRepository.findById(dto.loteProductoId())
+                    .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+        }
+
+        //Almacen almacen = entityManager.getReference(Almacen.class, dto.almacenId());
         Proveedor proveedor = dto.proveedorId() != null
                 ? entityManager.getReference(Proveedor.class, dto.proveedorId()) : null;
         OrdenCompra ordenCompra = dto.ordenCompraId() != null
@@ -71,8 +110,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId()) : null;
         TipoMovimientoDetalle detalle = dto.tipoMovimientoDetalleId() != null
                 ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null;
-        Usuario usuario = dto.usuarioId() != null
-                ? entityManager.getReference(Usuario.class, dto.usuarioId()) : null;
+        //Usuario usuario = dto.usuarioId() != null
+        //        ? entityManager.getReference(Usuario.class, dto.usuarioId()) : null;
         OrdenCompraDetalle ordenCompraDetalle = dto.ordenCompraDetalleId() != null
                 ? entityManager.getReference(OrdenCompraDetalle.class, dto.ordenCompraDetalleId()) : null;
 

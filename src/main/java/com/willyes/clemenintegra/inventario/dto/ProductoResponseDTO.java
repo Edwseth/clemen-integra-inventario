@@ -33,7 +33,7 @@ public class ProductoResponseDTO {
         this.stockMinimo = producto.getStockMinimo();
         this.stockMinimoProveedor = producto.getStockMinimoProveedor();
         this.activo = producto.isActivo();
-        this.requiereInspeccion = producto.isRequiereInspeccion();
+        this.requiereInspeccion = producto.getRequiereInspeccion();
         this.unidadMedida = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null;
         this.categoria = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null;
         this.fechaCreacion = producto.getFechaCreacion();

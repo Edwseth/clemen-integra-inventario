@@ -1,8 +1,10 @@
 package com.willyes.clemenintegra.inventario.dto;
 
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public record MovimientoInventarioDTO(
         Long id,
@@ -19,7 +21,7 @@ public record MovimientoInventarioDTO(
         @NotNull(message = "El producto es obligatorio")
         Long productoId,
 
-        @NotNull(message = "El lote es obligatorio")
+        //@NotNull(message = "El lote es obligatorio")
         Long loteProductoId,
 
         @NotNull(message = "El almacén es obligatorio")
@@ -41,7 +43,11 @@ public record MovimientoInventarioDTO(
         Long usuarioId,
 
         @NotNull(message = "El detalle de la orden de compra es obligatorio")
-        Long ordenCompraDetalleId
+        Long ordenCompraDetalleId,
+
+        String codigoLote,
+        LocalDate fechaVencimiento,
+        EstadoLote estadoLote
 ) { }
 
 

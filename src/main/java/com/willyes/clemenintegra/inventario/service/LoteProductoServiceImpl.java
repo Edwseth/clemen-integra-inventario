@@ -36,6 +36,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final AlmacenRepository almacenRepo;
     private final LoteProductoMapper loteProductoMapper;
     private final UsuarioService usuarioService;
+    private final LoteProductoRepository loteProductoRepository;
 
     @Transactional
     public LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto) {
@@ -50,15 +51,24 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         LoteProducto lote = loteProductoMapper.toEntity(dto, producto, almacen, usuario);
         lote = loteRepo.saveAndFlush(lote); // sin try-catch, lo maneja el ControllerAdvice
 
-        return loteProductoMapper.toDto(lote);
+        return loteProductoMapper.toResponseDTO(lote);
     }
 
     public List<LoteProductoResponseDTO> obtenerLotesPorEstado(String estado) {
         EstadoLote estadoEnum = EstadoLote.valueOf(estado.toUpperCase());
         return loteRepo.findByEstado(estadoEnum).stream()
-                .map(loteProductoMapper::toDto)
+                .map(loteProductoMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<LoteProductoResponseDTO> listarTodos() {
+        List<LoteProducto> lotes = loteProductoRepository.findAll();
+        return lotes.stream()
+                .map(loteProductoMapper::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
 
     public Workbook generarReporteLotesPorVencerExcel() {
         LocalDate hoy = LocalDate.now();

@@ -65,5 +65,13 @@ public class LoteProductoController {
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(stream.toByteArray());
     }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA')")
+    public ResponseEntity<List<LoteProductoResponseDTO>> listarTodos() {
+        List<LoteProductoResponseDTO> lotes = service.listarTodos();
+        return ResponseEntity.ok(lotes);
+    }
+
 }
 
