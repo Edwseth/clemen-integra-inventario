@@ -17,6 +17,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,7 +53,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     @Resource
     private final EntityManager entityManager;
-    private final MovimientoInventarioRepository movimientoRepo;
+    //private final MovimientoInventarioRepository movimientoRepo;
 
     @Transactional
     @Override
@@ -184,8 +185,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     @Override
     public List<MovimientoInventarioResponseDTO> listarTodos() {
-        return movimientoRepo.findAll()
-                .stream()
+        List<MovimientoInventario> movimientos = repository.findAll(
+                Sort.by(Sort.Direction.DESC, "fechaIngreso")
+        );
+        return movimientos.stream()
                 .map(mapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
