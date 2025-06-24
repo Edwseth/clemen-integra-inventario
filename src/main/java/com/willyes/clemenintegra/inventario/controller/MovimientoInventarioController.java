@@ -114,8 +114,8 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping
-    public ResponseEntity<List<MovimientoInventario>> listarTodos() {
-        List<MovimientoInventario> movimientos = service.listarTodos(); // crea este método en tu servicio si no existe
+    public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarTodos() {
+        List<MovimientoInventarioResponseDTO> movimientos = service.listarTodos();
         return ResponseEntity.ok(movimientos);
     }
 

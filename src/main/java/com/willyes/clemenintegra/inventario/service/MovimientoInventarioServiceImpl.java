@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -74,14 +75,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .codigoLote(dto.codigoLote())
                     .fechaFabricacion(LocalDate.now())
                     .fechaVencimiento(dto.fechaVencimiento())
-                    .fechaLiberacion(producto.getRequiereInspeccion() != null && producto.getRequiereInspeccion()
+                    .fechaLiberacion(producto.getRequiereInspeccion()
                             ? null
                             : LocalDate.now())
                     .estado(dto.estadoLote()) // aún puedes permitir que el frontend indique esto
                     .producto(producto)
                     .almacen(almacen)
                     .usuarioLiberador(
-                            producto.getRequiereInspeccion() != null && producto.getRequiereInspeccion()
+                            producto.getRequiereInspeccion()
                                     ? null
                                     : usuario
                     )
@@ -182,8 +183,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     @Override
-    public List<MovimientoInventario> listarTodos() {
-        return movimientoRepo.findAll();
+    public List<MovimientoInventarioResponseDTO> listarTodos() {
+        return movimientoRepo.findAll()
+                .stream()
+                .map(mapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override

@@ -77,8 +77,8 @@ public class Producto {
         }
     }
 
-    public Boolean getRequiereInspeccion() {return requiereInspeccion;}
-    public void setRequiereInspeccion(Boolean requiereInspeccion) {
+    public boolean getRequiereInspeccion() {return requiereInspeccion;}
+    public void setRequiereInspeccion(boolean requiereInspeccion) {
         this.requiereInspeccion = requiereInspeccion;}
 
 }
