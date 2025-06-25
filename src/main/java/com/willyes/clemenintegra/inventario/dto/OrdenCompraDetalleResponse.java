@@ -10,4 +10,6 @@ public class OrdenCompraDetalleResponse {
     public BigDecimal iva;
     public BigDecimal cantidadRecibida;
     public String productoNombre;
+    public String productoUnidadSimbolo;
+
 }

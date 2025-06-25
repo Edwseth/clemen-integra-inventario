@@ -41,7 +41,10 @@ public interface OrdenCompraMapper {
     ProveedorMinResponse toProveedorMin(Proveedor proveedor);
     ProveedorResponseDTO toProveedorDTO(Proveedor proveedor);
 
-    @Mapping(target = "productoNombre", expression = "java(detalle.getProducto() != null ? detalle.getProducto().getNombre() : null)")
+    @Mapping(target = "productoNombre", expression = "java(detalle.getProducto() != null ? " +
+            "detalle.getProducto().getNombre() : null)")
+    @Mapping(target = "productoUnidadSimbolo", expression = "java(detalle.getProducto() != null " +
+            "&& detalle.getProducto().getUnidadMedida() != null ? detalle.getProducto().getUnidadMedida().getSimbolo() : null)")
     OrdenCompraDetalleResponse toOrdenCompraDetalleResponse(OrdenCompraDetalle detalle);
     List<OrdenCompraDetalleResponse> toDetalleList(List<OrdenCompraDetalle> detalles);
 }

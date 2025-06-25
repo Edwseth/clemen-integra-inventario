@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -38,41 +39,69 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MovimientoInventarioController {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MovimientoInventarioController.class);
     private final MovimientoInventarioService service;
     private final ProductoRepository productoRepo;
     private final LoteProductoRepository loteRepo;
 
     @Operation(summary = "Registrar un movimiento de inventario")
     @ApiResponse(responseCode = "201", description = "Movimiento registrado correctamente")
+    @ApiResponse(responseCode = "400", description = "Solicitud malformada o inválida")
+    @ApiResponse(responseCode = "404", description = "Producto o lote no encontrado")
     @ApiResponse(responseCode = "409", description = "No hay suficiente stock disponible")
+    @ApiResponse(responseCode = "500", description = "Error interno del servidor")
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
-        // 1) Validación de stock aquí, antes de llamar al servicio:
-        var tipo = dto.tipoMovimiento();
-        boolean isSalida = tipo.name().startsWith("SALIDA")
-                || tipo == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
+        try {
+            // 1) Validación de stock para salidas
+            var tipo = dto.tipoMovimiento();
+            boolean isSalida = tipo.name().startsWith("SALIDA")
+                    || tipo == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
 
-        if (isSalida) {
-            Producto prod = productoRepo.findById(dto.productoId())
-                    .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
-            LoteProducto lote = loteRepo.findById(dto.loteProductoId())
-                    .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+            if (isSalida) {
+                Producto prod = productoRepo.findById(dto.productoId())
+                        .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
+                LoteProducto lote = loteRepo.findById(dto.loteProductoId())
+                        .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
-            BigDecimal cant = dto.cantidad();
-            BigDecimal stockProd = prod.getStockActual();
-            BigDecimal stockLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+                BigDecimal cant = dto.cantidad();
+                BigDecimal stockProd = prod.getStockActual();
+                BigDecimal stockLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
 
-            if (stockProd.compareTo(cant) < 0 || stockLote.compareTo(cant) < 0) {
-                return ResponseEntity
-                        .status(HttpStatus.CONFLICT)
-                        .body(Map.of("message", "No hay suficiente stock disponible"));
+                if (stockProd.compareTo(cant) < 0 || stockLote.compareTo(cant) < 0) {
+                    return ResponseEntity
+                            .status(HttpStatus.CONFLICT)
+                            .body(Map.of("message", "No hay suficiente stock disponible"));
+                }
             }
-        }
 
-        // 2) Si pasa validación, delegamos al servicio para grabar
-        MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+            // 2) Registrar movimiento
+            MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto);
+            log.info("Movimiento registrado correctamente: {}", creado.id());
+            return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+
+        } catch (NoSuchElementException e) {
+            log.warn("Error de entidad no encontrada: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", e.getMessage()));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Error de validación: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
+
+        } catch (DataIntegrityViolationException e) {
+            log.error("Violación de integridad en la base de datos", e);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Datos inválidos o faltantes"));
+
+        } catch (Exception e) {
+            log.error("Error inesperado al registrar movimiento", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("message", "No se pudo registrar el movimiento"));
+        }
     }
+
 
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
