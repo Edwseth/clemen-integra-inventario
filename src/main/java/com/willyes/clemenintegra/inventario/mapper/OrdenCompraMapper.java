@@ -3,10 +3,12 @@ package com.willyes.clemenintegra.inventario.mapper;
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.Proveedor;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
 import java.util.List;
 
@@ -41,12 +43,23 @@ public interface OrdenCompraMapper {
     ProveedorMinResponse toProveedorMin(Proveedor proveedor);
     ProveedorResponseDTO toProveedorDTO(Proveedor proveedor);
 
-    @Mapping(target = "productoNombre", expression = "java(detalle.getProducto() != null ? " +
-            "detalle.getProducto().getNombre() : null)")
-    @Mapping(target = "productoUnidadSimbolo", expression = "java(detalle.getProducto() != null " +
-            "&& detalle.getProducto().getUnidadMedida() != null ? detalle.getProducto().getUnidadMedida().getSimbolo() : null)")
+    @Mapping(target = "producto", source = "producto", qualifiedByName = "mapProductoMini")
     OrdenCompraDetalleResponse toOrdenCompraDetalleResponse(OrdenCompraDetalle detalle);
     List<OrdenCompraDetalleResponse> toDetalleList(List<OrdenCompraDetalle> detalles);
+
+    @Named("mapProductoMini")
+    default ProductoMiniDTO mapProductoMini(Producto producto) {
+        if (producto == null) return null;
+        UnidadMiniDTO unidadDTO = new UnidadMiniDTO(
+                producto.getUnidadMedida() != null ? producto.getUnidadMedida().getSimbolo() : null
+        );
+        return new ProductoMiniDTO(
+                producto.getId(),
+                producto.getNombre(),
+                unidadDTO
+        );
+    }
+
 }
 
 

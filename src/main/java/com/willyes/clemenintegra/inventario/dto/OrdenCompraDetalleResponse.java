@@ -9,7 +9,7 @@ public class OrdenCompraDetalleResponse {
     public BigDecimal valorTotal;
     public BigDecimal iva;
     public BigDecimal cantidadRecibida;
-    public String productoNombre;
-    public String productoUnidadSimbolo;
+
+    public ProductoMiniDTO producto;
 
 }
