@@ -68,6 +68,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? entityManager.getReference(Usuario.class, dto.usuarioId()) : null;
 
         LoteProducto lote;
+        boolean loteEsNuevo = false;
 
         if (dto.tipoMovimiento() == ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
 
@@ -89,6 +90,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     )
                     .stockLote(dto.cantidad())
                     .build();
+            loteEsNuevo = true;
 
             loteProductoRepository.save(lote);
 
@@ -118,7 +120,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? entityManager.getReference(OrdenCompraDetalle.class, dto.ordenCompraDetalleId()) : null;
 
         // Validar estado del lote
-        if (lote.getEstado() == EstadoLote.EN_CUARENTENA || lote.getEstado() == EstadoLote.RETENIDO) {
+        if (!loteEsNuevo &&
+                (lote.getEstado() == EstadoLote.EN_CUARENTENA || lote.getEstado() == EstadoLote.RETENIDO)) {
             throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
         }
 
