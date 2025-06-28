@@ -47,6 +47,10 @@ public record MovimientoInventarioDTO(
 
         String codigoLote,
         LocalDate fechaVencimiento,
+        /**
+         * Estado inicial sugerido por el cliente. Este valor se ignora en el
+         * proceso de registro del movimiento.
+         */
         EstadoLote estadoLote
 ) { }
 

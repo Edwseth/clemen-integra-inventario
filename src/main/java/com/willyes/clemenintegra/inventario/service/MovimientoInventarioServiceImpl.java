@@ -79,7 +79,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .fechaLiberacion(producto.getRequiereInspeccion()
                             ? null
                             : LocalDate.now())
-                    .estado(dto.estadoLote()) // aún puedes permitir que el frontend indique esto
+                    .estado(obtenerEstadoInicial(producto))
                     .producto(producto)
                     .almacen(almacen)
                     .usuarioLiberador(
@@ -280,6 +280,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         } catch (IOException e) {
             throw new IllegalStateException("Error generando el archivo Excel", e);
         }
+    }
+
+    private EstadoLote obtenerEstadoInicial(Producto producto) {
+        return producto.getRequiereInspeccion()
+                ? EstadoLote.EN_CUARENTENA
+                : EstadoLote.DISPONIBLE;
     }
 
 }
