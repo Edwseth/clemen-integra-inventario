@@ -37,7 +37,6 @@ public interface LoteProductoMapper {
 
     @Named("mapNombreUsuario")
     default String mapNombreUsuario(Usuario usuario) {return (usuario != null) ? usuario.getNombreCompleto() : null;}
-
 }
 
 

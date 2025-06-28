@@ -49,6 +49,12 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
         LoteProducto lote = loteProductoMapper.toEntity(dto, producto, almacen, usuario);
+        if (producto.getRequiereInspeccion()) {
+            lote.setEstado(EstadoLote.EN_CUARENTENA);
+        } else {
+            lote.setEstado(EstadoLote.DISPONIBLE);
+        }
+
         lote = loteRepo.saveAndFlush(lote); // sin try-catch, lo maneja el ControllerAdvice
 
         return loteProductoMapper.toResponseDTO(lote);
