@@ -4,9 +4,11 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
+import com.willyes.clemenintegra.inventario.mapper.TipoMovimientoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -30,7 +32,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -53,7 +54,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     @Resource
     private final EntityManager entityManager;
-    //private final MovimientoInventarioRepository movimientoRepo;
 
     @Transactional
     @Override
@@ -105,7 +105,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
         }
 
-        //Almacen almacen = entityManager.getReference(Almacen.class, dto.almacenId());
         Proveedor proveedor = dto.proveedorId() != null
                 ? entityManager.getReference(Proveedor.class, dto.proveedorId()) : null;
         OrdenCompra ordenCompra = dto.ordenCompraId() != null
@@ -114,8 +113,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId()) : null;
         TipoMovimientoDetalle detalle = dto.tipoMovimientoDetalleId() != null
                 ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null;
-        //Usuario usuario = dto.usuarioId() != null
-        //        ? entityManager.getReference(Usuario.class, dto.usuarioId()) : null;
         OrdenCompraDetalle ordenCompraDetalle = dto.ordenCompraDetalleId() != null
                 ? entityManager.getReference(OrdenCompraDetalle.class, dto.ordenCompraDetalleId()) : null;
 
@@ -143,25 +140,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             entityManager.merge(ordenCompraDetalle); // Actualizar cantidad recibida
         }
 
+        TipoMovimiento tipoMovimiento = TipoMovimientoMapper.obtenerTipoMovimiento(dto.tipoMovimiento());
            // Actualización de stock (usando BigDecimal)
-            switch (dto.tipoMovimiento()) {
-            case ENTRADA_PRODUCCION, RECEPCION_COMPRA, AJUSTE_POSITIVO -> {
-                producto.setStockActual(
-                        Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad)
-                );
-                lote.setStockLote(
-                        Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad)
-                );
+        switch (tipoMovimiento) {
+            case ENTRADA, RECEPCION, DEVOLUCION, AJUSTE, TRANSFERENCIA -> {
+                producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
+                lote.setStockLote(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad));
             }
-            case SALIDA_PRODUCCION, AJUSTE_NEGATIVO, SALIDA_VENCIDO -> {
-                producto.setStockActual(
-                        Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad)
-                );
-                lote.setStockLote(
-                        Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).subtract(cantidad)
-                );
+            case SALIDA -> {
+                producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
+                lote.setStockLote(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).subtract(cantidad));
             }
-            default -> throw new IllegalArgumentException("Tipo de movimiento no soportado: " + dto.tipoMovimiento());
+            default -> throw new IllegalArgumentException("Tipo de movimiento no soportado: " + tipoMovimiento);
         }
 
         productoRepository.save(producto);
