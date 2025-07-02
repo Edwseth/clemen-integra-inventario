@@ -1,3 +1,4 @@
+/*
 package com.willyes.clemenintegra.inventario.mapper;
 
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
@@ -44,4 +45,4 @@ public class TipoMovimientoMapper {
         return mapa.get(detalle);
     }
 }
-
+*/

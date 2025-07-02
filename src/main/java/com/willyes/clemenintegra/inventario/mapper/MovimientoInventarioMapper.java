@@ -37,7 +37,8 @@ public interface MovimientoInventarioMapper {
 
     // Convertir a DTO de respuesta (más completo para vistas)
     //@Mapping(target = "productoId", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getId() : null)")
-    @Mapping(target = "tipoMovimiento", expression = "java(convertTipoMovimiento(movimiento.getTipoMovimiento()))")
+    //@Mapping(target = "tipoMovimiento", expression = "java(convertTipoMovimiento(movimiento.getTipoMovimiento()))")
+    @Mapping(target = "tipoMovimiento", source = "tipoMovimiento")
     @Mapping(target = "nombreProducto", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null)")
     @Mapping(target = "nombreLote", expression = "java(movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null)")
     @Mapping(target = "nombreAlmacen", expression = "java(movimiento.getAlmacen() != null ? movimiento.getAlmacen().getNombre() : null)")
@@ -49,9 +50,9 @@ public interface MovimientoInventarioMapper {
 
 
     // Métodos auxiliares para convertir enum a String (para MapStruct)
-    default String convertTipoMovimiento(ClasificacionMovimientoInventario tipoMovimiento) {
-        return (tipoMovimiento != null) ? tipoMovimiento.name() : null;
-    }
+    //default String convertTipoMovimiento(ClasificacionMovimientoInventario tipoMovimiento) {
+    //    return (tipoMovimiento != null) ? tipoMovimiento.name() : null;
+    //}
 
     default String convertTipoMovimiento(TipoMovimiento tipoMovimiento) {
         return (tipoMovimiento != null) ? tipoMovimiento.name() : null;

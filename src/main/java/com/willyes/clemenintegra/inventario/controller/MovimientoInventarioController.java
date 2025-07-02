@@ -55,8 +55,7 @@ public class MovimientoInventarioController {
         try {
             // 1) Validación de stock para salidas
             var tipo = dto.tipoMovimiento();
-            boolean isSalida = tipo.name().startsWith("SALIDA")
-                    || tipo == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
+            boolean isSalida = tipo == TipoMovimiento.SALIDA || tipo == TipoMovimiento.AJUSTE;
 
             if (isSalida) {
                 Producto prod = productoRepo.findById(dto.productoId())

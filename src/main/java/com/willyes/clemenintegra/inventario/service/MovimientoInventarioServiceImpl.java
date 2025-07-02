@@ -4,9 +4,9 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
-import com.willyes.clemenintegra.inventario.mapper.TipoMovimientoMapper;
+//import com.willyes.clemenintegra.inventario.mapper.TipoMovimientoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
-import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+//import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -70,7 +70,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         LoteProducto lote;
         boolean loteEsNuevo = false;
 
-        if (dto.tipoMovimiento() == ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
+        if (dto.tipoMovimiento() == TipoMovimiento.RECEPCION) {
 
             // Crear nuevo lote
             lote = LoteProducto.builder()
@@ -140,7 +140,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             entityManager.merge(ordenCompraDetalle); // Actualizar cantidad recibida
         }
 
-        TipoMovimiento tipoMovimiento = TipoMovimientoMapper.obtenerTipoMovimiento(dto.tipoMovimiento());
+        TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
            // Actualización de stock (usando BigDecimal)
         switch (tipoMovimiento) {
             case ENTRADA, RECEPCION, DEVOLUCION, AJUSTE, TRANSFERENCIA -> {

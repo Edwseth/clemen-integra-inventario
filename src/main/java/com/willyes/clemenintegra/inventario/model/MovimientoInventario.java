@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.model;
 
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,8 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "movimientos_inventario")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -28,7 +28,7 @@ public class MovimientoInventario {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_mov", nullable = false, length = 20)
-    private ClasificacionMovimientoInventario tipoMovimiento;
+    private TipoMovimiento tipoMovimiento;
 
     @Column(name = "fecha_ingreso", nullable = false, updatable = false)
     private LocalDateTime fechaIngreso;
@@ -87,6 +87,11 @@ public class MovimientoInventario {
             this.fechaIngreso = LocalDateTime.now();
         }
     }
+
+    public TipoMovimiento getTipoMovimiento() {return tipoMovimiento;}
+    public void setTipoMovimiento(TipoMovimiento tipoMovimiento) {this.tipoMovimiento = tipoMovimiento;}
+    public LocalDateTime getFechaIngreso() {return fechaIngreso;}
+    public void setFechaIngreso(LocalDateTime fechaIngreso) {this.fechaIngreso = fechaIngreso;}
 }
 
 
