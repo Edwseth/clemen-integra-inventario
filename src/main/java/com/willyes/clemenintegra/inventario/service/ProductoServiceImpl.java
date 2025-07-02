@@ -205,6 +205,7 @@ public class ProductoServiceImpl implements ProductoService {
         List<LoteProducto> lotes = loteProductoRepository.findByEstado(estadoEnum);
 
         return lotes.stream()
+                .filter(l -> l.getProducto() != null)
                 .map(lote -> {
                     Producto producto = lote.getProducto();
                     return new ProductoConEstadoLoteDTO(
@@ -225,7 +226,11 @@ public class ProductoServiceImpl implements ProductoService {
 
         // Agrupar lotes por producto
         Map<Producto, List<LoteProducto>> agrupados = lotes.stream()
+                .filter(l -> l.getProducto() != null)
                 .collect(Collectors.groupingBy(LoteProducto::getProducto));
+
+        // Eliminar posibles agrupaciones con clave nula
+        agrupados.remove(null);
 
         // Convertir a DTOs
         return agrupados.entrySet().stream()

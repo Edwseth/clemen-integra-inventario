@@ -5,7 +5,6 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;

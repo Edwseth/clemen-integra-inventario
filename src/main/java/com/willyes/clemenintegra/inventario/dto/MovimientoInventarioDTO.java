@@ -1,6 +1,5 @@
 package com.willyes.clemenintegra.inventario.dto;
 
-import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import jakarta.validation.constraints.*;

@@ -100,7 +100,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             Row row = sheet.createRow(rowNum++);
             row.createCell(0).setCellValue(lote.getId());
             row.createCell(1).setCellValue(lote.getCodigoLote());
-            row.createCell(2).setCellValue(lote.getProducto().getNombre());
+            String nombreProd = lote.getProducto() != null ? lote.getProducto().getNombre() : "";
+            row.createCell(2).setCellValue(nombreProd);
             row.createCell(3).setCellValue(lote.getFechaVencimiento() != null ? lote.getFechaVencimiento().toString() : "");
             row.createCell(4).setCellValue(lote.getStockLote() != null ? lote.getStockLote().doubleValue() : 0);
             row.createCell(5).setCellValue(lote.getEstado().name());
@@ -151,7 +152,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             Row row = sheet.createRow(rowIdx++);
             row.createCell(0).setCellValue("Lote - " + l.getEstado().name());
             row.createCell(1).setCellValue(l.getCodigoLote());
-            row.createCell(2).setCellValue(l.getProducto().getNombre());
+            String nombreProducto = l.getProducto() != null ? l.getProducto().getNombre() : "";
+            row.createCell(2).setCellValue(nombreProducto);
             row.createCell(3).setCellValue(l.getEstado().name());
             row.createCell(4).setCellValue(l.getFechaVencimiento() != null ? l.getFechaVencimiento().toString() : "");
         }
