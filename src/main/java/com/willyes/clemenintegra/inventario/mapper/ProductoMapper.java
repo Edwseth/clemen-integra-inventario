@@ -9,8 +9,8 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring")
 public interface ProductoMapper {
 
-    @Mapping(target = "unidadMedida", source = "unidadMedida", qualifiedByName = "mapUnidadMedida")
-    //@Mapping(target = "categoria", source = "categoriaProducto", qualifiedByName = "mapCategoriaProducto")
+    @Mapping(target = "unidadMedida", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null)")
+    @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
     ProductoResponseDTO toDto(Producto producto);
 
     @Named("mapUnidadMedida")

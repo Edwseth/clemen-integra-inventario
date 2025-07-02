@@ -8,8 +8,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -34,4 +33,17 @@ public class DetalleFormula {
     private BigDecimal cantidadNecesaria;
 
     private Boolean obligatorio;
+
+    public Long getId() {return id;}
+    public void setId(Long id) {this.id = id;}
+    public FormulaProducto getFormula() {return formula;}
+    public void setFormula(FormulaProducto formula) {this.formula = formula;}
+    public Producto getInsumo() {return insumo;}
+    public void setInsumo(Producto insumo) {this.insumo = insumo;}
+    public UnidadMedida getUnidadMedida() {return unidadMedida;}
+    public void setUnidadMedida(UnidadMedida unidadMedida) {this.unidadMedida = unidadMedida;}
+    public BigDecimal getCantidadNecesaria() {return cantidadNecesaria;}
+    public void setCantidadNecesaria(BigDecimal cantidadNecesaria) {this.cantidadNecesaria = cantidadNecesaria;}
+    public Boolean getObligatorio() {return obligatorio;}
+    public void setObligatorio(Boolean obligatorio) {this.obligatorio = obligatorio;}
 }

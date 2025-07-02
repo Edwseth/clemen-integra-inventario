@@ -79,9 +79,33 @@ public class Producto {
 
 
     public boolean getRequiereInspeccion() {return requiereInspeccion;}
-    public void setRequiereInspeccion(boolean requiereInspeccion) {
-        this.requiereInspeccion = requiereInspeccion;}
+    public void setRequiereInspeccion(boolean requiereInspeccion) {this.requiereInspeccion = requiereInspeccion;}
 
+    public Long getId() {return id;}
+    public void setId(Long id) {this.id = id;}
+    public String getCodigoSku() {return codigoSku;}
+    public void setCodigoSku(String codigoSku) {this.codigoSku = codigoSku;}
+    public String getNombre() {return nombre;}
+    public void setNombre(String nombre) {this.nombre = nombre;}
+    public String getDescripcionProducto() {return descripcionProducto;}
+    public void setDescripcionProducto(String descripcionProducto) {this.descripcionProducto = descripcionProducto;}
+    public BigDecimal getStockActual() {return stockActual;}
+    public void setStockActual(BigDecimal stockActual) {this.stockActual = stockActual;}
+    public BigDecimal getStockMinimo() {return stockMinimo;}
+    public void setStockMinimo(BigDecimal stockMinimo) {this.stockMinimo = stockMinimo;}
+    public BigDecimal getStockMinimoProveedor() {return stockMinimoProveedor;}
+    public void setStockMinimoProveedor(BigDecimal stockMinimoProveedor) {this.stockMinimoProveedor = stockMinimoProveedor;}
+    public boolean isActivo() {return activo;}
+    public void setActivo(boolean activo) {this.activo = activo;}
+    public LocalDateTime getFechaCreacion() {return fechaCreacion;}
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {this.fechaCreacion = fechaCreacion;}
+    public boolean isRequiereInspeccion() {return requiereInspeccion;}
+    public UnidadMedida getUnidadMedida() {return unidadMedida;}
+    public void setUnidadMedida(UnidadMedida unidadMedida) {this.unidadMedida = unidadMedida;}
+    public CategoriaProducto getCategoriaProducto() {return categoriaProducto;}
+    public void setCategoriaProducto(CategoriaProducto categoriaProducto) {this.categoriaProducto = categoriaProducto;}
+    public Usuario getCreadoPor() {return creadoPor;}
+    public void setCreadoPor(Usuario creadoPor) {this.creadoPor = creadoPor;}
 }
 
 

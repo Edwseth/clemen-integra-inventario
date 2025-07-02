@@ -52,6 +52,8 @@ public class OrdenCompra {
     public Proveedor getProveedor() {return proveedor;}
     public EstadoOrdenCompra getEstado() {return estado;}
     public String getObservaciones() {return observaciones;}
+    public List<OrdenCompraDetalle> getDetalles() {return detalles;}
+    public void setDetalles(List<OrdenCompraDetalle> detalles) {this.detalles = detalles;}
     public void setId(Long id) {this.id = id;}
     public void setCodigoOrden(String codigoOrden) {this.codigoOrden = codigoOrden;}
     public void setFechaOrden(LocalDate fechaOrden) {this.fechaOrden = fechaOrden;}

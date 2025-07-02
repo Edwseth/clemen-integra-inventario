@@ -45,5 +45,22 @@ public class AjusteInventario {
     @JoinColumn(name = "usuarios_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_ajuste_usuario"))
     private Usuario usuario;
+
+    public Long getId() {return id;}
+    public void setId(Long id) {this.id = id;}
+    public LocalDateTime getFecha() {return fecha;}
+    public void setFecha(LocalDateTime fecha) {this.fecha = fecha;}
+    public BigDecimal getCantidad() {return cantidad;}
+    public void setCantidad(BigDecimal cantidad) {this.cantidad = cantidad;}
+    public String getMotivo() {return motivo;}
+    public void setMotivo(String motivo) {this.motivo = motivo;}
+    public String getObservaciones() {return observaciones;}
+    public void setObservaciones(String observaciones) {this.observaciones = observaciones;}
+    public Producto getProducto() {return producto;}
+    public void setProducto(Producto producto) {this.producto = producto;}
+    public Almacen getAlmacen() {return almacen;}
+    public void setAlmacen(Almacen almacen) {this.almacen = almacen;}
+    public Usuario getUsuario() {return usuario;}
+    public void setUsuario(Usuario usuario) {this.usuario = usuario;}
 }
 

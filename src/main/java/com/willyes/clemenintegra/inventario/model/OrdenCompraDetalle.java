@@ -7,8 +7,7 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "orden_compra_detalle")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -44,5 +43,7 @@ public class OrdenCompraDetalle {
     public OrdenCompraDetalle(Long id) {
         this.id = id;
     }
+
+    public Producto getProducto() {return producto;}
 }
 
