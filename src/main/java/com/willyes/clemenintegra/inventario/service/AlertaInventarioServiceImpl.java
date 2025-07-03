@@ -45,6 +45,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
         return loteProductoRepository.findAll().stream()
                 .filter(lote -> lote.getFechaVencimiento() != null
                         && lote.getFechaVencimiento().isBefore(LocalDate.now()))
+                .filter(lote -> lote.getProducto() != null)
                 .map(lote -> LoteAlertaResponseDTO.builder()
                         .loteId(lote.getId())
                         .codigoLote(lote.getCodigoLote())
@@ -63,6 +64,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                                 lote.getFechaFabricacion() != null &&
                                 lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(15))
                 )
+                .filter(lote -> lote.getProducto() != null)
                 .map(lote -> LoteEstadoProlongadoResponseDTO.builder()
                         .loteId(lote.getId())
                         .codigoLote(lote.getCodigoLote())

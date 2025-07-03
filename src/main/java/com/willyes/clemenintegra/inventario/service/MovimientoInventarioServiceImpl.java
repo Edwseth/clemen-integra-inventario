@@ -226,10 +226,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             row.createCell(0).setCellValue(mov.getId());
             row.createCell(1).setCellValue(mov.getFechaIngreso() != null ? mov.getFechaIngreso().toString() : "");
             row.createCell(2).setCellValue(mov.getTipoMovimiento().name());
-            row.createCell(3).setCellValue(mov.getProducto().getNombre());
-            row.createCell(4).setCellValue(mov.getProducto().getCodigoSku());
+            String nombreProducto = mov.getProducto() != null ? mov.getProducto().getNombre() : "";
+            String codigoSku = mov.getProducto() != null ? mov.getProducto().getCodigoSku() : "";
+            String unidad = (mov.getProducto() != null && mov.getProducto().getUnidadMedida() != null)
+                    ? mov.getProducto().getUnidadMedida().getNombre() : "";
+
+            row.createCell(3).setCellValue(nombreProducto);
+            row.createCell(4).setCellValue(codigoSku);
             row.createCell(5).setCellValue(mov.getCantidad().doubleValue());
-            row.createCell(6).setCellValue(mov.getProducto().getUnidadMedida().getNombre());
+            row.createCell(6).setCellValue(unidad);
             row.createCell(7).setCellValue(mov.getLote() != null ? mov.getLote().getCodigoLote() : "");
             row.createCell(8).setCellValue(mov.getAlmacen().getNombre());
             row.createCell(9).setCellValue(mov.getProveedor() != null ? mov.getProveedor().getNombre() : "");
@@ -260,7 +265,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             for (MovimientoInventario mov : movimientos) {
                 Row row = sheet.createRow(rowNum++);
                 row.createCell(0).setCellValue(mov.getId());
-                row.createCell(1).setCellValue(mov.getProducto().getNombre());
+                String nombreProducto = mov.getProducto() != null ? mov.getProducto().getNombre() : "";
+                row.createCell(1).setCellValue(nombreProducto);
                 row.createCell(2).setCellValue(mov.getCantidad().doubleValue());
                 row.createCell(3).setCellValue(mov.getTipoMovimiento().name());
                 row.createCell(4).setCellValue(mov.getFechaIngreso().toString());

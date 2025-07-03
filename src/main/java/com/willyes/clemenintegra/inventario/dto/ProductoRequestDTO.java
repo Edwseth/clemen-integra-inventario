@@ -28,11 +28,15 @@ public class ProductoRequestDTO {
 
     private BigDecimal stockMinimoProveedor;
 
-    private Boolean requiereInspeccion = false;
+    @Builder.Default
+    private boolean requiereInspeccion = false;
 
     @NotNull
     private Long unidadMedidaId;
 
     @NotNull
     private Long categoriaProductoId;
+
+    public boolean isRequiereInspeccion() {return requiereInspeccion;}
+    public void setRequiereInspeccion(boolean requiereInspeccion) {this.requiereInspeccion = requiereInspeccion;}
 }
