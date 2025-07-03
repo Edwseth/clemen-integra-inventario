@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -182,6 +183,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 Sort.by(Sort.Direction.DESC, "fechaIngreso")
         );
         return movimientos.stream()
+                .filter(Objects::nonNull)
                 .map(mapper::toResponseDTO)
                 .collect(Collectors.toList());
     }

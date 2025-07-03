@@ -73,7 +73,7 @@ public class ProductoServiceImpl implements ProductoService {
         });
         return productos.stream()
                 .filter(Objects::nonNull)  // protección extra temporal
-                .map(productoMapper::toDto)
+                .map(productoMapper::safeToDto)
                 .collect(Collectors.toList());
     }
 

@@ -53,7 +53,7 @@ public class ProductoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_ROL_JEFE_ALMACENES')")
+    @PreAuthorize("hasAuthority('ROL_JEFE_ALMACENES')")
     public ResponseEntity<?> crear(@Valid @RequestBody ProductoRequestDTO dto) {
         try {
             ProductoResponseDTO creado = productoService.crearProducto(dto);

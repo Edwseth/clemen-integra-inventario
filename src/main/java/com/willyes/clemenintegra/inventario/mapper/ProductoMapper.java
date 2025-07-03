@@ -9,6 +9,15 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring")
 public interface ProductoMapper {
 
+    default ProductoResponseDTO safeToDto(Producto producto) {
+        if (producto == null) {
+            System.out.println("❌ Producto nulo detectado");
+            return null;
+        }
+        return toDto(producto);
+    }
+
+
     @Mapping(target = "unidadMedida", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null)")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
     ProductoResponseDTO toDto(Producto producto);

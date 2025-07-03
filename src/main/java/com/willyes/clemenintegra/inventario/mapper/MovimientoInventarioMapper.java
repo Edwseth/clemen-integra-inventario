@@ -33,20 +33,16 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "ordenCompraDetalleId", expression = "java(movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null)")
     MovimientoInventarioDTO toDTO(MovimientoInventario movimiento);
 
-
     // Convertir a DTO de respuesta (más completo para vistas)
     @Mapping(target = "tipoMovimiento", source = "tipoMovimiento")
     @Mapping(target = "nombreProducto", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null)")
     @Mapping(target = "nombreLote", expression = "java(movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null)")
     @Mapping(target = "nombreAlmacen", expression = "java(movimiento.getAlmacen() != null ? movimiento.getAlmacen().getNombre() : null)")
-    @Mapping(target = "nombreMotivo", expression = "java(convertTipoMovimiento(movimiento.getMotivoMovimiento().getMotivo()))")
+    @Mapping(target = "nombreMotivo", expression = "java(movimiento.getMotivoMovimiento() != null && movimiento.getMotivoMovimiento().getMotivo() != null ? movimiento.getMotivoMovimiento().getMotivo().name() : null)")
     @Mapping(target = "tipoAlmacen", expression = "java(movimiento.getAlmacen() != null && movimiento.getAlmacen().getTipo() != null ? movimiento.getAlmacen().getTipo().name() : null)")
     @Mapping(target = "fechaIngreso", source = "fechaIngreso")
     @Mapping(target = "nombreUsuario", expression = "java(movimiento.getRegistradoPor() != null ? movimiento.getRegistradoPor().getNombreCompleto() : null)")
     MovimientoInventarioResponseDTO toResponseDTO(MovimientoInventario movimiento);
 
-    default String convertTipoMovimiento(TipoMovimiento tipoMovimiento) {
-        return (tipoMovimiento != null) ? tipoMovimiento.name() : null;
-    }
 }
 
