@@ -43,7 +43,6 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        //.requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/v3/api-docs/**",
@@ -58,27 +57,27 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/productos/**", "/api/ordenes-compra/**",
                                 "/api/motivos/**", "/api/lotes/**").hasAnyAuthority(
-                                "ROLE_" + RolUsuario.ROL_ALMACENISTA.name(),
-                                "ROLE_" + RolUsuario.ROL_JEFE_ALMACENES.name()
+                                RolUsuario.ROL_ALMACENISTA.name(),
+                                RolUsuario.ROL_JEFE_ALMACENES.name()
                         )
 
                         .requestMatchers("/api/movimientos/**").hasAnyAuthority(
-                                "ROLE_" + RolUsuario.ROL_JEFE_ALMACENES.name(),
-                                "ROLE_" + RolUsuario.ROL_ALMACENISTA.name(),
-                                "ROLE_" + RolUsuario.ROL_JEFE_PRODUCCION.name()
+                                RolUsuario.ROL_JEFE_ALMACENES.name(),
+                                RolUsuario.ROL_ALMACENISTA.name(),
+                                RolUsuario.ROL_JEFE_PRODUCCION.name()
                         )
 
-                        .requestMatchers("/api/calidad/**").hasAnyRole(
+                        .requestMatchers("/api/calidad/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_CALIDAD.name(),
                                 RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                                 RolUsuario.ROL_MICROBIOLOGO.name()
                         )
-                        .requestMatchers("/api/produccion/**").hasAnyRole(
+                        .requestMatchers("/api/produccion/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                                 RolUsuario.ROL_LIDER_HOMEOPATICOS.name()
                         )
-                        .requestMatchers("/api/bom/**").hasAnyRole(
+                        .requestMatchers("/api/bom/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                                 RolUsuario.ROL_LIDER_HOMEOPATICOS.name()
