@@ -22,6 +22,7 @@ public interface ProductoMapper {
     default String mapCategoriaProducto(CategoriaProducto categoriaProducto) {
         return (categoriaProducto != null) ? categoriaProducto.getNombre() : null;
     }
+
 }
 
 

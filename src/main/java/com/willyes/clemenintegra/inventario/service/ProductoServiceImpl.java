@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,10 +58,21 @@ public class ProductoServiceImpl implements ProductoService {
         throw new IllegalStateException("No se pudo extraer el token JWT");
     }
 
-
     public List<ProductoResponseDTO> listarTodos() {
-        return productoRepository.findAll()
-                .stream()
+
+        System.out.println("🟢 Entró correctamente a ProductoServiceImpl.listarTodos()");
+        List<Producto> productos = productoRepository.findAll();
+        System.out.println("▶️ Total productos devueltos: " + productos.size());
+
+        productos.forEach(p -> {
+            if (p == null) {
+                System.out.println("⚠️ Producto nulo detectado");
+            } else {
+                System.out.println("📦 Producto cargado: " + p.getId() + " - " + p.getNombre());
+            }
+        });
+        return productos.stream()
+                .filter(Objects::nonNull)  // protección extra temporal
                 .map(productoMapper::toDto)
                 .collect(Collectors.toList());
     }
