@@ -27,6 +27,7 @@ public class LoteProductoController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA')")
     public ResponseEntity<LoteProductoResponseDTO> crearLote(@RequestBody LoteProductoRequestDTO dto) {
         LoteProductoResponseDTO response = service.crearLote(dto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -39,7 +40,7 @@ public class LoteProductoController {
     }
 
     @GetMapping("/reporte-vencimiento")
-    @PreAuthorize("hasAnyRole('ROL_JEFE_ALMACENES', 'ROL_ANALISTA_CALIDAD', 'ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ANALISTA_CALIDAD', 'ROL_JEFE_CALIDAD')")
     public ResponseEntity<byte[]> exportarLotesPorVencer() throws IOException {
         Workbook workbook = service.generarReporteLotesPorVencerExcel();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -57,7 +58,7 @@ public class LoteProductoController {
     }
 
     @GetMapping("/reporte-alertas")
-    @PreAuthorize("hasAnyRole('ROL_JEFE_ALMACENES', 'ROL_ANALISTA_CALIDAD', 'ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ANALISTA_CALIDAD', 'ROL_JEFE_CALIDAD')")
     public ResponseEntity<byte[]> exportarAlertasActivas() {
         ByteArrayOutputStream stream = service.generarReporteAlertasActivasExcel();
         return ResponseEntity.ok()
@@ -67,7 +68,7 @@ public class LoteProductoController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA')")
     public ResponseEntity<List<LoteProductoResponseDTO>> listarTodos() {
         List<LoteProductoResponseDTO> lotes = service.listarTodos();
         return ResponseEntity.ok(lotes);

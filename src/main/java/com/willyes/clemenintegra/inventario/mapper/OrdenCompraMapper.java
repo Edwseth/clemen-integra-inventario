@@ -22,7 +22,6 @@ public interface OrdenCompraMapper {
         entity.setFechaOrden(java.time.LocalDate.now());
         entity.setObservaciones(dto.getObservaciones());
         entity.setCodigoOrden(dto.getCodigoOrden());
-        // los detalles los dejamos null o vacíos según corresponda
         return entity;
     }
 
@@ -30,6 +29,7 @@ public interface OrdenCompraMapper {
     @Mapping(target = "codigoOrden", source = "codigoOrden")
     @Mapping(target = "estado", source = "estado", qualifiedByName = "enumName")
     @Mapping(target = "proveedorNombre", source = "proveedor.nombre")
+    @Mapping(target = "fechaOrden", source = "fechaOrden")
     OrdenCompraResponseDTO toDTO(OrdenCompra orden);
 
     @org.mapstruct.Named("enumName")
@@ -39,13 +39,21 @@ public interface OrdenCompraMapper {
 
     @Mapping(target = "proveedor", source = "proveedor")
     @Mapping(target = "detalles", source = "detalles")
+    @Mapping(target = "fechaOrden", source = "fechaOrden")
     OrdenCompraConDetallesResponse toOrdenCompraConDetallesResponse(OrdenCompra orden);
+
     ProveedorMinResponse toProveedorMin(Proveedor proveedor);
     ProveedorResponseDTO toProveedorDTO(Proveedor proveedor);
 
     @Mapping(target = "producto", source = "producto", qualifiedByName = "mapProductoMini")
     OrdenCompraDetalleResponse toOrdenCompraDetalleResponse(OrdenCompraDetalle detalle);
+
     List<OrdenCompraDetalleResponse> toDetalleList(List<OrdenCompraDetalle> detalles);
+
+    @Named("mapDetalleList")
+    default List<OrdenCompraDetalleResponse> mapDetalleList(List<OrdenCompraDetalle> detalles) {
+        return toDetalleList(detalles);
+    }
 
     @Named("mapProductoMini")
     default ProductoMiniDTO mapProductoMini(Producto producto) {

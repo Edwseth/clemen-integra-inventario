@@ -17,7 +17,6 @@ public interface ProductoMapper {
         return toDto(producto);
     }
 
-
     @Mapping(target = "unidadMedida", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null)")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
     ProductoResponseDTO toDto(Producto producto);
