@@ -43,9 +43,10 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "nombreAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getNombre() : null)")
     @Mapping(target = "tipoAlmacenOrigen", expression = "java(movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenOrigen().getTipo() != null ? movimiento.getAlmacenOrigen().getTipo().name() : null)")
     @Mapping(target = "tipoAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null && movimiento.getAlmacenDestino().getTipo() != null ? movimiento.getAlmacenDestino().getTipo().name() : null)")
+    @Mapping(target = "categoriaAlmacenOrigen", expression = "java(movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenOrigen().getCategoria() != null ? movimiento.getAlmacenOrigen().getCategoria().name() : null)")
+    @Mapping(target = "categoriaAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null && movimiento.getAlmacenDestino().getCategoria() != null ? movimiento.getAlmacenDestino().getCategoria().name() : null)")
     @Mapping(target = "fechaIngreso", source = "fechaIngreso")
     @Mapping(target = "nombreUsuario", expression = "java(movimiento.getRegistradoPor() != null ? movimiento.getRegistradoPor().getNombreCompleto() : null)")
     MovimientoInventarioResponseDTO toResponseDTO(MovimientoInventario movimiento);
-
 }
 

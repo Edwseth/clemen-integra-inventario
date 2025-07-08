@@ -12,7 +12,9 @@ public record MovimientoInventarioResponseDTO(
         String nombreAlmacenOrigen,
         String nombreAlmacenDestino,
         String tipoAlmacenOrigen,
+        String categoriaAlmacenOrigen,
         String tipoAlmacenDestino,
+        String categoriaAlmacenDestino,
         LocalDateTime fechaIngreso,
         String nombreUsuario,
         String nombreMotivo
