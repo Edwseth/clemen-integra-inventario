@@ -9,8 +9,10 @@ public record MovimientoInventarioResponseDTO(
         String tipoMovimiento,
         String nombreProducto,
         String nombreLote,
-        String nombreAlmacen,
-        String tipoAlmacen,
+        String nombreAlmacenOrigen,
+        String nombreAlmacenDestino,
+        String tipoAlmacenOrigen,
+        String tipoAlmacenDestino,
         LocalDateTime fechaIngreso,
         String nombreUsuario,
         String nombreMotivo

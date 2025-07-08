@@ -30,7 +30,7 @@ public class ProduccionController {
     @PostMapping
     public ResponseEntity<ProduccionResponse> crear(@RequestBody ProduccionRequest request) {
         Usuario usuario = new Usuario(); usuario.setId(request.usuarioId);
-        Producto producto = new Producto(); producto.setId(request.productoId);
+        Producto producto = new Producto(); producto.setId(request.productoId.intValue());
         Produccion entidad = ProduccionSimpleMapper.toEntity(request, usuario, producto);
         return ResponseEntity.ok(ProduccionSimpleMapper.toResponse(service.guardar(entidad)));
     }

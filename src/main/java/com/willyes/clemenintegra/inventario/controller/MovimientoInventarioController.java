@@ -57,7 +57,7 @@ public class MovimientoInventarioController {
             boolean isSalida = tipo == TipoMovimiento.SALIDA || tipo == TipoMovimiento.AJUSTE;
 
             if (isSalida) {
-                Producto prod = productoRepo.findById(dto.productoId())
+                Producto prod = productoRepo.findById(dto.productoId().longValue())
                         .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
                 LoteProducto lote = loteRepo.findById(dto.loteProductoId())
                         .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));

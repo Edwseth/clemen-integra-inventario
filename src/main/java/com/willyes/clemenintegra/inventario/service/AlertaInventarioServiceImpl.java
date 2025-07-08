@@ -34,7 +34,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
 
     private ProductoAlertaResponseDTO mapToResponse(Producto producto) {
         return ProductoAlertaResponseDTO.builder()
-                .productoId(producto.getId())
+                .productoId(producto.getId().longValue())
                 .nombreProducto(producto.getNombre())
                 .stockActual(producto.getStockActual())
                 .stockMinimo(producto.getStockMinimo())

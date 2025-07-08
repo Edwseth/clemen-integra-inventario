@@ -4,9 +4,8 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
-//import com.willyes.clemenintegra.inventario.mapper.TipoMovimientoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
-//import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -61,90 +60,106 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     public MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto) {
         MovimientoInventario movimiento = mapper.toEntity(dto);
 
-        // Recuperar entidades
-        Producto producto = productoRepository.findById(dto.productoId())
+        // 1. Cargar entidades principales
+        Producto producto = productoRepository.findById(dto.productoId().longValue())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
-        Almacen almacen = entityManager.getReference(Almacen.class, dto.almacenId());
+
+        Almacen almacenOrigen = dto.almacenOrigenId() != null
+                ? entityManager.getReference(Almacen.class, dto.almacenOrigenId()) : null;
+
+        Almacen almacenDestino = dto.almacenDestinoId() != null
+                ? entityManager.getReference(Almacen.class, dto.almacenDestinoId()) : null;
+
         Usuario usuario = dto.usuarioId() != null
                 ? entityManager.getReference(Usuario.class, dto.usuarioId()) : null;
 
+        TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
+
+        // 2. Validaciones según el tipo de movimiento
+        if (tipoMovimiento == TipoMovimiento.RECEPCION && almacenDestino == null) {
+            throw new IllegalArgumentException("El almacén destino es obligatorio para la recepción.");
+        }
+
+        if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
+            if (almacenOrigen == null || almacenDestino == null) {
+                throw new IllegalArgumentException("En una transferencia se requieren almacén origen y destino.");
+            }
+            if (almacenOrigen.getId().equals(almacenDestino.getId())) {
+                throw new IllegalArgumentException("El almacén origen y destino no pueden ser iguales.");
+            }
+        }
+
         LoteProducto lote;
-        boolean loteEsNuevo = false;
+        BigDecimal cantidad = dto.cantidad();
 
-        if (dto.tipoMovimiento() == TipoMovimiento.RECEPCION) {
-
-            // Crear nuevo lote
+        // 3. Gestión de lote según tipo de movimiento
+        if (tipoMovimiento == TipoMovimiento.RECEPCION) {
             lote = LoteProducto.builder()
                     .codigoLote(dto.codigoLote())
                     .fechaFabricacion(LocalDate.now())
                     .fechaVencimiento(dto.fechaVencimiento())
-                    .fechaLiberacion(producto.getRequiereInspeccion()
-                            ? null
-                            : LocalDate.now())
+                    .fechaLiberacion(producto.getRequiereInspeccion() ? null : LocalDate.now())
                     .estado(obtenerEstadoInicial(producto))
                     .producto(producto)
-                    .almacen(almacen)
-                    .usuarioLiberador(
-                            producto.getRequiereInspeccion()
-                                    ? null
-                                    : usuario
-                    )
-                    .stockLote(dto.cantidad())
+                    .almacen(almacenDestino)
+                    .usuarioLiberador(producto.getRequiereInspeccion() ? null : usuario)
+                    .stockLote(cantidad)
                     .build();
-            loteEsNuevo = true;
 
             loteProductoRepository.save(lote);
 
         } else {
-            // Validar que el lote fue enviado
             if (dto.loteProductoId() == null) {
                 throw new IllegalArgumentException("Debe especificar el ID del lote para este tipo de movimiento.");
             }
 
-            // Buscar lote existente
             lote = loteProductoRepository.findById(dto.loteProductoId())
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+
+            if (lote.getEstado() == EstadoLote.EN_CUARENTENA || lote.getEstado() == EstadoLote.RETENIDO) {
+                throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
+            }
+
+            if (lote.getEstado() == EstadoLote.VENCIDO) {
+                if (dto.motivoMovimientoId() == null) {
+                    throw new IllegalStateException("No se puede mover: el lote está vencido");
+                }
+                MotivoMovimiento motivo = entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId());
+                if (motivo.getMotivo() != ClasificacionMovimientoInventario.SALIDA_VENCIDO) {
+                    throw new IllegalStateException("No se puede mover: el lote está vencido");
+                }
+            }
+
+            if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
+                if (lote.getStockLote().compareTo(cantidad) < 0) {
+                    throw new IllegalStateException("Stock insuficiente en el lote para transferir.");
+                }
+                // Descontar del lote origen. Se mantiene el mismo lote.
+                lote.setStockLote(lote.getStockLote().subtract(cantidad));
+                loteProductoRepository.save(lote);
+            }
         }
 
-        Proveedor proveedor = dto.proveedorId() != null
-                ? entityManager.getReference(Proveedor.class, dto.proveedorId()) : null;
-        OrdenCompra ordenCompra = dto.ordenCompraId() != null
-                ? entityManager.getReference(OrdenCompra.class, dto.ordenCompraId()) : null;
-        MotivoMovimiento motivo = dto.motivoMovimientoId() != null
-                ? entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId()) : null;
-        TipoMovimientoDetalle detalle = dto.tipoMovimientoDetalleId() != null
-                ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null;
+        // 4. Orden de compra detalle (si aplica)
         OrdenCompraDetalle ordenCompraDetalle = dto.ordenCompraDetalleId() != null
                 ? entityManager.getReference(OrdenCompraDetalle.class, dto.ordenCompraDetalleId()) : null;
 
-        // Validar estado del lote
-        if (!loteEsNuevo &&
-                (lote.getEstado() == EstadoLote.EN_CUARENTENA || lote.getEstado() == EstadoLote.RETENIDO)) {
-            throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
-        }
-
-        if (lote.getEstado() == EstadoLote.VENCIDO) {
-            throw new IllegalStateException("No se puede mover: el lote está vencido");
-        }
-
-        BigDecimal cantidad = dto.cantidad();
         if (ordenCompraDetalle != null) {
-            BigDecimal cantidadRecibida = Optional.ofNullable(ordenCompraDetalle.getCantidadRecibida()).orElse(BigDecimal.ZERO);
-            BigDecimal cantidadSolicitada = Optional.ofNullable(ordenCompraDetalle.getCantidad()).orElse(BigDecimal.ZERO);
-            BigDecimal nuevaCantidad = cantidadRecibida.add(cantidad);
+            BigDecimal recibida = Optional.ofNullable(ordenCompraDetalle.getCantidadRecibida()).orElse(BigDecimal.ZERO);
+            BigDecimal solicitada = Optional.ofNullable(ordenCompraDetalle.getCantidad()).orElse(BigDecimal.ZERO);
+            BigDecimal nuevaCantidad = recibida.add(cantidad);
 
-            if (nuevaCantidad.compareTo(cantidadSolicitada) > 0) {
-                throw new IllegalStateException("La cantidad recibida excede la cantidad solicitada en la orden.");
+            if (nuevaCantidad.compareTo(solicitada) > 0) {
+                throw new IllegalStateException("La cantidad recibida excede la solicitada en la orden.");
             }
 
             ordenCompraDetalle.setCantidadRecibida(nuevaCantidad);
-            entityManager.merge(ordenCompraDetalle); // Actualizar cantidad recibida
+            entityManager.merge(ordenCompraDetalle);
         }
 
-        TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
-           // Actualización de stock (usando BigDecimal)
+        // 5. Stock
         switch (tipoMovimiento) {
-            case ENTRADA, RECEPCION, DEVOLUCION, AJUSTE, TRANSFERENCIA -> {
+            case ENTRADA, RECEPCION, DEVOLUCION, AJUSTE -> {
                 producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
                 lote.setStockLote(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad));
             }
@@ -152,30 +167,35 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
                 lote.setStockLote(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).subtract(cantidad));
             }
+            case TRANSFERENCIA -> {
+                // El stock del producto no cambia; el lote ya fue descontado arriba.
+            }
             default -> throw new IllegalArgumentException("Tipo de movimiento no soportado: " + tipoMovimiento);
         }
 
         productoRepository.save(producto);
-        productoRepository.flush(); // ✅ Esto asegura visibilidad del cambio en el test
-
         loteProductoRepository.save(lote);
 
-        // Asociar entidades al movimiento
+        // 6. Asociar entidades al movimiento
         movimiento.setProducto(producto);
         movimiento.setLote(lote);
-        movimiento.setAlmacen(almacen);
-        movimiento.setProveedor(proveedor);
-        movimiento.setOrdenCompra(ordenCompra);
+        movimiento.setAlmacenOrigen(almacenOrigen);
+        movimiento.setAlmacenDestino(almacenDestino);
+        movimiento.setProveedor(dto.proveedorId() != null
+                ? entityManager.getReference(Proveedor.class, dto.proveedorId()) : null);
+        movimiento.setOrdenCompra(dto.ordenCompraId() != null
+                ? entityManager.getReference(OrdenCompra.class, dto.ordenCompraId()) : null);
         movimiento.setOrdenCompraDetalle(ordenCompraDetalle);
-        movimiento.setMotivoMovimiento(motivo);
-        movimiento.setTipoMovimientoDetalle(detalle);
+        movimiento.setMotivoMovimiento(dto.motivoMovimientoId() != null
+                ? entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId()) : null);
+        movimiento.setTipoMovimientoDetalle(dto.tipoMovimientoDetalleId() != null
+                ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null);
         movimiento.setRegistradoPor(usuario);
 
-        // Guardar movimiento
         MovimientoInventario guardado = repository.save(movimiento);
-
         return mapper.toResponseDTO(guardado);
     }
+
 
     @Override
     public List<MovimientoInventarioResponseDTO> listarTodos() {
@@ -238,7 +258,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             row.createCell(5).setCellValue(mov.getCantidad().doubleValue());
             row.createCell(6).setCellValue(unidad);
             row.createCell(7).setCellValue(mov.getLote() != null ? mov.getLote().getCodigoLote() : "");
-            row.createCell(8).setCellValue(mov.getAlmacen().getNombre());
+            String nombreAlmacen = mov.getAlmacenDestino() != null
+                    ? mov.getAlmacenDestino().getNombre()
+                    : (mov.getAlmacenOrigen() != null ? mov.getAlmacenOrigen().getNombre() : "");
+            row.createCell(8).setCellValue(nombreAlmacen);
             row.createCell(9).setCellValue(mov.getProveedor() != null ? mov.getProveedor().getNombre() : "");
             row.createCell(10).setCellValue(mov.getOrdenCompra() != null ? mov.getOrdenCompra().getId().toString() : "");
             row.createCell(11).setCellValue(mov.getMotivoMovimiento() != null ? mov.getMotivoMovimiento().getDescripcion() : "");

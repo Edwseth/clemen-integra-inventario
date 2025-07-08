@@ -14,13 +14,17 @@ import java.time.LocalDate;
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
 
     @Query("""
-        SELECT m FROM MovimientoInventario m
-        WHERE (:productoId IS NULL OR m.producto.id = :productoId)
-          AND (:almacenId IS NULL OR m.almacen.id = :almacenId)
-          AND (:tipoMovimiento IS NULL OR m.tipoMovimiento = :tipoMovimiento)
-          AND (:fechaInicio IS NULL OR m.fechaIngreso >= :fechaInicio)
-          AND (:fechaFin IS NULL OR m.fechaIngreso <= :fechaFin)
-    """)
+    SELECT m FROM MovimientoInventario m
+    WHERE (:productoId IS NULL OR m.producto.id = :productoId)
+      AND (
+        :almacenId IS NULL OR 
+        m.almacenOrigen.id = :almacenId OR 
+        m.almacenDestino.id = :almacenId
+      )
+      AND (:tipoMovimiento IS NULL OR m.tipoMovimiento = :tipoMovimiento)
+      AND (:fechaInicio IS NULL OR m.fechaIngreso >= :fechaInicio)
+      AND (:fechaFin IS NULL OR m.fechaIngreso <= :fechaFin)
+""")
     Page<MovimientoInventario> filtrarMovimientos(
             @Param("productoId") Long productoId,
             @Param("almacenId") Long almacenId,

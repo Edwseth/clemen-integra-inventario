@@ -28,7 +28,7 @@ public class HistorialEstadoOrdenController {
 
     @PostMapping
     public ResponseEntity<HistorialEstadoOrdenResponse> crear(@RequestBody HistorialEstadoOrdenRequest request) {
-        OrdenCompra orden = new OrdenCompra(); orden.setId(request.ordenCompraId);
+        OrdenCompra orden = new OrdenCompra(); orden.setId(request.ordenCompraId != null ? request.ordenCompraId.intValue() : null);
         Usuario usuario = new Usuario(); usuario.setId(request.usuarioId);
         HistorialEstadoOrden entidad = HistorialEstadoOrdenMapper.toEntity(request, orden, usuario);
         return ResponseEntity.ok(HistorialEstadoOrdenMapper.toResponse(service.guardar(entidad)));

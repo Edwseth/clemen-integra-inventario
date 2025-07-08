@@ -13,36 +13,38 @@ public record MovimientoInventarioDTO(
         @Positive(message = "La cantidad debe ser mayor a cero")
         BigDecimal cantidad,
 
-        @NotNull(message = "El tipo de movimiento es obligatorio")
+        //@NotNull(message = "El tipo de movimiento es obligatorio")
         TipoMovimiento tipoMovimiento,
 
         String docReferencia,
 
         @NotNull(message = "El producto es obligatorio")
-        Long productoId,
+        Integer productoId,
 
         //@NotNull(message = "El lote es obligatorio")
         Long loteProductoId,
 
-        @NotNull(message = "El almacén es obligatorio")
-        Long almacenId,
+        //@NotNull(message = "El almacén es obligatorio")
+        Integer almacenOrigenId,
 
-        @NotNull(message = "El proveedor es obligatorio")
-        Long proveedorId,
+        Integer almacenDestinoId,
 
-        @NotNull(message = "La orden de compra es obligatoria")
-        Long ordenCompraId,
+        //@NotNull(message = "El proveedor es obligatorio")
+        Integer proveedorId,
 
-        @NotNull(message = "El motivo del movimiento es obligatorio")
+        //@NotNull(message = "La orden de compra es obligatoria")
+        Integer ordenCompraId,
+
+        //@NotNull(message = "El motivo del movimiento es obligatorio")
         Long motivoMovimientoId,
 
-        @NotNull(message = "El detalle del movimiento es obligatorio")
+        //@NotNull(message = "El detalle del movimiento es obligatorio")
         Long tipoMovimientoDetalleId, // ✅ CORREGIDO
 
         //@NotNull(message = "El usuario es obligatorio")
         Long usuarioId,
 
-        @NotNull(message = "El detalle de la orden de compra es obligatorio")
+        //@NotNull(message = "El detalle de la orden de compra es obligatorio")
         Long ordenCompraDetalleId,
 
         String codigoLote,

@@ -35,7 +35,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     @Transactional
     public OrdenProduccion guardarConValidacionStock(OrdenProduccion orden) {
-        Long productoId = orden.getProducto().getId();
+        Long productoId = orden.getProducto().getId().longValue();
 
         // 1. Buscar fórmula asociada al producto
         FormulaProducto formula = formulaProductoRepository.findByProductoId(productoId)
@@ -45,7 +45,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         // 2. Verificar stock suficiente para cada insumo
         for (DetalleFormula insumo : formula.getDetalles()) {
-            Long insumoId = insumo.getInsumo().getId();
+            Long insumoId = insumo.getInsumo().getId().longValue();
             Producto producto = productoRepository.findById(insumoId)
                     .orElseThrow(() -> new IllegalArgumentException("Insumo no encontrado: ID " + insumoId));
 
@@ -61,7 +61,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         // 3. Descontar stock si todo está OK
         for (DetalleFormula insumo : formula.getDetalles()) {
-            Long insumoId = insumo.getInsumo().getId();
+            Long insumoId = insumo.getInsumo().getId().longValue();
             Producto producto = insumosMap.get(insumoId);
             BigDecimal nuevoStock = producto.getStockActual().subtract(insumo.getCantidadNecesaria());
             producto.setStockActual(nuevoStock);

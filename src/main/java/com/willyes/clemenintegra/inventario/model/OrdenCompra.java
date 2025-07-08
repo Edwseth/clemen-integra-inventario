@@ -19,7 +19,7 @@ public class OrdenCompra {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private Long id;
+    private Integer id;
 
     @Column(name = "codigo_orden", nullable = false, unique = true)
     private String codigoOrden;
@@ -43,10 +43,10 @@ public class OrdenCompra {
     private List<OrdenCompraDetalle> detalles;
 
 
-    public OrdenCompra(Long id) {
+    public OrdenCompra(Integer id) {
         this.id = id;
     }
-    public Long getId() {return id;}
+    public Integer getId() {return id;}
     public String getCodigoOrden() {return codigoOrden;}
     public LocalDate getFechaOrden() {return fechaOrden;}
     public Proveedor getProveedor() {return proveedor;}
@@ -54,7 +54,7 @@ public class OrdenCompra {
     public String getObservaciones() {return observaciones;}
     public List<OrdenCompraDetalle> getDetalles() {return detalles;}
     public void setDetalles(List<OrdenCompraDetalle> detalles) {this.detalles = detalles;}
-    public void setId(Long id) {this.id = id;}
+    public void setId(Integer id) {this.id = id;}
     public void setCodigoOrden(String codigoOrden) {this.codigoOrden = codigoOrden;}
     public void setFechaOrden(LocalDate fechaOrden) {this.fechaOrden = fechaOrden;}
     public void setProveedor(Proveedor proveedor) {this.proveedor = proveedor;}
