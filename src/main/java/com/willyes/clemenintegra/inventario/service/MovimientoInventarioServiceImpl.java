@@ -142,10 +142,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     || deteccionDevolucionInterna;
 
             if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA || esDevolucionInterna) {
-                if (!loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
+                if (!esDevolucionInterna && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
                     throw new IllegalStateException("El lote no pertenece al almacén origen indicado.");
                 }
-                if (loteOrigen.getStockLote().compareTo(cantidad) < 0) {
+                if (!esDevolucionInterna && loteOrigen.getStockLote().compareTo(cantidad) < 0) {
                     throw new IllegalStateException("Stock insuficiente en el lote para transferir.");
                 }
 
@@ -369,15 +369,27 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         var tipo = producto.getCategoriaProducto().getTipo();
-        boolean categoriaPermitida = tipo == TipoCategoria.MATERIA_PRIMA || tipo == TipoCategoria.MATERIAL_EMPAQUE;
+        boolean categoriaPermitida = tipo == TipoCategoria.MATERIA_PRIMA
+                || tipo == TipoCategoria.MATERIAL_EMPAQUE;
 
-        boolean origenPreBodega = almacenOrigen.getNombre() != null
-                && almacenOrigen.getNombre().equalsIgnoreCase("Pre-Bodega Producción");
+        String nombreOrigen = normalizar(almacenOrigen.getNombre());
+        String nombreDestino = normalizar(almacenDestino.getNombre());
 
-        boolean destinoDiferente = almacenDestino.getNombre() != null
-                && !almacenDestino.getNombre().equalsIgnoreCase("Pre-Bodega Producción");
+        boolean origenPreBodega = "pre-bodega produccion".equals(nombreOrigen);
+        boolean destinoDiferente = !"pre-bodega produccion".equals(nombreDestino);
 
         return categoriaPermitida && origenPreBodega && destinoDiferente;
+    }
+
+    /**
+     * Normaliza un nombre de almacén ignorando mayúsculas y acentos.
+     */
+    private String normalizar(String nombre) {
+        if (nombre == null) {
+            return "";
+        }
+        String nfd = java.text.Normalizer.normalize(nombre, java.text.Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{M}", "").toLowerCase();
     }
 
 }
