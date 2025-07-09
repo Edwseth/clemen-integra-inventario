@@ -162,7 +162,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
                 if (destinoExistente.isPresent()) {
                     lote = destinoExistente.get();
+
+                    // 🔍 Trazas antes de actualizar
+                    System.out.println("🧪 Lote destino encontrado: ID=" + lote.getId() +
+                            ", Almacén=" + lote.getAlmacen().getNombre() +
+                            ", Stock actual=" + lote.getStockLote());
+
+                    BigDecimal nuevoStock = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
+
                     lote.setStockLote(lote.getStockLote().add(cantidad));
+
+                    // 🔍 Trazas después de actualizar
+                    System.out.println("✅ Nuevo stock calculado para lote destino: " + nuevoStock);
+
                 } else {
                     lote = LoteProducto.builder()
                             .producto(producto)
@@ -173,7 +185,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             .almacen(almacenDestino)
                             .stockLote(cantidad)
                             .build();
+
+                    System.out.println("🆕 Se creó nuevo lote destino con stock: " + cantidad);
+
                 }
+
+                // 🔍 Confirmación justo antes del save
+                System.out.println("💾 Guardando lote destino: ID=" + (lote.getId() != null ? lote.getId() : "nuevo") +
+                        ", Stock=" + lote.getStockLote());
 
                 loteProductoRepository.save(lote);
             } else {
