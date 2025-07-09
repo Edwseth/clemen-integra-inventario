@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -75,6 +76,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
 
+        // Detección automática de devolución interna
+        boolean deteccionDevolucionInterna = false;
+        if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA
+                && almacenOrigen != null && almacenDestino != null) {
+            deteccionDevolucionInterna = esDevolucionInterna(producto, almacenOrigen, almacenDestino);
+        }
+
         // 2. Validaciones generales
         if (tipoMovimiento == TipoMovimiento.RECEPCION && almacenDestino == null) {
             throw new IllegalArgumentException("El almacén destino es obligatorio para la recepción.");
@@ -129,8 +137,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 }
             }
 
-            boolean esDevolucionInterna = tipoMovimiento == TipoMovimiento.DEVOLUCION
-                    && almacenOrigen != null && almacenDestino != null;
+            boolean esDevolucionInterna = (tipoMovimiento == TipoMovimiento.DEVOLUCION
+                    && almacenOrigen != null && almacenDestino != null)
+                    || deteccionDevolucionInterna;
 
             if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA || esDevolucionInterna) {
                 if (!loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
@@ -342,6 +351,33 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return producto.getRequiereInspeccion()
                 ? EstadoLote.EN_CUARENTENA
                 : EstadoLote.DISPONIBLE;
+    }
+
+    /**
+     * Detecta si un movimiento marcado como transferencia corresponde en realidad
+     * a una devolución interna entre bodegas.
+     *
+     * @param producto       Producto en movimiento
+     * @param almacenOrigen  almacén desde donde se mueve
+     * @param almacenDestino almacén hacia donde se mueve
+     * @return {@code true} si se cumplen las reglas de devolución interna
+     */
+    private boolean esDevolucionInterna(Producto producto, Almacen almacenOrigen, Almacen almacenDestino) {
+        if (producto == null || producto.getCategoriaProducto() == null
+                || almacenOrigen == null || almacenDestino == null) {
+            return false;
+        }
+
+        var tipo = producto.getCategoriaProducto().getTipo();
+        boolean categoriaPermitida = tipo == TipoCategoria.MATERIA_PRIMA || tipo == TipoCategoria.MATERIAL_EMPAQUE;
+
+        boolean origenPreBodega = almacenOrigen.getNombre() != null
+                && almacenOrigen.getNombre().equalsIgnoreCase("Pre-Bodega Producción");
+
+        boolean destinoDiferente = almacenDestino.getNombre() != null
+                && !almacenDestino.getNombre().equalsIgnoreCase("Pre-Bodega Producción");
+
+        return categoriaPermitida && origenPreBodega && destinoDiferente;
     }
 
 }
