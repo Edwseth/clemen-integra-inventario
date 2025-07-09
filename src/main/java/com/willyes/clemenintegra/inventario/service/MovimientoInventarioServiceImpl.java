@@ -75,7 +75,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
 
-        // 2. Validaciones según el tipo de movimiento
+        // 2. Validaciones generales
         if (tipoMovimiento == TipoMovimiento.RECEPCION && almacenDestino == null) {
             throw new IllegalArgumentException("El almacén destino es obligatorio para la recepción.");
         }
@@ -92,7 +92,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         LoteProducto lote;
         BigDecimal cantidad = dto.cantidad();
 
-        // 3. Gestión de lote según tipo de movimiento
+        // 3. Gestión de lote
         if (tipoMovimiento == TipoMovimiento.RECEPCION) {
             lote = LoteProducto.builder()
                     .codigoLote(dto.codigoLote())
@@ -113,14 +113,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 throw new IllegalArgumentException("Debe especificar el ID del lote para este tipo de movimiento.");
             }
 
-            lote = loteProductoRepository.findById(dto.loteProductoId())
+            LoteProducto loteOrigen = loteProductoRepository.findById(dto.loteProductoId())
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
-            if (lote.getEstado() == EstadoLote.EN_CUARENTENA || lote.getEstado() == EstadoLote.RETENIDO) {
+            if (loteOrigen.getEstado() == EstadoLote.EN_CUARENTENA || loteOrigen.getEstado() == EstadoLote.RETENIDO) {
                 throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
             }
 
-            if (lote.getEstado() == EstadoLote.VENCIDO) {
+            if (loteOrigen.getEstado() == EstadoLote.VENCIDO) {
                 if (dto.motivoMovimientoId() == null) {
                     throw new IllegalStateException("No se puede mover: el lote está vencido");
                 }
@@ -131,12 +131,42 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
 
             if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
-                if (lote.getStockLote().compareTo(cantidad) < 0) {
+                if (!loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
+                    throw new IllegalStateException("El lote no pertenece al almacén origen indicado.");
+                }
+                if (loteOrigen.getStockLote().compareTo(cantidad) < 0) {
                     throw new IllegalStateException("Stock insuficiente en el lote para transferir.");
                 }
-                // Descontar del lote origen. Se mantiene el mismo lote.
-                lote.setStockLote(lote.getStockLote().subtract(cantidad));
+
+                // Descontar del lote origen
+                loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidad));
+                loteProductoRepository.save(loteOrigen);
+
+                // Buscar o crear lote destino
+                Optional<LoteProducto> destinoExistente = loteProductoRepository
+                        .findByCodigoLoteAndProductoIdAndAlmacenId(
+                                loteOrigen.getCodigoLote(),
+                                producto.getId(),
+                                almacenDestino.getId());
+
+                if (destinoExistente.isPresent()) {
+                    lote = destinoExistente.get();
+                    lote.setStockLote(lote.getStockLote().add(cantidad));
+                } else {
+                    lote = LoteProducto.builder()
+                            .producto(producto)
+                            .codigoLote(loteOrigen.getCodigoLote())
+                            .fechaFabricacion(loteOrigen.getFechaFabricacion())
+                            .fechaVencimiento(loteOrigen.getFechaVencimiento())
+                            .estado(loteOrigen.getEstado())
+                            .almacen(almacenDestino)
+                            .stockLote(cantidad)
+                            .build();
+                }
+
                 loteProductoRepository.save(lote);
+            } else {
+                lote = loteOrigen;
             }
         }
 
@@ -157,24 +187,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             entityManager.merge(ordenCompraDetalle);
         }
 
-        // 5. Stock
+        // 5. Stock total del producto (excepto transferencia)
         switch (tipoMovimiento) {
-            case ENTRADA, RECEPCION, DEVOLUCION, AJUSTE -> {
-                producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
-                lote.setStockLote(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad));
-            }
-            case SALIDA -> {
-                producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
-                lote.setStockLote(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).subtract(cantidad));
-            }
+            case ENTRADA, RECEPCION, DEVOLUCION, AJUSTE ->
+                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
+            case SALIDA ->
+                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
             case TRANSFERENCIA -> {
-                // El stock del producto no cambia; el lote ya fue descontado arriba.
+                // Ya manejado lote a lote
             }
             default -> throw new IllegalArgumentException("Tipo de movimiento no soportado: " + tipoMovimiento);
         }
 
         productoRepository.save(producto);
-        loteProductoRepository.save(lote);
 
         // 6. Asociar entidades al movimiento
         movimiento.setProducto(producto);
@@ -195,7 +220,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         MovimientoInventario guardado = repository.save(movimiento);
         return mapper.toResponseDTO(guardado);
     }
-
 
     @Override
     public List<MovimientoInventarioResponseDTO> listarTodos() {
