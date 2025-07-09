@@ -107,7 +107,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .build();
 
             loteProductoRepository.save(lote);
-
         } else {
             if (dto.loteProductoId() == null) {
                 throw new IllegalArgumentException("Debe especificar el ID del lote para este tipo de movimiento.");
@@ -130,7 +129,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 }
             }
 
-            if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
+            boolean esDevolucionInterna = tipoMovimiento == TipoMovimiento.DEVOLUCION
+                    && almacenOrigen != null && almacenDestino != null;
+
+            if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA || esDevolucionInterna) {
                 if (!loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
                     throw new IllegalStateException("El lote no pertenece al almacén origen indicado.");
                 }
@@ -189,8 +191,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         // 5. Stock total del producto (excepto transferencia)
         switch (tipoMovimiento) {
-            case ENTRADA, RECEPCION, DEVOLUCION, AJUSTE ->
+            case ENTRADA, RECEPCION, AJUSTE ->
                     producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
+            case DEVOLUCION -> {
+                // Si es devolución entre almacenes no afecta el stock global
+                if (!(almacenOrigen != null && almacenDestino != null)) {
+                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
+                }
+            }
             case SALIDA ->
                     producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
             case TRANSFERENCIA -> {
