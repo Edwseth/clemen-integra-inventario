@@ -16,6 +16,8 @@ public interface MovimientoInventarioService {
 
     Page<MovimientoInventario> consultarMovimientosConFiltros(MovimientoInventarioFiltroDTO filtro, Pageable pageable);
 
+    List<MovimientoInventarioResponseDTO> consultarMovimientos(MovimientoInventarioFiltroDTO filtro);
+
     Workbook generarReporteMovimientosExcel(); // 👈 nuevo método para exportar
 
     List<MovimientoInventarioResponseDTO> listarTodos();

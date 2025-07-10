@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
@@ -108,15 +109,32 @@ public class MovimientoInventarioController {
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) TipoMovimiento tipoMovimiento,
+            @RequestParam(required = false) ClasificacionMovimientoInventario clasificacion,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         MovimientoInventarioFiltroDTO filtro = new MovimientoInventarioFiltroDTO(
-                productoId, almacenId, tipoMovimiento, fechaInicio, fechaFin
+                productoId, almacenId, tipoMovimiento, clasificacion, fechaInicio, fechaFin
         );
         Page<MovimientoInventario> resultados = service.consultarMovimientosConFiltros(filtro, pageable);
         return ResponseEntity.ok(resultados);
+    }
+
+    @GetMapping("/buscar")
+    public ResponseEntity<List<MovimientoInventarioResponseDTO>> consultar(
+            @RequestParam(required = false) Long productoId,
+            @RequestParam(required = false) Long almacenId,
+            @RequestParam(required = false) TipoMovimiento tipoMovimiento,
+            @RequestParam(required = false) ClasificacionMovimientoInventario clasificacion,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
+    ) {
+        MovimientoInventarioFiltroDTO filtro = new MovimientoInventarioFiltroDTO(
+                productoId, almacenId, tipoMovimiento, clasificacion, fechaInicio, fechaFin
+        );
+        List<MovimientoInventarioResponseDTO> lista = service.consultarMovimientos(filtro);
+        return ResponseEntity.ok(lista);
     }
 
     @GetMapping("/reporte-excel")
