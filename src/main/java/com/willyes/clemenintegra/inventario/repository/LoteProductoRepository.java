@@ -14,6 +14,7 @@ import java.util.Optional;
 @Repository
 public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long> {
 
+    Optional<LoteProducto> findByCodigoLoteAndProductoId(String codigoLote, Long productoId);
     boolean existsByProducto(Producto producto);
     boolean existsByCodigoLote(String codigoLote);
     List<LoteProducto> findByEstado(EstadoLote estado);

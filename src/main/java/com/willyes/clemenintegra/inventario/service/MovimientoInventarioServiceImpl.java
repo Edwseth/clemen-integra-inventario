@@ -27,6 +27,8 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -42,6 +44,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MovimientoInventarioServiceImpl implements MovimientoInventarioService {
 
+    private static final Logger log = LoggerFactory.getLogger(MovimientoInventarioServiceImpl.class);
     private final AlmacenRepository almacenRepository;
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
@@ -77,164 +80,31 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
 
         // Detección automática de devolución interna
-        boolean deteccionDevolucionInterna = false;
-        if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA
-                && almacenOrigen != null && almacenDestino != null) {
-            deteccionDevolucionInterna = esDevolucionInterna(producto, almacenOrigen, almacenDestino);
-        }
-
-        // 2. Validaciones generales
-        if (tipoMovimiento == TipoMovimiento.RECEPCION && almacenDestino == null) {
-            throw new IllegalArgumentException("El almacén destino es obligatorio para la recepción.");
-        }
-
-        if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
-            if (almacenOrigen == null || almacenDestino == null) {
-                throw new IllegalArgumentException("En una transferencia se requieren almacén origen y destino.");
-            }
-            if (almacenOrigen.getId().equals(almacenDestino.getId())) {
-                throw new IllegalArgumentException("El almacén origen y destino no pueden ser iguales.");
+        boolean devolucionInterna = false;
+        if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA && almacenOrigen != null && almacenDestino != null) {
+            devolucionInterna = esDevolucionInterna(producto, almacenOrigen, almacenDestino);
+            if (devolucionInterna) {
+                tipoMovimiento = TipoMovimiento.DEVOLUCION;
+                movimiento.setTipoMovimiento(TipoMovimiento.DEVOLUCION);
+                log.debug("Movimiento detectado como devolución interna");
             }
         }
 
-        LoteProducto lote;
+        validarParametros(tipoMovimiento, almacenOrigen, almacenDestino);
+
         BigDecimal cantidad = dto.cantidad();
+        LoteProducto lote;
 
-        // 3. Gestión de lote
         if (tipoMovimiento == TipoMovimiento.RECEPCION) {
-            lote = LoteProducto.builder()
-                    .codigoLote(dto.codigoLote())
-                    .fechaFabricacion(LocalDate.now())
-                    .fechaVencimiento(dto.fechaVencimiento())
-                    .fechaLiberacion(producto.getRequiereInspeccion() ? null : LocalDate.now())
-                    .estado(obtenerEstadoInicial(producto))
-                    .producto(producto)
-                    .almacen(almacenDestino)
-                    .usuarioLiberador(producto.getRequiereInspeccion() ? null : usuario)
-                    .stockLote(cantidad)
-                    .build();
-
-            loteProductoRepository.save(lote);
+            lote = crearLoteRecepcion(dto, producto, almacenDestino, usuario, cantidad);
         } else {
-            if (dto.loteProductoId() == null) {
-                throw new IllegalArgumentException("Debe especificar el ID del lote para este tipo de movimiento.");
-            }
-
-            LoteProducto loteOrigen = loteProductoRepository.findById(dto.loteProductoId())
-                    .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
-
-            if (loteOrigen.getEstado() == EstadoLote.EN_CUARENTENA || loteOrigen.getEstado() == EstadoLote.RETENIDO) {
-                throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
-            }
-
-            if (loteOrigen.getEstado() == EstadoLote.VENCIDO) {
-                if (dto.motivoMovimientoId() == null) {
-                    throw new IllegalStateException("No se puede mover: el lote está vencido");
-                }
-                MotivoMovimiento motivo = entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId());
-                if (motivo.getMotivo() != ClasificacionMovimientoInventario.SALIDA_VENCIDO) {
-                    throw new IllegalStateException("No se puede mover: el lote está vencido");
-                }
-            }
-
-            boolean esDevolucionInterna = (tipoMovimiento == TipoMovimiento.DEVOLUCION
-                    && almacenOrigen != null && almacenDestino != null)
-                    || deteccionDevolucionInterna;
-
-            if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA || esDevolucionInterna) {
-                if (!esDevolucionInterna && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
-                    throw new IllegalStateException("El lote no pertenece al almacén origen indicado.");
-                }
-                if (!esDevolucionInterna && loteOrigen.getStockLote().compareTo(cantidad) < 0) {
-                    throw new IllegalStateException("Stock insuficiente en el lote para transferir.");
-                }
-
-                // Descontar del lote origen
-                loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidad));
-                loteProductoRepository.save(loteOrigen);
-
-                // Buscar o crear lote destino
-                Optional<LoteProducto> destinoExistente = loteProductoRepository
-                        .findByCodigoLoteAndProductoIdAndAlmacenId(
-                                loteOrigen.getCodigoLote(),
-                                producto.getId(),
-                                almacenDestino.getId());
-
-                if (destinoExistente.isPresent()) {
-                    lote = destinoExistente.get();
-
-                    // 🔍 Trazas antes de actualizar
-                    System.out.println("🧪 Lote destino encontrado: ID=" + lote.getId() +
-                            ", Almacén=" + lote.getAlmacen().getNombre() +
-                            ", Stock actual=" + lote.getStockLote());
-
-                    BigDecimal nuevoStock = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
-
-                    lote.setStockLote(lote.getStockLote().add(cantidad));
-
-                    // 🔍 Trazas después de actualizar
-                    System.out.println("✅ Nuevo stock calculado para lote destino: " + nuevoStock);
-
-                } else {
-                    lote = LoteProducto.builder()
-                            .producto(producto)
-                            .codigoLote(loteOrigen.getCodigoLote())
-                            .fechaFabricacion(loteOrigen.getFechaFabricacion())
-                            .fechaVencimiento(loteOrigen.getFechaVencimiento())
-                            .estado(loteOrigen.getEstado())
-                            .almacen(almacenDestino)
-                            .stockLote(cantidad)
-                            .build();
-
-                    System.out.println("🆕 Se creó nuevo lote destino con stock: " + cantidad);
-
-                }
-
-                // 🔍 Confirmación justo antes del save
-                System.out.println("💾 Guardando lote destino: ID=" + (lote.getId() != null ? lote.getId() : "nuevo") +
-                        ", Stock=" + lote.getStockLote());
-
-                loteProductoRepository.save(lote);
-            } else {
-                lote = loteOrigen;
-            }
+            lote = procesarMovimientoConLoteExistente(dto, tipoMovimiento, almacenOrigen,
+                    almacenDestino, producto, cantidad, devolucionInterna);
         }
 
-        // 4. Orden de compra detalle (si aplica)
-        OrdenCompraDetalle ordenCompraDetalle = dto.ordenCompraDetalleId() != null
-                ? entityManager.getReference(OrdenCompraDetalle.class, dto.ordenCompraDetalleId()) : null;
+        OrdenCompraDetalle ordenCompraDetalle = actualizarOrdenCompraDetalle(dto, cantidad);
 
-        if (ordenCompraDetalle != null) {
-            BigDecimal recibida = Optional.ofNullable(ordenCompraDetalle.getCantidadRecibida()).orElse(BigDecimal.ZERO);
-            BigDecimal solicitada = Optional.ofNullable(ordenCompraDetalle.getCantidad()).orElse(BigDecimal.ZERO);
-            BigDecimal nuevaCantidad = recibida.add(cantidad);
-
-            if (nuevaCantidad.compareTo(solicitada) > 0) {
-                throw new IllegalStateException("La cantidad recibida excede la solicitada en la orden.");
-            }
-
-            ordenCompraDetalle.setCantidadRecibida(nuevaCantidad);
-            entityManager.merge(ordenCompraDetalle);
-        }
-
-        // 5. Stock total del producto (excepto transferencia)
-        switch (tipoMovimiento) {
-            case ENTRADA, RECEPCION, AJUSTE ->
-                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
-            case DEVOLUCION -> {
-                // Si es devolución entre almacenes no afecta el stock global
-                if (!(almacenOrigen != null && almacenDestino != null)) {
-                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
-                }
-            }
-            case SALIDA ->
-                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
-            case TRANSFERENCIA -> {
-                // Ya manejado lote a lote
-            }
-            default -> throw new IllegalArgumentException("Tipo de movimiento no soportado: " + tipoMovimiento);
-        }
-
+        actualizarStockProducto(producto, tipoMovimiento, cantidad, devolucionInterna);
         productoRepository.save(producto);
 
         // 6. Asociar entidades al movimiento
@@ -363,6 +233,156 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         } catch (IOException e) {
             throw new IllegalStateException("Error generando el archivo Excel", e);
+        }
+    }
+
+    private void validarParametros(TipoMovimiento tipo, Almacen origen, Almacen destino) {
+        if (tipo == TipoMovimiento.RECEPCION && destino == null) {
+            throw new IllegalArgumentException("El almacén destino es obligatorio para la recepción.");
+        }
+
+        if (tipo == TipoMovimiento.TRANSFERENCIA) {
+            if (origen == null || destino == null) {
+                throw new IllegalArgumentException("En una transferencia se requieren almacén origen y destino.");
+            }
+            if (Objects.equals(origen.getId(), destino.getId())) {
+                throw new IllegalArgumentException("El almacén origen y destino no pueden ser iguales.");
+            }
+        }
+    }
+
+    private LoteProducto crearLoteRecepcion(MovimientoInventarioDTO dto, Producto producto,
+                                            Almacen destino, Usuario usuario, BigDecimal cantidad) {
+        LoteProducto lote = LoteProducto.builder()
+                .codigoLote(dto.codigoLote())
+                .fechaFabricacion(LocalDate.now())
+                .fechaVencimiento(dto.fechaVencimiento())
+                .fechaLiberacion(producto.getRequiereInspeccion() ? null : LocalDate.now())
+                .estado(obtenerEstadoInicial(producto))
+                .producto(producto)
+                .almacen(destino)
+                .usuarioLiberador(producto.getRequiereInspeccion() ? null : usuario)
+                .stockLote(cantidad)
+                .build();
+        return loteProductoRepository.save(lote);
+    }
+
+    private LoteProducto procesarMovimientoConLoteExistente(MovimientoInventarioDTO dto,
+                                                            TipoMovimiento tipo,
+                                                            Almacen origen,
+                                                            Almacen destino,
+                                                            Producto producto,
+                                                            BigDecimal cantidad,
+                                                            boolean devolucionInterna) {
+        if (dto.loteProductoId() == null) {
+            throw new IllegalArgumentException("Debe especificar el ID del lote para este tipo de movimiento.");
+        }
+
+        LoteProducto loteOrigen = loteProductoRepository.findById(dto.loteProductoId())
+                .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+
+        if (loteOrigen.getEstado() == EstadoLote.EN_CUARENTENA || loteOrigen.getEstado() == EstadoLote.RETENIDO) {
+            throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
+        }
+
+        if (loteOrigen.getEstado() == EstadoLote.VENCIDO) {
+            if (dto.motivoMovimientoId() == null) {
+                throw new IllegalStateException("No se puede mover: el lote está vencido");
+            }
+            MotivoMovimiento motivo = entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId());
+            if (motivo.getMotivo() != ClasificacionMovimientoInventario.SALIDA_VENCIDO) {
+                throw new IllegalStateException("No se puede mover: el lote está vencido");
+            }
+        }
+
+        if (!esDevolucionInterna && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
+            log.error("Validación fallida: lote está en almacén {}, pero se recibió almacenOrigenId {}",
+                    loteOrigen.getAlmacen().getId(), almacenOrigen.getId());
+            throw new IllegalStateException("El lote no pertenece al almacén origen indicado.");
+        }
+
+
+        if (loteOrigen.getStockLote().compareTo(cantidad) < 0) {
+            throw new IllegalStateException("Stock insuficiente en el lote para transferir.");
+        }
+
+        if (tipo == TipoMovimiento.TRANSFERENCIA || (tipo == TipoMovimiento.DEVOLUCION && destino != null)) {
+            loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidad));
+            loteProductoRepository.save(loteOrigen);
+
+            Optional<LoteProducto> destinoExistente = loteProductoRepository
+                    .findByCodigoLoteAndProductoIdAndAlmacenId(
+                            loteOrigen.getCodigoLote(),
+                            producto.getId(),
+                            destino.getId());
+
+            LoteProducto loteDestino;
+
+            if (destinoExistente.isPresent()) {
+                loteDestino = destinoExistente.get();
+            } else {
+                // ⚠️ Antes de crear, verificar si existe uno con mismo código en otra ubicación
+                /*Optional<LoteProducto> duplicado = loteProductoRepository
+                        .findByCodigoLoteAndProductoId(loteOrigen.getCodigoLote(), producto.getId().longValue());
+
+                if (duplicado.isPresent() && !duplicado.get().getAlmacen().getId().equals(destino.getId())) {
+                    throw new IllegalStateException("Ya existe un lote con código " + loteOrigen.getCodigoLote()
+                            + " en otro almacén (" + duplicado.get().getAlmacen().getNombre() + "). No se puede duplicar.");
+                }*/
+
+                loteDestino = LoteProducto.builder()
+                        .producto(producto)
+                        .codigoLote(loteOrigen.getCodigoLote())
+                        .fechaFabricacion(loteOrigen.getFechaFabricacion())
+                        .fechaVencimiento(loteOrigen.getFechaVencimiento())
+                        .estado(loteOrigen.getEstado())
+                        .almacen(destino)
+                        .stockLote(BigDecimal.ZERO)
+                        .build();
+            }
+
+// Actualizar stock
+            BigDecimal nuevoStock = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
+            log.debug("Actualizando lote destino {} con nuevo stock {}", loteDestino.getCodigoLote(), nuevoStock);
+            loteDestino.setStockLote(nuevoStock);
+            return loteProductoRepository.save(loteDestino);
+
+        }
+
+        return loteOrigen;
+    }
+
+    private OrdenCompraDetalle actualizarOrdenCompraDetalle(MovimientoInventarioDTO dto, BigDecimal cantidad) {
+        if (dto.ordenCompraDetalleId() == null) {
+            return null;
+        }
+        OrdenCompraDetalle detalle = entityManager.getReference(OrdenCompraDetalle.class, dto.ordenCompraDetalleId());
+        BigDecimal recibida = Optional.ofNullable(detalle.getCantidadRecibida()).orElse(BigDecimal.ZERO);
+        BigDecimal solicitada = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO);
+        BigDecimal nuevaCantidad = recibida.add(cantidad);
+        if (nuevaCantidad.compareTo(solicitada) > 0) {
+            throw new IllegalStateException("La cantidad recibida excede la solicitada en la orden.");
+        }
+        detalle.setCantidadRecibida(nuevaCantidad);
+        return entityManager.merge(detalle);
+    }
+
+    private void actualizarStockProducto(Producto producto, TipoMovimiento tipo, BigDecimal cantidad,
+                                         boolean devolucionInterna) {
+        switch (tipo) {
+            case ENTRADA, RECEPCION, AJUSTE ->
+                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
+            case DEVOLUCION -> {
+                if (!devolucionInterna) {
+                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
+                }
+            }
+            case SALIDA ->
+                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
+            case TRANSFERENCIA -> {
+                // No afecta stock global
+            }
+            default -> throw new IllegalArgumentException("Tipo de movimiento no soportado: " + tipo);
         }
     }
 
