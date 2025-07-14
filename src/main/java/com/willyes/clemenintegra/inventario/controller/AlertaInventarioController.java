@@ -15,6 +15,11 @@ public class AlertaInventarioController {
 
     private final AlertaInventarioService alertaService;
 
+    @GetMapping
+    public ResponseEntity<List<AlertaInventarioResponseDTO>> obtenerAlertas() {
+        return ResponseEntity.ok(alertaService.obtenerAlertasInventario());
+    }
+
     @GetMapping("/stock-bajo")
     public ResponseEntity<List<ProductoAlertaResponseDTO>> obtenerProductosConStockBajo() {
         List<ProductoAlertaResponseDTO> alertas = alertaService.obtenerProductosConStockBajo();
