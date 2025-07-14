@@ -15,7 +15,7 @@ public class Proveedor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private Long id;
+    private Integer id;
 
     @Column(name = "proveedor", nullable = false, unique = true, length = 100)
     private String nombre;
@@ -41,13 +41,13 @@ public class Proveedor {
     @Column(nullable = false)
     private Boolean activo;
 
-    public Proveedor(Long id) {
+    public Proveedor(Integer id) {
         this.id = id;
     }
 
     public String getNombre() {return nombre;}
-    public Long getId() {return id;}
+    public Integer getId() {return id;}
 
-    public void setId(Long id) {this.id = id;}
+    public void setId(Integer id) {this.id = id;}
     public void setNombre(String nombre) {this.nombre = nombre;}
 }

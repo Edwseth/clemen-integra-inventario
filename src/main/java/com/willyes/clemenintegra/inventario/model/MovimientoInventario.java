@@ -52,9 +52,14 @@ public class MovimientoInventario {
     private LoteProducto lote;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "almacenes_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_movimientos_inventario_almacenes1"))
-    private Almacen almacen;
+    @JoinColumn(name = "almacen_origen_id", nullable = true,
+            foreignKey = @ForeignKey(name = "fk_movimientos_inventario_origen"))
+    private Almacen almacenOrigen;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "almacen_destino_id", nullable = true,
+            foreignKey = @ForeignKey(name = "fk_movimientos_inventario_destino"))
+    private Almacen almacenDestino;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proveedores_id", nullable = false,
@@ -92,6 +97,10 @@ public class MovimientoInventario {
     public void setTipoMovimiento(TipoMovimiento tipoMovimiento) {this.tipoMovimiento = tipoMovimiento;}
     public LocalDateTime getFechaIngreso() {return fechaIngreso;}
     public void setFechaIngreso(LocalDateTime fechaIngreso) {this.fechaIngreso = fechaIngreso;}
+    public Almacen getAlmacenOrigen() {return almacenOrigen;}
+    public void setAlmacenOrigen(Almacen almacenOrigen) {this.almacenOrigen = almacenOrigen;}
+    public Almacen getAlmacenDestino() {return almacenDestino;}
+    public void setAlmacenDestino(Almacen almacenDestino) {this.almacenDestino = almacenDestino;}
 }
 
 

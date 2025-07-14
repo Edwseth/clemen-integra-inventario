@@ -25,7 +25,8 @@ public interface MovimientoInventarioMapper {
     // Convertir entidad a DTO básico (para uso interno)
     @Mapping(target = "productoId", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getId() : null)")
     @Mapping(target = "loteProductoId", expression = "java(movimiento.getLote() != null ? movimiento.getLote().getId() : null)")
-    @Mapping(target = "almacenId", expression = "java(movimiento.getAlmacen() != null ? movimiento.getAlmacen().getId() : null)")
+    @Mapping(target = "almacenOrigenId", expression = "java(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null)")
+    @Mapping(target = "almacenDestinoId", expression = "java(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null)")
     @Mapping(target = "proveedorId", expression = "java(movimiento.getProveedor() != null ? movimiento.getProveedor().getId() : null)")
     @Mapping(target = "ordenCompraId", expression = "java(movimiento.getOrdenCompra() != null ? movimiento.getOrdenCompra().getId() : null)")
     @Mapping(target = "motivoMovimientoId", expression = "java(movimiento.getMotivoMovimiento() != null ? movimiento.getMotivoMovimiento().getId() : null)")
@@ -37,12 +38,15 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "tipoMovimiento", source = "tipoMovimiento")
     @Mapping(target = "nombreProducto", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null)")
     @Mapping(target = "nombreLote", expression = "java(movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null)")
-    @Mapping(target = "nombreAlmacen", expression = "java(movimiento.getAlmacen() != null ? movimiento.getAlmacen().getNombre() : null)")
     @Mapping(target = "nombreMotivo", expression = "java(movimiento.getMotivoMovimiento() != null && movimiento.getMotivoMovimiento().getMotivo() != null ? movimiento.getMotivoMovimiento().getMotivo().name() : null)")
-    @Mapping(target = "tipoAlmacen", expression = "java(movimiento.getAlmacen() != null && movimiento.getAlmacen().getTipo() != null ? movimiento.getAlmacen().getTipo().name() : null)")
+    @Mapping(target = "nombreAlmacenOrigen", expression = "java(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getNombre() : null)")
+    @Mapping(target = "nombreAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getNombre() : null)")
+    @Mapping(target = "tipoAlmacenOrigen", expression = "java(movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenOrigen().getTipo() != null ? movimiento.getAlmacenOrigen().getTipo().name() : null)")
+    @Mapping(target = "tipoAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null && movimiento.getAlmacenDestino().getTipo() != null ? movimiento.getAlmacenDestino().getTipo().name() : null)")
+    @Mapping(target = "categoriaAlmacenOrigen", expression = "java(movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenOrigen().getCategoria() != null ? movimiento.getAlmacenOrigen().getCategoria().name() : null)")
+    @Mapping(target = "categoriaAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null && movimiento.getAlmacenDestino().getCategoria() != null ? movimiento.getAlmacenDestino().getCategoria().name() : null)")
     @Mapping(target = "fechaIngreso", source = "fechaIngreso")
     @Mapping(target = "nombreUsuario", expression = "java(movimiento.getRegistradoPor() != null ? movimiento.getRegistradoPor().getNombreCompleto() : null)")
     MovimientoInventarioResponseDTO toResponseDTO(MovimientoInventario movimiento);
-
 }
 

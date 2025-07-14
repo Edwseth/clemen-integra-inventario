@@ -221,7 +221,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .map(lote -> {
                     Producto producto = lote.getProducto();
                     return new ProductoConEstadoLoteDTO(
-                            producto.getId(),
+                            producto.getId().longValue(),
                             producto.getCodigoSku(),
                             producto.getNombre(),
                             lote.getEstado().name()
@@ -259,7 +259,7 @@ public class ProductoServiceImpl implements ProductoService {
                     }).toList();
 
                     return new ProductoConLotesDTO(
-                            producto.getId(),
+                            producto.getId().longValue(),
                             producto.getCodigoSku(),
                             producto.getNombre(),
                             loteDTOs

@@ -21,7 +21,7 @@ public interface OrdenCompraDetalleMapper {
                 producto.getUnidadMedida() != null ? producto.getUnidadMedida().getSimbolo() : null
         );
         return new ProductoMiniDTO(
-                producto.getId(),
+                producto.getId().longValue(),
                 producto.getNombre(),
                 unidadDTO
         );

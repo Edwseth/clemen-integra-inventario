@@ -38,7 +38,7 @@ public class DetalleFormulaController {
     @PostMapping
     public ResponseEntity<DetalleFormulaResponse> crear(@RequestBody DetalleFormulaRequest request) {
         FormulaProducto formula = new FormulaProducto(); formula.setId(request.formulaId);
-        Producto insumo = new Producto(); insumo.setId(request.insumoId);
+        Producto insumo = new Producto(); insumo.setId(request.insumoId.intValue());
         UnidadMedida unidad = new UnidadMedida(); unidad.setId(request.unidadMedidaId);
         DetalleFormula entidad = bomMapper.toEntity(request, formula, insumo, unidad);
         return ResponseEntity.ok(bomMapper.toResponse(detalleService.guardar(entidad)));
@@ -49,7 +49,7 @@ public class DetalleFormulaController {
         return detalleService.buscarPorId(id)
                 .map(existente -> {
                     FormulaProducto formula = new FormulaProducto(); formula.setId(request.formulaId);
-                    Producto insumo = new Producto(); insumo.setId(request.insumoId);
+                    Producto insumo = new Producto(); insumo.setId(request.insumoId.intValue());
                     UnidadMedida unidad = new UnidadMedida(); unidad.setId(request.unidadMedidaId);
                     DetalleFormula entidad = bomMapper.toEntity(request, formula, insumo, unidad);
                     entidad.setId(existente.getId());

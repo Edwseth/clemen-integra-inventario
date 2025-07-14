@@ -9,7 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class AlmacenResponseDTO {
-    private Long id;
+    private Integer id;
     private String nombre;
     private String ubicacion;
     private String categoria;

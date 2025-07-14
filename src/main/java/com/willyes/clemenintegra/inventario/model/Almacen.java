@@ -18,7 +18,7 @@ public class Almacen {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private Long id;
+    private Integer id;
 
     @Column(nullable = false, unique = true, length = 100)
     private String nombre;
@@ -34,7 +34,7 @@ public class Almacen {
     @Column(name = "tipo_almacen", nullable = false, length = 30)
     private TipoAlmacen tipo;
 
-    public Almacen(Long id) {
+    public Almacen(Integer id) {
         this.id = id;
     }
 }

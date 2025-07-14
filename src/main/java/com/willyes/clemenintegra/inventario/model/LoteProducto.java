@@ -12,10 +12,12 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "lotes_productos", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_codigo_lote", columnNames = "codigo_lote")
+        @UniqueConstraint(
+                name = "uk_codigo_lote_producto_almacen",
+                columnNames = {"codigo_lote", "productos_id", "almacenes_id"}
+        )
 })
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

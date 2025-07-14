@@ -38,7 +38,7 @@ public class FormulaProductoController {
 
     @PostMapping
     public ResponseEntity<FormulaProductoResponse> crear(@RequestBody FormulaProductoRequest request) {
-        Producto producto = new Producto(); producto.setId(request.productoId);
+        Producto producto = new Producto(); producto.setId(request.productoId.intValue());
         Usuario creador = new Usuario(); creador.setId(request.creadoPorId);
         FormulaProducto entidad = bomMapper.toEntity(request, producto, creador);
         return ResponseEntity.ok(bomMapper.toResponse(formulaService.guardar(entidad)));
@@ -48,7 +48,7 @@ public class FormulaProductoController {
     public ResponseEntity<FormulaProductoResponse> actualizar(@PathVariable Long id, @RequestBody FormulaProductoRequest request) {
         return formulaService.buscarPorId(id)
                 .map(existente -> {
-                    Producto producto = new Producto(); producto.setId(request.productoId);
+                    Producto producto = new Producto(); producto.setId(request.productoId.intValue());
                     Usuario creador = new Usuario(); creador.setId(request.creadoPorId);
                     FormulaProducto entidad = bomMapper.toEntity(request, producto, creador);
                     entidad.setId(existente.getId());

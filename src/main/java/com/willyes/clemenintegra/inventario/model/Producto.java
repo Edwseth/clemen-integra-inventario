@@ -22,7 +22,7 @@ public class Producto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private Long id;
+    private Integer id;
 
     @Column(name = "codigo_sku", nullable = false, length = 50)
     private String codigoSku;
@@ -66,7 +66,7 @@ public class Producto {
             foreignKey = @ForeignKey(name = "fk_productos_usuarios1"))
     private Usuario creadoPor;
 
-    public Producto(Long id) {
+    public Producto(Integer id) {
         this.id = id;
     }
 
@@ -81,8 +81,8 @@ public class Producto {
     public boolean getRequiereInspeccion() {return requiereInspeccion;}
     public void setRequiereInspeccion(boolean requiereInspeccion) {this.requiereInspeccion = requiereInspeccion;}
 
-    public Long getId() {return id;}
-    public void setId(Long id) {this.id = id;}
+    public Integer getId() {return id;}
+    public void setId(Integer id) {this.id = id;}
     public String getCodigoSku() {return codigoSku;}
     public void setCodigoSku(String codigoSku) {this.codigoSku = codigoSku;}
     public String getNombre() {return nombre;}

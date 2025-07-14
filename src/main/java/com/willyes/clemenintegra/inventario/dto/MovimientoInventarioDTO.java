@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import jakarta.validation.constraints.*;
@@ -12,39 +13,21 @@ public record MovimientoInventarioDTO(
         @NotNull(message = "La cantidad es obligatoria")
         @Positive(message = "La cantidad debe ser mayor a cero")
         BigDecimal cantidad,
-
-        @NotNull(message = "El tipo de movimiento es obligatorio")
         TipoMovimiento tipoMovimiento,
-
+        ClasificacionMovimientoInventario clasificacionMovimientoInventario,
         String docReferencia,
 
         @NotNull(message = "El producto es obligatorio")
-        Long productoId,
-
-        //@NotNull(message = "El lote es obligatorio")
+        Integer productoId,
         Long loteProductoId,
-
-        @NotNull(message = "El almacén es obligatorio")
-        Long almacenId,
-
-        @NotNull(message = "El proveedor es obligatorio")
-        Long proveedorId,
-
-        @NotNull(message = "La orden de compra es obligatoria")
-        Long ordenCompraId,
-
-        @NotNull(message = "El motivo del movimiento es obligatorio")
+        Integer almacenOrigenId,
+        Integer almacenDestinoId,
+        Integer proveedorId,
+        Integer ordenCompraId,
         Long motivoMovimientoId,
-
-        @NotNull(message = "El detalle del movimiento es obligatorio")
-        Long tipoMovimientoDetalleId, // ✅ CORREGIDO
-
-        //@NotNull(message = "El usuario es obligatorio")
+        Long tipoMovimientoDetalleId,
         Long usuarioId,
-
-        @NotNull(message = "El detalle de la orden de compra es obligatorio")
         Long ordenCompraDetalleId,
-
         String codigoLote,
         LocalDate fechaVencimiento,
         /**
@@ -52,6 +35,9 @@ public record MovimientoInventarioDTO(
          * proceso de registro del movimiento.
          */
         EstadoLote estadoLote
+
+
+
 ) { }
 
 

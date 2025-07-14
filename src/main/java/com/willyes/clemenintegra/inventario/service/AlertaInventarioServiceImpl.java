@@ -1,8 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
-import com.willyes.clemenintegra.inventario.dto.LoteAlertaResponseDTO;
-import com.willyes.clemenintegra.inventario.dto.LoteEstadoProlongadoResponseDTO;
-import com.willyes.clemenintegra.inventario.dto.ProductoAlertaResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
@@ -34,7 +32,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
 
     private ProductoAlertaResponseDTO mapToResponse(Producto producto) {
         return ProductoAlertaResponseDTO.builder()
-                .productoId(producto.getId())
+                .productoId(producto.getId().longValue())
                 .nombreProducto(producto.getNombre())
                 .stockActual(producto.getStockActual())
                 .stockMinimo(producto.getStockMinimo())
@@ -62,7 +60,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                         lote.getEstado() != null &&
                                 (lote.getEstado().name().equals("EN_CUARENTENA") || lote.getEstado().name().equals("RETENIDO")) &&
                                 lote.getFechaFabricacion() != null &&
-                                lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(15))
+                                lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(10))  // Cambia a 10 días para prolongados, campo para modificar la alerta
                 )
                 .filter(lote -> lote.getProducto() != null)
                 .map(lote -> LoteEstadoProlongadoResponseDTO.builder()
@@ -74,6 +72,74 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                         .nombreProducto(lote.getProducto().getNombre())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    public List<AlertaInventarioResponseDTO> obtenerAlertasInventario() {
+        List<AlertaInventarioResponseDTO> alertas = new java.util.ArrayList<>();
+
+        // Productos con stock bajo
+        productoRepository.findAll().stream()
+                .filter(this::tieneStockPorDebajoDelMinimo)
+                .forEach(producto -> {
+                    if (producto != null) {
+                        alertas.add(AlertaInventarioResponseDTO.builder()
+                                .tipo("Stock bajo")
+                                .nombreProducto(producto.getNombre())
+                                .nombreAlmacen("")
+                                .codigoLote("")
+                                .fechaVencimiento(null)
+                                .stockActual(producto.getStockActual())
+                                .stockMinimo(producto.getStockMinimo())
+                                .estado("")
+                                .criticidad("stock")
+                                .build());
+                    }
+                });
+
+        // Lotes vencidos
+        loteProductoRepository.findAll().stream()
+                .filter(lote -> lote.getFechaVencimiento() != null && lote.getFechaVencimiento().isBefore(LocalDate.now()))
+                .filter(lote -> lote.getProducto() != null)
+                .forEach(lote -> {
+                    String nombreAlmacen = lote.getAlmacen() != null && lote.getAlmacen().getNombre() != null
+                            ? lote.getAlmacen().getNombre() : "";
+                    alertas.add(AlertaInventarioResponseDTO.builder()
+                            .tipo("Lote vencido")
+                            .nombreProducto(lote.getProducto().getNombre())
+                            .nombreAlmacen(nombreAlmacen)
+                            .codigoLote(lote.getCodigoLote())
+                            .fechaVencimiento(lote.getFechaVencimiento())
+                            .stockActual(lote.getStockLote())
+                            .stockMinimo(null)
+                            .estado("")
+                            .criticidad("critica")
+                            .build());
+                });
+
+        // Lotes en cuarentena o retenidos prolongados
+        loteProductoRepository.findAll().stream()
+                .filter(lote -> lote.getEstado() != null &&
+                        (lote.getEstado().name().equals("EN_CUARENTENA") || lote.getEstado().name().equals("RETENIDO")))
+                .filter(lote -> lote.getFechaFabricacion() != null &&
+                        lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(15)))
+                .filter(lote -> lote.getProducto() != null)
+                .forEach(lote -> {
+                    String nombreAlmacen = lote.getAlmacen() != null && lote.getAlmacen().getNombre() != null
+                            ? lote.getAlmacen().getNombre() : "";
+                    alertas.add(AlertaInventarioResponseDTO.builder()
+                            .tipo("Lote en cuarentena")
+                            .nombreProducto(lote.getProducto().getNombre())
+                            .nombreAlmacen(nombreAlmacen)
+                            .codigoLote(lote.getCodigoLote())
+                            .fechaVencimiento(lote.getFechaVencimiento())
+                            .stockActual(lote.getStockLote())
+                            .stockMinimo(null)
+                            .estado(lote.getEstado().name())
+                            .criticidad("advertencia")
+                            .build());
+                });
+
+        return alertas;
     }
 
 }

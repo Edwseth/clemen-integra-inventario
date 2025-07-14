@@ -14,10 +14,13 @@ import java.util.Optional;
 @Repository
 public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long> {
 
+    Optional<LoteProducto> findByCodigoLoteAndProductoId(String codigoLote, Long productoId);
     boolean existsByProducto(Producto producto);
     boolean existsByCodigoLote(String codigoLote);
     List<LoteProducto> findByEstado(EstadoLote estado);
     Optional<LoteProducto> findByCodigoLote(String codigoLote);
     List<LoteProducto> findByFechaVencimientoBetween(LocalDate inicio, LocalDate fin);
+    Optional<LoteProducto> findByCodigoLoteAndProductoIdAndAlmacenId(String codigoLote, Integer productoId, Integer almacenId);
+
 }
 

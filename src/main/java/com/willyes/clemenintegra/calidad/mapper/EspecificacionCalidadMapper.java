@@ -15,7 +15,7 @@ public class EspecificacionCalidadMapper {
                 .valorMinimo(entity.getValorMinimo())
                 .valorMaximo(entity.getValorMaximo())
                 .metodoEnsayo(entity.getMetodoEnsayo())
-                .productoId(entity.getProducto().getId())
+                .productoId(entity.getProducto().getId().longValue())
                 .build();
     }
 

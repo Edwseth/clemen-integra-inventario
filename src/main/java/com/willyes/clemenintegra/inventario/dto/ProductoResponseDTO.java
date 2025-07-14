@@ -25,7 +25,7 @@ public class ProductoResponseDTO {
     private LocalDateTime fechaCreacion;
 
     public ProductoResponseDTO(Producto producto) {
-        this.id = producto.getId();
+        this.id = producto.getId().longValue();
         this.codigoSku = producto.getCodigoSku();
         this.nombre = producto.getNombre();
         this.descripcionProducto = producto.getDescripcionProducto();

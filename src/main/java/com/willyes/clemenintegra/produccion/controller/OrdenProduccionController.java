@@ -38,7 +38,7 @@ public class OrdenProduccionController {
 
     @PostMapping
     public ResponseEntity<OrdenProduccionResponseDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {
-        Producto producto = new Producto(); producto.setId(request.getProductoId());
+        Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
         Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
         OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
         return new ResponseEntity<>(ProduccionMapper.toResponse(service.guardarConValidacionStock(entidad)), HttpStatus.CREATED);
@@ -48,7 +48,7 @@ public class OrdenProduccionController {
     public ResponseEntity<OrdenProduccionResponseDTO> actualizar(@PathVariable Long id, @RequestBody OrdenProduccionRequestDTO request) {
         return service.buscarPorId(id)
                 .map(existente -> {
-                    Producto producto = new Producto(); producto.setId(request.getProductoId());
+                    Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
                     Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
                     OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
                     entidad.setId(existente.getId());
