@@ -60,7 +60,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                         lote.getEstado() != null &&
                                 (lote.getEstado().name().equals("EN_CUARENTENA") || lote.getEstado().name().equals("RETENIDO")) &&
                                 lote.getFechaFabricacion() != null &&
-                                lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(15))
+                                lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(10))  // Cambia a 10 días para prolongados, campo para modificar la alerta
                 )
                 .filter(lote -> lote.getProducto() != null)
                 .map(lote -> LoteEstadoProlongadoResponseDTO.builder()
