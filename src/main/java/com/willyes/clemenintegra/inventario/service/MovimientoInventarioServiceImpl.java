@@ -377,8 +377,37 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             if (loteOrigen.getEstado() != EstadoLote.DISPONIBLE) {
                 throw new IllegalStateException("El lote no está disponible para transferir");
             }
-            loteOrigen.setAlmacen(destino);
-            return loteProductoRepository.save(loteOrigen);
+            int cmp = loteOrigen.getStockLote().compareTo(cantidad);
+            if (cmp > 0) {
+                // Transferencia parcial: mover solo parte del stock
+                loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidad));
+                loteProductoRepository.save(loteOrigen);
+
+                Optional<LoteProducto> destinoExistente = loteProductoRepository
+                        .findByCodigoLoteAndProductoIdAndAlmacenId(
+                                loteOrigen.getCodigoLote(),
+                                producto.getId(),
+                                destino.getId());
+
+                LoteProducto loteDestino = destinoExistente.orElseGet(() -> LoteProducto.builder()
+                        .producto(producto)
+                        .codigoLote(loteOrigen.getCodigoLote())
+                        .fechaFabricacion(loteOrigen.getFechaFabricacion())
+                        .fechaVencimiento(loteOrigen.getFechaVencimiento())
+                        .estado(loteOrigen.getEstado())
+                        .almacen(destino)
+                        .stockLote(BigDecimal.ZERO)
+                        .build());
+
+                BigDecimal nuevoStock = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO)
+                        .add(cantidad);
+                loteDestino.setStockLote(nuevoStock);
+                return loteProductoRepository.save(loteDestino);
+            } else {
+                // Transferencia completa: mover el lote sin dividir
+                loteOrigen.setAlmacen(destino);
+                return loteProductoRepository.save(loteOrigen);
+            }
         }
 
         if (tipo == TipoMovimiento.DEVOLUCION && destino != null) {
