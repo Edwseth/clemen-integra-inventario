@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +43,7 @@ public class AjusteInventarioServiceImpl implements AjusteInventarioService {
         var usuario = usuarioRepository.findById(dto.getUsuarioId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         var entity = mapper.toEntity(dto, producto, almacen, usuario);
+        entity.setFecha(LocalDateTime.now());
         var guardado = repository.save(entity);
         return mapper.toResponseDTO(guardado);
     }
