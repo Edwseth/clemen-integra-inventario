@@ -30,7 +30,7 @@ public class AjusteInventarioServiceImpl implements AjusteInventarioService {
                 .collect(Collectors.toList());
     }
 
-    public AjusteInventarioResponseDTO crear(AjusteInventarioRequestDTO dto) {
+    public AjusteInventarioResponseDTO crear(AjusteInventarioRequestDTO dto, Long usuarioId) {
 
         if (dto.getCantidad().compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalArgumentException("La cantidad no puede ser cero");
@@ -40,7 +40,7 @@ public class AjusteInventarioServiceImpl implements AjusteInventarioService {
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
         var almacen = almacenRepository.findById(dto.getAlmacenId())
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado"));
-        var usuario = usuarioRepository.findById(dto.getUsuarioId())
+        var usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         var entity = mapper.toEntity(dto, producto, almacen, usuario);
         entity.setFecha(LocalDateTime.now());

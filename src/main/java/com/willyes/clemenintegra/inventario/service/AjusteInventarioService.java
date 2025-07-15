@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface AjusteInventarioService {
     List<AjusteInventarioResponseDTO> listar();
-    AjusteInventarioResponseDTO crear(AjusteInventarioRequestDTO dto);
+    AjusteInventarioResponseDTO crear(AjusteInventarioRequestDTO dto, Long usuarioId);
     void eliminar(Long id);
 }

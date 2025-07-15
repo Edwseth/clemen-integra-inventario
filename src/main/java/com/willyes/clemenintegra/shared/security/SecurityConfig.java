@@ -54,8 +54,6 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name())
-
                         .requestMatchers("/api/productos/**", "/api/ordenes-compra/**",
                                 "/api/motivos/**", "/api/lotes/**").hasAnyAuthority(
                                 RolUsuario.ROL_ALMACENISTA.name(),
@@ -89,6 +87,8 @@ public class SecurityConfig {
                                 RolUsuario.ROL_CONTADOR.name(),
                                 RolUsuario.ROL_SUPER_ADMIN.name()
                         )
+
+                        .requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name())
 
                         .anyRequest().authenticated()
                 )
