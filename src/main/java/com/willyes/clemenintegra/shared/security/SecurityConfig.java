@@ -36,7 +36,6 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -55,10 +54,13 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
+                        .requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name())
+
                         .requestMatchers("/api/productos/**", "/api/ordenes-compra/**",
                                 "/api/motivos/**", "/api/lotes/**").hasAnyAuthority(
                                 RolUsuario.ROL_ALMACENISTA.name(),
-                                RolUsuario.ROL_JEFE_ALMACENES.name()
+                                RolUsuario.ROL_JEFE_ALMACENES.name(),
+                                RolUsuario.ROL_CONTADOR.name()
                         )
 
                         .requestMatchers("/api/movimientos/**").hasAnyAuthority(
@@ -82,6 +84,12 @@ public class SecurityConfig {
                                 RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                                 RolUsuario.ROL_LIDER_HOMEOPATICOS.name()
                         )
+
+                        .requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
+                                RolUsuario.ROL_CONTADOR.name(),
+                                RolUsuario.ROL_SUPER_ADMIN.name()
+                        )
+
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
