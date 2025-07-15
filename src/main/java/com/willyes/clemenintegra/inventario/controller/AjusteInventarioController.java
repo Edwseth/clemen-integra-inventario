@@ -2,11 +2,9 @@ package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.service.AjusteInventarioService;
-import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,9 +22,8 @@ public class AjusteInventarioController {
     }
 
     @PostMapping
-    public ResponseEntity<AjusteInventarioResponseDTO> crear(@RequestBody @Valid AjusteInventarioRequestDTO dto,
-                                                             @AuthenticationPrincipal(expression = "usuario") Usuario usuario) {
-        return ResponseEntity.ok(service.crear(dto, usuario.getId()));
+    public ResponseEntity<AjusteInventarioResponseDTO> crear(@RequestBody @Valid AjusteInventarioRequestDTO dto) {
+        return ResponseEntity.ok(service.crear(dto));
     }
 
     @DeleteMapping("/{id}")
