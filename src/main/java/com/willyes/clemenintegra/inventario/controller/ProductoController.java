@@ -75,14 +75,14 @@ public class ProductoController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ROL_JEFE_ALMACENES')")
+    @PreAuthorize("hasAuthority('ROL_JEFE_ALMACENES')")
     public ResponseEntity<ProductoResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ProductoRequestDTO dto) {
         ProductoResponseDTO actualizado = productoService.actualizarProducto(id, dto);
         return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ROL_JEFE_ALMACENES')")
+    @PreAuthorize("hasAuthority('ROL_JEFE_ALMACENES')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         productoService.eliminarProducto(id);
         return ResponseEntity.noContent().build();
@@ -142,7 +142,7 @@ public class ProductoController {
     }
 
     @GetMapping("/reporte-stock")
-    @PreAuthorize("hasAnyRole('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA')")
     @Operation(summary = "Exportar reporte de stock actual de productos a Excel")
     @ApiResponse(responseCode = "200", description = "Reporte generado correctamente")
     public void exportarStockActual(HttpServletResponse response) throws IOException {
