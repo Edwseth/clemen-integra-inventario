@@ -54,8 +54,15 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/productos/**", "/api/ordenes-compra/**",
-                                "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**").hasAnyAuthority(
+                        .requestMatchers(
+                                "/api/productos/**", "/api/ordenes-compra/**",
+                                "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**",
+                                "/api/proveedores/**", "/api/unidades/**",
+                                "/api/inventario/bitacora/**",
+                                "/api/inventario/historial-ordenes/**",
+                                "/api/inventario/ordenes-compra-detalle/**",
+                                "/api/inventario/tipos-movimiento-detalle/**"
+                        ).hasAnyAuthority(
                                 RolUsuario.ROL_ALMACENISTA.name(),
                                 RolUsuario.ROL_JEFE_ALMACENES.name(),
                                 RolUsuario.ROL_CONTADOR.name(),
@@ -63,7 +70,7 @@ public class SecurityConfig {
                         )
 
                         .requestMatchers("/api/movimientos/**", "/api/categorias/**",
-                                "api/inventario/alertas/**").hasAnyAuthority(
+                                "/api/inventario/alertas/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_ALMACENES.name(),
                                 RolUsuario.ROL_ALMACENISTA.name(),
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
