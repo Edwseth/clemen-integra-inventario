@@ -54,41 +54,46 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name())
-
                         .requestMatchers("/api/productos/**", "/api/ordenes-compra/**",
                                 "/api/motivos/**", "/api/lotes/**").hasAnyAuthority(
                                 RolUsuario.ROL_ALMACENISTA.name(),
                                 RolUsuario.ROL_JEFE_ALMACENES.name(),
-                                RolUsuario.ROL_CONTADOR.name()
+                                RolUsuario.ROL_CONTADOR.name(),
+                                RolUsuario.ROL_SUPER_ADMIN.name()
                         )
 
                         .requestMatchers("/api/movimientos/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_ALMACENES.name(),
                                 RolUsuario.ROL_ALMACENISTA.name(),
-                                RolUsuario.ROL_JEFE_PRODUCCION.name()
+                                RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                                RolUsuario.ROL_SUPER_ADMIN.name()
                         )
 
                         .requestMatchers("/api/calidad/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_CALIDAD.name(),
                                 RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                                RolUsuario.ROL_MICROBIOLOGO.name()
+                                RolUsuario.ROL_MICROBIOLOGO.name(),
+                                RolUsuario.ROL_SUPER_ADMIN.name()
                         )
                         .requestMatchers("/api/produccion/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                                RolUsuario.ROL_LIDER_HOMEOPATICOS.name()
+                                RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                                RolUsuario.ROL_SUPER_ADMIN.name()
                         )
                         .requestMatchers("/api/bom/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                                RolUsuario.ROL_LIDER_HOMEOPATICOS.name()
+                                RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                                RolUsuario.ROL_SUPER_ADMIN.name()
                         )
 
                         .requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
                                 RolUsuario.ROL_CONTADOR.name(),
                                 RolUsuario.ROL_SUPER_ADMIN.name()
                         )
+
+                        .requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name())
 
                         .anyRequest().authenticated()
                 )
