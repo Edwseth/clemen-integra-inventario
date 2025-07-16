@@ -72,7 +72,7 @@ public class OrdenCompraController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ROL_JEFE_ALMACENES')")
+    @PreAuthorize("hasAuthority('ROL_JEFE_ALMACENES')")
     public ResponseEntity<OrdenCompra> actualizar(@PathVariable Long id,
                                                   @RequestBody OrdenCompraRequestDTO dto) {
         OrdenCompra orden = ordenCompraRepository.findById(id)
