@@ -101,6 +101,12 @@ public class SecurityConfig {
                                 RolUsuario.ROL_SUPER_ADMIN.name()
                         )
 
+                        .requestMatchers("/api/reportes/**").hasAnyAuthority(
+                                RolUsuario.ROL_ALMACENISTA.name(),
+                                RolUsuario.ROL_JEFE_ALMACENES.name(),
+                                RolUsuario.ROL_SUPER_ADMIN.name()
+                        )
+
                         .requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name())
 
                         .anyRequest().authenticated()
