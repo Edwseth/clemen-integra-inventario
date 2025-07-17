@@ -61,6 +61,32 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             @Param("fechaFin") LocalDate fechaFin
     );
 
+    @Query("""
+    SELECT p.nombre, p.codigoSku, COUNT(m.id), c.tipo, u.nombre
+    FROM MovimientoInventario m
+    JOIN m.producto p
+    JOIN p.categoriaProducto c
+    JOIN p.unidadMedida u
+    WHERE m.fechaIngreso >= :inicio AND m.fechaIngreso <= :fin
+    GROUP BY p.id, p.nombre, p.codigoSku, c.tipo, u.nombre
+    ORDER BY COUNT(m.id) DESC
+    """)
+    List<Object[]> conteoMovimientosDesc(@Param("inicio") java.time.LocalDateTime inicio,
+                                         @Param("fin") java.time.LocalDateTime fin);
+
+    @Query("""
+    SELECT p.nombre, p.codigoSku, COUNT(m.id), c.tipo, u.nombre
+    FROM MovimientoInventario m
+    JOIN m.producto p
+    JOIN p.categoriaProducto c
+    JOIN p.unidadMedida u
+    WHERE m.fechaIngreso >= :inicio AND m.fechaIngreso <= :fin
+    GROUP BY p.id, p.nombre, p.codigoSku, c.tipo, u.nombre
+    ORDER BY COUNT(m.id) ASC
+    """)
+    List<Object[]> conteoMovimientosAsc(@Param("inicio") java.time.LocalDateTime inicio,
+                                        @Param("fin") java.time.LocalDateTime fin);
+
     boolean existsByProductoId(Long productoId);
 
 }
