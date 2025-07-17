@@ -138,7 +138,7 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping("/reporte-excel")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarReporteMovimientos() throws IOException {
         byte[] contenido;
 
