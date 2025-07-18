@@ -64,6 +64,77 @@ public class ReporteInventarioServiceImpl implements ReporteInventarioService {
         return workbook;
     }
 
+    @Override
+    public Workbook generarReporteTrazabilidadLote(String codigoLote) {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Trazabilidad Lote");
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Codigo Lote");
+        header.createCell(1).setCellValue("Detalle");
+        Row row = sheet.createRow(1);
+        row.createCell(0).setCellValue(codigoLote != null ? codigoLote : "");
+        row.createCell(1).setCellValue("Datos de trazabilidad");
+        sheet.autoSizeColumn(0);
+        sheet.autoSizeColumn(1);
+        return workbook;
+    }
+
+    @Override
+    public Workbook generarReporteProductosRetencionLiberacion(String estadoLote, LocalDate desde, LocalDate hasta) {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Retencion/Liberacion");
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Estado");
+        header.createCell(1).setCellValue("Desde");
+        header.createCell(2).setCellValue("Hasta");
+        Row row = sheet.createRow(1);
+        row.createCell(0).setCellValue(estadoLote != null ? estadoLote : "");
+        row.createCell(1).setCellValue(desde != null ? desde.toString() : "");
+        row.createCell(2).setCellValue(hasta != null ? hasta.toString() : "");
+        for (int i = 0; i < 3; i++) {
+            sheet.autoSizeColumn(i);
+        }
+        return workbook;
+    }
+
+    @Override
+    public Workbook generarReporteNoConformidades(String tipo, String area, LocalDate desde, LocalDate hasta) {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("No Conformidades");
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Tipo");
+        header.createCell(1).setCellValue("Area");
+        header.createCell(2).setCellValue("Desde");
+        header.createCell(3).setCellValue("Hasta");
+        Row row = sheet.createRow(1);
+        row.createCell(0).setCellValue(tipo != null ? tipo : "");
+        row.createCell(1).setCellValue(area != null ? area : "");
+        row.createCell(2).setCellValue(desde != null ? desde.toString() : "");
+        row.createCell(3).setCellValue(hasta != null ? hasta.toString() : "");
+        for (int i = 0; i < 4; i++) {
+            sheet.autoSizeColumn(i);
+        }
+        return workbook;
+    }
+
+    @Override
+    public Workbook generarReporteCapas(String estado, LocalDate desde, LocalDate hasta) {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("CAPAs");
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Estado");
+        header.createCell(1).setCellValue("Desde");
+        header.createCell(2).setCellValue("Hasta");
+        Row row = sheet.createRow(1);
+        row.createCell(0).setCellValue(estado != null ? estado : "");
+        row.createCell(1).setCellValue(desde != null ? desde.toString() : "");
+        row.createCell(2).setCellValue(hasta != null ? hasta.toString() : "");
+        for (int i = 0; i < 3; i++) {
+            sheet.autoSizeColumn(i);
+        }
+        return workbook;
+    }
+
     private Workbook crearExcelRotacion(List<Object[]> datos, String nombreHoja) {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet(nombreHoja);
