@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.service;
 import com.willyes.clemenintegra.calidad.dto.RetencionLoteDTO;
 import com.willyes.clemenintegra.calidad.mapper.RetencionLoteMapper;
 import com.willyes.clemenintegra.calidad.model.RetencionLote;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
@@ -10,10 +11,10 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,11 +25,11 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
     private final UsuarioRepository usuarioRepository;
     private final RetencionLoteMapper mapper;
 
-    public List<RetencionLoteDTO> listarTodos() {
-        return repository.findAll()
-                .stream()
-                .map(mapper::toDTO)
-                .collect(Collectors.toList());
+    public Page<RetencionLoteDTO> listar(EstadoRetencion estado, Pageable pageable) {
+        Page<RetencionLote> page = (estado != null)
+                ? repository.findByEstado(estado, pageable)
+                : repository.findAll(pageable);
+        return page.map(mapper::toDTO);
     }
 
     public RetencionLoteDTO crear(RetencionLoteDTO dto) {

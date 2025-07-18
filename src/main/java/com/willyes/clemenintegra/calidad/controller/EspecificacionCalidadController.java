@@ -3,10 +3,11 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.EspecificacionCalidadDTO;
 import com.willyes.clemenintegra.calidad.service.EspecificacionCalidadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/calidad/especificaciones")
@@ -16,8 +17,10 @@ public class EspecificacionCalidadController {
     private final EspecificacionCalidadService service;
 
     @GetMapping
-    public ResponseEntity<List<EspecificacionCalidadDTO>> listar() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<Page<EspecificacionCalidadDTO>> listar(
+            @RequestParam(required = false) Long productoId,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(service.listar(productoId, pageable));
     }
 
     @GetMapping("/{id}")

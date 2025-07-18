@@ -8,10 +8,10 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,10 +21,11 @@ public class EspecificacionCalidadServiceImpl implements EspecificacionCalidadSe
     private final ProductoRepository productoRepository;
     private final EspecificacionCalidadMapper mapper;
 
-    public List<EspecificacionCalidadDTO> listarTodos() {
-        return repository.findAll().stream()
-                .map(mapper::toDTO)
-                .collect(Collectors.toList());
+    public Page<EspecificacionCalidadDTO> listar(Long productoId, Pageable pageable) {
+        Page<EspecificacionCalidad> page = (productoId != null)
+                ? repository.findByProducto_Id(productoId, pageable)
+                : repository.findAll(pageable);
+        return page.map(mapper::toDTO);
     }
 
     public EspecificacionCalidadDTO crear(EspecificacionCalidadDTO dto) {

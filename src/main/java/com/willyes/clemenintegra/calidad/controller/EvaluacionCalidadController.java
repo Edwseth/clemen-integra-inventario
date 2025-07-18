@@ -2,12 +2,14 @@ package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
+import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/calidad/evaluaciones")
@@ -17,8 +19,10 @@ public class EvaluacionCalidadController {
     private final EvaluacionCalidadService service;
 
     @GetMapping
-    public ResponseEntity<List<EvaluacionCalidadResponseDTO>> listar() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<Page<EvaluacionCalidadResponseDTO>> listar(
+            @RequestParam(required = false) ResultadoEvaluacion resultado,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(service.listar(resultado, pageable));
     }
 
     @GetMapping("/{id}")

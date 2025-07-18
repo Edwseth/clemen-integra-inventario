@@ -13,12 +13,12 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,10 +29,11 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     private final UsuarioRepository usuarioRepository;
     private final EvaluacionCalidadMapper mapper;
 
-    public List<EvaluacionCalidadResponseDTO> listarTodos() {
-        return repository.findAll().stream()
-                .map(mapper::toResponseDTO)
-                .collect(Collectors.toList());
+    public Page<EvaluacionCalidadResponseDTO> listar(ResultadoEvaluacion resultado, Pageable pageable) {
+        Page<EvaluacionCalidad> page = (resultado != null)
+                ? repository.findByResultado(resultado, pageable)
+                : repository.findAll(pageable);
+        return page.map(mapper::toResponseDTO);
     }
 
     public EvaluacionCalidadResponseDTO crear(EvaluacionCalidadRequestDTO dto) {

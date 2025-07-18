@@ -3,15 +3,16 @@ package com.willyes.clemenintegra.calidad.service;
 import com.willyes.clemenintegra.calidad.dto.ChecklistCalidadDTO;
 import com.willyes.clemenintegra.calidad.mapper.ChecklistCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.ChecklistCalidad;
+import com.willyes.clemenintegra.calidad.model.enums.TipoChecklist;
 import com.willyes.clemenintegra.calidad.repository.ChecklistCalidadRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,10 +22,11 @@ public class ChecklistCalidadServiceImpl implements ChecklistCalidadService {
     private final UsuarioRepository usuarioRepository;
     private final ChecklistCalidadMapper mapper;
 
-    public List<ChecklistCalidadDTO> listarTodos() {
-        return repository.findAll().stream()
-                .map(mapper::toDTO)
-                .collect(Collectors.toList());
+    public Page<ChecklistCalidadDTO> listar(TipoChecklist tipo, Pageable pageable) {
+        Page<ChecklistCalidad> page = (tipo != null)
+                ? repository.findByTipoChecklist(tipo, pageable)
+                : repository.findAll(pageable);
+        return page.map(mapper::toDTO);
     }
 
     public ChecklistCalidadDTO crear(ChecklistCalidadDTO dto) {

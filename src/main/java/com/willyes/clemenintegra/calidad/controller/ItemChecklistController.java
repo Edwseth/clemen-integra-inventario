@@ -3,10 +3,11 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.ItemChecklistDTO;
 import com.willyes.clemenintegra.calidad.service.ItemChecklistService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/calidad/checklist-items")
@@ -16,8 +17,10 @@ public class ItemChecklistController {
     private final ItemChecklistService service;
 
     @GetMapping
-    public ResponseEntity<List<ItemChecklistDTO>> listar() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<Page<ItemChecklistDTO>> listar(
+            @RequestParam(required = false) Long checklistId,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(service.listar(checklistId, pageable));
     }
 
     @GetMapping("/{id}")
