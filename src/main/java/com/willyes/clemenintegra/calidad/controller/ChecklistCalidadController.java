@@ -1,12 +1,14 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.ChecklistCalidadDTO;
+import com.willyes.clemenintegra.calidad.model.enums.TipoChecklist;
 import com.willyes.clemenintegra.calidad.service.ChecklistCalidadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/calidad/checklists")
@@ -16,8 +18,10 @@ public class ChecklistCalidadController {
     private final ChecklistCalidadService service;
 
     @GetMapping
-    public ResponseEntity<List<ChecklistCalidadDTO>> listar() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<Page<ChecklistCalidadDTO>> listar(
+            @RequestParam(required = false) TipoChecklist tipo,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(service.listar(tipo, pageable));
     }
 
     @GetMapping("/{id}")

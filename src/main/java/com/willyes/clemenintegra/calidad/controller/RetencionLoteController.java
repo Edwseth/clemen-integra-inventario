@@ -1,12 +1,14 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.RetencionLoteDTO;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/calidad/retenciones")
@@ -16,8 +18,10 @@ public class RetencionLoteController {
     private final RetencionLoteService service;
 
     @GetMapping
-    public ResponseEntity<List<RetencionLoteDTO>> listar() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<Page<RetencionLoteDTO>> listar(
+            @RequestParam(required = false) EstadoRetencion estado,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(service.listar(estado, pageable));
     }
 
     @GetMapping("/{id}")

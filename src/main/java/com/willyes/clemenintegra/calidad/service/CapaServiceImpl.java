@@ -3,14 +3,16 @@ package com.willyes.clemenintegra.calidad.service;
 import com.willyes.clemenintegra.calidad.dto.CapaDTO;
 import com.willyes.clemenintegra.calidad.mapper.CapaMapper;
 import com.willyes.clemenintegra.calidad.model.Capa;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoCapa;
+import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.repository.*;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,11 +23,18 @@ public class CapaServiceImpl implements CapaService {
     private final UsuarioRepository usuarioRepository;
     private final CapaMapper mapper;
 
-    public List<CapaDTO> listarTodos() {
-        return capaRepository.findAll()
-                .stream()
-                .map(mapper::toDTO)
-                .collect(Collectors.toList());
+    public Page<CapaDTO> listar(EstadoCapa estado, SeveridadNoConformidad severidad, Pageable pageable) {
+        Page<Capa> page;
+        if (estado != null && severidad != null) {
+            page = capaRepository.findByNoConformidad_SeveridadAndEstado(severidad, estado, pageable);
+        } else if (estado != null) {
+            page = capaRepository.findByEstado(estado, pageable);
+        } else if (severidad != null) {
+            page = capaRepository.findByNoConformidad_Severidad(severidad, pageable);
+        } else {
+            page = capaRepository.findAll(pageable);
+        }
+        return page.map(mapper::toDTO);
     }
 
     public CapaDTO crear(CapaDTO dto) {

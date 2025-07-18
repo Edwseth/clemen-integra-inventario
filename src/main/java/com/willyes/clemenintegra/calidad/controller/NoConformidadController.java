@@ -1,8 +1,13 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
+import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,8 +21,11 @@ public class NoConformidadController {
     private final NoConformidadService service;
 
     @GetMapping
-    public ResponseEntity<List<NoConformidadDTO>> listar() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<Page<NoConformidadDTO>> listar(
+            @RequestParam(required = false) SeveridadNoConformidad severidad,
+            @RequestParam(required = false) OrigenNoConformidad origen,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(service.listar(severidad, origen, pageable));
     }
 
     @GetMapping("/{id}")

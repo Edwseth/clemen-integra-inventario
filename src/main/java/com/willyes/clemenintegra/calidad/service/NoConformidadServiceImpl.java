@@ -3,14 +3,17 @@ package com.willyes.clemenintegra.calidad.service;
 import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
 import com.willyes.clemenintegra.calidad.mapper.NoConformidadMapper;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -20,11 +23,20 @@ public class NoConformidadServiceImpl implements NoConformidadService {
     private final UsuarioRepository usuarioRepository;
     private final NoConformidadMapper mapper;
 
-    public List<NoConformidadDTO> listarTodos() {
-        return repository.findAll()
-                .stream()
-                .map(mapper::toDTO)
-                .collect(Collectors.toList());
+    public Page<NoConformidadDTO> listar(SeveridadNoConformidad severidad,
+                                         OrigenNoConformidad origen,
+                                         Pageable pageable) {
+        Page<NoConformidad> page;
+        if (severidad != null && origen != null) {
+            page = repository.findBySeveridadAndOrigen(severidad, origen, pageable);
+        } else if (severidad != null) {
+            page = repository.findBySeveridad(severidad, pageable);
+        } else if (origen != null) {
+            page = repository.findByOrigen(origen, pageable);
+        } else {
+            page = repository.findAll(pageable);
+        }
+        return page.map(mapper::toDTO);
     }
 
     public NoConformidadDTO crear(NoConformidadDTO dto) {

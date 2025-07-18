@@ -8,10 +8,10 @@ import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,11 +22,11 @@ public class ItemChecklistServiceImpl implements ItemChecklistService {
     private final UsuarioRepository usuarioRepository;
     private final ItemChecklistMapper mapper;
 
-    public List<ItemChecklistDTO> listarTodos() {
-        return repository.findAll()
-                .stream()
-                .map(mapper::toDTO)
-                .collect(Collectors.toList());
+    public Page<ItemChecklistDTO> listar(Long checklistId, Pageable pageable) {
+        Page<ItemChecklist> page = (checklistId != null)
+                ? repository.findByChecklist_Id(checklistId, pageable)
+                : repository.findAll(pageable);
+        return page.map(mapper::toDTO);
     }
 
     public ItemChecklistDTO crear(ItemChecklistDTO dto) {
