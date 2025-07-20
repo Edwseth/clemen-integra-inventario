@@ -37,6 +37,12 @@ public interface LoteProductoMapper {
 
     @Named("mapNombreUsuario")
     default String mapNombreUsuario(Usuario usuario) {return (usuario != null) ? usuario.getNombreCompleto() : null;}
+
+    @Mapping(source = "producto.nombre", target = "nombreProducto")
+    @Mapping(source = "almacen.nombre", target = "nombreAlmacen")
+    @Mapping(source = "usuarioLiberador.nombreCompleto", target = "nombreUsuarioLiberador")
+    LoteProductoResponseDTO toDto(LoteProducto entity);
+
 }
 
 
