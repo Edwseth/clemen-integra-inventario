@@ -2,8 +2,13 @@ package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -15,16 +20,16 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/lotes")
+@RequiredArgsConstructor
 public class LoteProductoController {
 
     private final LoteProductoService service;
-
-    public LoteProductoController(LoteProductoService service) {
-        this.service = service;
-    }
+    private final LoteProductoRepository loteProductoRepository;
+    private final LoteProductoMapper mapper;
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
@@ -72,6 +77,17 @@ public class LoteProductoController {
     public ResponseEntity<List<LoteProductoResponseDTO>> listarTodos() {
         List<LoteProductoResponseDTO> lotes = service.listarTodos();
         return ResponseEntity.ok(lotes);
+    }
+
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_SUPER_ADMIN')")
+    @GetMapping("/por-evaluar")
+    public ResponseEntity<List<LoteProductoResponseDTO>> obtenerLotesPorEvaluar() {
+        List<LoteProducto> lotes = loteProductoRepository.findByEstadoIn(List.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO));
+        List<LoteProductoResponseDTO> resultado = lotes.stream()
+                .map(lote -> mapper.toDto(lote))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(resultado);
     }
 
 }
