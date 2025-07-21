@@ -50,19 +50,34 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         Usuario user = usuarioService.obtenerUsuarioAutenticado();
 
         String archivoAdjunto = null;
+
         if (archivo != null && !archivo.isEmpty()) {
             try {
-                String nombreArchivo = System.currentTimeMillis() + "_" + archivo.getOriginalFilename();
-                Path destino = Paths.get("uploads", "evaluaciones", nombreArchivo);
-                Files.createDirectories(destino.getParent());
+                // Sanitiza el nombre original del archivo
+                String nombreOriginal = archivo.getOriginalFilename();
+                String nombreSanitizado = (nombreOriginal != null ? nombreOriginal : "archivo")
+                        .replaceAll("[^a-zA-Z0-9._-]", "_");
+
+                // Genera nombre único
+                String nombreArchivo = System.currentTimeMillis() + "_" + nombreSanitizado;
+
+                // ✅ Ruta absoluta dentro del directorio del proyecto
+                Path uploadRoot = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones");
+                Files.createDirectories(uploadRoot); // Crea carpeta si no existe
+
+                // Define la ruta final del archivo
+                Path destino = uploadRoot.resolve(nombreArchivo);
                 archivo.transferTo(destino.toFile());
-                archivoAdjunto = nombreArchivo; // 🔥 Guarda solo el nombre
+
+                // Guarda el nombre (no la ruta completa)
+                archivoAdjunto = nombreArchivo;
             } catch (IOException e) {
-                throw new RuntimeException("Error al guardar el archivo adjunto", e);
+                e.printStackTrace(); // Temporal para depuración
+                throw new RuntimeException("Error al guardar el archivo adjunto: " + e.getMessage(), e);
             }
         }
 
-
+        // Construye y persiste la entidad
         EvaluacionCalidad entidad = mapper.toEntity(dto, lote, user);
         entidad.setFechaEvaluacion(LocalDateTime.now());
         entidad.setArchivoAdjunto(archivoAdjunto);

@@ -46,7 +46,7 @@ public class EvaluacionCalidadController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<EvaluacionCalidadResponseDTO> crear(
             @ModelAttribute @Valid EvaluacionCalidadRequestDTO dto,
-            @RequestPart(value = "archivo", required = false) MultipartFile archivo) {
+            @RequestPart(value = "documentoAdjunto", required = false) MultipartFile archivo) {
         return ResponseEntity.ok(service.crear(dto, archivo));
     }
 
