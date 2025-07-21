@@ -119,7 +119,6 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(usuarioInactivoFilter, UsernamePasswordAuthenticationFilter.class);
 
-
         return http.build();
     }
 }
