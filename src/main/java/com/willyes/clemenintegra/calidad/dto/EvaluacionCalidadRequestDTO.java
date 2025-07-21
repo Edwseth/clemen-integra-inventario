@@ -21,7 +21,7 @@ public class EvaluacionCalidadRequestDTO {
     @NotNull(message = "El lote es obligatorio")
     private Long loteProductoId;
 
-    @NotNull(message = "El evaluador es obligatorio")
+    //@NotNull(message = "El evaluador es obligatorio")
     private Long usuarioEvaluadorId;
 }
 
