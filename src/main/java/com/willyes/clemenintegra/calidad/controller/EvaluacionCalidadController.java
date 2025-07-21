@@ -5,15 +5,23 @@ import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/calidad/evaluaciones")
@@ -53,4 +61,22 @@ public class EvaluacionCalidadController {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/archivo/{nombreArchivo}")
+    @PreAuthorize("hasRole('ROL_JEFE_CALIDAD') or hasRole('ROL_SUPER_ADMIN')")
+    public ResponseEntity<Resource> descargarArchivo(@PathVariable String nombreArchivo) throws IOException {
+        Path archivoPath = Paths.get("uploads", "evaluaciones", nombreArchivo);
+        if (!Files.exists(archivoPath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource recurso = new UrlResource(archivoPath.toUri());
+        String tipoContenido = Files.probeContentType(archivoPath);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(tipoContenido != null ? tipoContenido : "application/octet-stream"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
+                .body(recurso);
+    }
+
 }
