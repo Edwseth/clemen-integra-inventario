@@ -19,7 +19,6 @@ public class EvaluacionCalidadMapper {
                 .resultado(dto.getResultado())
                 .fechaEvaluacion(LocalDateTime.now()) // Fecha generada automáticamente
                 .observaciones(dto.getObservaciones())
-                //.archivoAdjunto(dto.getArchivoAdjunto())
                 .loteProducto(loteProducto)
                 .usuarioEvaluador(usuarioEvaluador)
                 .build();
