@@ -8,8 +8,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/calidad/evaluaciones")
@@ -30,9 +34,12 @@ public class EvaluacionCalidadController {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
-    @PostMapping
-    public ResponseEntity<EvaluacionCalidadResponseDTO> crear(@RequestBody EvaluacionCalidadRequestDTO dto) {
-        return ResponseEntity.ok(service.crear(dto));
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_SUPER_ADMIN')")
+    public ResponseEntity<EvaluacionCalidadResponseDTO> crear(
+            @ModelAttribute @Valid EvaluacionCalidadRequestDTO dto,
+            @RequestPart(value = "archivo", required = false) MultipartFile archivo) {
+        return ResponseEntity.ok(service.crear(dto, archivo));
     }
 
     @PutMapping("/{id}")
