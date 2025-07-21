@@ -49,23 +49,23 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         Usuario user = usuarioService.obtenerUsuarioAutenticado();
 
-        String rutaArchivo = null;
+        String archivoAdjunto = null;
         if (archivo != null && !archivo.isEmpty()) {
             try {
-                Path uploadDir = Paths.get("uploads", "evaluaciones");
-                Files.createDirectories(uploadDir);
-                String fileName = System.currentTimeMillis() + "_" + archivo.getOriginalFilename();
-                Path filePath = uploadDir.resolve(fileName);
-                archivo.transferTo(filePath.toFile());
-                rutaArchivo = filePath.toString();
+                String nombreArchivo = System.currentTimeMillis() + "_" + archivo.getOriginalFilename();
+                Path destino = Paths.get("uploads", "evaluaciones", nombreArchivo);
+                Files.createDirectories(destino.getParent());
+                archivo.transferTo(destino.toFile());
+                archivoAdjunto = nombreArchivo; // 🔥 Guarda solo el nombre
             } catch (IOException e) {
                 throw new RuntimeException("Error al guardar el archivo adjunto", e);
             }
         }
 
+
         EvaluacionCalidad entidad = mapper.toEntity(dto, lote, user);
         entidad.setFechaEvaluacion(LocalDateTime.now());
-        entidad.setArchivoAdjunto(rutaArchivo);
+        entidad.setArchivoAdjunto(archivoAdjunto);
 
         // 👉 Lógica para liberar el lote si es aprobado
         if (dto.getResultado() == ResultadoEvaluacion.APROBADO && lote.getEstado() == EstadoLote.EN_CUARENTENA) {

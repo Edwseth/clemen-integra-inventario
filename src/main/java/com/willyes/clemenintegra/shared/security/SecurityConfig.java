@@ -66,7 +66,6 @@ public class SecurityConfig {
                                 RolUsuario.ROL_ALMACENISTA.name(),
                                 RolUsuario.ROL_JEFE_ALMACENES.name(),
                                 RolUsuario.ROL_CONTADOR.name(),
-                                RolUsuario.ROL_JEFE_CALIDAD.name(),
                                 RolUsuario.ROL_SUPER_ADMIN.name()
                         )
 
@@ -78,7 +77,7 @@ public class SecurityConfig {
                                 RolUsuario.ROL_SUPER_ADMIN.name()
                         )
 
-                        .requestMatchers("/api/calidad/**").hasAnyAuthority(
+                        .requestMatchers("/api/calidad/**", "/api/lotes/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_CALIDAD.name(),
                                 RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                                 RolUsuario.ROL_MICROBIOLOGO.name(),
