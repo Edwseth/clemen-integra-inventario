@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -40,7 +41,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -159,14 +159,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     @Override
-    public List<MovimientoInventarioResponseDTO> listarTodos() {
-        List<MovimientoInventario> movimientos = repository.findAll(
-                Sort.by(Sort.Direction.DESC, "fechaIngreso")
-        );
-        return movimientos.stream()
-                .filter(Objects::nonNull)
-                .map(mapper::toResponseDTO)
-                .collect(Collectors.toList());
+    public Page<MovimientoInventarioResponseDTO> listarTodos(Pageable pageable) {
+        Sort sort = pageable.getSort().isEmpty()
+                ? Sort.by(Sort.Direction.DESC, "fechaIngreso")
+                : pageable.getSort();
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<MovimientoInventario> movimientos = repository.findAll(sortedPageable);
+        return movimientos.map(mapper::toResponseDTO);
     }
 
     @Override

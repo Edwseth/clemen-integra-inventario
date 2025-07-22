@@ -20,6 +20,6 @@ public interface MovimientoInventarioService {
 
     Workbook generarReporteMovimientosExcel(); // 👈 nuevo método para exportar
 
-    List<MovimientoInventarioResponseDTO> listarTodos();
+    Page<MovimientoInventarioResponseDTO> listarTodos(Pageable pageable);
 
 }

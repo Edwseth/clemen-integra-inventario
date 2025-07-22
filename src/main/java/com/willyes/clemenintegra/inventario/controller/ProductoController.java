@@ -16,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -136,8 +139,9 @@ public class ProductoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductoResponseDTO>> obtenerTodos() {
-        List<ProductoResponseDTO> productos = productoService.listarTodos();
+    public ResponseEntity<Page<ProductoResponseDTO>> obtenerTodos(
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<ProductoResponseDTO> productos = productoService.listarTodos(pageable);
         return ResponseEntity.ok(productos);
     }
 
