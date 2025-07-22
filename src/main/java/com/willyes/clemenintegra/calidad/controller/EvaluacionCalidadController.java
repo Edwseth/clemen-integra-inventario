@@ -10,6 +10,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/calidad/evaluaciones")
@@ -35,6 +37,14 @@ public class EvaluacionCalidadController {
             @RequestParam(required = false) ResultadoEvaluacion resultado,
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(service.listar(resultado, pageable));
+    }
+
+    @GetMapping("/evaluaciones")
+    public ResponseEntity<Page<EvaluacionCalidadResponseDTO>> listarPorFecha(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            Pageable pageable) {
+        return ResponseEntity.ok(service.listarPorFecha(fechaInicio, fechaFin, pageable));
     }
 
     @GetMapping("/{id}")
