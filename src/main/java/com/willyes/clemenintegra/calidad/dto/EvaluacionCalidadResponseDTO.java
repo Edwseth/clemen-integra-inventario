@@ -18,5 +18,6 @@ public class EvaluacionCalidadResponseDTO {
     private String archivoAdjunto;
 
     private String nombreLote;         // Referencia al lote evaluado
+    private String nombreProducto;     // Nombre del producto evaluado
     private String nombreEvaluador;    // Nombre del usuario evaluador
 }

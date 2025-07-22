@@ -73,15 +73,15 @@ public class EvaluacionCalidadController {
     }
 
     @GetMapping("/archivo/{nombreArchivo}")
-    @PreAuthorize("hasRole('ROL_JEFE_CALIDAD') or hasRole('ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<Resource> descargarArchivo(@PathVariable String nombreArchivo) throws IOException {
-        Path archivoPath = Paths.get("uploads", "evaluaciones", nombreArchivo);
+        Path archivoPath = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones", nombreArchivo);
         if (!Files.exists(archivoPath)) {
             return ResponseEntity.notFound().build();
         }
 
         Resource recurso = new UrlResource(archivoPath.toUri());
-        String tipoContenido = Files.probeContentType(archivoPath);
+        String tipoContenido = "application/pdf";
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(tipoContenido != null ? tipoContenido : "application/octet-stream"))
