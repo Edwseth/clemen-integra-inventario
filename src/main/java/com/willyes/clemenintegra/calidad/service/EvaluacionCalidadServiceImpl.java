@@ -43,6 +43,13 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         return page.map(mapper::toResponseDTO);
     }
 
+    public Page<EvaluacionCalidadResponseDTO> listarPorFecha(LocalDate fechaInicio, LocalDate fechaFin, Pageable pageable) {
+        LocalDateTime inicio = fechaInicio.atStartOfDay();
+        LocalDateTime fin = fechaFin.atTime(23, 59, 59);
+        Page<EvaluacionCalidad> page = repository.findAllByFechaEvaluacionBetween(inicio, fin, pageable);
+        return page.map(mapper::toResponseDTO);
+    }
+
     public EvaluacionCalidadResponseDTO crear(EvaluacionCalidadRequestDTO dto, MultipartFile archivo) {
         LoteProducto lote = loteRepository.findById(dto.getLoteProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteProductoId()));
