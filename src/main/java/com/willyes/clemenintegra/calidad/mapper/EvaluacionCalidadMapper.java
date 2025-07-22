@@ -38,6 +38,7 @@ public class EvaluacionCalidadMapper {
                 .observaciones(entity.getObservaciones())
                 .archivoAdjunto(archivoUrl)
                 .nombreLote(entity.getLoteProducto().getCodigoLote())
+                .nombreProducto(entity.getLoteProducto().getProducto().getNombre())
                 .nombreEvaluador(entity.getUsuarioEvaluador().getNombreCompleto())
                 .build();
     }
