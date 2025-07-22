@@ -3,6 +3,8 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;
@@ -12,5 +14,5 @@ public interface LoteProductoService {
     List<LoteProductoResponseDTO> obtenerLotesPorEstado(String estado);
     Workbook generarReporteLotesPorVencerExcel();
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
-    List<LoteProductoResponseDTO> listarTodos();
+    Page<LoteProductoResponseDTO> listarTodos(Pageable pageable);
 }

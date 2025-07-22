@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.dto.ProveedorResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.ProveedorMapper;
 import com.willyes.clemenintegra.inventario.model.Proveedor;
 import com.willyes.clemenintegra.inventario.repository.ProveedorRepository;
+import com.willyes.clemenintegra.inventario.service.ProveedorService;
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +17,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.media.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequestMapping("/api/proveedores")
@@ -26,6 +28,7 @@ public class ProveedorController {
 
     private final ProveedorRepository proveedorRepository;
     private final ProveedorMapper proveedorMapper;
+    private final ProveedorService proveedorService;
 
     @Operation(summary = "Crear un nuevo proveedor")
     @ApiResponses(value = {
@@ -49,10 +52,9 @@ public class ProveedorController {
     }
 
     @GetMapping
-    public List<ProveedorResponseDTO> listar() {
-        return proveedorRepository.findAll().stream()
-                .map(proveedorMapper::toDTO)
-                .collect(Collectors.toList());
+    public ResponseEntity<Page<ProveedorResponseDTO>> listar(
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(proveedorService.listar(pageable));
     }
 
 }

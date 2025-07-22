@@ -101,7 +101,6 @@ public class MovimientoInventarioController {
         }
     }
 
-
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
@@ -159,8 +158,9 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping
-    public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarTodos() {
-        List<MovimientoInventarioResponseDTO> movimientos = service.listarTodos();
+    public ResponseEntity<Page<MovimientoInventarioResponseDTO>> listarTodos(
+            @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<MovimientoInventarioResponseDTO> movimientos = service.listarTodos(pageable);
         return ResponseEntity.ok(movimientos);
     }
 

@@ -8,23 +8,21 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.*;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import lombok.RequiredArgsConstructor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.stream.Collectors;
 
 @Service
@@ -68,13 +66,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     }
 
     @Override
-    public List<LoteProductoResponseDTO> listarTodos() {
-        List<LoteProducto> lotes = loteProductoRepository.findAll();
-        return lotes.stream()
-                .map(loteProductoMapper::toResponseDTO)
-                .collect(Collectors.toList());
+    public Page<LoteProductoResponseDTO> listarTodos(Pageable pageable) {
+        Page<LoteProducto> lotes = loteProductoRepository.findAll(pageable);
+        return lotes.map(loteProductoMapper::toResponseDTO);
     }
-
 
     public Workbook generarReporteLotesPorVencerExcel() {
         LocalDate hoy = LocalDate.now();

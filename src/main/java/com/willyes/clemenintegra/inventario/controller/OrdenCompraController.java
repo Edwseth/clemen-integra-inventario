@@ -15,8 +15,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.*;
 
@@ -115,10 +117,10 @@ public class OrdenCompraController {
     }
 
     @GetMapping
-    public List<OrdenCompraResponseDTO> listar() {
-        return ordenCompraRepository.findAll().stream()
-                .map(mapper::toDTO)
-                .collect(Collectors.toList());
+    public ResponseEntity<Page<OrdenCompraResponseDTO>> listar(
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<OrdenCompraResponseDTO> page = ordenCompraService.listar(pageable);
+        return ResponseEntity.ok(page);
     }
 
     @GetMapping("/{id}/detalles")

@@ -21,13 +21,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,11 +59,11 @@ public class ProductoServiceImpl implements ProductoService {
         throw new IllegalStateException("No se pudo extraer el token JWT");
     }
 
-    public List<ProductoResponseDTO> listarTodos() {
+    public Page<ProductoResponseDTO> listarTodos(Pageable pageable) {
 
         System.out.println("🟢 Entró correctamente a ProductoServiceImpl.listarTodos()");
-        List<Producto> productos = productoRepository.findAll();
-        System.out.println("▶️ Total productos devueltos: " + productos.size());
+        Page<Producto> productos = productoRepository.findAll(pageable);
+        System.out.println("▶️ Total productos devueltos: " + productos.getTotalElements());
 
         productos.forEach(p -> {
             if (p == null) {
@@ -71,10 +72,7 @@ public class ProductoServiceImpl implements ProductoService {
                 System.out.println("📦 Producto cargado: " + p.getId() + " - " + p.getNombre());
             }
         });
-        return productos.stream()
-                .filter(Objects::nonNull)  // protección extra temporal
-                .map(productoMapper::safeToDto)
-                .collect(Collectors.toList());
+        return productos.map(productoMapper::safeToDto);
     }
 
     public List<ProductoResponseDTO> buscarPorCategoria(String categoria) {
@@ -137,7 +135,6 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     // Mapeo delegado a MapStruct
-
     public ProductoResponseDTO obtenerPorId(Long id) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
@@ -177,7 +174,6 @@ public class ProductoServiceImpl implements ProductoService {
         return productoMapper.toDto(producto);
     }
 
-
     @Transactional
     public UnidadMedidaResponseDTO cambiarUnidadMedida(Long productoId, UnidadMedidaRequestDTO dto) {
         Producto producto = productoRepository.findById(productoId)
@@ -196,7 +192,6 @@ public class ProductoServiceImpl implements ProductoService {
 
         return new UnidadMedidaResponseDTO(unidad.getId(), unidad.getNombre(), unidad.getSimbolo());
     }
-
 
     public void eliminarProducto(Long id) {
         Producto producto = productoRepository.findById(id)
@@ -301,6 +296,5 @@ public class ProductoServiceImpl implements ProductoService {
 
         return workbook;
     }
-
 }
 

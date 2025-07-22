@@ -3,16 +3,17 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
+import com.willyes.clemenintegra.inventario.service.AlmacenService;
 import com.willyes.clemenintegra.inventario.model.enums.*;
 import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/almacenes")
@@ -22,6 +23,7 @@ public class AlmacenController {
     private static final Logger log = LoggerFactory.getLogger(AlmacenController.class);
 
     private final AlmacenRepository almacenRepository;
+    private final AlmacenService almacenService;
 
     @PostMapping
     public ResponseEntity<?> crear(@RequestBody AlmacenRequestDTO dto) {
@@ -44,20 +46,13 @@ public class AlmacenController {
         }
     }
 
-
     @GetMapping
-    public ResponseEntity<List<AlmacenResponseDTO>> buscarPorTipoYCategoria(
+    public ResponseEntity<Page<AlmacenResponseDTO>> buscarPorTipoYCategoria(
             @RequestParam(required = false) TipoAlmacen tipo,
-            @RequestParam(required = false) TipoCategoria categoria) {
-        List<Almacen> resultados;
-        if (tipo != null && categoria != null) {
-            resultados = almacenRepository.findByTipoAndCategoria(tipo, categoria);
-        } else {
-            resultados = almacenRepository.findAll();
-        }
-        return ResponseEntity.ok(resultados.stream()
-                .map(AlmacenResponseDTO::new)
-                .collect(Collectors.toList()));
+            @RequestParam(required = false) TipoCategoria categoria,
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<AlmacenResponseDTO> page = almacenService.buscarPorTipoYCategoria(tipo, categoria, pageable);
+        return ResponseEntity.ok(page);
     }
 }
 
