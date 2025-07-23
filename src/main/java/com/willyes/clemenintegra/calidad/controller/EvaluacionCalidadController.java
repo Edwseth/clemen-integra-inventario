@@ -56,7 +56,7 @@ public class EvaluacionCalidadController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<EvaluacionCalidadResponseDTO> crear(
             @ModelAttribute @Valid EvaluacionCalidadRequestDTO dto,
-            @RequestPart(value = "documentoAdjunto", required = false) MultipartFile archivo) {
+            @RequestPart(value = "archivoAdjunto", required = false) MultipartFile archivo) {
         return ResponseEntity.ok(service.crear(dto, archivo));
     }
 
@@ -73,7 +73,7 @@ public class EvaluacionCalidadController {
     }
 
     @GetMapping("/archivo/{nombreArchivo}")
-    @PreAuthorize("hasAnyRole('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<Resource> descargarArchivo(@PathVariable String nombreArchivo) throws IOException {
         Path archivoPath = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones", nombreArchivo);
         if (!Files.exists(archivoPath)) {

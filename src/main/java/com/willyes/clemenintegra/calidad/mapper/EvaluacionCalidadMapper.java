@@ -29,7 +29,8 @@ public class EvaluacionCalidadMapper {
 
         String archivoUrl = null;
         if (entity.getArchivoAdjunto() != null) {
-            archivoUrl = "http://localhost:8080/api/calidad/evaluaciones/archivo/" + entity.getArchivoAdjunto();
+            //archivoUrl = "http://localhost:8080/api/calidad/evaluaciones/archivo/" + entity.getArchivoAdjunto();
+            archivoUrl = entity.getArchivoAdjunto();
         }
         return EvaluacionCalidadResponseDTO.builder()
                 .id(entity.getId())
