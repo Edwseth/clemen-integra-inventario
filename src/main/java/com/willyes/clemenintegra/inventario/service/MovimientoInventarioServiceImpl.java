@@ -312,11 +312,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .codigoLote(dto.codigoLote())
                 .fechaFabricacion(LocalDate.now())
                 .fechaVencimiento(dto.fechaVencimiento())
-                .fechaLiberacion(producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO ? null : LocalDate.now())
+                .fechaLiberacion(producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO ? LocalDate.now() : null)
                 .estado(obtenerEstadoInicial(producto))
                 .producto(producto)
                 .almacen(destino)
-                .usuarioLiberador(producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO ? null : usuario)
+                .usuarioLiberador(producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO ? usuario : null)
                 .stockLote(cantidad)
                 .build();
         return loteProductoRepository.save(lote);
@@ -474,9 +474,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private EstadoLote obtenerEstadoInicial(Producto producto) {
-        return producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO
-                ? EstadoLote.EN_CUARENTENA
-                : EstadoLote.DISPONIBLE;
+        return producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO
+                ? EstadoLote.DISPONIBLE
+                : EstadoLote.EN_CUARENTENA;
     }
 
     /**

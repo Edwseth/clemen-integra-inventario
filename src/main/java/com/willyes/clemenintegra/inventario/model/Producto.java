@@ -82,6 +82,10 @@ public class Producto {
     public TipoAnalisisCalidad getTipoAnalisis() {return tipoAnalisis;}
     public void setTipoAnalisis(TipoAnalisisCalidad tipoAnalisis) {this.tipoAnalisis = tipoAnalisis;}
 
+    // Nuevos alias para mantener compatibilidad con la propiedad renombrada
+    public TipoAnalisisCalidad getTipoAnalisisCalidad() {return tipoAnalisis;}
+    public void setTipoAnalisisCalidad(TipoAnalisisCalidad tipoAnalisis) {this.tipoAnalisis = tipoAnalisis;}
+
     public Integer getId() {return id;}
     public void setId(Integer id) {this.id = id;}
     public String getCodigoSku() {return codigoSku;}
