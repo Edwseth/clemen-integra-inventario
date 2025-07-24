@@ -50,7 +50,7 @@ public class Producto {
     private LocalDateTime fechaCreacion;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_analisis", nullable = false, length = 30)
+    @Column(name = "tipo_analisis_calidad", nullable = false, length = 30)
     private TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.NINGUNO;
 
     @ManyToOne(fetch = FetchType.LAZY)
