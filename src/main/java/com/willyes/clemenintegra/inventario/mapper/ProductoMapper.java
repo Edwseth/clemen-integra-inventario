@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.mapstruct.*;
 
 @Mapper(componentModel = "spring")
@@ -19,7 +20,7 @@ public interface ProductoMapper {
 
     @Mapping(target = "unidadMedida", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null)")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
-    @Mapping(target = "tipoAnalisis", expression = "java(producto.getRequiereInspeccion() ? TipoAnalisisCalidad.INSPECCION : TipoAnalisisCalidad.NINGUNO)")
+    @Mapping(target = "tipoAnalisisCalidad", expression = "java(producto.getTipoAnalisis() != null ? producto.getTipoAnalisis().name() : null)")
     ProductoResponseDTO toDto(Producto producto);
 
     @Named("mapUnidadMedida")
@@ -30,6 +31,19 @@ public interface ProductoMapper {
     @Named("mapCategoriaProducto")
     default String mapCategoriaProducto(CategoriaProducto categoriaProducto) {
         return (categoriaProducto != null) ? categoriaProducto.getNombre() : null;
+    }
+
+    @Named("mapTipoAnalisisCalidad")
+    default TipoAnalisisCalidad mapTipoAnalisisCalidad(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return TipoAnalisisCalidad.NINGUNO;
+        }
+        return TipoAnalisisCalidad.valueOf(valor);
+    }
+
+    @Named("mapTipoAnalisisCalidadString")
+    default String mapTipoAnalisisCalidadString(TipoAnalisisCalidad valor) {
+        return valor != null ? valor.name() : null;
     }
 
 }

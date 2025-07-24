@@ -20,7 +20,7 @@ public class ProductoResponseDTO {
     private BigDecimal stockMinimo;
     private BigDecimal stockMinimoProveedor;
     private Boolean activo;
-    private TipoAnalisisCalidad tipoAnalisis;
+    private String tipoAnalisisCalidad;
     private String unidadMedida;
     private String categoria;
     private LocalDateTime fechaCreacion;
@@ -34,7 +34,7 @@ public class ProductoResponseDTO {
         this.stockMinimo = producto.getStockMinimo();
         this.stockMinimoProveedor = producto.getStockMinimoProveedor();
         this.activo = producto.isActivo();
-        this.tipoAnalisis = producto.getTipoAnalisis();
+        this.tipoAnalisisCalidad = producto.getTipoAnalisis() != null ? producto.getTipoAnalisis().name() : null;
         this.unidadMedida = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null;
         this.categoria = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null;
         this.fechaCreacion = producto.getFechaCreacion();
@@ -56,8 +56,8 @@ public class ProductoResponseDTO {
     public void setStockMinimoProveedor(BigDecimal stockMinimoProveedor) {this.stockMinimoProveedor = stockMinimoProveedor;}
     public Boolean getActivo() {return activo;}
     public void setActivo(Boolean activo) {this.activo = activo;}
-    public TipoAnalisisCalidad getTipoAnalisis() {return tipoAnalisis;}
-    public void setTipoAnalisis(TipoAnalisisCalidad tipoAnalisis) {this.tipoAnalisis = tipoAnalisis;}
+    public String getTipoAnalisisCalidad() {return tipoAnalisisCalidad;}
+    public void setTipoAnalisisCalidad(String tipoAnalisisCalidad) {this.tipoAnalisisCalidad = tipoAnalisisCalidad;}
     public String getUnidadMedida() {return unidadMedida;}
     public void setUnidadMedida(String unidadMedida) {this.unidadMedida = unidadMedida;}
     public String getCategoria() {return categoria;}
