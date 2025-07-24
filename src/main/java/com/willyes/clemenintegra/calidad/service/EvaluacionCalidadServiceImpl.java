@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -52,41 +53,35 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         return page.map(mapper::toResponseDTO);
     }
 
-    public EvaluacionCalidadResponseDTO crear(EvaluacionCalidadRequestDTO dto, MultipartFile archivo) {
+    public EvaluacionCalidadResponseDTO crear(EvaluacionCalidadRequestDTO dto, java.util.List<MultipartFile> archivos) {
         LoteProducto lote = loteRepository.findById(dto.getLoteProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteProductoId()));
 
         Usuario user = usuarioService.obtenerUsuarioAutenticado();
 
-        if (archivo == null || archivo.isEmpty()) {
+        if (archivos == null || archivos.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Debe adjuntar al menos un documento.");
         }
+        java.util.List<String> nombresArchivos = new java.util.ArrayList<>();
 
-        String archivoAdjunto = null;
-
-        if (archivo != null && !archivo.isEmpty()) {
+        for (MultipartFile archivo : archivos) {
+            if (archivo == null || archivo.isEmpty()) continue;
             try {
-                // Sanitiza el nombre original del archivo
                 String nombreOriginal = archivo.getOriginalFilename();
                 String nombreSanitizado = (nombreOriginal != null ? nombreOriginal : "archivo")
                         .replaceAll("[^a-zA-Z0-9._-]", "_");
 
-                // Genera nombre único
                 String nombreArchivo = System.currentTimeMillis() + "_" + nombreSanitizado;
 
-                // ✅ Ruta absoluta dentro del directorio del proyecto
                 Path uploadRoot = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones");
-                Files.createDirectories(uploadRoot); // Crea carpeta si no existe
+                Files.createDirectories(uploadRoot);
 
-                // Define la ruta final del archivo
                 Path destino = uploadRoot.resolve(nombreArchivo);
                 archivo.transferTo(destino.toFile());
 
-                // Guarda el nombre (no la ruta completa)
-                archivoAdjunto = nombreArchivo;
+                nombresArchivos.add(nombreArchivo);
             } catch (IOException e) {
-                e.printStackTrace(); // Temporal para depuración
                 throw new RuntimeException("Error al guardar el archivo adjunto: " + e.getMessage(), e);
             }
         }
@@ -94,7 +89,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         // Construye y persiste la entidad
         EvaluacionCalidad entidad = mapper.toEntity(dto, lote, user);
         entidad.setFechaEvaluacion(LocalDateTime.now());
-        entidad.setArchivoAdjunto(archivoAdjunto);
+        entidad.setArchivosAdjuntos(nombresArchivos);
 
         // 👉 Lógica para liberar el lote si es aprobado
         if (dto.getResultado() == ResultadoEvaluacion.APROBADO && lote.getEstado() == EstadoLote.EN_CUARENTENA) {
@@ -118,7 +113,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         existing.setResultado(dto.getResultado());
         existing.setObservaciones(dto.getObservaciones());
-        existing.setArchivoAdjunto(dto.getArchivoAdjunto());
+        existing.setArchivosAdjuntos(dto.getArchivosAdjuntos());
         existing.setLoteProducto(lote);
         existing.setUsuarioEvaluador(user);
         existing.setFechaEvaluacion(LocalDateTime.now());

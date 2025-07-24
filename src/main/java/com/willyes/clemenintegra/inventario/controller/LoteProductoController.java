@@ -83,7 +83,7 @@ public class LoteProductoController {
         return ResponseEntity.ok(lotes);
     }
 
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     @GetMapping("/por-evaluar")
     public ResponseEntity<List<LoteProductoResponseDTO>> obtenerLotesPorEvaluar() {
         List<LoteProducto> lotes = loteProductoRepository.findByEstadoIn(List.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO));
