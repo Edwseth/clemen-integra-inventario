@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -55,6 +57,11 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteProductoId()));
 
         Usuario user = usuarioService.obtenerUsuarioAutenticado();
+
+        if (archivo == null || archivo.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Debe adjuntar al menos un documento.");
+        }
 
         String archivoAdjunto = null;
 
