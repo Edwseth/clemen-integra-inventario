@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.model;
 
 import com.willyes.clemenintegra.shared.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -48,8 +49,9 @@ public class Producto {
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
-    @Column(name = "requiere_inspeccion", nullable = false)
-    private boolean requiereInspeccion = false;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_analisis", nullable = false, length = 30)
+    private TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.NINGUNO;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unidades_medida_id", nullable = false,
@@ -77,9 +79,8 @@ public class Producto {
         }
     }
 
-
-    public boolean getRequiereInspeccion() {return requiereInspeccion;}
-    public void setRequiereInspeccion(boolean requiereInspeccion) {this.requiereInspeccion = requiereInspeccion;}
+    public TipoAnalisisCalidad getTipoAnalisis() {return tipoAnalisis;}
+    public void setTipoAnalisis(TipoAnalisisCalidad tipoAnalisis) {this.tipoAnalisis = tipoAnalisis;}
 
     public Integer getId() {return id;}
     public void setId(Integer id) {this.id = id;}
@@ -99,13 +100,13 @@ public class Producto {
     public void setActivo(boolean activo) {this.activo = activo;}
     public LocalDateTime getFechaCreacion() {return fechaCreacion;}
     public void setFechaCreacion(LocalDateTime fechaCreacion) {this.fechaCreacion = fechaCreacion;}
-    public boolean isRequiereInspeccion() {return requiereInspeccion;}
     public UnidadMedida getUnidadMedida() {return unidadMedida;}
     public void setUnidadMedida(UnidadMedida unidadMedida) {this.unidadMedida = unidadMedida;}
     public CategoriaProducto getCategoriaProducto() {return categoriaProducto;}
     public void setCategoriaProducto(CategoriaProducto categoriaProducto) {this.categoriaProducto = categoriaProducto;}
     public Usuario getCreadoPor() {return creadoPor;}
     public void setCreadoPor(Usuario creadoPor) {this.creadoPor = creadoPor;}
+
 }
 
 

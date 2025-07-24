@@ -2,11 +2,11 @@ package com.willyes.clemenintegra.inventario.dto;
 
 import jakarta.validation.constraints.*;
 import lombok.*;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -29,7 +29,7 @@ public class ProductoRequestDTO {
     private BigDecimal stockMinimoProveedor;
 
     @Builder.Default
-    private boolean requiereInspeccion = false;
+    private TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.NINGUNO;
 
     @NotNull
     private Long unidadMedidaId;
@@ -37,6 +37,6 @@ public class ProductoRequestDTO {
     @NotNull
     private Long categoriaProductoId;
 
-    public boolean isRequiereInspeccion() {return requiereInspeccion;}
-    public void setRequiereInspeccion(boolean requiereInspeccion) {this.requiereInspeccion = requiereInspeccion;}
+    public TipoAnalisisCalidad getTipoAnalisis() {return tipoAnalisis;}
+    public void setTipoAnalisis(TipoAnalisisCalidad tipoAnalisis) {this.tipoAnalisis = tipoAnalisis;}
 }
