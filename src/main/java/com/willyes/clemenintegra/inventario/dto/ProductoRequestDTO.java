@@ -29,7 +29,8 @@ public class ProductoRequestDTO {
     private BigDecimal stockMinimoProveedor;
 
     @Builder.Default
-    private TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.NINGUNO;
+    @Pattern(regexp = "NINGUNO|FISICO_QUIMICO|MICROBIOLOGICO|AMBOS")
+    private String tipoAnalisisCalidad = TipoAnalisisCalidad.NINGUNO.name();
 
     @NotNull
     private Long unidadMedidaId;
@@ -37,6 +38,6 @@ public class ProductoRequestDTO {
     @NotNull
     private Long categoriaProductoId;
 
-    public TipoAnalisisCalidad getTipoAnalisis() {return tipoAnalisis;}
-    public void setTipoAnalisis(TipoAnalisisCalidad tipoAnalisis) {this.tipoAnalisis = tipoAnalisis;}
+    public String getTipoAnalisisCalidad() {return tipoAnalisisCalidad;}
+    public void setTipoAnalisisCalidad(String tipoAnalisisCalidad) {this.tipoAnalisisCalidad = tipoAnalisisCalidad;}
 }

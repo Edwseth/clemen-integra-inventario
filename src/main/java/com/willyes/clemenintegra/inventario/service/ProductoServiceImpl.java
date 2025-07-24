@@ -106,7 +106,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .stockMinimo(dto.getStockMinimo())
                 .stockMinimoProveedor(dto.getStockMinimoProveedor())
                 .activo(true)
-                .tipoAnalisis(dto.getTipoAnalisis())
+                .tipoAnalisis(obtenerTipoAnalisisDesdeDto(dto.getTipoAnalisisCalidad()))
                 .fechaCreacion(LocalDateTime.now())
                 .unidadMedida(unidad)
                 .categoriaProducto(categoria)
@@ -166,7 +166,7 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setDescripcionProducto(dto.getDescripcionProducto());
         producto.setStockMinimo(dto.getStockMinimo());
         producto.setStockMinimoProveedor(dto.getStockMinimoProveedor());
-        producto.setTipoAnalisis(dto.getTipoAnalisis());
+        producto.setTipoAnalisis(obtenerTipoAnalisisDesdeDto(dto.getTipoAnalisisCalidad()));
         producto.setUnidadMedida(unidad);
         producto.setCategoriaProducto(categoria);
         producto.setCreadoPor(usuario);
@@ -296,6 +296,13 @@ public class ProductoServiceImpl implements ProductoService {
         }
 
         return workbook;
+    }
+
+    private TipoAnalisisCalidad obtenerTipoAnalisisDesdeDto(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return TipoAnalisisCalidad.NINGUNO;
+        }
+        return TipoAnalisisCalidad.valueOf(valor);
     }
 }
 
