@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 import jakarta.validation.Valid;
 
 import java.io.IOException;
@@ -56,8 +57,8 @@ public class EvaluacionCalidadController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<EvaluacionCalidadResponseDTO> crear(
             @ModelAttribute @Valid EvaluacionCalidadRequestDTO dto,
-            @RequestPart(value = "archivoAdjunto", required = false) MultipartFile archivo) {
-        return ResponseEntity.ok(service.crear(dto, archivo));
+            @RequestPart(value = "archivos", required = false) java.util.List<MultipartFile> archivos) {
+        return ResponseEntity.ok(service.crear(dto, archivos));
     }
 
     @PutMapping("/{id}")

@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.dto;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +17,7 @@ public class EvaluacionCalidadRequestDTO {
     @NotNull(message = "Las observaciones son obligatorias")
     private String observaciones;
 
-    private String archivoAdjunto;
+    private List<String> archivosAdjuntos;
 
     @NotNull(message = "El lote es obligatorio")
     private Long loteProductoId;

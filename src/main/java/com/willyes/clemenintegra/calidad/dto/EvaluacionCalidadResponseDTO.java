@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.calidad.dto;
 
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import lombok.*;
+import java.util.List;
 
 import java.time.LocalDateTime;
 
@@ -15,8 +16,7 @@ public class EvaluacionCalidadResponseDTO {
     private ResultadoEvaluacion resultado;
     private LocalDateTime fechaEvaluacion;
     private String observaciones;
-    private String archivoAdjunto;
-
+    private List<String> archivosAdjuntos;
     private String nombreLote;         // Referencia al lote evaluado
     private String nombreProducto;     // Nombre del producto evaluado
     private String nombreEvaluador;    // Nombre del usuario evaluador

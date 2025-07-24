@@ -31,8 +31,10 @@ public class EvaluacionCalidad {
     @Column(name = "observaciones", columnDefinition = "TEXT", nullable = false)
     private String observaciones;
 
-    @Column(name = "archivo_adjunto", length = 255)
-    private String archivoAdjunto;
+    @ElementCollection
+    @CollectionTable(name = "archivos_evaluacion", joinColumns = @JoinColumn(name = "evaluacion_id"))
+    @Column(name = "archivo")
+    private java.util.List<String> archivosAdjuntos;
 
     @ManyToOne
     @JoinColumn(name = "lotes_productos_id", nullable = false,

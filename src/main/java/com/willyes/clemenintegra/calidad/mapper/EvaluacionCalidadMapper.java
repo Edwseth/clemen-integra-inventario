@@ -27,17 +27,12 @@ public class EvaluacionCalidadMapper {
     public EvaluacionCalidadResponseDTO toResponseDTO(EvaluacionCalidad entity) {
         if (entity == null) return null;
 
-        String archivoUrl = null;
-        if (entity.getArchivoAdjunto() != null) {
-            //archivoUrl = "http://localhost:8080/api/calidad/evaluaciones/archivo/" + entity.getArchivoAdjunto();
-            archivoUrl = entity.getArchivoAdjunto();
-        }
         return EvaluacionCalidadResponseDTO.builder()
                 .id(entity.getId())
                 .resultado(entity.getResultado())
                 .fechaEvaluacion(entity.getFechaEvaluacion())
                 .observaciones(entity.getObservaciones())
-                .archivoAdjunto(archivoUrl)
+                .archivosAdjuntos(entity.getArchivosAdjuntos())
                 .nombreLote(entity.getLoteProducto().getCodigoLote())
                 .nombreProducto(entity.getLoteProducto().getProducto().getNombre())
                 .nombreEvaluador(entity.getUsuarioEvaluador().getNombreCompleto())
