@@ -48,9 +48,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
         LoteProducto lote = loteProductoMapper.toEntity(dto, producto, almacen, usuario);
-        if (producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO) {
-            lote.setEstado(EstadoLote.EN_CUARENTENA);
+        if (producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO) {
+            lote.setEstado(EstadoLote.DISPONIBLE);
         } else {
+            lote.setEstado(EstadoLote.EN_CUARENTENA);
             lote.setEstado(EstadoLote.DISPONIBLE);
         }
 
