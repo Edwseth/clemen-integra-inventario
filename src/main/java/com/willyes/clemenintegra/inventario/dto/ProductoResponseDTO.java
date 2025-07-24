@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.dto;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -19,7 +20,7 @@ public class ProductoResponseDTO {
     private BigDecimal stockMinimo;
     private BigDecimal stockMinimoProveedor;
     private Boolean activo;
-    private Boolean requiereInspeccion;
+    private TipoAnalisisCalidad tipoAnalisis;
     private String unidadMedida;
     private String categoria;
     private LocalDateTime fechaCreacion;
@@ -33,7 +34,7 @@ public class ProductoResponseDTO {
         this.stockMinimo = producto.getStockMinimo();
         this.stockMinimoProveedor = producto.getStockMinimoProveedor();
         this.activo = producto.isActivo();
-        this.requiereInspeccion = producto.getRequiereInspeccion();
+        this.tipoAnalisis = producto.getTipoAnalisis();
         this.unidadMedida = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null;
         this.categoria = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null;
         this.fechaCreacion = producto.getFechaCreacion();
@@ -55,8 +56,8 @@ public class ProductoResponseDTO {
     public void setStockMinimoProveedor(BigDecimal stockMinimoProveedor) {this.stockMinimoProveedor = stockMinimoProveedor;}
     public Boolean getActivo() {return activo;}
     public void setActivo(Boolean activo) {this.activo = activo;}
-    public Boolean getRequiereInspeccion() {return requiereInspeccion;}
-    public void setRequiereInspeccion(Boolean requiereInspeccion) {this.requiereInspeccion = requiereInspeccion;}
+    public TipoAnalisisCalidad getTipoAnalisis() {return tipoAnalisis;}
+    public void setTipoAnalisis(TipoAnalisisCalidad tipoAnalisis) {this.tipoAnalisis = tipoAnalisis;}
     public String getUnidadMedida() {return unidadMedida;}
     public void setUnidadMedida(String unidadMedida) {this.unidadMedida = unidadMedida;}
     public String getCategoria() {return categoria;}

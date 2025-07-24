@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
@@ -105,7 +106,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .stockMinimo(dto.getStockMinimo())
                 .stockMinimoProveedor(dto.getStockMinimoProveedor())
                 .activo(true)
-                .requiereInspeccion(Boolean.TRUE.equals(dto.isRequiereInspeccion()))
+                .tipoAnalisis(dto.getTipoAnalisis())
                 .fechaCreacion(LocalDateTime.now())
                 .unidadMedida(unidad)
                 .categoriaProducto(categoria)
@@ -165,7 +166,7 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setDescripcionProducto(dto.getDescripcionProducto());
         producto.setStockMinimo(dto.getStockMinimo());
         producto.setStockMinimoProveedor(dto.getStockMinimoProveedor());
-        producto.setRequiereInspeccion(Boolean.TRUE.equals(dto.isRequiereInspeccion()));
+        producto.setTipoAnalisis(dto.getTipoAnalisis());
         producto.setUnidadMedida(unidad);
         producto.setCategoriaProducto(categoria);
         producto.setCreadoPor(usuario);

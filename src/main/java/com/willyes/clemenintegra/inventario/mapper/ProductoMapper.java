@@ -19,6 +19,7 @@ public interface ProductoMapper {
 
     @Mapping(target = "unidadMedida", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null)")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
+    @Mapping(target = "tipoAnalisis", expression = "java(producto.getRequiereInspeccion() ? TipoAnalisisCalidad.INSPECCION : TipoAnalisisCalidad.NINGUNO)")
     ProductoResponseDTO toDto(Producto producto);
 
     @Named("mapUnidadMedida")

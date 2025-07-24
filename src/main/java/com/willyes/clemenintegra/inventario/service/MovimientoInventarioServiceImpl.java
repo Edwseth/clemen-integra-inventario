@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -311,11 +312,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .codigoLote(dto.codigoLote())
                 .fechaFabricacion(LocalDate.now())
                 .fechaVencimiento(dto.fechaVencimiento())
-                .fechaLiberacion(producto.getRequiereInspeccion() ? null : LocalDate.now())
+                .fechaLiberacion(producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO ? null : LocalDate.now())
                 .estado(obtenerEstadoInicial(producto))
                 .producto(producto)
                 .almacen(destino)
-                .usuarioLiberador(producto.getRequiereInspeccion() ? null : usuario)
+                .usuarioLiberador(producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO ? null : usuario)
                 .stockLote(cantidad)
                 .build();
         return loteProductoRepository.save(lote);
@@ -473,7 +474,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private EstadoLote obtenerEstadoInicial(Producto producto) {
-        return producto.getRequiereInspeccion()
+        return producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO
                 ? EstadoLote.EN_CUARENTENA
                 : EstadoLote.DISPONIBLE;
     }

@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.*;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -47,7 +48,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
         LoteProducto lote = loteProductoMapper.toEntity(dto, producto, almacen, usuario);
-        if (producto.getRequiereInspeccion()) {
+        if (producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO) {
             lote.setEstado(EstadoLote.EN_CUARENTENA);
         } else {
             lote.setEstado(EstadoLote.DISPONIBLE);
