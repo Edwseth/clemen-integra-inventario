@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -39,6 +40,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final LoteProductoMapper loteProductoMapper;
     private final UsuarioService usuarioService;
     private final LoteProductoRepository loteProductoRepository;
+    private final EvaluacionCalidadRepository evaluacionRepository;
 
     @Transactional
     public LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto) {
@@ -199,6 +201,60 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             return bos;
         } catch (IOException e) {
             throw new RuntimeException("Error generando reporte de alertas activas", e);
+        }
+    }
+
+    @Transactional
+    @Override
+    public LoteProductoResponseDTO liberarLote(Long id) {
+        LoteProducto lote = loteRepo.findById(id)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Lote no encontrado"));
+        validarEvaluacionesExistentes(id);
+
+        if (lote.getEstado() == EstadoLote.EN_CUARENTENA) {
+            lote.setEstado(EstadoLote.DISPONIBLE);
+            lote.setFechaLiberacion(LocalDate.now());
+            lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
+        } else if (lote.getEstado() == EstadoLote.RETENIDO) {
+            lote.setEstado(EstadoLote.LIBERADO);
+            lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
+        } else {
+            throw new IllegalStateException("El lote no puede ser liberado desde su estado actual");
+        }
+
+        loteRepo.save(lote);
+        return loteProductoMapper.toResponseDTO(lote);
+    }
+
+    @Transactional
+    @Override
+    public LoteProductoResponseDTO rechazarLote(Long id) {
+        LoteProducto lote = loteRepo.findById(id)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Lote no encontrado"));
+        validarEvaluacionesExistentes(id);
+        lote.setEstado(EstadoLote.RECHAZADO);
+        loteRepo.save(lote);
+        return loteProductoMapper.toResponseDTO(lote);
+    }
+
+    @Transactional
+    @Override
+    public LoteProductoResponseDTO liberarLoteRetenido(Long id) {
+        LoteProducto lote = loteRepo.findById(id)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Lote no encontrado"));
+        validarEvaluacionesExistentes(id);
+        if (lote.getEstado() != EstadoLote.RETENIDO) {
+            throw new IllegalStateException("El lote no está en estado RETENIDO");
+        }
+        lote.setEstado(EstadoLote.LIBERADO);
+        lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
+        loteRepo.save(lote);
+        return loteProductoMapper.toResponseDTO(lote);
+    }
+
+    private void validarEvaluacionesExistentes(Long loteId) {
+        if (evaluacionRepository.findByLoteProductoId(loteId).isEmpty()) {
+            throw new IllegalStateException("El lote no cuenta con evaluaciones registradas");
         }
     }
 }

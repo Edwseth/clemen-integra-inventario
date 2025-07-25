@@ -3,10 +3,10 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
-import com.willyes.clemenintegra.inventario.model.LoteProducto;
-import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
+import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/lotes")
@@ -33,6 +32,7 @@ public class LoteProductoController {
     private final LoteProductoService service;
     private final LoteProductoRepository loteProductoRepository;
     private final LoteProductoMapper mapper;
+    private final EvaluacionCalidadService evaluacionService;
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
@@ -89,6 +89,30 @@ public class LoteProductoController {
         List<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar();
 
         return ResponseEntity.ok(resultado);
+    }
+
+    @GetMapping("/{id}/evaluaciones")
+    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
+    public ResponseEntity<java.util.List<EvaluacionCalidadResponseDTO>> obtenerEvaluaciones(@PathVariable Long id) {
+        return ResponseEntity.ok(evaluacionService.listarPorLote(id));
+    }
+
+    @PutMapping("/{id}/liberar")
+    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
+    public ResponseEntity<LoteProductoResponseDTO> liberar(@PathVariable Long id) {
+        return ResponseEntity.ok(service.liberarLote(id));
+    }
+
+    @PutMapping("/{id}/rechazar")
+    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
+    public ResponseEntity<LoteProductoResponseDTO> rechazar(@PathVariable Long id) {
+        return ResponseEntity.ok(service.rechazarLote(id));
+    }
+
+    @PutMapping("/{id}/liberar-retenido")
+    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
+    public ResponseEntity<LoteProductoResponseDTO> liberarRetenido(@PathVariable Long id) {
+        return ResponseEntity.ok(service.liberarLoteRetenido(id));
     }
 
 }
