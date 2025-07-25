@@ -42,8 +42,7 @@ public class EvaluacionCalidad {
 
     @ElementCollection
     @CollectionTable(name = "archivos_evaluacion", joinColumns = @JoinColumn(name = "evaluacion_id"))
-    @Column(name = "archivo")
-    private java.util.List<String> archivosAdjuntos;
+    private java.util.List<ArchivoEvaluacion> archivosAdjuntos;
 
     @ManyToOne
     @JoinColumn(name = "lotes_productos_id", nullable = false,

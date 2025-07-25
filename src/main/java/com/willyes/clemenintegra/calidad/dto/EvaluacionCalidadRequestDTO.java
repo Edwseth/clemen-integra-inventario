@@ -6,6 +6,10 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.util.List;
 
+/**
+ * Información de archivos adjuntos para la evaluación.
+ */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,7 +25,7 @@ public class EvaluacionCalidadRequestDTO {
     @NotNull(message = "Las observaciones son obligatorias")
     private String observaciones;
 
-    private List<String> archivosAdjuntos;
+    private List<ArchivoEvaluacionDTO> archivosAdjuntos;
 
     @NotNull(message = "El lote es obligatorio")
     private Long loteProductoId;
