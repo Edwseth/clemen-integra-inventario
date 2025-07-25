@@ -123,6 +123,14 @@ public class OrdenCompraController {
         return ResponseEntity.ok(page);
     }
 
+    @GetMapping("/estado")
+    public ResponseEntity<Page<OrdenCompraResponseDTO>> listarPorEstado(
+            @RequestParam EstadoOrdenCompra estado,
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarPorEstado(estado, pageable);
+        return ResponseEntity.ok(page);
+    }
+
     @GetMapping("/{id}/detalles")
     public ResponseEntity<OrdenCompraConDetallesResponse> obtenerOrdenConDetalles(@PathVariable Long id) {
         return ordenCompraService.buscarPorIdConDetalles(id)

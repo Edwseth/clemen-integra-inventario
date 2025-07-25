@@ -12,6 +12,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -53,6 +54,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final ProductoRepository productoRepository;
     private final ProveedorRepository proveedorRepository;
     private final OrdenCompraRepository ordenCompraRepository;
+    private final OrdenCompraService ordenCompraService;
     private final LoteProductoRepository loteProductoRepository;
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
@@ -103,13 +105,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .orElseThrow(() -> new NoSuchElementException("Motivo no encontrado"));
         }
 
+        OrdenCompra orden = null;
         if (tipoMovimiento == TipoMovimiento.RECEPCION
                 && motivoMovimiento != null
                 && motivoMovimiento.getMotivo() == ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
             if (dto.ordenCompraId() == null) {
                 throw new IllegalArgumentException("Se requiere una orden de compra para la recepción de compra");
             }
-            OrdenCompra orden = ordenCompraRepository.findById(dto.ordenCompraId().longValue())
+            orden = ordenCompraRepository.findById(dto.ordenCompraId().longValue())
                     .orElseThrow(() -> new NoSuchElementException("Orden de compra no encontrada"));
             if (orden.getEstado() == EstadoOrdenCompra.CERRADA
                     || orden.getEstado() == EstadoOrdenCompra.CANCELADA
@@ -135,6 +138,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         OrdenCompraDetalle ordenCompraDetalle = actualizarOrdenCompraDetalle(dto, cantidad);
+        if (orden != null) {
+            ordenCompraService.evaluarYActualizarEstado(orden);
+        }
 
         actualizarStockProducto(producto, tipoMovimiento, cantidad, devolucionInterna);
         productoRepository.save(producto);
