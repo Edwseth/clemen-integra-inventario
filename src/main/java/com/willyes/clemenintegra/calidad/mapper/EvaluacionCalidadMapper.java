@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.calidad.mapper;
 
+import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
@@ -34,7 +35,14 @@ public class EvaluacionCalidadMapper {
                 .tipoEvaluacion(entity.getTipoEvaluacion())
                 .fechaEvaluacion(entity.getFechaEvaluacion())
                 .observaciones(entity.getObservaciones())
-                .archivosAdjuntos(entity.getArchivosAdjuntos())
+                .archivosAdjuntos(
+                        entity.getArchivosAdjuntos() == null ? java.util.List.of() :
+                                entity.getArchivosAdjuntos().stream()
+                                        .map(a -> ArchivoEvaluacionDTO.builder()
+                                                .nombreArchivo(a.getNombreArchivo())
+                                                .nombreVisible(a.getNombreVisible())
+                                                .build())
+                                        .toList())
                 .nombreLote(entity.getLoteProducto().getCodigoLote())
                 .nombreProducto(entity.getLoteProducto().getProducto().getNombre())
                 .nombreEvaluador(entity.getUsuarioEvaluador().getNombreCompleto())

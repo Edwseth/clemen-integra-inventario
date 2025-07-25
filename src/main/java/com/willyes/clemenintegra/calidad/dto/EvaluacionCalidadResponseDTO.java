@@ -18,7 +18,7 @@ public class EvaluacionCalidadResponseDTO {
     private TipoEvaluacion tipoEvaluacion;
     private LocalDateTime fechaEvaluacion;
     private String observaciones;
-    private List<String> archivosAdjuntos;
+    private List<ArchivoEvaluacionDTO> archivosAdjuntos;
     private String nombreLote;         // Referencia al lote evaluado
     private String nombreProducto;     // Nombre del producto evaluado
     private String nombreEvaluador;    // Nombre del usuario evaluador

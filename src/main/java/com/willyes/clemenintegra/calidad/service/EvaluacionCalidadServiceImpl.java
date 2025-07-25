@@ -1,7 +1,9 @@
 package com.willyes.clemenintegra.calidad.service;
 
+import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
+import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
@@ -76,9 +78,12 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Debe adjuntar al menos un documento.");
         }
-        java.util.List<String> nombresArchivos = new java.util.ArrayList<>();
 
-        for (MultipartFile archivo : archivos) {
+        java.util.List<ArchivoEvaluacion> adjuntos = new java.util.ArrayList<>();
+        java.util.List<ArchivoEvaluacionDTO> datosArchivos = dto.getArchivosAdjuntos();
+
+        for (int i = 0; i < archivos.size(); i++) {
+            MultipartFile archivo = archivos.get(i);
             if (archivo == null || archivo.isEmpty()) continue;
             try {
                 String nombreOriginal = archivo.getOriginalFilename();
@@ -93,7 +98,14 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 Path destino = uploadRoot.resolve(nombreArchivo);
                 archivo.transferTo(destino.toFile());
 
-                nombresArchivos.add(nombreArchivo);
+                String nombreVisible = (datosArchivos != null && datosArchivos.size() > i)
+                        ? datosArchivos.get(i).getNombreVisible()
+                        : nombreOriginal;
+
+                adjuntos.add(ArchivoEvaluacion.builder()
+                        .nombreArchivo(nombreArchivo)
+                        .nombreVisible(nombreVisible)
+                        .build());
             } catch (IOException e) {
                 throw new RuntimeException("Error al guardar el archivo adjunto: " + e.getMessage(), e);
             }
@@ -102,7 +114,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         // Construye y persiste la entidad
         EvaluacionCalidad entidad = mapper.toEntity(dto, lote, user);
         entidad.setFechaEvaluacion(LocalDateTime.now());
-        entidad.setArchivosAdjuntos(nombresArchivos);
+        entidad.setArchivosAdjuntos(adjuntos);
 
         entidad = repository.save(entidad);
 
@@ -122,7 +134,16 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         existing.setResultado(dto.getResultado());
         existing.setTipoEvaluacion(dto.getTipoEvaluacion());
         existing.setObservaciones(dto.getObservaciones());
-        existing.setArchivosAdjuntos(dto.getArchivosAdjuntos());
+
+        java.util.List<ArchivoEvaluacion> nuevosAdjuntos = (dto.getArchivosAdjuntos() == null)
+                ? new java.util.ArrayList<>()
+                : dto.getArchivosAdjuntos().stream()
+                .map(a -> ArchivoEvaluacion.builder()
+                        .nombreArchivo(a.getNombreArchivo())
+                        .nombreVisible(a.getNombreVisible())
+                        .build())
+                .toList();
+        existing.setArchivosAdjuntos(nuevosAdjuntos);
         existing.setLoteProducto(lote);
         existing.setUsuarioEvaluador(user);
         existing.setFechaEvaluacion(LocalDateTime.now());
