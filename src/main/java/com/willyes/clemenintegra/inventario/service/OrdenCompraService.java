@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +31,35 @@ public class OrdenCompraService {
     public Page<OrdenCompraResponseDTO> listar(Pageable pageable) {
         return ordenCompraRepository.findAll(pageable)
                 .map(mapper::toDTO);
+    }
+
+    public Page<OrdenCompraResponseDTO> listarPorEstado(EstadoOrdenCompra estado, Pageable pageable) {
+        return ordenCompraRepository.findByEstado(estado, pageable)
+                .map(mapper::toDTO);
+    }
+
+    /**
+     * Evalúa el estado de una orden según la cantidad recibida en sus detalles
+     * y actualiza la entidad si corresponde.
+     * @param orden Orden de compra a evaluar
+     */
+    public void evaluarYActualizarEstado(OrdenCompra orden) {
+        boolean allReceived = orden.getDetalles().stream()
+                .allMatch(d -> d.getCantidadRecibida().compareTo(d.getCantidad()) >= 0);
+        boolean anyReceived = orden.getDetalles().stream()
+                .anyMatch(d -> d.getCantidadRecibida().compareTo(java.math.BigDecimal.ZERO) > 0);
+
+        EstadoOrdenCompra nuevoEstado = orden.getEstado();
+        if (allReceived) {
+            nuevoEstado = EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE;
+        } else if (anyReceived) {
+            nuevoEstado = EstadoOrdenCompra.PARCIALMENTE_RECIBIDA;
+        }
+
+        if (nuevoEstado != orden.getEstado()) {
+            orden.setEstado(nuevoEstado);
+            ordenCompraRepository.save(orden);
+        }
     }
 
     // Métodos adicionales futuros: crear, editar, anular, etc.
