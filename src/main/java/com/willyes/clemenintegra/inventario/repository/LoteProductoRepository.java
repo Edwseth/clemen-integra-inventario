@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.repository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -22,5 +23,6 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     List<LoteProducto> findByFechaVencimientoBetween(LocalDate inicio, LocalDate fin);
     Optional<LoteProducto> findByCodigoLoteAndProductoIdAndAlmacenId(String codigoLote, Integer productoId, Integer almacenId);
     List<LoteProducto> findByEstadoIn(List<EstadoLote> estados);
+    List<LoteProducto> findByEstadoInAndProducto_TipoAnalisisIn(List<EstadoLote> estados, List<TipoAnalisisCalidad> tipos);
 }
 
