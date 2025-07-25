@@ -25,6 +25,9 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.util.stream.Collectors;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.GrantedAuthority;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +68,40 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return loteRepo.findByEstado(estadoEnum).stream()
                 .map(loteProductoMapper::toResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    public List<LoteProductoResponseDTO> obtenerLotesPorEvaluar() {
+        List<EstadoLote> estados = List.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        List<LoteProducto> lotes;
+        if (auth != null) {
+            boolean analista = auth.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch("ROL_ANALISTA_CALIDAD"::equals);
+            boolean micro = auth.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch("ROL_MICROBIOLOGO"::equals);
+
+            if (analista) {
+                lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
+                        estados,
+                        List.of(TipoAnalisisCalidad.FISICO_QUIMICO, TipoAnalisisCalidad.AMBOS)
+                );
+            } else if (micro) {
+                lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
+                        estados,
+                        List.of(TipoAnalisisCalidad.MICROBIOLOGICO, TipoAnalisisCalidad.AMBOS)
+                );
+            } else {
+                lotes = loteRepo.findByEstadoIn(estados);
+            }
+        } else {
+            lotes = loteRepo.findByEstadoIn(estados);
+        }
+
+        return lotes.stream().map(loteProductoMapper::toDto).collect(Collectors.toList());
     }
 
     @Override

@@ -86,10 +86,7 @@ public class LoteProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     @GetMapping("/por-evaluar")
     public ResponseEntity<List<LoteProductoResponseDTO>> obtenerLotesPorEvaluar() {
-        List<LoteProducto> lotes = loteProductoRepository.findByEstadoIn(List.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO));
-        List<LoteProductoResponseDTO> resultado = lotes.stream()
-                .map(lote -> mapper.toDto(lote))
-                .collect(Collectors.toList());
+        List<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar();
 
         return ResponseEntity.ok(resultado);
     }

@@ -12,6 +12,7 @@ import java.util.List;
 public interface LoteProductoService {
     LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto);
     List<LoteProductoResponseDTO> obtenerLotesPorEstado(String estado);
+    List<LoteProductoResponseDTO> obtenerLotesPorEvaluar();
     Workbook generarReporteLotesPorVencerExcel();
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
     Page<LoteProductoResponseDTO> listarTodos(Pageable pageable);
