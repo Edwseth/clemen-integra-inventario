@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.calidad.model;
 
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
@@ -9,7 +10,10 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "evaluaciones_calidad")
+@Table(name = "evaluaciones_calidad",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_lote_tipo_evaluacion",
+                columnNames = {"lotes_productos_id", "tipo_evaluacion"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,6 +28,11 @@ public class EvaluacionCalidad {
     @Column(name = "resultado", nullable = false,
             columnDefinition = "ENUM('APROBADO','RECHAZADO','CONDICIONADO')")
     private ResultadoEvaluacion resultado;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_evaluacion", nullable = false,
+            columnDefinition = "ENUM('FISICO_QUIMICO','MICROBIOLOGICO')")
+    private TipoEvaluacion tipoEvaluacion;
 
     @Column(name = "fecha_evaluacion", nullable = false)
     private LocalDateTime fechaEvaluacion;

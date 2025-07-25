@@ -17,6 +17,7 @@ public class EvaluacionCalidadMapper {
                                       Usuario usuarioEvaluador) {
         return EvaluacionCalidad.builder()
                 .resultado(dto.getResultado())
+                .tipoEvaluacion(dto.getTipoEvaluacion())
                 .fechaEvaluacion(LocalDateTime.now()) // Fecha generada automáticamente
                 .observaciones(dto.getObservaciones())
                 .loteProducto(loteProducto)
@@ -30,6 +31,7 @@ public class EvaluacionCalidadMapper {
         return EvaluacionCalidadResponseDTO.builder()
                 .id(entity.getId())
                 .resultado(entity.getResultado())
+                .tipoEvaluacion(entity.getTipoEvaluacion())
                 .fechaEvaluacion(entity.getFechaEvaluacion())
                 .observaciones(entity.getObservaciones())
                 .archivosAdjuntos(entity.getArchivosAdjuntos())

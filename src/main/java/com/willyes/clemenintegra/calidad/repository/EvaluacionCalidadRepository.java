@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.calidad.repository;
 
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -19,4 +20,8 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
             @Param("inicio") LocalDateTime inicio,
             @Param("fin") LocalDateTime fin,
             Pageable pageable);
+
+    boolean existsByLoteProductoIdAndTipoEvaluacion(Long loteId, TipoEvaluacion tipo);
+
+    java.util.List<EvaluacionCalidad> findByLoteProductoId(Long loteId);
 }

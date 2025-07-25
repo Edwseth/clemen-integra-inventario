@@ -5,11 +5,14 @@ import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +62,19 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         Usuario user = usuarioService.obtenerUsuarioAutenticado();
 
+        // Validar rol de acuerdo al tipo de evaluación
+        if (dto.getTipoEvaluacion() == TipoEvaluacion.FISICO_QUIMICO && user.getRol() != RolUsuario.ROL_ANALISTA_CALIDAD) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo un analista puede registrar evaluaciones físico-químicas");
+        }
+        if (dto.getTipoEvaluacion() == TipoEvaluacion.MICROBIOLOGICO && user.getRol() != RolUsuario.ROL_MICROBIOLOGO) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo un microbiólogo puede registrar evaluaciones microbiológicas");
+        }
+
+        // Evitar duplicado de lote + tipo
+        if (repository.existsByLoteProductoIdAndTipoEvaluacion(lote.getId(), dto.getTipoEvaluacion())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una evaluación de este tipo para el lote");
+        }
+
         if (archivos == null || archivos.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Debe adjuntar al menos un documento.");
@@ -91,14 +107,10 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         entidad.setFechaEvaluacion(LocalDateTime.now());
         entidad.setArchivosAdjuntos(nombresArchivos);
 
-        // 👉 Lógica para liberar el lote si es aprobado
-        if (dto.getResultado() == ResultadoEvaluacion.APROBADO && lote.getEstado() == EstadoLote.EN_CUARENTENA) {
-            lote.setEstado(EstadoLote.DISPONIBLE);
-            lote.setFechaLiberacion(LocalDate.now());
-            loteRepository.save(lote);
-        }
+        entidad = repository.save(entidad);
+        actualizarEstadoLoteDespuesDeEvaluacion(lote);
 
-        return mapper.toResponseDTO(repository.save(entidad));
+        return mapper.toResponseDTO(entidad);
     }
 
     public EvaluacionCalidadResponseDTO actualizar(Long id, EvaluacionCalidadRequestDTO dto) {
@@ -112,20 +124,17 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + dto.getUsuarioEvaluadorId()));
 
         existing.setResultado(dto.getResultado());
+        existing.setTipoEvaluacion(dto.getTipoEvaluacion());
         existing.setObservaciones(dto.getObservaciones());
         existing.setArchivosAdjuntos(dto.getArchivosAdjuntos());
         existing.setLoteProducto(lote);
         existing.setUsuarioEvaluador(user);
         existing.setFechaEvaluacion(LocalDateTime.now());
 
-        // 👉 Lógica adicional: liberar lote si es aprobado
-        if (dto.getResultado() == ResultadoEvaluacion.APROBADO && lote.getEstado() == EstadoLote.EN_CUARENTENA) {
-            lote.setEstado(EstadoLote.DISPONIBLE);
-            lote.setFechaLiberacion(LocalDate.now());
-            loteRepository.save(lote);
-        }
+        existing = repository.save(existing);
+        actualizarEstadoLoteDespuesDeEvaluacion(lote);
 
-        return mapper.toResponseDTO(repository.save(existing));
+        return mapper.toResponseDTO(existing);
     }
 
     public EvaluacionCalidadResponseDTO obtenerPorId(Long id) {
@@ -136,5 +145,51 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
     public void eliminar(Long id) {
         repository.deleteById(id);
+    }
+
+    private void actualizarEstadoLoteDespuesDeEvaluacion(LoteProducto lote) {
+        var evaluaciones = repository.findByLoteProductoId(lote.getId());
+
+        if (evaluaciones.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.RECHAZADO)) {
+            lote.setEstado(EstadoLote.RECHAZADO);
+        } else {
+            boolean fisicoOk = evaluaciones.stream()
+                    .anyMatch(e -> e.getTipoEvaluacion() == TipoEvaluacion.FISICO_QUIMICO
+                            && e.getResultado() == ResultadoEvaluacion.APROBADO);
+            boolean microOk = evaluaciones.stream()
+                    .anyMatch(e -> e.getTipoEvaluacion() == TipoEvaluacion.MICROBIOLOGICO
+                            && e.getResultado() == ResultadoEvaluacion.APROBADO);
+
+            TipoAnalisisCalidad tipo = lote.getProducto().getTipoAnalisisCalidad();
+            switch (tipo) {
+                case FISICO_QUIMICO -> {
+                    if (fisicoOk) {
+                        lote.setEstado(EstadoLote.DISPONIBLE);
+                        lote.setFechaLiberacion(LocalDate.now());
+                    } else {
+                        lote.setEstado(EstadoLote.EN_CUARENTENA);
+                    }
+                }
+                case MICROBIOLOGICO -> {
+                    if (microOk) {
+                        lote.setEstado(EstadoLote.DISPONIBLE);
+                        lote.setFechaLiberacion(LocalDate.now());
+                    } else {
+                        lote.setEstado(EstadoLote.EN_CUARENTENA);
+                    }
+                }
+                case AMBOS -> {
+                    if (fisicoOk && microOk) {
+                        lote.setEstado(EstadoLote.DISPONIBLE);
+                        lote.setFechaLiberacion(LocalDate.now());
+                    } else {
+                        lote.setEstado(EstadoLote.EN_CUARENTENA);
+                    }
+                }
+                default -> {}
+            }
+        }
+
+        loteRepository.save(lote);
     }
 }
