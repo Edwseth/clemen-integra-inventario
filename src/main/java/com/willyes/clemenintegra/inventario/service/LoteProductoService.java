@@ -16,4 +16,8 @@ public interface LoteProductoService {
     Workbook generarReporteLotesPorVencerExcel();
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
     Page<LoteProductoResponseDTO> listarTodos(Pageable pageable);
+
+    LoteProductoResponseDTO liberarLote(Long id);
+    LoteProductoResponseDTO rechazarLote(Long id);
+    LoteProductoResponseDTO liberarLoteRetenido(Long id);
 }

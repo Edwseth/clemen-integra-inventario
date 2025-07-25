@@ -8,8 +8,6 @@ import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
-import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
@@ -20,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -108,7 +105,6 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         entidad.setArchivosAdjuntos(nombresArchivos);
 
         entidad = repository.save(entidad);
-        actualizarEstadoLoteDespuesDeEvaluacion(lote);
 
         return mapper.toResponseDTO(entidad);
     }
@@ -132,7 +128,6 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         existing.setFechaEvaluacion(LocalDateTime.now());
 
         existing = repository.save(existing);
-        actualizarEstadoLoteDespuesDeEvaluacion(lote);
 
         return mapper.toResponseDTO(existing);
     }
@@ -143,53 +138,16 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .orElseThrow(() -> new NoSuchElementException("Evaluación no encontrada con ID: " + id));
     }
 
+    @Override
+    public java.util.List<EvaluacionCalidadResponseDTO> listarPorLote(Long loteId) {
+        return repository.findByLoteProductoId(loteId)
+                .stream()
+                .map(mapper::toResponseDTO)
+                .toList();
+    }
+
     public void eliminar(Long id) {
         repository.deleteById(id);
     }
 
-    private void actualizarEstadoLoteDespuesDeEvaluacion(LoteProducto lote) {
-        var evaluaciones = repository.findByLoteProductoId(lote.getId());
-
-        if (evaluaciones.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.RECHAZADO)) {
-            lote.setEstado(EstadoLote.RECHAZADO);
-        } else {
-            boolean fisicoOk = evaluaciones.stream()
-                    .anyMatch(e -> e.getTipoEvaluacion() == TipoEvaluacion.FISICO_QUIMICO
-                            && e.getResultado() == ResultadoEvaluacion.APROBADO);
-            boolean microOk = evaluaciones.stream()
-                    .anyMatch(e -> e.getTipoEvaluacion() == TipoEvaluacion.MICROBIOLOGICO
-                            && e.getResultado() == ResultadoEvaluacion.APROBADO);
-
-            TipoAnalisisCalidad tipo = lote.getProducto().getTipoAnalisisCalidad();
-            switch (tipo) {
-                case FISICO_QUIMICO -> {
-                    if (fisicoOk) {
-                        lote.setEstado(EstadoLote.DISPONIBLE);
-                        lote.setFechaLiberacion(LocalDate.now());
-                    } else {
-                        lote.setEstado(EstadoLote.EN_CUARENTENA);
-                    }
-                }
-                case MICROBIOLOGICO -> {
-                    if (microOk) {
-                        lote.setEstado(EstadoLote.DISPONIBLE);
-                        lote.setFechaLiberacion(LocalDate.now());
-                    } else {
-                        lote.setEstado(EstadoLote.EN_CUARENTENA);
-                    }
-                }
-                case AMBOS -> {
-                    if (fisicoOk && microOk) {
-                        lote.setEstado(EstadoLote.DISPONIBLE);
-                        lote.setFechaLiberacion(LocalDate.now());
-                    } else {
-                        lote.setEstado(EstadoLote.EN_CUARENTENA);
-                    }
-                }
-                default -> {}
-            }
-        }
-
-        loteRepository.save(lote);
-    }
 }

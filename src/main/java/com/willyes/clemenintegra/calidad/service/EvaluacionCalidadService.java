@@ -15,5 +15,6 @@ public interface EvaluacionCalidadService {
     EvaluacionCalidadResponseDTO crear(EvaluacionCalidadRequestDTO dto, List<MultipartFile> archivos);
     EvaluacionCalidadResponseDTO actualizar(Long id, EvaluacionCalidadRequestDTO dto);
     EvaluacionCalidadResponseDTO obtenerPorId(Long id);
+    java.util.List<EvaluacionCalidadResponseDTO> listarPorLote(Long loteId);
     void eliminar(Long id);
 }
