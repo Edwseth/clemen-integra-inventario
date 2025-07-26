@@ -8,8 +8,12 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
+import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -29,6 +33,8 @@ import java.util.stream.Collectors;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -250,6 +256,54 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
         loteRepo.save(lote);
         return loteProductoMapper.toResponseDTO(lote);
+    }
+
+    @Transactional
+    @Override
+    public LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, Usuario usuarioActual) {
+        if (usuarioActual == null || usuarioActual.getRol() != RolUsuario.ROL_JEFE_CALIDAD) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el Jefe de Calidad puede liberar lotes.");
+        }
+
+        LoteProducto lote = loteRepo.findById(loteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lote no encontrado"));
+
+        if (lote.getEstado() != EstadoLote.EN_CUARENTENA && lote.getEstado() != EstadoLote.RETENIDO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Este lote no puede ser liberado.");
+        }
+
+        List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(loteId);
+
+        Producto producto = lote.getProducto();
+        TipoAnalisisCalidad tipo = producto.getTipoAnalisisCalidad();
+
+        if (tipo == TipoAnalisisCalidad.FISICO_QUIMICO || tipo == TipoAnalisisCalidad.AMBOS) {
+            validarEvaluacion(evaluaciones, TipoEvaluacion.FISICO_QUIMICO);
+        }
+        if (tipo == TipoAnalisisCalidad.MICROBIOLOGICO || tipo == TipoAnalisisCalidad.AMBOS) {
+            validarEvaluacion(evaluaciones, TipoEvaluacion.MICROBIOLOGICO);
+        }
+
+        lote.setEstado(EstadoLote.DISPONIBLE);
+        lote.setFechaLiberacion(LocalDate.now());
+        lote.setUsuarioLiberador(usuarioActual);
+        loteRepo.save(lote);
+
+        return loteProductoMapper.toResponseDTO(lote);
+    }
+
+    private void validarEvaluacion(List<EvaluacionCalidad> evaluaciones, TipoEvaluacion tipo) {
+        List<EvaluacionCalidad> filtradas = evaluaciones.stream()
+                .filter(e -> e.getTipoEvaluacion() == tipo)
+                .toList();
+        if (filtradas.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta evaluación requerida");
+        }
+        boolean aprobadas = filtradas.stream()
+                .allMatch(e -> e.getResultado() == ResultadoEvaluacion.APROBADO);
+        if (!aprobadas) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La evaluación requerida no está aprobada");
+        }
     }
 
     private void validarEvaluacionesExistentes(Long loteId) {
