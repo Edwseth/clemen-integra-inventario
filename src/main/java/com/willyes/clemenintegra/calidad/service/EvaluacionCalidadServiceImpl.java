@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.service;
 import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
@@ -164,6 +165,29 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         return repository.findByLoteProductoId(loteId)
                 .stream()
                 .map(mapper::toResponseDTO)
+                .toList();
+    }
+
+    @Override
+    public java.util.List<EvaluacionConsolidadaResponseDTO> obtenerEvaluacionesConsolidadas() {
+        java.util.List<EvaluacionCalidad> evaluaciones = repository.findAllWithRelations();
+
+        java.util.Map<LoteProducto, java.util.List<EvaluacionCalidad>> agrupado = evaluaciones.stream()
+                .collect(java.util.stream.Collectors.groupingBy(EvaluacionCalidad::getLoteProducto));
+
+        return agrupado.entrySet().stream()
+                .map(entry -> {
+                    LoteProducto lote = entry.getKey();
+                    return EvaluacionConsolidadaResponseDTO.builder()
+                            .nombreLote(lote.getCodigoLote())
+                            .nombreProducto(lote.getProducto().getNombre())
+                            .estadoLote(lote.getEstado().name())
+                            .tipoAnalisisCalidad(lote.getProducto().getTipoAnalisisCalidad().name())
+                            .evaluaciones(entry.getValue().stream()
+                                    .map(mapper::toSimpleDTO)
+                                    .toList())
+                            .build();
+                })
                 .toList();
     }
 
