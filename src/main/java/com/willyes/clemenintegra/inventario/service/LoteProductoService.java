@@ -20,4 +20,13 @@ public interface LoteProductoService {
     LoteProductoResponseDTO liberarLote(Long id);
     LoteProductoResponseDTO rechazarLote(Long id);
     LoteProductoResponseDTO liberarLoteRetenido(Long id);
+
+    /**
+     * Libera un lote validando las evaluaciones de calidad requeridas.
+     *
+     * @param loteId        identificador del lote a liberar
+     * @param usuarioActual usuario autenticado que realiza la liberación
+     * @return información del lote actualizado
+     */
+    LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, com.willyes.clemenintegra.shared.model.Usuario usuarioActual);
 }
