@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.mapper;
 import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionSimpleDTO;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -48,6 +49,16 @@ public class EvaluacionCalidadMapper {
                 .nombreEvaluador(entity.getUsuarioEvaluador().getNombreCompleto())
                 .build();
     }
+
+    public EvaluacionSimpleDTO toSimpleDTO(EvaluacionCalidad entity) {
+        if (entity == null) return null;
+
+        return EvaluacionSimpleDTO.builder()
+                .tipoEvaluacion(entity.getTipoEvaluacion().name())
+                .resultado(entity.getResultado().name())
+                .nombreEvaluador(entity.getUsuarioEvaluador().getNombreCompleto())
+                .observaciones(entity.getObservaciones())
+                .fechaEvaluacion(entity.getFechaEvaluacion())
+                .build();
+    }
 }
-
-

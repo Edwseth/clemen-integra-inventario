@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.List;
 import jakarta.validation.Valid;
 
 import java.io.IOException;
@@ -32,6 +32,12 @@ import java.time.LocalDate;
 public class EvaluacionCalidadController {
 
     private final EvaluacionCalidadService service;
+
+    @PreAuthorize("hasAnyRole('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @GetMapping("/consolidadas")
+    public ResponseEntity<java.util.List<EvaluacionConsolidadaResponseDTO>> getEvaluacionesConsolidadas() {
+        return ResponseEntity.ok(service.obtenerEvaluacionesConsolidadas());
+    }
 
     @GetMapping
     public ResponseEntity<Page<EvaluacionCalidadResponseDTO>> listar(

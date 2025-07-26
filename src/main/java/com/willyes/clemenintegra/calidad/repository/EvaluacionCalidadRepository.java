@@ -21,6 +21,10 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
             @Param("fin") LocalDateTime fin,
             Pageable pageable);
 
+    @EntityGraph(attributePaths = {"loteProducto.producto", "usuarioEvaluador"})
+    @Query("SELECT e FROM EvaluacionCalidad e")
+    java.util.List<EvaluacionCalidad> findAllWithRelations();
+
     boolean existsByLoteProductoIdAndTipoEvaluacion(Long loteId, TipoEvaluacion tipo);
 
     java.util.List<EvaluacionCalidad> findByLoteProductoId(Long loteId);
