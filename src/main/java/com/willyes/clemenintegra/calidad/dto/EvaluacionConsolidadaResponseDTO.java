@@ -9,6 +9,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class EvaluacionConsolidadaResponseDTO {
+    private Long idLote;
     private String nombreLote;
     private String nombreProducto;
     private String estadoLote;
