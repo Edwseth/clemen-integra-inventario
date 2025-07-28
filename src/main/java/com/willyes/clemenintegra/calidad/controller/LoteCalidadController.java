@@ -18,7 +18,7 @@ public class LoteCalidadController {
     private final LoteProductoService service;
 
     @PutMapping("/{loteId}/liberar")
-    @PreAuthorize("hasRole('ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD')")
     public ResponseEntity<LoteProductoResponseDTO> liberarLote(
             @PathVariable Long loteId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
