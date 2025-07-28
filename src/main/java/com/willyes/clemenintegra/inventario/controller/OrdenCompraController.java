@@ -18,6 +18,8 @@ import java.time.LocalDate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.*;
@@ -44,7 +46,7 @@ public class OrdenCompraController {
         OrdenCompra orden = OrdenCompra.builder()
                 .proveedor(proveedor)
                 .estado(EstadoOrdenCompra.CREADA)
-                .fechaOrden(LocalDate.now())
+                .fechaOrden(LocalDateTime.now())
                 .observaciones(dto.getObservaciones())
                 .build();
 

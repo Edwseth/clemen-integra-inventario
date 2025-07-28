@@ -19,7 +19,7 @@ public interface OrdenCompraMapper {
         OrdenCompra entity = new OrdenCompra();
         entity.setProveedor(proveedor);
         entity.setEstado(estado);
-        entity.setFechaOrden(java.time.LocalDate.now());
+        entity.setFechaOrden(java.time.LocalDateTime.now());
         entity.setObservaciones(dto.getObservaciones());
         entity.setCodigoOrden(dto.getCodigoOrden());
         return entity;

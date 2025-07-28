@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -25,7 +26,7 @@ public class OrdenCompra {
     private String codigoOrden;
 
     @Column(name = "fecha_orden", nullable = false)
-    private LocalDate fechaOrden;
+    private LocalDateTime fechaOrden;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proveedor_id", nullable = false,
@@ -48,7 +49,7 @@ public class OrdenCompra {
     }
     public Integer getId() {return id;}
     public String getCodigoOrden() {return codigoOrden;}
-    public LocalDate getFechaOrden() {return fechaOrden;}
+    public LocalDateTime getFechaOrden() {return fechaOrden;}
     public Proveedor getProveedor() {return proveedor;}
     public EstadoOrdenCompra getEstado() {return estado;}
     public String getObservaciones() {return observaciones;}
@@ -56,7 +57,7 @@ public class OrdenCompra {
     public void setDetalles(List<OrdenCompraDetalle> detalles) {this.detalles = detalles;}
     public void setId(Integer id) {this.id = id;}
     public void setCodigoOrden(String codigoOrden) {this.codigoOrden = codigoOrden;}
-    public void setFechaOrden(LocalDate fechaOrden) {this.fechaOrden = fechaOrden;}
+    public void setFechaOrden(LocalDateTime fechaOrden) {this.fechaOrden = fechaOrden;}
     public void setProveedor(Proveedor proveedor) {this.proveedor = proveedor;}
     public void setEstado(EstadoOrdenCompra estado) {this.estado = estado;}
     public void setObservaciones(String observaciones) {this.observaciones = observaciones;}

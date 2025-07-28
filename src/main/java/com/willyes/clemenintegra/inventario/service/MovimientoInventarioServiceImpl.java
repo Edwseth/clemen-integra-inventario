@@ -39,6 +39,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -316,9 +317,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         LoteProducto lote = LoteProducto.builder()
                 .codigoLote(dto.codigoLote())
-                .fechaFabricacion(LocalDate.now())
-                .fechaVencimiento(dto.fechaVencimiento())
-                .fechaLiberacion(producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO ? LocalDate.now() : null)
+                .fechaFabricacion(LocalDateTime.now())
+                .fechaVencimiento(dto.fechaVencimiento().atStartOfDay())
+                .fechaLiberacion(producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO ? LocalDateTime.now() : null)
                 .estado(obtenerEstadoInicial(producto))
                 .producto(producto)
                 .almacen(destino)
