@@ -9,6 +9,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "lotes_productos", uniqueConstraints = {
@@ -33,10 +34,10 @@ public class LoteProducto {
     private String codigoLote;
 
     @Column(name = "fecha_fabricacion")
-    private LocalDate fechaFabricacion;
+    private LocalDateTime fechaFabricacion;
 
     @Column(name = "fecha_vencimiento")
-    private LocalDate fechaVencimiento;
+    private LocalDateTime fechaVencimiento;
 
     @Column(name = "stock_lote", nullable = false, precision = 10, scale = 2)
     private BigDecimal stockLote;
@@ -49,7 +50,7 @@ public class LoteProducto {
     private Double temperaturaAlmacenamiento;
 
     @Column(name = "fecha_liberacion")
-    private LocalDate fechaLiberacion;
+    private LocalDateTime fechaLiberacion;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "productos_id", nullable = false,

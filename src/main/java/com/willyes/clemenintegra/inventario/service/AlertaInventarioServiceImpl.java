@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,12 +43,12 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
     public List<LoteAlertaResponseDTO> obtenerLotesVencidos() {
         return loteProductoRepository.findAll().stream()
                 .filter(lote -> lote.getFechaVencimiento() != null
-                        && lote.getFechaVencimiento().isBefore(LocalDate.now()))
+                        && lote.getFechaVencimiento().isBefore(LocalDateTime.now()))
                 .filter(lote -> lote.getProducto() != null)
                 .map(lote -> LoteAlertaResponseDTO.builder()
                         .loteId(lote.getId())
                         .codigoLote(lote.getCodigoLote())
-                        .fechaVencimiento(lote.getFechaVencimiento())
+                        .fechaVencimiento(LocalDate.from(lote.getFechaVencimiento()))
                         .nombreProducto(lote.getProducto().getNombre())
                         .nombreAlmacen(lote.getAlmacen().getNombre())
                         .build())
@@ -60,14 +61,14 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                         lote.getEstado() != null &&
                                 (lote.getEstado().name().equals("EN_CUARENTENA") || lote.getEstado().name().equals("RETENIDO")) &&
                                 lote.getFechaFabricacion() != null &&
-                                lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(10))  // Cambia a 10 días para prolongados, campo para modificar la alerta
+                                lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(10).atStartOfDay())  // Cambia a 10 días para prolongados, campo para modificar la alerta
                 )
                 .filter(lote -> lote.getProducto() != null)
                 .map(lote -> LoteEstadoProlongadoResponseDTO.builder()
                         .loteId(lote.getId())
                         .codigoLote(lote.getCodigoLote())
                         .estado(lote.getEstado().name())
-                        .fechaFabricacion(lote.getFechaFabricacion())
+                        .fechaFabricacion(LocalDate.from(lote.getFechaFabricacion()))
                         .diasEnEstado((int) ChronoUnit.DAYS.between(lote.getFechaFabricacion(), LocalDate.now()))
                         .nombreProducto(lote.getProducto().getNombre())
                         .build())
@@ -98,7 +99,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
 
         // Lotes vencidos
         loteProductoRepository.findAll().stream()
-                .filter(lote -> lote.getFechaVencimiento() != null && lote.getFechaVencimiento().isBefore(LocalDate.now()))
+                .filter(lote -> lote.getFechaVencimiento() != null && lote.getFechaVencimiento().isBefore(LocalDateTime.now()))
                 .filter(lote -> lote.getProducto() != null)
                 .forEach(lote -> {
                     String nombreAlmacen = lote.getAlmacen() != null && lote.getAlmacen().getNombre() != null
@@ -108,7 +109,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                             .nombreProducto(lote.getProducto().getNombre())
                             .nombreAlmacen(nombreAlmacen)
                             .codigoLote(lote.getCodigoLote())
-                            .fechaVencimiento(lote.getFechaVencimiento())
+                            .fechaVencimiento(LocalDate.from(lote.getFechaVencimiento()))
                             .stockActual(lote.getStockLote())
                             .stockMinimo(null)
                             .estado("")
@@ -121,7 +122,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                 .filter(lote -> lote.getEstado() != null &&
                         (lote.getEstado().name().equals("EN_CUARENTENA") || lote.getEstado().name().equals("RETENIDO")))
                 .filter(lote -> lote.getFechaFabricacion() != null &&
-                        lote.getFechaFabricacion().isBefore(LocalDate.now().minusDays(15)))
+                        lote.getFechaFabricacion().isBefore(LocalDateTime.now().minusDays(15)))
                 .filter(lote -> lote.getProducto() != null)
                 .forEach(lote -> {
                     String nombreAlmacen = lote.getAlmacen() != null && lote.getAlmacen().getNombre() != null
@@ -131,7 +132,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                             .nombreProducto(lote.getProducto().getNombre())
                             .nombreAlmacen(nombreAlmacen)
                             .codigoLote(lote.getCodigoLote())
-                            .fechaVencimiento(lote.getFechaVencimiento())
+                            .fechaVencimiento(LocalDate.from(lote.getFechaVencimiento()))
                             .stockActual(lote.getStockLote())
                             .stockMinimo(null)
                             .estado(lote.getEstado().name())

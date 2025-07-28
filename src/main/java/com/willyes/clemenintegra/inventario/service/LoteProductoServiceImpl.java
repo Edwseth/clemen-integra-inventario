@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -187,7 +188,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         List<LoteProducto> lotesConAlerta = loteRepo.findAll().stream()
                 .filter(l -> l.getEstado() == EstadoLote.RETENIDO
                         || l.getEstado() == EstadoLote.EN_CUARENTENA
-                        || (l.getFechaVencimiento() != null && l.getFechaVencimiento().isBefore(LocalDate.now())))
+                        || (l.getFechaVencimiento() != null && l.getFechaVencimiento().isBefore(LocalDateTime.now())))
                 .toList();
 
         for (LoteProducto l : lotesConAlerta) {
@@ -219,7 +220,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         if (lote.getEstado() == EstadoLote.EN_CUARENTENA) {
             lote.setEstado(EstadoLote.DISPONIBLE);
-            lote.setFechaLiberacion(LocalDate.now());
+            lote.setFechaLiberacion(LocalDateTime.now());
             lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
         } else if (lote.getEstado() == EstadoLote.RETENIDO) {
             lote.setEstado(EstadoLote.LIBERADO);
@@ -285,7 +286,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         }
 
         lote.setEstado(EstadoLote.DISPONIBLE);
-        lote.setFechaLiberacion(LocalDate.now());
+        lote.setFechaLiberacion(LocalDateTime.now());
         lote.setUsuarioLiberador(usuarioActual);
         loteRepo.save(lote);
 
