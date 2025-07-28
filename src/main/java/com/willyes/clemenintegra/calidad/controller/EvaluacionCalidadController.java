@@ -35,8 +35,10 @@ public class EvaluacionCalidadController {
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     @GetMapping("/consolidadas")
-    public ResponseEntity<java.util.List<EvaluacionConsolidadaResponseDTO>> getEvaluacionesConsolidadas() {
-        return ResponseEntity.ok(service.obtenerEvaluacionesConsolidadas());
+    public ResponseEntity<java.util.List<EvaluacionConsolidadaResponseDTO>> getEvaluacionesConsolidadas(
+            @RequestParam("fechaInicio") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam("fechaFin") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+        return ResponseEntity.ok(service.obtenerEvaluacionesConsolidadas(fechaInicio, fechaFin));
     }
 
     @GetMapping
