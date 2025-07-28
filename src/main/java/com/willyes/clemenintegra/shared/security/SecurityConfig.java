@@ -51,7 +51,8 @@ public class SecurityConfig {
                                 "/swagger-resources",
                                 "/configuration/ui",
                                 "/configuration/security",
-                                "/webjars/**"
+                                "/webjars/**",
+                                "/api/calidad/evaluaciones/archivo/**"
                         ).permitAll()
 
                         .requestMatchers(

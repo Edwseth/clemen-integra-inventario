@@ -83,7 +83,6 @@ public class EvaluacionCalidadController {
     }
 
     @GetMapping("/archivo/{nombreArchivo:.+}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<Resource> verArchivo(@PathVariable String nombreArchivo) {
         try {
             Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones")
