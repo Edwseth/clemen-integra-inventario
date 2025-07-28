@@ -33,7 +33,7 @@ public class EvaluacionCalidadController {
 
     private final EvaluacionCalidadService service;
 
-    @PreAuthorize("hasAnyRole('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
     @GetMapping("/consolidadas")
     public ResponseEntity<java.util.List<EvaluacionConsolidadaResponseDTO>> getEvaluacionesConsolidadas() {
         return ResponseEntity.ok(service.obtenerEvaluacionesConsolidadas());
