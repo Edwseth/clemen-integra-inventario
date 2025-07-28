@@ -59,6 +59,13 @@ public class EvaluacionCalidadMapper {
                 .nombreEvaluador(entity.getUsuarioEvaluador().getNombreCompleto())
                 .observaciones(entity.getObservaciones())
                 .fechaEvaluacion(entity.getFechaEvaluacion())
+                .archivosAdjuntos(entity.getArchivosAdjuntos() == null ? java.util.List.of() :
+                        entity.getArchivosAdjuntos().stream()
+                                .map(a -> ArchivoEvaluacionDTO.builder()
+                                        .nombreArchivo(a.getNombreArchivo())
+                                        .nombreVisible(a.getNombreVisible())
+                                        .build())
+                                .toList())
                 .build();
     }
 }

@@ -1,8 +1,10 @@
 package com.willyes.clemenintegra.calidad.dto;
 
 import lombok.*;
+import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -14,4 +16,5 @@ public class EvaluacionSimpleDTO {
     private String nombreEvaluador;
     private String observaciones;
     private LocalDateTime fechaEvaluacion;
+    private List<ArchivoEvaluacionDTO> archivosAdjuntos;
 }
