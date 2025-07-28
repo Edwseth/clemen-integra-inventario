@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.NoSuchElementException;
 
 @Service
@@ -173,8 +174,10 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     }
 
     @Override
-    public java.util.List<EvaluacionConsolidadaResponseDTO> obtenerEvaluacionesConsolidadas() {
-        java.util.List<EvaluacionCalidad> evaluaciones = repository.findAllWithRelations();
+    public java.util.List<EvaluacionConsolidadaResponseDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio, LocalDate fechaFin) {
+        LocalDateTime inicio = fechaInicio.atStartOfDay();
+        LocalDateTime fin = fechaFin.atTime(LocalTime.MAX);
+        java.util.List<EvaluacionCalidad> evaluaciones = repository.findAllWithinFechaEvaluacion(inicio, fin);
 
         java.util.Map<LoteProducto, java.util.List<EvaluacionCalidad>> agrupado = evaluaciones.stream()
                 .collect(java.util.stream.Collectors.groupingBy(EvaluacionCalidad::getLoteProducto));

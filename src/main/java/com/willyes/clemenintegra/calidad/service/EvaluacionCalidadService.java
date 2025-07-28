@@ -17,6 +17,6 @@ public interface EvaluacionCalidadService {
     EvaluacionCalidadResponseDTO actualizar(Long id, EvaluacionCalidadRequestDTO dto);
     EvaluacionCalidadResponseDTO obtenerPorId(Long id);
     java.util.List<EvaluacionCalidadResponseDTO> listarPorLote(Long loteId);
-    java.util.List<EvaluacionConsolidadaResponseDTO> obtenerEvaluacionesConsolidadas();
+    java.util.List<EvaluacionConsolidadaResponseDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio, LocalDate fechaFin);
     void eliminar(Long id);
 }
