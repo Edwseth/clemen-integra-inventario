@@ -63,11 +63,15 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         Usuario user = usuarioService.obtenerUsuarioAutenticado();
 
         // Validar rol de acuerdo al tipo de evaluación
-        if (dto.getTipoEvaluacion() == TipoEvaluacion.FISICO_QUIMICO && user.getRol() != RolUsuario.ROL_ANALISTA_CALIDAD) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo un analista puede registrar evaluaciones físico-químicas");
+        if (dto.getTipoEvaluacion() == TipoEvaluacion.FISICO_QUIMICO
+                && !java.util.Set.of(RolUsuario.ROL_ANALISTA_CALIDAD, RolUsuario.ROL_JEFE_CALIDAD).contains(user.getRol())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo un analista o el jefe de calidad puede registrar evaluaciones físico-químicas");
         }
-        if (dto.getTipoEvaluacion() == TipoEvaluacion.MICROBIOLOGICO && user.getRol() != RolUsuario.ROL_MICROBIOLOGO) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo un microbiólogo puede registrar evaluaciones microbiológicas");
+        if (dto.getTipoEvaluacion() == TipoEvaluacion.MICROBIOLOGICO
+                && !java.util.Set.of(RolUsuario.ROL_MICROBIOLOGO, RolUsuario.ROL_JEFE_CALIDAD).contains(user.getRol())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo un microbiólogo o el jefe de calidad puede registrar evaluaciones microbiológicas");
         }
 
         // Evitar duplicado de lote + tipo

@@ -60,7 +60,7 @@ public class EvaluacionCalidadController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<EvaluacionCalidadResponseDTO> crear(
             @ModelAttribute @Valid EvaluacionCalidadRequestDTO dto,
             @RequestPart(value = "archivos", required = false) java.util.List<MultipartFile> archivos) {
@@ -68,6 +68,7 @@ public class EvaluacionCalidadController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<EvaluacionCalidadResponseDTO> actualizar(@PathVariable Long id,
                                                                    @RequestBody EvaluacionCalidadRequestDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
