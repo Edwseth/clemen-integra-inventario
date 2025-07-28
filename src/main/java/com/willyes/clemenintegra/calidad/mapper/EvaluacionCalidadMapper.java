@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionSimpleDTO;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -65,6 +66,23 @@ public class EvaluacionCalidadMapper {
                                         .nombreArchivo(a.getNombreArchivo())
                                         .nombreVisible(a.getNombreVisible())
                                         .build())
+                                .toList())
+                .build();
+    }
+
+    public EvaluacionConsolidadaResponseDTO toConsolidadoDTO(LoteProducto lote,
+                                                             java.util.List<EvaluacionCalidad> evaluaciones) {
+        if (lote == null) return null;
+
+        return EvaluacionConsolidadaResponseDTO.builder()
+                .idLote(lote.getId())
+                .nombreLote(lote.getCodigoLote())
+                .nombreProducto(lote.getProducto().getNombre())
+                .estadoLote(lote.getEstado().name())
+                .tipoAnalisisCalidad(lote.getProducto().getTipoAnalisisCalidad().name())
+                .evaluaciones(evaluaciones == null ? java.util.List.of() :
+                        evaluaciones.stream()
+                                .map(this::toSimpleDTO)
                                 .toList())
                 .build();
     }

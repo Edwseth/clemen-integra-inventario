@@ -183,18 +183,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .collect(java.util.stream.Collectors.groupingBy(EvaluacionCalidad::getLoteProducto));
 
         return agrupado.entrySet().stream()
-                .map(entry -> {
-                    LoteProducto lote = entry.getKey();
-                    return EvaluacionConsolidadaResponseDTO.builder()
-                            .nombreLote(lote.getCodigoLote())
-                            .nombreProducto(lote.getProducto().getNombre())
-                            .estadoLote(lote.getEstado().name())
-                            .tipoAnalisisCalidad(lote.getProducto().getTipoAnalisisCalidad().name())
-                            .evaluaciones(entry.getValue().stream()
-                                    .map(mapper::toSimpleDTO)
-                                    .toList())
-                            .build();
-                })
+                .map(entry -> mapper.toConsolidadoDTO(entry.getKey(), entry.getValue()))
                 .toList();
     }
 
