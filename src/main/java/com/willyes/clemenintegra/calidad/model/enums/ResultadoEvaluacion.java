@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.calidad.model.enums;
 
 public enum ResultadoEvaluacion {
-    APROBADO,
-    RECHAZADO,
-    CONDICIONADO
+    CONFORME,
+    NO_CONFORME
 }

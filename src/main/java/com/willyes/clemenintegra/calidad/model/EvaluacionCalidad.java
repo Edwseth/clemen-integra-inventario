@@ -26,7 +26,7 @@ public class EvaluacionCalidad {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "resultado", nullable = false,
-            columnDefinition = "ENUM('APROBADO','RECHAZADO','CONDICIONADO')")
+            columnDefinition = "ENUM('CONFORME','NO_CONFORME')")
     private ResultadoEvaluacion resultado;
 
     @Enumerated(EnumType.STRING)
