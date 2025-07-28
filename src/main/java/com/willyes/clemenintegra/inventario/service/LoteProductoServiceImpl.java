@@ -300,7 +300,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta evaluación requerida");
         }
         boolean aprobadas = filtradas.stream()
-                .allMatch(e -> e.getResultado() == ResultadoEvaluacion.APROBADO);
+                .allMatch(e -> e.getResultado() == ResultadoEvaluacion.CONFORME);
         if (!aprobadas) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La evaluación requerida no está aprobada");
         }
