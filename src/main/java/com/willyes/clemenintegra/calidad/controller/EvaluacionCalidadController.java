@@ -82,21 +82,32 @@ public class EvaluacionCalidadController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/archivo/{nombreArchivo}")
+    @GetMapping("/archivo/{nombreArchivo:.+}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<Resource> descargarArchivo(@PathVariable String nombreArchivo) throws IOException {
-        Path archivoPath = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones", nombreArchivo);
-        if (!Files.exists(archivoPath)) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Resource> verArchivo(@PathVariable String nombreArchivo) {
+        try {
+            Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones")
+                    .toAbsolutePath().normalize();
+            Path archivoPath = uploadDir.resolve(nombreArchivo).normalize();
+
+            if (!archivoPath.startsWith(uploadDir) || !Files.exists(archivoPath)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource recurso = new UrlResource(archivoPath.toUri());
+            if (!recurso.exists() || !recurso.isReadable()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String tipoContenido = Files.probeContentType(archivoPath);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(tipoContenido != null ? tipoContenido : "application/octet-stream"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + recurso.getFilename() + "\"")
+                    .body(recurso);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
         }
-
-        Resource recurso = new UrlResource(archivoPath.toUri());
-        String tipoContenido = "application/pdf";
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(tipoContenido != null ? tipoContenido : "application/octet-stream"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
-                .body(recurso);
     }
 
 }
