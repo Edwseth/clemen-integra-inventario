@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.bom.service;
 
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
+import com.willyes.clemenintegra.bom.dto.FormulaProductoResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -10,4 +11,6 @@ public interface FormulaProductoService {
     Optional<FormulaProducto> buscarPorId(Long id);
     FormulaProducto guardar(FormulaProducto formula);
     void eliminar(Long id);
+
+    FormulaProductoResponse obtenerFormulaActivaPorProducto(Long productoId);
 }
