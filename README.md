@@ -78,6 +78,20 @@ El código ha sido refactorizado mediante **Codex Workspace**, mejorando la legi
 ## Seguridad
 Se utiliza Spring Security con autenticación JWT y verificación 2FA. Los roles se gestionan mediante anotaciones `@PreAuthorize` en los controladores y la configuración de `SecurityConfig`. Todas las acciones registran el `usuarioId` y la `fechaIngreso` (por ejemplo en `MovimientoInventario`) para trazabilidad.
 
+## Trazabilidad temporal y uso de LocalDateTime
+Para asegurar una trazabilidad precisa de los eventos, los campos `fechaFabricacion`, `fechaVencimiento`, `fechaLiberacion` y `fechaEvaluacion` fueron migrados de `LocalDate` a `LocalDateTime` en las entidades y DTOs. Esto permite almacenar también la hora exacta en la que ocurrió cada acción.
+
+Los repositorios se ajustaron para recibir `LocalDateTime` en sus consultas, y los servicios convierten cualquier fecha recibida sin hora usando `atStartOfDay()` o `atTime(23, 59, 59)` según corresponda. El mapper `LoteProductoMapper` de MapStruct asigna explícitamente cada campo temporal desde el DTO:
+
+```java
+@Mapping(target = "fechaFabricacion", expression = "java(dto.getFechaFabricacion())")
+@Mapping(target = "fechaVencimiento", expression = "java(dto.getFechaVencimiento())")
+@Mapping(target = "fechaLiberacion", expression = "java(dto.getFechaLiberacion())")
+LoteProducto toEntity(LoteProductoRequestDTO dto, Producto producto, Almacen almacen, Usuario usuario);
+```
+
+Al trabajar con `LocalDateTime` se evita la pérdida de información al registrar movimientos o cambios de estado. **No se debe volver a utilizar `LocalDate`** en estos contextos, ya que comprometería la precisión temporal que requiere el sistema.
+
 ## Requisitos de Compilación y Despliegue
 - JDK 21
 - Maven 3.8+
