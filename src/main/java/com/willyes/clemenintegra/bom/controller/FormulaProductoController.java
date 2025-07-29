@@ -62,5 +62,10 @@ public class FormulaProductoController {
         formulaService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/activa")
+    public ResponseEntity<FormulaProductoResponse> obtenerFormulaActiva(@RequestParam Long productoId) {
+        return ResponseEntity.ok(formulaService.obtenerFormulaActivaPorProducto(productoId));
+    }
 }
 

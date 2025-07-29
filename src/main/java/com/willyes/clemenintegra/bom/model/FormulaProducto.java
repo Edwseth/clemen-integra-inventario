@@ -27,6 +27,8 @@ public class FormulaProducto {
 
     private LocalDateTime fechaCreacion;
 
+    private boolean activo = true;
+
     @ManyToOne
     @JoinColumn(name = "creado_por_id")
     private Usuario creadoPor;
@@ -53,5 +55,7 @@ public class FormulaProducto {
     public void setDetalles(List<DetalleFormula> detalles) {this.detalles = detalles;}
     public List<DocumentoFormula> getDocumentos() {return documentos;}
     public void setDocumentos(List<DocumentoFormula> documentos) {this.documentos = documentos;}
+    public boolean isActivo() {return activo;}
+    public void setActivo(boolean activo) {this.activo = activo;}
 }
 
