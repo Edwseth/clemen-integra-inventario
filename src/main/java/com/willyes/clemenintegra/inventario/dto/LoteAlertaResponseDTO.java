@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.inventario.dto;
 
 import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 public class LoteAlertaResponseDTO {
     private Long loteId;
     private String codigoLote;
-    private LocalDate fechaVencimiento;
+    private LocalDateTime fechaVencimiento;
     private String nombreProducto;
     private String nombreAlmacen;
 }

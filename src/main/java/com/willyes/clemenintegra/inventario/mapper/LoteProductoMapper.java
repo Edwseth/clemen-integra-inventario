@@ -12,11 +12,9 @@ import org.mapstruct.Named;
 public interface LoteProductoMapper {
 
     @Mapping(target = "id", ignore = true)
-    //@Mapping(source = "producto", target = "producto")
-    //@Mapping(source = "almacen", target = "almacen")
-    //@Mapping(source = "usuario", target = "usuarioLiberador")
-    //@Mapping(target = "ordenProduccion", ignore = true)
-    //@Mapping(target = "produccion", ignore = true)
+    @Mapping(target = "fechaFabricacion", expression = "java(dto.getFechaFabricacion())")
+    @Mapping(target = "fechaVencimiento", expression = "java(dto.getFechaVencimiento())")
+    @Mapping(target = "fechaLiberacion", expression = "java(dto.getFechaLiberacion())")
     LoteProducto toEntity(LoteProductoRequestDTO dto, Producto producto, Almacen almacen, Usuario usuario);
 
     // Mapeo de respuesta

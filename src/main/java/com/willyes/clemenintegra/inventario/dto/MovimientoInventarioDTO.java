@@ -5,7 +5,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record MovimientoInventarioDTO(
         Long id,
@@ -29,7 +29,7 @@ public record MovimientoInventarioDTO(
         Long usuarioId,
         Long ordenCompraDetalleId,
         String codigoLote,
-        LocalDate fechaVencimiento,
+        LocalDateTime fechaVencimiento,
         /**
          * Estado inicial sugerido por el cliente. Este valor se ignora en el
          * proceso de registro del movimiento.

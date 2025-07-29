@@ -5,7 +5,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -15,9 +15,9 @@ public class LoteProductoRequestDTO {
     @NotBlank
     private String codigoLote;
     @PastOrPresent
-    private LocalDate fechaFabricacion;
+    private LocalDateTime fechaFabricacion;
     @Future
-    private LocalDate fechaVencimiento;
+    private LocalDateTime fechaVencimiento;
     @NotNull
     @Positive
     private BigDecimal stockLote;
@@ -28,7 +28,7 @@ public class LoteProductoRequestDTO {
      */
     private EstadoLote estado;
     private Double temperaturaAlmacenamiento;
-    private LocalDate fechaLiberacion;
+    private LocalDateTime fechaLiberacion;
     @NotNull
     private Long productoId;
     @NotNull

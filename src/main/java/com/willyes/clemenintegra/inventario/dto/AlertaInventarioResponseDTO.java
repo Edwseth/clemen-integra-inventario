@@ -3,7 +3,7 @@ package com.willyes.clemenintegra.inventario.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -14,7 +14,7 @@ public class AlertaInventarioResponseDTO {
     private String nombreProducto;
     private String nombreAlmacen;
     private String codigoLote;
-    private LocalDate fechaVencimiento;
+    private LocalDateTime fechaVencimiento;
     private BigDecimal stockActual;
     private BigDecimal stockMinimo;
     private String estado;
