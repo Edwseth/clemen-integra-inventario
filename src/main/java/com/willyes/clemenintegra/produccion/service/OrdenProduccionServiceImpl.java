@@ -10,6 +10,9 @@ import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.mapper.OrdenProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,7 +31,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final FormulaProductoRepository formulaProductoRepository;
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
-
+    private final SolicitudMovimientoService solicitudMovimientoService;
     private final OrdenProduccionRepository repository;
     private final OrdenProduccionMapper ordenProduccionMapper;
 
@@ -59,17 +62,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             insumosMap.put(insumoId, producto);
         }
 
-        // 3. Descontar stock si todo está OK
+        // 3. Guardar la orden
+        OrdenProduccion guardada = repository.save(orden);
+
+        // 4. Registrar solicitudes de movimiento para cada insumo
         for (DetalleFormula insumo : formula.getDetalles()) {
-            Long insumoId = insumo.getInsumo().getId().longValue();
-            Producto producto = insumosMap.get(insumoId);
-            BigDecimal nuevoStock = producto.getStockActual().subtract(insumo.getCantidadNecesaria());
-            producto.setStockActual(nuevoStock);
-            productoRepository.save(producto);
+            SolicitudMovimientoRequestDTO req = SolicitudMovimientoRequestDTO.builder()
+                    .tipoMovimiento(TipoMovimiento.SALIDA)
+                    .productoId(insumo.getInsumo().getId().longValue())
+                    .cantidad(insumo.getCantidadNecesaria())
+                    .ordenProduccionId(guardada.getId())
+                    .usuarioSolicitanteId(guardada.getResponsable().getId())
+                    .build();
+            solicitudMovimientoService.registrarSolicitud(req);
         }
 
-        // 4. Guardar la orden
-        return repository.save(orden);
+        return guardada;
     }
 
     public OrdenProduccion crearOrden(OrdenProduccionRequestDTO dto) {
