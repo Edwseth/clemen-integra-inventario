@@ -123,7 +123,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         LocalDate hoy = LocalDate.now();
         LocalDate limite = hoy.plusDays(30); // Puedes parametrizar esto si lo deseas
 
-        List<LoteProducto> lotes = loteRepo.findByFechaVencimientoBetween(hoy, limite);
+        LocalDateTime inicio = hoy.atStartOfDay();
+        LocalDateTime fin = limite.atTime(23, 59, 59);
+
+        List<LoteProducto> lotes = loteRepo.findByFechaVencimientoBetween(inicio, fin);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Lotes por Vencer");

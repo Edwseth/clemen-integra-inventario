@@ -4,7 +4,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -13,12 +13,12 @@ import java.time.LocalDate;
 public class LoteProductoResponseDTO {
     private Long id;
     private String codigoLote;
-    private LocalDate fechaFabricacion;
-    private LocalDate fechaVencimiento;
+    private LocalDateTime fechaFabricacion;
+    private LocalDateTime fechaVencimiento;
     private BigDecimal stockLote;
     private EstadoLote estado;
     private Double temperaturaAlmacenamiento;
-    private LocalDate fechaLiberacion;
+    private LocalDateTime fechaLiberacion;
     private String nombreProducto;
     private String nombreAlmacen;
     private String nombreUsuarioLiberador;

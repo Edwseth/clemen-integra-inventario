@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
@@ -33,8 +33,8 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             @Param("almacenId") Long almacenId,
             @Param("tipoMovimiento") TipoMovimiento tipoMovimiento,
             @Param("clasificacion") ClasificacionMovimientoInventario clasificacion,
-            @Param("fechaInicio") LocalDate fechaInicio,
-            @Param("fechaFin") LocalDate fechaFin,
+            @Param("fechaInicio") LocalDateTime fechaInicio,
+            @Param("fechaFin") LocalDateTime fechaFin,
             Pageable pageable
     );
 
@@ -57,8 +57,8 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             @Param("almacenId") Long almacenId,
             @Param("tipoMovimiento") TipoMovimiento tipoMovimiento,
             @Param("clasificacion") ClasificacionMovimientoInventario clasificacion,
-            @Param("fechaInicio") LocalDate fechaInicio,
-            @Param("fechaFin") LocalDate fechaFin
+            @Param("fechaInicio") LocalDateTime fechaInicio,
+            @Param("fechaFin") LocalDateTime fechaFin
     );
 
     @Query("""

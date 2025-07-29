@@ -180,26 +180,31 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     @Override
     public Page<MovimientoInventario> consultarMovimientosConFiltros(
             MovimientoInventarioFiltroDTO filtro, Pageable pageable) {
+        LocalDateTime inicio = filtro.fechaInicio() != null ? filtro.fechaInicio().atStartOfDay() : null;
+        LocalDateTime fin = filtro.fechaFin() != null ? filtro.fechaFin().atTime(23, 59, 59) : null;
         return repository.filtrarMovimientos(
                 filtro.productoId(),
                 filtro.almacenId(),
                 filtro.tipoMovimiento(),
                 filtro.clasificacion(),
-                filtro.fechaInicio(),
-                filtro.fechaFin(),
+                inicio,
+                fin,
                 pageable
         );
     }
 
     @Override
     public List<MovimientoInventarioResponseDTO> consultarMovimientos(MovimientoInventarioFiltroDTO filtro) {
+        LocalDateTime inicio = filtro.fechaInicio() != null ? filtro.fechaInicio().atStartOfDay() : null;
+        LocalDateTime fin = filtro.fechaFin() != null ? filtro.fechaFin().atTime(23, 59, 59) : null;
+
         List<MovimientoInventario> lista = repository.buscarMovimientos(
                 filtro.productoId(),
                 filtro.almacenId(),
                 filtro.tipoMovimiento(),
                 filtro.clasificacion(),
-                filtro.fechaInicio(),
-                filtro.fechaFin()
+                inicio,
+                fin
         );
         return lista.stream().map(mapper::toResponseDTO).toList();
     }
@@ -318,7 +323,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         LoteProducto lote = LoteProducto.builder()
                 .codigoLote(dto.codigoLote())
                 .fechaFabricacion(LocalDateTime.now())
-                .fechaVencimiento(dto.fechaVencimiento().atStartOfDay())
+                .fechaVencimiento(dto.fechaVencimiento())
                 .fechaLiberacion(producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO ? LocalDateTime.now() : null)
                 .estado(obtenerEstadoInicial(producto))
                 .producto(producto)
