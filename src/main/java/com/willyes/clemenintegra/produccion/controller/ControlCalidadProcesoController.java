@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.produccion.model.ControlCalidadProceso;
 import com.willyes.clemenintegra.produccion.model.DetalleEtapa;
 import com.willyes.clemenintegra.produccion.service.ControlCalidadProcesoService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +39,7 @@ public class ControlCalidadProcesoController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<ControlCalidadProcesoResponse> crear(@RequestBody ControlCalidadProcesoRequest request) {
         DetalleEtapa detalle = new DetalleEtapa();
         detalle.setId(request.detalleEtapaId);
@@ -49,6 +51,7 @@ public class ControlCalidadProcesoController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<ControlCalidadProcesoResponse> actualizar(@PathVariable Long id, @RequestBody ControlCalidadProcesoRequest request) {
         return service.buscarPorId(id)
                 .map(existente -> {
@@ -65,6 +68,7 @@ public class ControlCalidadProcesoController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
