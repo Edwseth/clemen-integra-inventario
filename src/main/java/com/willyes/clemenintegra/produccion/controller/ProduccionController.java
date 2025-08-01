@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.produccion.mapper.ProduccionSimpleMapper;
 import com.willyes.clemenintegra.produccion.model.Produccion;
 import com.willyes.clemenintegra.produccion.service.ProduccionService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
@@ -28,6 +29,7 @@ public class ProduccionController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<ProduccionResponse> crear(@RequestBody ProduccionRequest request) {
         Usuario usuario = new Usuario(); usuario.setId(request.usuarioId);
         Producto producto = new Producto(); producto.setId(request.productoId.intValue());
@@ -44,6 +46,7 @@ public class ProduccionController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();

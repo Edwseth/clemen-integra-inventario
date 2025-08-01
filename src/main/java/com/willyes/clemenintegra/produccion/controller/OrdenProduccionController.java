@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.service.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
@@ -37,6 +38,7 @@ public class OrdenProduccionController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {
         Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
         Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
@@ -45,6 +47,7 @@ public class OrdenProduccionController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> actualizar(@PathVariable Long id, @RequestBody OrdenProduccionRequestDTO request) {
         return service.buscarPorId(id)
                 .map(existente -> {
@@ -58,6 +61,7 @@ public class OrdenProduccionController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
