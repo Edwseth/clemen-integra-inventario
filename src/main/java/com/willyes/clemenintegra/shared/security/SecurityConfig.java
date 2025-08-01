@@ -85,6 +85,12 @@ public class SecurityConfig {
                                 RolUsuario.ROL_MICROBIOLOGO.name(),
                                 RolUsuario.ROL_SUPER_ADMIN.name()
                         )
+                        .requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
+                                RolUsuario.ROL_JEFE_CALIDAD.name(),
+                                RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                                RolUsuario.ROL_MICROBIOLOGO.name(),
+                                RolUsuario.ROL_SUPER_ADMIN.name()
+                        )
                         .requestMatchers("/api/produccion/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_LIDER_ALIMENTOS.name(),
