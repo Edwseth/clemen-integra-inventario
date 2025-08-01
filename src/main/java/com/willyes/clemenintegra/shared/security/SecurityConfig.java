@@ -70,6 +70,7 @@ public class SecurityConfig {
                                 RolUsuario.ROL_JEFE_CALIDAD.name(),
                                 RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                                 RolUsuario.ROL_MICROBIOLOGO.name(),
+                                RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_SUPER_ADMIN.name()
                         )
                         .requestMatchers("/api/movimientos/**", "/api/categorias/**",

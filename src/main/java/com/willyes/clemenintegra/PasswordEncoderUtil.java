@@ -7,7 +7,7 @@ public class PasswordEncoderUtil {
 
     public static void main(String[] args) {
         // Cambia esta línea con la contraseña que quieres codificar
-        String rawPassword = "micro123";
+        String rawPassword = "homeopaticos123";
 
         PasswordEncoder encoder = new BCryptPasswordEncoder();
         String encodedPassword = encoder.encode(rawPassword);
