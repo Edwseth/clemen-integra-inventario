@@ -94,8 +94,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/bom/**").hasAnyAuthority(
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_JEFE_CALIDAD.name(),
-                                RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                                RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
                                 RolUsuario.ROL_SUPER_ADMIN.name()
                         )
                         .requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(

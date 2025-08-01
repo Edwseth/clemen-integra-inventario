@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.bom.service.*;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
@@ -22,6 +23,7 @@ public class FormulaProductoController {
     private final BomMapper bomMapper;
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public List<FormulaProductoResponse> listarTodas() {
         return formulaService.listarTodas().stream()
                 .map(formula -> bomMapper.toResponse(formula))
@@ -29,6 +31,7 @@ public class FormulaProductoController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> obtenerPorId(@PathVariable Long id) {
         return formulaService.buscarPorId(id)
                 .map(formula -> bomMapper.toResponse(formula))
@@ -37,6 +40,7 @@ public class FormulaProductoController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> crear(@RequestBody FormulaProductoRequest request) {
         Producto producto = new Producto(); producto.setId(request.productoId.intValue());
         Usuario creador = new Usuario(); creador.setId(request.creadoPorId);
@@ -45,6 +49,7 @@ public class FormulaProductoController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> actualizar(@PathVariable Long id, @RequestBody FormulaProductoRequest request) {
         return formulaService.buscarPorId(id)
                 .map(existente -> {
@@ -58,12 +63,14 @@ public class FormulaProductoController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         formulaService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/activa")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> obtenerFormulaActiva(@RequestParam Long productoId) {
         return ResponseEntity.ok(formulaService.obtenerFormulaActivaPorProducto(productoId));
     }
