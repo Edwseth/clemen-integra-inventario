@@ -85,18 +85,23 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     public List<ProductoResponseDTO> findByCategoriaTipo(String tipo) {
-        return productoRepository.findByCategoriaProducto_Tipo(tipo)
+        TipoCategoria tipoEnum = TipoCategoria.valueOf(tipo); // conversión aquí
+        return productoRepository.findByCategoriaProducto_Tipo(tipoEnum)
                 .stream()
                 .map(productoMapper::toDto)
                 .toList();
     }
 
     public List<ProductoResponseDTO> findByCategoriaTipoIn(List<String> tipos) {
-        return productoRepository.findByCategoriaProducto_TipoIn(tipos)
+        List<TipoCategoria> tiposEnum = tipos.stream()
+                .map(TipoCategoria::valueOf)
+                .toList();
+        return productoRepository.findByCategoriaProducto_TipoIn(tiposEnum)
                 .stream()
                 .map(productoMapper::toDto)
                 .toList();
     }
+
 
     public ProductoResponseDTO crearProducto(ProductoRequestDTO dto) {
         validarDuplicados(dto.getCodigoSku(), dto.getNombre());
