@@ -10,6 +10,8 @@ import java.util.List;
 public interface ProductoService {
     Page<ProductoResponseDTO> listarTodos(Pageable pageable);
     List<ProductoResponseDTO> buscarPorCategoria(String categoria);
+    List<ProductoResponseDTO> findByCategoriaTipo(String tipo);
+    List<ProductoResponseDTO> findByCategoriaTipoIn(List<String> tipos);
     ProductoResponseDTO crearProducto(ProductoRequestDTO dto);
     ProductoResponseDTO obtenerPorId(Long id);
     ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto);

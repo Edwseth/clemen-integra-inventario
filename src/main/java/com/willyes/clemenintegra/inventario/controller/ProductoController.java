@@ -44,7 +44,6 @@ public class ProductoController {
     private final ProductoRepository productoRepo;
     private final LoteProductoRepository loteRepo;
 
-
     @GetMapping("/categoria/{nombre}")
     public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
             @PathVariable String nombre) {
@@ -53,6 +52,18 @@ public class ProductoController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(productos);
         }
         return ResponseEntity.ok(productos);
+    }
+
+    @GetMapping("/producto-terminado")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public List<ProductoResponseDTO> getProductosTerminados() {
+        return productoService.findByCategoriaTipo("PRODUCTO_TERMINADO");
+    }
+
+    @GetMapping("/insumos")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public List<ProductoResponseDTO> getProductosInsumo() {
+        return productoService.findByCategoriaTipoIn(List.of("MATERIA_PRIMA", "MATERIAL_EMPAQUE"));
     }
 
     @PostMapping
