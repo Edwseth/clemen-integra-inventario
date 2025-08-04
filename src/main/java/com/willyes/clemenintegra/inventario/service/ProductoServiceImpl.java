@@ -84,6 +84,20 @@ public class ProductoServiceImpl implements ProductoService {
                 .collect(Collectors.toList());
     }
 
+    public List<ProductoResponseDTO> findByCategoriaTipo(String tipo) {
+        return productoRepository.findByCategoriaProducto_Tipo(tipo)
+                .stream()
+                .map(productoMapper::toDto)
+                .toList();
+    }
+
+    public List<ProductoResponseDTO> findByCategoriaTipoIn(List<String> tipos) {
+        return productoRepository.findByCategoriaProducto_TipoIn(tipos)
+                .stream()
+                .map(productoMapper::toDto)
+                .toList();
+    }
+
     public ProductoResponseDTO crearProducto(ProductoRequestDTO dto) {
         validarDuplicados(dto.getCodigoSku(), dto.getNombre());
 
