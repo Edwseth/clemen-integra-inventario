@@ -82,7 +82,7 @@ public class ProductoController {
         }
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<ProductoResponseDTO> obtenerPorId(@PathVariable Long id) {
         ProductoResponseDTO producto = productoService.obtenerPorId(id);
         return ResponseEntity.ok(producto);
