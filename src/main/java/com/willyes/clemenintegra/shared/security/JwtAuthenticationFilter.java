@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -30,14 +31,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
+            try {
+                Authentication authRequest = new JwtAuthenticationToken(token);
+                Authentication authResult = jwtAuthenticationProvider.authenticate(authRequest);
 
-            Authentication authRequest = new JwtAuthenticationToken(token);
-            Authentication authResult = jwtAuthenticationProvider.authenticate(authRequest);
+                SecurityContextHolder.getContext().setAuthentication(authResult);
 
-            SecurityContextHolder.getContext().setAuthentication(authResult);
-
-            // ✅ Aquí sí es seguro poner el log
-            log.info("Authorities asignadas: {}", authResult.getAuthorities());
+                // ✅ Aquí sí es seguro poner el log
+                log.info("Authorities asignadas: {}", authResult.getAuthorities());
+            } catch (AuthenticationException ex) {
+                log.warn("Autenticación JWT fallida: {}", ex.getMessage());
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o expirado");
+                return;
+            } catch (Exception ex) {
+                log.error("Error procesando JWT", ex);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Error de autenticación");
+                return;
+            }
+        } else {
+            log.debug("Encabezado Authorization no encontrado o malformado");
         }
 
         filterChain.doFilter(request, response);
