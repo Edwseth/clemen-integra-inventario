@@ -41,7 +41,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No existe fórmula activa aprobada para este producto."));
 
-        return bomMapper.toResponse(formula);
+        return bomMapper.toResponseDTO(formula);
     }
 }
 

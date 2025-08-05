@@ -42,7 +42,7 @@ public class FormulaProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public List<FormulaProductoResponse> listarTodas() {
         return formulaService.listarTodas().stream()
-                .map(formula -> bomMapper.toResponse(formula))
+                .map(formula -> bomMapper.toResponseDTO(formula))
                 .collect(Collectors.toList());
     }
 
@@ -50,7 +50,7 @@ public class FormulaProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> obtenerPorId(@PathVariable Long id) {
         return formulaService.buscarPorId(id)
-                .map(formula -> bomMapper.toResponse(formula))
+                .map(formula -> bomMapper.toResponseDTO(formula))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -127,7 +127,7 @@ public class FormulaProductoController {
         }
 
         FormulaProducto guardado = formulaService.guardar(formula);
-        return ResponseEntity.ok(bomMapper.toResponse(guardado));
+        return ResponseEntity.ok(bomMapper.toResponseDTO(guardado));
     }
 
     @PutMapping("/{id}")
@@ -139,7 +139,7 @@ public class FormulaProductoController {
                     Usuario creador = new Usuario(); creador.setId(request.getCreadoPorId());
                     FormulaProducto entidad = bomMapper.toEntity(request, producto, creador);
                     entidad.setId(existente.getId());
-                    return ResponseEntity.ok(bomMapper.toResponse(formulaService.guardar(entidad)));
+                    return ResponseEntity.ok(bomMapper.toResponseDTO(formulaService.guardar(entidad)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

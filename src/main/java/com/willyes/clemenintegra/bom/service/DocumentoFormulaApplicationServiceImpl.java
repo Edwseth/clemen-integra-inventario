@@ -29,21 +29,21 @@ public class DocumentoFormulaApplicationServiceImpl implements DocumentoFormulaA
 
         DocumentoFormula entidad = bomMapper.toEntity(requestDTO, formula);
         DocumentoFormula guardado = documentoRepository.save(entidad);
-        return bomMapper.toResponse(guardado);
+        return bomMapper.toResponseDTO(guardado);
     }
 
     @Override
     public DocumentoFormulaResponseDTO buscarPorId(Long id) {
         DocumentoFormula encontrado = documentoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Documento no encontrado"));
-        return bomMapper.toResponse(encontrado);
+        return bomMapper.toResponseDTO(encontrado);
     }
 
     @Override
     public List<DocumentoFormulaResponseDTO> listarTodas() {
         return documentoRepository.findAll()
                 .stream()
-                .map(entity -> bomMapper.toResponse(entity))
+                .map(entity -> bomMapper.toResponseDTO(entity))
                 .collect(Collectors.toList());
     }
 
@@ -64,7 +64,7 @@ public class DocumentoFormulaApplicationServiceImpl implements DocumentoFormulaA
         entidadActualizada.setId(id);  // mantenemos el id original
 
         DocumentoFormula actualizado = documentoRepository.save(entidadActualizada);
-        return bomMapper.toResponse(actualizado);
+        return bomMapper.toResponseDTO(actualizado);
     }
 }
 

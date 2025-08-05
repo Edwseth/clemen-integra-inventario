@@ -25,7 +25,7 @@ public class DetalleFormulaController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public List<DetalleFormulaResponse> listarTodas() {
         return detalleService.listarTodas().stream()
-                .map(detalle -> bomMapper.toResponse(detalle))
+                .map(detalle -> bomMapper.toResponseDTO(detalle))
                 .collect(Collectors.toList());
     }
 
@@ -33,7 +33,7 @@ public class DetalleFormulaController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<DetalleFormulaResponse> obtenerPorId(@PathVariable Long id) {
         return detalleService.buscarPorId(id)
-                .map(detalle -> bomMapper.toResponse(detalle))
+                .map(detalle -> bomMapper.toResponseDTO(detalle))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -45,7 +45,7 @@ public class DetalleFormulaController {
         Producto insumo = new Producto(); insumo.setId(request.insumoId.intValue());
         UnidadMedida unidad = new UnidadMedida(); unidad.setId(request.unidadMedidaId);
         DetalleFormula entidad = bomMapper.toEntity(request, formula, insumo, unidad);
-        return ResponseEntity.ok(bomMapper.toResponse(detalleService.guardar(entidad)));
+        return ResponseEntity.ok(bomMapper.toResponseDTO(detalleService.guardar(entidad)));
     }
 
     @PutMapping("/{id}")
@@ -58,7 +58,7 @@ public class DetalleFormulaController {
                     UnidadMedida unidad = new UnidadMedida(); unidad.setId(request.unidadMedidaId);
                     DetalleFormula entidad = bomMapper.toEntity(request, formula, insumo, unidad);
                     entidad.setId(existente.getId());
-                    return ResponseEntity.ok(bomMapper.toResponse(detalleService.guardar(entidad)));
+                    return ResponseEntity.ok(bomMapper.toResponseDTO(detalleService.guardar(entidad)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
