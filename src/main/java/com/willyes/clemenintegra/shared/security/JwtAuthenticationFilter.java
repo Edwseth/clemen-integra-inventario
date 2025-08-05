@@ -40,11 +40,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // ✅ Aquí sí es seguro poner el log
                 log.info("Authorities asignadas: {}", authResult.getAuthorities());
             } catch (AuthenticationException ex) {
-                log.warn("Autenticación JWT fallida: {}", ex.getMessage());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o expirado");
+                log.warn("Autenticación JWT fallida en {}: {}", request.getRequestURI(), ex.getMessage());
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, ex.getMessage());
                 return;
             } catch (Exception ex) {
-                log.error("Error procesando JWT", ex);
+                log.error("Error procesando JWT en {}: {}", request.getRequestURI(), ex.getMessage(), ex);
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Error de autenticación");
                 return;
             }
