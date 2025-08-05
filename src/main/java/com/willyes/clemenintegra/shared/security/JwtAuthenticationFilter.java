@@ -36,20 +36,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Authentication authResult = jwtAuthenticationProvider.authenticate(authRequest);
 
                 SecurityContextHolder.getContext().setAuthentication(authResult);
+                log.debug("Usuario {} autenticado en {}", authResult.getName(), request.getRequestURI());
 
                 // ✅ Aquí sí es seguro poner el log
                 log.info("Authorities asignadas: {}", authResult.getAuthorities());
             } catch (AuthenticationException ex) {
                 log.warn("Autenticación JWT fallida en {}: {}", request.getRequestURI(), ex.getMessage());
+                log.debug("Solicitud no autorizada en {}", request.getRequestURI());
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, ex.getMessage());
                 return;
             } catch (Exception ex) {
                 log.error("Error procesando JWT en {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+                log.debug("Solicitud no autorizada en {}", request.getRequestURI());
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Error de autenticación");
                 return;
             }
         } else {
-            log.debug("Encabezado Authorization no encontrado o malformado");
+            log.debug("Solicitud sin encabezado Authorization en {}", request.getRequestURI());
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authorization header missing or malformed");
+            return;
         }
 
         filterChain.doFilter(request, response);
