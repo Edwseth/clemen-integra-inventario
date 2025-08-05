@@ -18,4 +18,5 @@ public class FormulaProductoRequest {
 
     @NotNull
     public Long creadoPorId;
+
 }
