@@ -41,21 +41,21 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/swagger-resources/**",
-                                "/swagger-resources",
-                                "/configuration/ui",
-                                "/configuration/security",
-                                "/webjars/**",
-                                "/api/calidad/evaluaciones/archivo/**"
-                        ).permitAll()
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(
+                            "/api/auth/**",
+                            "/v3/api-docs/**",
+                            "/swagger-ui.html",
+                            "/swagger-ui/**",
+                            "/swagger-resources/**",
+                            "/swagger-resources",
+                            "/configuration/ui",
+                            "/configuration/security",
+                            "/webjars/**",
+                            "/api/calidad/evaluaciones/archivo/**"
+                        ).permitAll();
 
-                        .requestMatchers(
+                        auth.requestMatchers(
                                 "/api/productos/**", "/api/ordenes-compra/**",
                                 "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**",
                                 "/api/proveedores/**", "/api/unidades/**",
@@ -72,50 +72,53 @@ public class SecurityConfig {
                                 RolUsuario.ROL_MICROBIOLOGO.name(),
                                 RolUsuario.ROL_JEFE_PRODUCCION.name(),
                                 RolUsuario.ROL_SUPER_ADMIN.name()
-                        )
-                        .requestMatchers("/api/movimientos/**", "/api/categorias/**",
-                                "/api/inventario/alertas/**").hasAnyAuthority(
-                                RolUsuario.ROL_JEFE_ALMACENES.name(),
-                                RolUsuario.ROL_ALMACENISTA.name(),
-                                RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                                RolUsuario.ROL_SUPER_ADMIN.name()
-                        )
-                        .requestMatchers("/api/calidad/**", "/api/lotes/**").hasAnyAuthority(
-                                RolUsuario.ROL_JEFE_CALIDAD.name(),
-                                RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                                RolUsuario.ROL_MICROBIOLOGO.name(),
-                                RolUsuario.ROL_SUPER_ADMIN.name()
-                        )
-                        .requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
-                                RolUsuario.ROL_JEFE_CALIDAD.name(),
-                                RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                                RolUsuario.ROL_MICROBIOLOGO.name(),
-                                RolUsuario.ROL_SUPER_ADMIN.name()
-                        )
-                        .requestMatchers("/api/produccion/**").hasAnyAuthority(
-                                RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                                RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                                RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                                RolUsuario.ROL_SUPER_ADMIN.name()
-                        )
-                        .requestMatchers("/api/bom/**").hasAnyAuthority(
-                                RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                                RolUsuario.ROL_JEFE_CALIDAD.name(),
-                                RolUsuario.ROL_SUPER_ADMIN.name()
-                        )
-                        .requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
-                                RolUsuario.ROL_CONTADOR.name(),
-                                RolUsuario.ROL_SUPER_ADMIN.name()
-                        )
-                        .requestMatchers("/api/reportes/**").hasAnyAuthority(
-                                RolUsuario.ROL_ALMACENISTA.name(),
-                                RolUsuario.ROL_JEFE_ALMACENES.name(),
-                                RolUsuario.ROL_SUPER_ADMIN.name()
-                        )
-                        .requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name())
+                        );
+        auth.requestMatchers("/api/movimientos/**", "/api/categorias/**",
+                "/api/inventario/alertas/**").hasAnyAuthority(
+                RolUsuario.ROL_JEFE_ALMACENES.name(),
+                RolUsuario.ROL_ALMACENISTA.name(),
+                RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                RolUsuario.ROL_SUPER_ADMIN.name()
+        );
+        auth.requestMatchers("/api/calidad/**", "/api/lotes/**").hasAnyAuthority(
+                RolUsuario.ROL_JEFE_CALIDAD.name(),
+                RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                RolUsuario.ROL_MICROBIOLOGO.name(),
+                RolUsuario.ROL_SUPER_ADMIN.name()
+        );
+        auth.requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
+                RolUsuario.ROL_JEFE_CALIDAD.name(),
+                RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                RolUsuario.ROL_MICROBIOLOGO.name(),
+                RolUsuario.ROL_SUPER_ADMIN.name()
+        );
+        auth.requestMatchers("/api/produccion/**").hasAnyAuthority(
+                RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                RolUsuario.ROL_LIDER_ALIMENTOS.name(),
+                RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                RolUsuario.ROL_SUPER_ADMIN.name()
+        );
+        auth.requestMatchers("/api/bom/**").hasAnyAuthority(
+                RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                RolUsuario.ROL_JEFE_CALIDAD.name(),
+                RolUsuario.ROL_SUPER_ADMIN.name()
+        );
+        auth.requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
+                RolUsuario.ROL_CONTADOR.name(),
+                RolUsuario.ROL_SUPER_ADMIN.name()
+        );
+        auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
+                RolUsuario.ROL_ALMACENISTA.name(),
+                RolUsuario.ROL_JEFE_ALMACENES.name(),
+                RolUsuario.ROL_SUPER_ADMIN.name()
+        );
 
-                        .anyRequest().authenticated()
-                )
+        // Mantener esta regla genérica al final para que las reglas específicas previas tengan precedencia.
+        // Nuevas rutas específicas deben agregarse antes de esta sección.
+        auth.requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name());
+
+        auth.anyRequest().authenticated();
+    })
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) ->
                                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autorizado"))
