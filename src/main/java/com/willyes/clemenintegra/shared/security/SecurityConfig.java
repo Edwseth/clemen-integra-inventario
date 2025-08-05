@@ -115,7 +115,7 @@ public class SecurityConfig {
 
         // Mantener esta regla genérica al final para que las reglas específicas previas tengan precedencia.
         // Nuevas rutas específicas deben agregarse antes de esta sección.
-        auth.requestMatchers("/api/**").hasAuthority(RolUsuario.ROL_SUPER_ADMIN.name());
+        auth.requestMatchers("/api/**").authenticated();
 
         auth.anyRequest().authenticated();
     })
