@@ -26,6 +26,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        String requestURI = request.getRequestURI();
+        if (requestURI.startsWith("/api/auth")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String authHeader = request.getHeader("Authorization");
 
@@ -36,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Authentication authResult = jwtAuthenticationProvider.authenticate(authRequest);
 
                 SecurityContextHolder.getContext().setAuthentication(authResult);
-                log.debug("Usuario {} autenticado en {}", authResult.getName(), request.getRequestURI());
+                log.debug("Usuario {} autenticado en {}", authResult.getName(), requestURI);
 
                 // ✅ Aquí sí es seguro poner el log
                 log.info("Authorities asignadas: {}", authResult.getAuthorities());
@@ -46,14 +51,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, ex.getMessage());
                 return;
             } catch (Exception ex) {
-                log.error("Error procesando JWT en {}: {}", request.getRequestURI(), ex.getMessage(), ex);
-                log.debug("Solicitud no autorizada en {}", request.getRequestURI());
+                log.error("Error procesando JWT en {}: {}", requestURI, ex.getMessage(), ex);
+                log.debug("Solicitud no autorizada en {}", requestURI);
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Error de autenticación");
                 return;
             }
         } else {
-            log.debug("Solicitud sin encabezado Authorization en {}", request.getRequestURI());
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authorization header missing or malformed");
+            log.debug("Solicitud sin encabezado Authorization en {}", requestURI);
+            filterChain.doFilter(request, response);
             return;
         }
 
