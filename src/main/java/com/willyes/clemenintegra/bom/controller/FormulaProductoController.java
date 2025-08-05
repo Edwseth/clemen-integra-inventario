@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,6 +53,7 @@ public class FormulaProductoController {
         Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
         Usuario creador = new Usuario(); creador.setId(request.getCreadoPorId());
         FormulaProducto entidad = bomMapper.toEntity(request, producto, creador);
+        entidad.setFechaCreacion(LocalDateTime.now());
         return ResponseEntity.ok(bomMapper.toResponse(formulaService.guardar(entidad)));
     }
 
