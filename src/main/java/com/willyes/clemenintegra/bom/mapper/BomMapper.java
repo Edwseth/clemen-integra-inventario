@@ -17,7 +17,7 @@ public interface BomMapper {
     @Mapping(source = "dto.fechaCreacion", target = "fechaCreacion")
     @Mapping(target = "activo", ignore = true)
     //@Mapping(source = "producto", target = "producto")
-    //@Mapping(source = "usuario", target = "creadoPor")
+    @Mapping(source = "usuario", target = "creadoPor")
     //@Mapping(target = "estado", expression = "java(EstadoFormula.valueOf(dto.estado))")
     //@Mapping(target = "detalles", ignore = true)
     //@Mapping(target = "documentos", ignore = true)
