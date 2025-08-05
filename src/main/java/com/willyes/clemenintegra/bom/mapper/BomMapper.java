@@ -23,10 +23,10 @@ public interface BomMapper {
     //@Mapping(target = "documentos", ignore = true)
     FormulaProducto toEntity(FormulaProductoRequest dto, Producto producto, Usuario usuario);
 
-    //@Mapping(target = "productoNombre", source = "producto", qualifiedByName = "mapProductoNombre")
-    //@Mapping(target = "estado", source = "estado", qualifiedByName = "mapEstadoFormula")
-    //@Mapping(target = "creadoPorNombre", source = "creadoPor", qualifiedByName = "mapNombreUsuario")
-    FormulaProductoResponse toResponse(FormulaProducto entidad);
+    @Mapping(target = "productoNombre", source = "producto", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "estado", source = "estado", qualifiedByName = "mapEstadoFormula")
+    @Mapping(target = "creadoPorNombre", source = "creadoPor", qualifiedByName = "mapNombreUsuario")
+    FormulaProductoResponse toResponseDTO(FormulaProducto formula);
 
     @Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
@@ -35,18 +35,18 @@ public interface BomMapper {
     //@Mapping(target = "cantidadNecesaria", expression = "java(java.math.BigDecimal.valueOf(dto.cantidadNecesaria))")
     DetalleFormula toEntity(DetalleFormulaRequest dto, FormulaProducto formula, Producto insumo, UnidadMedida unidad);
 
-    //@Mapping(target = "insumoNombre", source = "insumo", qualifiedByName = "mapProductoNombre")
-    //@Mapping(target = "cantidadNecesaria", expression = "java(entidad.getCantidadNecesaria() != null ? entidad.getCantidadNecesaria().doubleValue() : null)")
-    //@Mapping(target = "unidad", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
-    DetalleFormulaResponse toResponse(DetalleFormula entidad);
+    @Mapping(target = "insumoNombre", source = "insumo", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "cantidadNecesaria", expression = "java(detalle.getCantidadNecesaria() != null ? detalle.getCantidadNecesaria().doubleValue() : null)")
+    @Mapping(target = "unidad", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
+    DetalleFormulaResponse toResponseDTO(DetalleFormula detalle);
 
     //@Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
     //@Mapping(target = "tipoDocumento", expression = "java(TipoDocumento.valueOf(dto.getTipoDocumento()))")
     DocumentoFormula toEntity(DocumentoFormulaRequestDTO dto, FormulaProducto formula);
 
-    //@Mapping(target = "tipoDocumento", source = "tipoDocumento", qualifiedByName = "mapTipoDocumento")
-    DocumentoFormulaResponseDTO toResponse(DocumentoFormula entidad);
+    @Mapping(target = "tipoDocumento", source = "tipoDocumento", qualifiedByName = "mapTipoDocumento")
+    DocumentoFormulaResponseDTO toResponseDTO(DocumentoFormula documento);
 
     @Named("mapProductoNombre")
     default String mapProductoNombre(Producto producto) {
