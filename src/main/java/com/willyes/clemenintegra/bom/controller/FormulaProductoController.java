@@ -49,8 +49,8 @@ public class FormulaProductoController {
             @RequestPart("formula") String formulaJson,
             @RequestPart(value = "pdfs", required = false) MultipartFile[] pdfs) throws IOException {
         FormulaProductoRequest request = new ObjectMapper().readValue(formulaJson, FormulaProductoRequest.class);
-        Producto producto = new Producto(); producto.setId(request.productoId.intValue());
-        Usuario creador = new Usuario(); creador.setId(request.creadoPorId);
+        Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
+        Usuario creador = new Usuario(); creador.setId(request.getCreadoPorId());
         FormulaProducto entidad = bomMapper.toEntity(request, producto, creador);
         return ResponseEntity.ok(bomMapper.toResponse(formulaService.guardar(entidad)));
     }
@@ -60,8 +60,8 @@ public class FormulaProductoController {
     public ResponseEntity<FormulaProductoResponse> actualizar(@PathVariable Long id, @RequestBody FormulaProductoRequest request) {
         return formulaService.buscarPorId(id)
                 .map(existente -> {
-                    Producto producto = new Producto(); producto.setId(request.productoId.intValue());
-                    Usuario creador = new Usuario(); creador.setId(request.creadoPorId);
+                    Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
+                    Usuario creador = new Usuario(); creador.setId(request.getCreadoPorId());
                     FormulaProducto entidad = bomMapper.toEntity(request, producto, creador);
                     entidad.setId(existente.getId());
                     return ResponseEntity.ok(bomMapper.toResponse(formulaService.guardar(entidad)));
