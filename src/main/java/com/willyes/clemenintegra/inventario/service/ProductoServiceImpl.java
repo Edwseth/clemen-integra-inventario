@@ -323,5 +323,11 @@ public class ProductoServiceImpl implements ProductoService {
         }
         return TipoAnalisisCalidad.valueOf(valor);
     }
+
+    @Override
+    public Producto findById(Long id) {
+        return productoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
+    }
 }
 
