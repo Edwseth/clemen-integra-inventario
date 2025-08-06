@@ -66,6 +66,12 @@ public class ProductoController {
         return productoService.findByCategoriaTipoIn(List.of("MATERIA_PRIMA", "MATERIAL_EMPAQUE"));
     }
 
+    @GetMapping("/terminados")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public List<ProductoResponseDTO> getProductosTerminadosPublico() {
+        return productoService.findByCategoriaTipo("PRODUCTO_TERMINADO");
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<?> crear(@Valid @RequestBody ProductoRequestDTO dto) {

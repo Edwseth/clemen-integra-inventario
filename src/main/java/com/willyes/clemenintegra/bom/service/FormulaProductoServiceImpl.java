@@ -27,6 +27,9 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     }
 
     public FormulaProducto guardar(FormulaProducto formula) {
+        if (formula.getEstado() == EstadoFormula.APROBADA) {
+            formula.setActivo(true);
+        }
         return formulaRepository.save(formula);
     }
 
