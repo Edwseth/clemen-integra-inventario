@@ -13,7 +13,7 @@ public class OrdenProduccionMapper {
     public OrdenProduccion toEntity(OrdenProduccionRequestDTO dto, Producto producto, Usuario responsable) {
         OrdenProduccion orden = new OrdenProduccion();
         orden.setLoteProduccion(dto.getLoteProduccion());
-        orden.setFechaInicio(dto.getFechaInicio());
+        // fechaInicio se asignará en el servicio para evitar valores nulos o manipulados desde el frontend
         orden.setFechaFin(dto.getFechaFin());
         orden.setCantidadProgramada(dto.getCantidadProgramada());
         orden.setCantidadProducida(dto.getCantidadProducida());

@@ -11,7 +11,7 @@ public class ProduccionMapper {
     public static OrdenProduccion toEntity(OrdenProduccionRequestDTO dto, Producto producto, Usuario responsable) {
         return OrdenProduccion.builder()
                 .loteProduccion(dto.getLoteProduccion())
-                .fechaInicio(dto.getFechaInicio())
+                // La fecha de inicio se establecerá desde el servicio, ignorando valores del cliente
                 .fechaFin(dto.getFechaFin())
                 .cantidadProgramada(dto.getCantidadProgramada())
                 .cantidadProducida(dto.getCantidadProducida())

@@ -17,6 +17,7 @@ public class OrdenProduccion {
 
     private String loteProduccion;
 
+    @Column(nullable = false)
     private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;
 

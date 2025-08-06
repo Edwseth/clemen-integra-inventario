@@ -96,6 +96,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .build();
         }
 
+        // Aseguramos que la fecha de inicio siempre sea asignada desde el backend
+        orden.setFechaInicio(LocalDateTime.now());
+
         OrdenProduccion guardada = repository.save(orden);
 
         for (DetalleFormula insumo : formula.getDetalles()) {
@@ -127,7 +130,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         OrdenProduccion orden = ordenProduccionMapper.toEntity(dto, producto, responsable);
-        orden.setFechaInicio(LocalDateTime.now());
         return guardarConValidacionStock(orden);
     }
 
