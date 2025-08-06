@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -126,6 +127,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         OrdenProduccion orden = ordenProduccionMapper.toEntity(dto, producto, responsable);
+        orden.setFechaInicio(LocalDateTime.now());
         return guardarConValidacionStock(orden);
     }
 
