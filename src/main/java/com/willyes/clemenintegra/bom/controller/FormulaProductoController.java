@@ -153,8 +153,9 @@ public class FormulaProductoController {
 
     @GetMapping("/activa")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<FormulaProductoResponse> obtenerFormulaActiva(@RequestParam Long productoId) {
-        return ResponseEntity.ok(formulaService.obtenerFormulaActivaPorProducto(productoId));
+    public ResponseEntity<FormulaProductoResponse> obtenerFormulaActiva(@RequestParam Long productoId,
+                                                                        @RequestParam(defaultValue = "1") BigDecimal cantidad) {
+        return ResponseEntity.ok(formulaService.obtenerFormulaActivaPorProducto(productoId, cantidad));
     }
 }
 
