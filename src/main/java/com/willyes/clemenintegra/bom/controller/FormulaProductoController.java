@@ -17,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -24,13 +25,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bom/formulas")
 @RequiredArgsConstructor
+@Slf4j
 public class FormulaProductoController {
 
     private final FormulaProductoService formulaService;
@@ -59,7 +60,7 @@ public class FormulaProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> crear(
             @RequestPart("formula") String formulaJson,
-            @RequestPart(value = "pdfs", required = false) MultipartFile[] pdfs) throws IOException {
+            @RequestPart(value = "archivo", required = false) MultipartFile archivo) throws IOException {
         // Convertir JSON a DTO
         FormulaProductoRequest request = new ObjectMapper().readValue(formulaJson, FormulaProductoRequest.class);
 
@@ -92,38 +93,37 @@ public class FormulaProductoController {
             formula.setDetalles(detalles);
         }
 
-        // Procesar documentos adjuntos
-        if (pdfs != null && pdfs.length > 0) {
-            List<DocumentoFormula> documentos = new ArrayList<>();
-            for (MultipartFile pdf : pdfs) {
-                if (pdf == null || pdf.isEmpty()) continue;
+        // Procesar documento adjunto
+        if (archivo != null && !archivo.isEmpty()) {
+            String nombreOriginal = archivo.getOriginalFilename();
+            String nombreSanitizado = (nombreOriginal != null ? nombreOriginal : "documento")
+                    .replaceAll("[^a-zA-Z0-9._-]", "_");
+            String nombreArchivo = System.currentTimeMillis() + "_" + nombreSanitizado;
 
-                String nombreOriginal = pdf.getOriginalFilename();
-                String nombreSanitizado = (nombreOriginal != null ? nombreOriginal : "documento")
-                        .replaceAll("[^a-zA-Z0-9._-]", "_");
-                String nombreArchivo = System.currentTimeMillis() + "_" + nombreSanitizado;
+            Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "formulas");
+            Files.createDirectories(uploadDir);
+            Path destino = uploadDir.resolve(nombreArchivo);
+            archivo.transferTo(destino.toFile());
 
-                Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "formulas");
-                Files.createDirectories(uploadDir);
-                Path destino = uploadDir.resolve(nombreArchivo);
-                pdf.transferTo(destino.toFile());
-
-                TipoDocumento tipoDoc = TipoDocumento.PROCEDIMIENTO;
-                if (nombreOriginal != null) {
-                    String lower = nombreOriginal.toLowerCase();
-                    if (lower.contains("msds")) tipoDoc = TipoDocumento.MSDS;
-                    else if (lower.contains("instructivo")) tipoDoc = TipoDocumento.INSTRUCTIVO;
-                    else if (lower.contains("procedimiento")) tipoDoc = TipoDocumento.PROCEDIMIENTO;
-                }
-
-                DocumentoFormula documento = DocumentoFormula.builder()
-                        .tipoDocumento(tipoDoc)
-                        .rutaArchivo(nombreArchivo)
-                        .formula(formula)
-                        .build();
-                documentos.add(documento);
+            TipoDocumento tipoDoc = TipoDocumento.PROCEDIMIENTO;
+            if (nombreOriginal != null) {
+                String lower = nombreOriginal.toLowerCase();
+                if (lower.contains("msds")) tipoDoc = TipoDocumento.MSDS;
+                else if (lower.contains("instructivo")) tipoDoc = TipoDocumento.INSTRUCTIVO;
+                else if (lower.contains("procedimiento")) tipoDoc = TipoDocumento.PROCEDIMIENTO;
             }
-            formula.setDocumentos(documentos);
+
+            DocumentoFormula documento = DocumentoFormula.builder()
+                    .tipoDocumento(tipoDoc)
+                    .nombreArchivo(nombreArchivo)
+                    .rutaArchivo(Paths.get("uploads", "formulas", nombreArchivo).toString())
+                    .fechaSubida(LocalDateTime.now())
+                    .usuario(creador)
+                    .formula(formula)
+                    .build();
+            formula.setDocumentos(List.of(documento));
+        } else {
+            log.info("No se recibió archivo adjunto para la fórmula");
         }
 
         FormulaProducto guardado = formulaService.guardar(formula);
