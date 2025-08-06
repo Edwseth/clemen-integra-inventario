@@ -39,23 +39,27 @@ public class OrdenProduccionController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
-    public ResponseEntity<OrdenProduccionResponseDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {
+    public ResponseEntity<ResultadoValidacionOrdenDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {
         Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
         Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
         OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
-        return new ResponseEntity<>(ProduccionMapper.toResponse(service.guardarConValidacionStock(entidad)), HttpStatus.CREATED);
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(entidad);
+        HttpStatus status = resultado.isEsValida() ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
+        return new ResponseEntity<>(resultado, status);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
-    public ResponseEntity<OrdenProduccionResponseDTO> actualizar(@PathVariable Long id, @RequestBody OrdenProduccionRequestDTO request) {
+    public ResponseEntity<ResultadoValidacionOrdenDTO> actualizar(@PathVariable Long id, @RequestBody OrdenProduccionRequestDTO request) {
         return service.buscarPorId(id)
                 .map(existente -> {
                     Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
                     Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
                     OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
                     entidad.setId(existente.getId());
-                    return ResponseEntity.ok(ProduccionMapper.toResponse(service.guardarConValidacionStock(entidad)));
+                    ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(entidad);
+                    HttpStatus status = resultado.isEsValida() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+                    return new ResponseEntity<>(resultado, status);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
