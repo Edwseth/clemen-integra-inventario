@@ -24,6 +24,7 @@ public class ProduccionMapper {
     public static OrdenProduccionResponseDTO toResponse(OrdenProduccion entidad) {
         OrdenProduccionResponseDTO dto = new OrdenProduccionResponseDTO();
         dto.id = entidad.getId();
+        dto.codigoOrden = entidad.getCodigoOrden();
         dto.loteProduccion = entidad.getLoteProduccion();
         dto.fechaInicio = entidad.getFechaInicio();
         dto.fechaFin = entidad.getFechaFin();
@@ -71,6 +72,7 @@ public class ProduccionMapper {
         dto.observaciones = entidad.getObservaciones();
         dto.etapaProduccionId = entidad.getEtapaProduccion() != null ? entidad.getEtapaProduccion().getId() : null;
         dto.ordenProduccionId = entidad.getOrdenProduccion() != null ? entidad.getOrdenProduccion().getId() : null;
+        dto.codigoOrden = entidad.getOrdenProduccion() != null ? entidad.getOrdenProduccion().getCodigoOrden() : null;
         dto.nombreOperario = entidad.getOperario() != null ? entidad.getOperario().getNombreCompleto() : null;
         return dto;
     }

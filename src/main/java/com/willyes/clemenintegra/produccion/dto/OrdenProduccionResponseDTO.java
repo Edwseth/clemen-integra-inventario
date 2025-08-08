@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public class OrdenProduccionResponseDTO {
     public Long id;
+    public String codigoOrden;
     public String loteProduccion;
     public LocalDateTime fechaInicio;
     public LocalDateTime fechaFin;

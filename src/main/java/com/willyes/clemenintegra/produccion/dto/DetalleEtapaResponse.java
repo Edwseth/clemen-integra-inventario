@@ -9,5 +9,6 @@ public class DetalleEtapaResponse {
     public String observaciones;
     public Long etapaProduccionId;
     public Long ordenProduccionId;
+    public String codigoOrden;
     public String nombreOperario;
 }

@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,13 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final SolicitudMovimientoService solicitudMovimientoService;
     private final OrdenProduccionRepository repository;
     private final OrdenProduccionMapper ordenProduccionMapper;
+
+    private String generarCodigoOrden() {
+        String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefijo = "OP-CLEMEN-" + fecha;
+        Long contador = repository.countByCodigoOrdenStartingWith(prefijo);
+        return prefijo + "-" + String.format("%02d", contador + 1);
+    }
 
     @Transactional
     public ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden) {
@@ -98,6 +107,13 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         // Aseguramos que la fecha de inicio siempre sea asignada desde el backend
         orden.setFechaInicio(LocalDateTime.now());
+        if (orden.getId() == null) {
+            orden.setCodigoOrden(generarCodigoOrden());
+        } else if (orden.getCodigoOrden() == null) {
+            orden.setCodigoOrden(repository.findById(orden.getId())
+                    .map(OrdenProduccion::getCodigoOrden)
+                    .orElse(generarCodigoOrden()));
+        }
 
         OrdenProduccion guardada = repository.save(orden);
 
