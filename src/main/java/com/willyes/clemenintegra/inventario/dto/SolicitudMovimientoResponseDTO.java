@@ -14,10 +14,14 @@ import java.time.LocalDateTime;
 public class SolicitudMovimientoResponseDTO {
     private Long id;
     private TipoMovimiento tipoMovimiento;
+    private Integer productoId;
     private String nombreProducto;
+    private Long loteProductoId;
     private String nombreLote;
     private BigDecimal cantidad;
+    private Integer almacenOrigenId;
     private String nombreAlmacenOrigen;
+    private Integer almacenDestinoId;
     private String nombreAlmacenDestino;
     private Long ordenProduccionId;
     private String nombreSolicitante;
