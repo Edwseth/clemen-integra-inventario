@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -13,9 +14,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,14 +38,29 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     public SolicitudMovimientoResponseDTO registrarSolicitud(SolicitudMovimientoRequestDTO dto) {
         Producto producto = productoRepository.findById(dto.getProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
-        LoteProducto lote = null;
+
+        LoteProducto lote;
         if (dto.getLoteId() != null) {
             lote = loteRepository.findById(dto.getLoteId())
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+        } else {
+            lote = loteRepository
+                    .findFirstByProductoIdAndEstadoAndStockLoteGreaterThanOrderByFechaVencimientoAsc(
+                            producto.getId(),
+                            EstadoLote.DISPONIBLE,
+                            BigDecimal.ZERO
+                    )
+                    .orElseThrow(() -> new NoSuchElementException(
+                            "No hay stock disponible para el producto: " + producto.getNombre()
+                    ));
         }
-        Almacen origen = null;
+
+        Almacen origen;
         if (dto.getAlmacenOrigenId() != null) {
             origen = almacenRepository.findById(dto.getAlmacenOrigenId())
+                    .orElseThrow(() -> new NoSuchElementException("Almacén origen no encontrado"));
+        } else {
+            origen = Optional.of(lote.getAlmacen())
                     .orElseThrow(() -> new NoSuchElementException("Almacén origen no encontrado"));
         }
         Almacen destino = null;
