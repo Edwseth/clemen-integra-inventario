@@ -57,6 +57,7 @@ public class OrdenProduccionController {
                     Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
                     OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
                     entidad.setId(existente.getId());
+                    entidad.setCodigoOrden(existente.getCodigoOrden());
                     ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(entidad);
                     HttpStatus status = resultado.isEsValida() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
                     return new ResponseEntity<>(resultado, status);

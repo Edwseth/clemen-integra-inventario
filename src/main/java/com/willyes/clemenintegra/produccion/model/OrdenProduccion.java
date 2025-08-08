@@ -15,6 +15,9 @@ public class OrdenProduccion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "codigo_orden", unique = true, nullable = false)
+    private String codigoOrden;
+
     private String loteProduccion;
 
     @Column(nullable = false)
