@@ -5,6 +5,8 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -29,5 +31,19 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             EstadoLote estado,
             BigDecimal stockLote
     );
+
+    @Query("SELECT lp.estado, COALESCE(SUM(lp.stockLote), 0) " +
+            "FROM LoteProducto lp " +
+            "WHERE lp.producto.id = :productoId AND lp.stockLote > 0 " +
+            "GROUP BY lp.estado")
+    List<Object[]> sumarStockPorEstado(@Param("productoId") Long productoId);
+
+    @Query("SELECT lp FROM LoteProducto lp " +
+            "JOIN FETCH lp.almacen a " +
+            "WHERE lp.producto.id = :productoId " +
+            "AND lp.estado = 'DISPONIBLE' " +
+            "AND lp.stockLote > 0 " +
+            "ORDER BY lp.fechaVencimiento ASC")
+    List<LoteProducto> findDisponiblesFifo(@Param("productoId") Long productoId);
 }
 
