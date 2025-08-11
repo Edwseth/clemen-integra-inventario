@@ -70,12 +70,13 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();
             Producto productoInsumo = productoRepository.findById(insumoId)
+                    // LÍNEA CODEx: posible N+1, se consulta cada insumo individualmente
                     .orElseThrow(() -> new IllegalArgumentException("Insumo no encontrado: ID " + insumoId));
 
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
             cantidadesEscaladas.put(insumoId, cantidadRequerida);
 
-            BigDecimal stockActual = productoInsumo.getStockActual();
+            BigDecimal stockActual = productoInsumo.getStockActual(); // LÍNEA CODEx: stock sin discriminar estado de lotes
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {

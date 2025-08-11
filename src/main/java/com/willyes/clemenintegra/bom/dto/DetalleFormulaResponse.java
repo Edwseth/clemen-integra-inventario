@@ -9,4 +9,8 @@ public class DetalleFormulaResponse {
     public String estadoStock;
     public String unidad;
     public Boolean obligatorio;
+    // LÍNEA CODEx: nuevos campos para exponer disponibilidad detallada de lotes
+    public DisponibilidadInsumoDTO disponibilidad;
+    public BloqueanteDTO bloqueante;
+    public java.util.List<LoteResumenDTO> lotes;
 }
