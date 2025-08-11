@@ -28,6 +28,7 @@ public class SolicitudMovimientoController {
     }
 
     @GetMapping
+    // CODEx: endpoint que lista las solicitudes de movimiento
     public ResponseEntity<List<SolicitudMovimientoResponseDTO>> listar(
             @RequestParam(required = false) EstadoSolicitudMovimiento estado,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
