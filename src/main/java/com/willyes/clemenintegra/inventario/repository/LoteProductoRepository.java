@@ -44,6 +44,7 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             "AND lp.estado = 'DISPONIBLE' " +
             "AND lp.stockLote > 0 " +
             "ORDER BY lp.fechaVencimiento ASC")
+    // CODEx: lógica FIFO existente solo por producto y estado DISPONIBLE
     List<LoteProducto> findDisponiblesFifo(@Param("productoId") Long productoId);
 
     // LÍNEA CODEx: nuevas consultas para disponibilidad detallada por producto

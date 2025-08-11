@@ -40,6 +40,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
 
         LoteProducto lote;
+        // CODEx: actualmente solo selecciona un primer lote disponible sin considerar FIFO global
         if (dto.getLoteId() != null) {
             lote = loteRepository.findById(dto.getLoteId())
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
@@ -100,6 +101,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     }
 
     @Override
+    // CODEx: servicio que alimenta el listado de solicitudes
     public List<SolicitudMovimientoResponseDTO> listarSolicitudes(EstadoSolicitudMovimiento estado, LocalDateTime desde, LocalDateTime hasta) {
         List<SolicitudMovimiento> lista;
         if (estado != null) {
@@ -128,6 +130,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         solicitud.setEstado(EstadoSolicitudMovimiento.APROBADO);
         solicitud.setFechaResolucion(LocalDateTime.now());
 
+        // CODEx: aprobar actualmente crea un movimiento simple sin lógica FIFO ni prellenado
         movimientoService.registrarMovimiento(
                 new com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO(
                         null,
