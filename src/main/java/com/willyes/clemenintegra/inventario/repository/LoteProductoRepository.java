@@ -45,5 +45,27 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             "AND lp.stockLote > 0 " +
             "ORDER BY lp.fechaVencimiento ASC")
     List<LoteProducto> findDisponiblesFifo(@Param("productoId") Long productoId);
+
+    // LÍNEA CODEx: nuevas consultas para disponibilidad detallada por producto
+    @Query("""
+      select lp.estado as estado, coalesce(sum(lp.stockLote),0)
+      from LoteProducto lp
+      where lp.producto.id = :productoId and lp.stockLote > 0
+      group by lp.estado
+    """)
+    List<Object[]> sumarPorEstado(@Param("productoId") Long productoId);
+
+    @Query("""
+     select new com.willyes.clemenintegra.bom.dto.LoteResumenDTO(
+        lp.id, lp.codigoLote, lp.estado, a.nombre, lp.stockLote,
+        lp.fechaVencimiento, lp.fechaLiberacion, u.nombreCompleto
+     )
+     from LoteProducto lp
+     left join lp.almacen a
+     left join lp.usuarioLiberador u
+     where lp.producto.id = :productoId and lp.stockLote > 0
+     order by lp.estado asc, lp.fechaVencimiento asc
+    """)
+    List<com.willyes.clemenintegra.bom.dto.LoteResumenDTO> listarLotesPorProducto(@Param("productoId") Long productoId);
 }
 

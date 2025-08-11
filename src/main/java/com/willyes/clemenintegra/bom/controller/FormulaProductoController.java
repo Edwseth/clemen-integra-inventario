@@ -155,6 +155,7 @@ public class FormulaProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> obtenerFormulaActiva(@RequestParam Long productoId,
                                                                         @RequestParam(defaultValue = "1") BigDecimal cantidad) {
+        // LÍNEA CODEx: endpoint consultado por Producción para validar disponibilidad de insumos
         return ResponseEntity.ok(formulaService.obtenerFormulaActivaPorProducto(productoId, cantidad));
     }
 }
