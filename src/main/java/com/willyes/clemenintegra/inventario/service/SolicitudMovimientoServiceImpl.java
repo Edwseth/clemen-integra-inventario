@@ -17,11 +17,11 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
-import com.itextpdf.layout.property.TextAlignment;
-import com.itextpdf.layout.property.UnitValue;
+import com.itextpdf.layout.properties.TextAlignment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -252,8 +252,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             Document document = new Document(pdf, PageSize.A4);
             document.setMargins(36f, 36f, 36f, 36f);
 
-            Table header = new Table(UnitValue.createPercentArray(new float[]{60, 40}))
-                    .setWidth(UnitValue.createPercentValue(100));
+            Table header = new Table(new float[]{60f, 40f}).useAllAvailableWidth();
             Cell left = new Cell().setBorder(Border.NO_BORDER);
             left.add(new Paragraph()
                     .add(new Text("Picklist OP: ").setBold().setFontSize(11))
@@ -270,9 +269,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             header.setMarginBottom(10f);
             document.add(header);
 
-            float[] widths = {22, 16, 10, 8, 14, 14, 14, 14, 24};
-            Table table = new Table(UnitValue.createPercentArray(widths))
-                    .setWidth(UnitValue.createPercentValue(100));
+            float[] widths = {22f, 16f, 10f, 8f, 14f, 14f, 14f, 14f, 24f};
+            Table table = new Table(widths).useAllAvailableWidth();
             String[] headers = {"Producto", "Lote", "Cant.", "UM", "Alm. Origen", "Ubic. Origen", "Alm. Destino", "Ubic. Destino", "Observaciones"};
             for (String h : headers) {
                 table.addHeaderCell(new Cell()
@@ -312,8 +310,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             }
             document.add(table);
 
-            Table firmas = new Table(UnitValue.createPercentArray(new float[]{25, 25, 25, 25}))
-                    .setWidth(UnitValue.createPercentValue(100))
+            Table firmas = new Table(new float[]{25f, 25f, 25f, 25f})
+                    .useAllAvailableWidth()
                     .setMarginTop(20f);
             for (int i = 0; i < 4; i++) {
                 firmas.addCell(new Cell().add(new Paragraph("____________________"))
