@@ -17,6 +17,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,9 +34,13 @@ public class SolicitudPorOrdenController {
 
     @GetMapping({"/por-orden", "/ordenes"})
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @Operation(summary = "Listar solicitudes agrupadas por orden de producción")
     public ResponseEntity<Page<SolicitudesPorOrdenDTO>> listarPorOrden(
+            @Parameter(description = "Estado de las solicitudes. Si se omite, se usa PENDIENTE por defecto")
             @RequestParam(required = false) EstadoSolicitudMovimiento estado,
+            @Parameter(description = "Filtrar desde esta fecha (inclusive)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @Parameter(description = "Filtrar hasta esta fecha (inclusive)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size

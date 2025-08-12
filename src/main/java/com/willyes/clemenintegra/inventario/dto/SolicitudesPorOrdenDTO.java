@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Collections;
 
 @Data
 @NoArgsConstructor
@@ -15,7 +16,12 @@ import java.util.List;
 public class SolicitudesPorOrdenDTO {
     private Long ordenProduccionId;
     private String codigoOrden;
-    private LocalDateTime fechaCreacionOrden;
+    private String estadoAgregado;
     private String solicitanteOrden;
+    private LocalDateTime fechaOrden;
     private List<SolicitudMovimientoItemDTO> items;
+
+    public List<SolicitudMovimientoItemDTO> getItems() {
+        return items != null ? items : Collections.emptyList();
+    }
 }

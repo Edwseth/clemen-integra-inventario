@@ -188,7 +188,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                                                          LocalDateTime desde,
                                                          LocalDateTime hasta,
                                                          Pageable pageable) {
-        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(null, estado, desde, hasta);
+        EstadoSolicitudMovimiento filtro = estado != null ? estado : EstadoSolicitudMovimiento.PENDIENTE;
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(null, filtro, desde, hasta);
         Map<Long, List<SolicitudMovimiento>> agrupadas = new LinkedHashMap<>();
         for (SolicitudMovimiento s : solicitudes) {
             if (s.getOrdenProduccion() == null) continue;
@@ -201,11 +202,13 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                     List<SolicitudMovimientoItemDTO> items = list.stream()
                             .map(this::toItemDTO)
                             .collect(Collectors.toList());
+                    String estadoAgregado = calcularEstadoAgregado(items);
                     return SolicitudesPorOrdenDTO.builder()
                             .ordenProduccionId(op.getId())
                             .codigoOrden(op.getCodigoOrden())
-                            .fechaCreacionOrden(op.getFechaInicio())
+                            .estadoAgregado(estadoAgregado)
                             .solicitanteOrden(op.getResponsable() != null ? op.getResponsable().getNombreCompleto() : null)
+                            .fechaOrden(op.getFechaInicio())
                             .items(items)
                             .build();
                 })
@@ -333,11 +336,26 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .nombreAlmacenOrigen(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : null)
                 .almacenDestinoId(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getId().longValue() : null)
                 .nombreAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : null)
-                .estado(s.getEstado())
+                .estado(s.getEstado() != null ? s.getEstado().name() : null)
                 .fechaSolicitud(s.getFechaSolicitud())
                 .usuarioSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
                 .observaciones(s.getObservaciones())
                 .build();
+    }
+
+    private String calcularEstadoAgregado(List<SolicitudMovimientoItemDTO> items) {
+        if (items == null || items.isEmpty()) {
+            return "PENDIENTE";
+        }
+        boolean todosPendientes = items.stream().allMatch(i -> "PENDIENTE".equals(i.getEstado()));
+        boolean todosAprobados = items.stream().allMatch(i -> "APROBADO".equals(i.getEstado()));
+        if (todosPendientes) {
+            return "PENDIENTE";
+        }
+        if (todosAprobados) {
+            return "APROBADO";
+        }
+        return "MIXTO";
     }
 
     private SolicitudMovimientoResponseDTO toResponse(SolicitudMovimiento s) {

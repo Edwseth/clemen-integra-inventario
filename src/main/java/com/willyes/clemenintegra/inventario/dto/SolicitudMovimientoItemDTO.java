@@ -1,6 +1,5 @@
 package com.willyes.clemenintegra.inventario.dto;
 
-import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,7 +23,7 @@ public class SolicitudMovimientoItemDTO {
     private String nombreAlmacenOrigen;
     private Long almacenDestinoId;
     private String nombreAlmacenDestino;
-    private EstadoSolicitudMovimiento estado;
+    private String estado;
     private LocalDateTime fechaSolicitud;
     private String usuarioSolicitante;
     private String observaciones;

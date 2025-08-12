@@ -37,17 +37,4 @@ public class CorsConfig {
             }
         };
     }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(java.util.List.of(ALLOWED_ORIGINS));
-        configuration.setAllowedMethods(java.util.List.of(ALLOWED_METHODS));
-        configuration.setAllowedHeaders(java.util.List.of(ALLOWED_HEADERS));
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
 }
