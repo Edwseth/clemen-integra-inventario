@@ -5,6 +5,9 @@ import com.willyes.clemenintegra.inventario.dto.SolicitudesPorOrdenDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,13 +23,14 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @RestController
-@RequestMapping("/api/inventario/solicitudes")
+@RequestMapping({"/api/inventario/solicitudes", "/api/inventarios/solicitudes"})
 @RequiredArgsConstructor
+@Slf4j
 public class SolicitudPorOrdenController {
 
     private final SolicitudMovimientoService service;
 
-    @GetMapping("/por-orden")
+    @GetMapping({"/por-orden", "/ordenes"})
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<SolicitudesPorOrdenDTO>> listarPorOrden(
             @RequestParam(required = false) EstadoSolicitudMovimiento estado,
@@ -38,6 +42,10 @@ public class SolicitudPorOrdenController {
         LocalDateTime desde = fechaDesde != null ? fechaDesde.atStartOfDay() : null;
         LocalDateTime hasta = fechaHasta != null ? fechaHasta.atTime(23, 59, 59) : null;
         Pageable pageable = PageRequest.of(page, size);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            log.debug("listarPorOrden invocado por {} con authorities {}", auth.getName(), auth.getAuthorities());
+        }
         return ResponseEntity.ok(service.listGroupByOrden(estado, desde, hasta, pageable));
     }
 

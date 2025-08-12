@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -15,6 +16,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -43,6 +49,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+
                     auth.requestMatchers(
                             "/api/auth/**",
                             "/v3/api-docs/**",
@@ -54,79 +62,108 @@ public class SecurityConfig {
                             "/configuration/security",
                             "/webjars/**",
                             "/api/calidad/evaluaciones/archivo/**"
-                        ).permitAll();
+                    ).permitAll();
 
-                        auth.requestMatchers(
-                                "/api/productos/**", "/api/ordenes-compra/**",
-                                "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**",
-                                "/api/proveedores/**", "/api/unidades/**",
-                                "/api/inventario/bitacora/**",
-                                "/api/inventario/historial-ordenes/**",
-                                "/api/inventario/ordenes-compra-detalle/**",
-                                "/api/inventario/tipos-movimiento-detalle/**"
-                        ).hasAnyAuthority(
-                                RolUsuario.ROL_ALMACENISTA.name(),
-                                RolUsuario.ROL_JEFE_ALMACENES.name(),
-                                RolUsuario.ROL_CONTADOR.name(),
-                                RolUsuario.ROL_JEFE_CALIDAD.name(),
-                                RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                                RolUsuario.ROL_MICROBIOLOGO.name(),
-                                RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                                RolUsuario.ROL_SUPER_ADMIN.name()
-                        );
-        auth.requestMatchers("/api/movimientos/**", "/api/categorias/**",
-                "/api/inventario/alertas/**").hasAnyAuthority(
-                RolUsuario.ROL_JEFE_ALMACENES.name(),
-                RolUsuario.ROL_ALMACENISTA.name(),
-                RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                RolUsuario.ROL_SUPER_ADMIN.name()
-        );
-        auth.requestMatchers("/api/calidad/**", "/api/lotes/**").hasAnyAuthority(
-                RolUsuario.ROL_JEFE_CALIDAD.name(),
-                RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                RolUsuario.ROL_MICROBIOLOGO.name(),
-                RolUsuario.ROL_SUPER_ADMIN.name()
-        );
-        auth.requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
-                RolUsuario.ROL_JEFE_CALIDAD.name(),
-                RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                RolUsuario.ROL_MICROBIOLOGO.name(),
-                RolUsuario.ROL_SUPER_ADMIN.name()
-        );
-        auth.requestMatchers("/api/produccion/**").hasAnyAuthority(
-                RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                RolUsuario.ROL_SUPER_ADMIN.name()
-        );
-        auth.requestMatchers("/api/bom/**").hasAnyAuthority(
-                RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                RolUsuario.ROL_JEFE_CALIDAD.name(),
-                RolUsuario.ROL_SUPER_ADMIN.name()
-        );
-        auth.requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
-                RolUsuario.ROL_CONTADOR.name(),
-                RolUsuario.ROL_SUPER_ADMIN.name()
-        );
-        auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
-                RolUsuario.ROL_ALMACENISTA.name(),
-                RolUsuario.ROL_JEFE_ALMACENES.name(),
-                RolUsuario.ROL_SUPER_ADMIN.name()
-        );
+                    auth.requestMatchers(
+                            "/api/productos/**", "/api/ordenes-compra/**",
+                            "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**",
+                            "/api/proveedores/**", "/api/unidades/**",
+                            "/api/inventario/bitacora/**",
+                            "/api/inventario/historial-ordenes/**",
+                            "/api/inventario/ordenes-compra-detalle/**",
+                            "/api/inventario/tipos-movimiento-detalle/**"
+                    ).hasAnyAuthority(
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
 
-        // Mantener esta regla genérica al final para que las reglas específicas previas tengan precedencia.
-        // Nuevas rutas específicas deben agregarse antes de esta sección.
-        auth.requestMatchers("/api/**").authenticated();
+                    auth.requestMatchers("/api/movimientos/**", "/api/categorias/**",
+                            "/api/inventario/alertas/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
 
-        auth.anyRequest().authenticated();
-    })
+                    auth.requestMatchers("/api/calidad/**", "/api/lotes/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/produccion/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
+                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/bom/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(
+                            "/api/inventarios/solicitudes/**",
+                            "/api/inventario/solicitudes/**"
+                    ).hasAnyAuthority(
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    // Mantener esta regla genérica al final para que las reglas específicas previas tengan precedencia.
+                    // Nuevas rutas específicas deben agregarse antes de esta sección.
+                    auth.requestMatchers("/api/**").authenticated();
+
+                    auth.anyRequest().authenticated();
+                })
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) ->
                                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autorizado"))
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(usuarioInactivoFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
