@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
-import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
-import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
@@ -11,14 +10,21 @@ import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -174,6 +180,164 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         solicitud.setObservaciones(observaciones);
         SolicitudMovimiento actualizada = repository.save(solicitud);
         return toResponse(actualizada);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<SolicitudesPorOrdenDTO> listGroupByOrden(EstadoSolicitudMovimiento estado,
+                                                         LocalDateTime desde,
+                                                         LocalDateTime hasta,
+                                                         Pageable pageable) {
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(null, estado, desde, hasta);
+        Map<Long, List<SolicitudMovimiento>> agrupadas = new LinkedHashMap<>();
+        for (SolicitudMovimiento s : solicitudes) {
+            if (s.getOrdenProduccion() == null) continue;
+            Long key = s.getOrdenProduccion().getId();
+            agrupadas.computeIfAbsent(key, k -> new ArrayList<>()).add(s);
+        }
+        List<SolicitudesPorOrdenDTO> dtos = agrupadas.values().stream()
+                .map(list -> {
+                    OrdenProduccion op = list.get(0).getOrdenProduccion();
+                    List<SolicitudMovimientoItemDTO> items = list.stream()
+                            .map(this::toItemDTO)
+                            .collect(Collectors.toList());
+                    return SolicitudesPorOrdenDTO.builder()
+                            .ordenProduccionId(op.getId())
+                            .codigoOrden(op.getCodigoOrden())
+                            .fechaCreacionOrden(op.getFechaInicio())
+                            .solicitanteOrden(op.getResponsable() != null ? op.getResponsable().getNombreCompleto() : null)
+                            .items(items)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), dtos.size());
+        List<SolicitudesPorOrdenDTO> contenido = start > end ? Collections.emptyList() : dtos.subList(start, end);
+        return new PageImpl<>(contenido, pageable, dtos.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PicklistDTO generarPicklist(Long ordenId, boolean incluirAprobadas) {
+        EstadoSolicitudMovimiento estado = incluirAprobadas ? null : EstadoSolicitudMovimiento.PENDIENTE;
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(ordenId, estado, null, null);
+        if (solicitudes.isEmpty()) {
+            throw new NoSuchElementException("No se encontraron solicitudes para la orden");
+        }
+        OrdenProduccion op = solicitudes.get(0).getOrdenProduccion();
+        String codigoOrden = op != null ? op.getCodigoOrden() : String.valueOf(ordenId);
+
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            document.addPage(page);
+            PDPageContentStream content = new PDPageContentStream(document, page);
+
+            float margin = 40f;
+            float y = page.getMediaBox().getHeight() - margin;
+
+            content.beginText();
+            content.setFont(PDType1Font.HELVETICA_BOLD, 14);
+            content.newLineAtOffset(margin, y);
+            content.showText("Picklist OP: " + codigoOrden);
+            content.endText();
+
+            y -= 20;
+            content.beginText();
+            content.setFont(PDType1Font.HELVETICA, 12);
+            content.newLineAtOffset(margin, y);
+            content.showText("Fecha: " + LocalDateTime.now().toLocalDate());
+            content.endText();
+
+            y -= 20;
+            String solicitante = solicitudes.get(0).getUsuarioSolicitante() != null ?
+                    solicitudes.get(0).getUsuarioSolicitante().getNombreCompleto() : "";
+            content.beginText();
+            content.setFont(PDType1Font.HELVETICA, 12);
+            content.newLineAtOffset(margin, y);
+            content.showText("Solicitante: " + solicitante);
+            content.endText();
+
+            y -= 30;
+            content.setFont(PDType1Font.HELVETICA_BOLD, 10);
+            String[] headers = {"Producto", "Lote", "Cantidad", "UM", "Alm. Origen", "Alm. Destino", "Observaciones"};
+            float[] widths = {80, 60, 60, 40, 80, 80, 140};
+            float x;
+            x = margin;
+            for (int i = 0; i < headers.length; i++) {
+                content.beginText();
+                content.newLineAtOffset(x, y);
+                content.showText(headers[i]);
+                content.endText();
+                x += widths[i];
+            }
+
+            y -= 15;
+            content.setFont(PDType1Font.HELVETICA, 9);
+            for (SolicitudMovimiento s : solicitudes) {
+                x = margin;
+                String[] valores = {
+                        s.getProducto() != null ? s.getProducto().getNombre() : "",
+                        s.getLote() != null ? s.getLote().getCodigoLote() : "",
+                        s.getCantidad() != null ? s.getCantidad().toString() : "",
+                        s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : "",
+                        s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : "",
+                        s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : "",
+                        s.getObservaciones() != null ? s.getObservaciones() : ""
+                };
+                for (int i = 0; i < valores.length; i++) {
+                    content.beginText();
+                    content.newLineAtOffset(x, y);
+                    content.showText(valores[i]);
+                    content.endText();
+                    x += widths[i];
+                }
+                y -= 15;
+                if (y <= margin) {
+                    content.close();
+                    page = new PDPage(PDRectangle.A4);
+                    document.addPage(page);
+                    content = new PDPageContentStream(document, page);
+                    y = page.getMediaBox().getHeight() - margin;
+                }
+            }
+
+            y -= 40;
+            content.beginText();
+            content.newLineAtOffset(margin, y);
+            content.showText("___________________________");
+            content.endText();
+            content.beginText();
+            content.newLineAtOffset(margin + 200, y);
+            content.showText("___________________________");
+            content.endText();
+
+            content.close();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.save(out);
+            return new PicklistDTO(codigoOrden, out.toByteArray());
+        } catch (Exception e) {
+            throw new RuntimeException("Error generando PDF", e);
+        }
+    }
+
+    private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s) {
+        return SolicitudMovimientoItemDTO.builder()
+                .solicitudId(s.getId())
+                .productoId(s.getProducto() != null ? s.getProducto().getId().longValue() : null)
+                .nombreProducto(s.getProducto() != null ? s.getProducto().getNombre() : null)
+                .codigoLote(s.getLote() != null ? s.getLote().getCodigoLote() : null)
+                .cantidadSolicitada(s.getCantidad())
+                .unidadMedida(s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : null)
+                .almacenOrigenId(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getId().longValue() : null)
+                .nombreAlmacenOrigen(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : null)
+                .almacenDestinoId(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getId().longValue() : null)
+                .nombreAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : null)
+                .estado(s.getEstado())
+                .fechaSolicitud(s.getFechaSolicitud())
+                .usuarioSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
+                .observaciones(s.getObservaciones())
+                .build();
     }
 
     private SolicitudMovimientoResponseDTO toResponse(SolicitudMovimiento s) {
