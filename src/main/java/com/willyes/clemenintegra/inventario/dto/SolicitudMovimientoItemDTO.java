@@ -21,8 +21,10 @@ public class SolicitudMovimientoItemDTO {
     private String unidadMedida;
     private Long almacenOrigenId;
     private String nombreAlmacenOrigen;
+    private String ubicacionAlmacenOrigen;
     private Long almacenDestinoId;
     private String nombreAlmacenDestino;
+    private String ubicacionAlmacenDestino;
     private String estado;
     private LocalDateTime fechaSolicitud;
     private String usuarioSolicitante;

@@ -10,11 +10,18 @@ import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.element.Text;
+import com.itextpdf.layout.property.TextAlignment;
+import com.itextpdf.layout.property.UnitValue;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -23,8 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -230,94 +239,96 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         }
         OrdenProduccion op = solicitudes.get(0).getOrdenProduccion();
         String codigoOrden = op != null ? op.getCodigoOrden() : String.valueOf(ordenId);
+        LocalDate fechaOrden = op != null && op.getFechaInicio() != null ? op.getFechaInicio().toLocalDate() : null;
+        String solicitante = op != null && op.getResponsable() != null
+                ? op.getResponsable().getNombreCompleto()
+                : (solicitudes.get(0).getUsuarioSolicitante() != null
+                ? solicitudes.get(0).getUsuarioSolicitante().getNombreCompleto()
+                : null);
 
-        try (PDDocument document = new PDDocument()) {
-            PDPage page = new PDPage(PDRectangle.A4);
-            document.addPage(page);
-            PDPageContentStream content = new PDPageContentStream(document, page);
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            PdfWriter writer = new PdfWriter(out);
+            PdfDocument pdf = new PdfDocument(writer);
+            Document document = new Document(pdf, PageSize.A4);
+            document.setMargins(36f, 36f, 36f, 36f);
 
-            float margin = 40f;
-            float y = page.getMediaBox().getHeight() - margin;
+            Table header = new Table(UnitValue.createPercentArray(new float[]{60, 40}))
+                    .setWidth(UnitValue.createPercentValue(100));
+            Cell left = new Cell().setBorder(Border.NO_BORDER);
+            left.add(new Paragraph()
+                    .add(new Text("Picklist OP: ").setBold().setFontSize(11))
+                    .add(new Text(codigoOrden != null ? codigoOrden : "-").setFontSize(10)));
+            left.add(new Paragraph()
+                    .add(new Text("Fecha OP: ").setBold().setFontSize(11))
+                    .add(new Text(fechaOrden != null ? fechaOrden.toString() : "-").setFontSize(10)));
+            Cell right = new Cell().setBorder(Border.NO_BORDER);
+            right.add(new Paragraph()
+                    .add(new Text("Solicitante: ").setBold().setFontSize(11))
+                    .add(new Text(solicitante != null ? solicitante : "-").setFontSize(10)));
+            header.addCell(left);
+            header.addCell(right);
+            header.setMarginBottom(10f);
+            document.add(header);
 
-            content.beginText();
-            content.setFont(PDType1Font.HELVETICA_BOLD, 14);
-            content.newLineAtOffset(margin, y);
-            content.showText("Picklist OP: " + codigoOrden);
-            content.endText();
-
-            y -= 20;
-            content.beginText();
-            content.setFont(PDType1Font.HELVETICA, 12);
-            content.newLineAtOffset(margin, y);
-            content.showText("Fecha: " + LocalDateTime.now().toLocalDate());
-            content.endText();
-
-            y -= 20;
-            String solicitante = solicitudes.get(0).getUsuarioSolicitante() != null ?
-                    solicitudes.get(0).getUsuarioSolicitante().getNombreCompleto() : "";
-            content.beginText();
-            content.setFont(PDType1Font.HELVETICA, 12);
-            content.newLineAtOffset(margin, y);
-            content.showText("Solicitante: " + solicitante);
-            content.endText();
-
-            y -= 30;
-            content.setFont(PDType1Font.HELVETICA_BOLD, 10);
-            String[] headers = {"Producto", "Lote", "Cantidad", "UM", "Alm. Origen", "Alm. Destino", "Observaciones"};
-            float[] widths = {80, 60, 60, 40, 80, 80, 140};
-            float x;
-            x = margin;
-            for (int i = 0; i < headers.length; i++) {
-                content.beginText();
-                content.newLineAtOffset(x, y);
-                content.showText(headers[i]);
-                content.endText();
-                x += widths[i];
+            float[] widths = {22, 16, 10, 8, 14, 14, 14, 14, 24};
+            Table table = new Table(UnitValue.createPercentArray(widths))
+                    .setWidth(UnitValue.createPercentValue(100));
+            String[] headers = {"Producto", "Lote", "Cant.", "UM", "Alm. Origen", "Ubic. Origen", "Alm. Destino", "Ubic. Destino", "Observaciones"};
+            for (String h : headers) {
+                table.addHeaderCell(new Cell()
+                        .add(new Paragraph(h).setFontSize(9).setBold())
+                        .setBackgroundColor(new DeviceRgb(0xF2, 0xF2, 0xF2))
+                        .setPadding(6)
+                        .setTextAlignment(TextAlignment.LEFT));
             }
 
-            y -= 15;
-            content.setFont(PDType1Font.HELVETICA, 9);
+            int index = 0;
             for (SolicitudMovimiento s : solicitudes) {
-                x = margin;
-                String[] valores = {
-                        s.getProducto() != null ? s.getProducto().getNombre() : "",
-                        s.getLote() != null ? s.getLote().getCodigoLote() : "",
-                        s.getCantidad() != null ? s.getCantidad().toString() : "",
-                        s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : "",
-                        s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : "",
-                        s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : "",
-                        s.getObservaciones() != null ? s.getObservaciones() : ""
-                };
+                index++;
+                boolean zebra = index % 2 == 0;
+                DeviceRgb zebraColor = new DeviceRgb(0xFA, 0xFA, 0xFA);
+
+                String producto = s.getProducto() != null ? s.getProducto().getNombre() : "-";
+                String lote = s.getLote() != null ? s.getLote().getCodigoLote() : "-";
+                String cantidad = s.getCantidad() != null ? String.format(Locale.US, "%,.3f", s.getCantidad()) : "-";
+                String um = s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : "-";
+                String almOrig = s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : "-";
+                String ubicOrig = s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getUbicacion() : "-";
+                String almDest = s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : "-";
+                String ubicDest = s.getAlmacenDestino() != null ? s.getAlmacenDestino().getUbicacion() : "-";
+                String obs = s.getObservaciones() != null ? s.getObservaciones() : "-";
+
+                String[] valores = {producto, lote, cantidad, um, almOrig, ubicOrig, almDest, ubicDest, obs};
                 for (int i = 0; i < valores.length; i++) {
-                    content.beginText();
-                    content.newLineAtOffset(x, y);
-                    content.showText(valores[i]);
-                    content.endText();
-                    x += widths[i];
-                }
-                y -= 15;
-                if (y <= margin) {
-                    content.close();
-                    page = new PDPage(PDRectangle.A4);
-                    document.addPage(page);
-                    content = new PDPageContentStream(document, page);
-                    y = page.getMediaBox().getHeight() - margin;
+                    Cell cell = new Cell()
+                            .add(new Paragraph(valores[i]).setFontSize(9))
+                            .setPadding(5)
+                            .setTextAlignment(i == 2 ? TextAlignment.RIGHT : TextAlignment.LEFT);
+                    if (zebra) {
+                        cell.setBackgroundColor(zebraColor);
+                    }
+                    table.addCell(cell);
                 }
             }
+            document.add(table);
 
-            y -= 40;
-            content.beginText();
-            content.newLineAtOffset(margin, y);
-            content.showText("___________________________");
-            content.endText();
-            content.beginText();
-            content.newLineAtOffset(margin + 200, y);
-            content.showText("___________________________");
-            content.endText();
+            Table firmas = new Table(UnitValue.createPercentArray(new float[]{25, 25, 25, 25}))
+                    .setWidth(UnitValue.createPercentValue(100))
+                    .setMarginTop(20f);
+            for (int i = 0; i < 4; i++) {
+                firmas.addCell(new Cell().add(new Paragraph("____________________"))
+                        .setBorder(Border.NO_BORDER)
+                        .setTextAlignment(TextAlignment.CENTER));
+            }
+            String[] labels = {"Alistó", "Verificó", "Entregó", "Recibió"};
+            for (String l : labels) {
+                firmas.addCell(new Cell().add(new Paragraph(l).setFontSize(9))
+                        .setBorder(Border.NO_BORDER)
+                        .setTextAlignment(TextAlignment.CENTER));
+            }
+            document.add(firmas);
 
-            content.close();
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            document.save(out);
+            document.close();
             return new PicklistDTO(codigoOrden, out.toByteArray());
         } catch (Exception e) {
             throw new RuntimeException("Error generando PDF", e);
@@ -334,8 +345,10 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .unidadMedida(s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : null)
                 .almacenOrigenId(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getId().longValue() : null)
                 .nombreAlmacenOrigen(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : null)
+                .ubicacionAlmacenOrigen(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getUbicacion() : "-")
                 .almacenDestinoId(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getId().longValue() : null)
                 .nombreAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : null)
+                .ubicacionAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getUbicacion() : "-")
                 .estado(s.getEstado() != null ? s.getEstado().name() : null)
                 .fechaSolicitud(s.getFechaSolicitud())
                 .usuarioSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
