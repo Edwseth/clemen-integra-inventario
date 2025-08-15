@@ -11,8 +11,7 @@ import java.time.LocalDateTime;
         @UniqueConstraint(name = "un_nombre_usuario_UNIQUE", columnNames = "nombre_usuario"),
         @UniqueConstraint(name = "un_correo_usuario_UNIQUE", columnNames = "correo")
 })
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

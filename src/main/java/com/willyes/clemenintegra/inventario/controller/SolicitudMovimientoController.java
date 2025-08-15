@@ -4,11 +4,14 @@ import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,6 +24,7 @@ import java.util.List;
 public class SolicitudMovimientoController {
 
     private final SolicitudMovimientoService service;
+    private final UsuarioService usuarioService;
 
     @PostMapping
     public ResponseEntity<SolicitudMovimientoResponseDTO> crear(@RequestBody SolicitudMovimientoRequestDTO dto) {
@@ -42,8 +46,11 @@ public class SolicitudMovimientoController {
     @PutMapping("/{id}/aprobar")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> aprobar(@PathVariable Long id,
-                                                                  @RequestParam Long responsableId) {
-        return ResponseEntity.ok(service.aprobarSolicitud(id, responsableId));
+                                                                  Authentication authentication) {
+        String username = authentication.getName();
+        Usuario usuario = usuarioService.buscarPorNombreUsuario(username);
+        Long usuarioId = usuario.getId();
+        return ResponseEntity.ok(service.aprobarSolicitud(id, usuarioId));
     }
 
     @PutMapping("/{id}/rechazar")
