@@ -27,6 +27,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -66,9 +69,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     @Resource
     private final EntityManager entityManager;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            log.warn("Intento de registrar movimiento sin autenticación válida");
+            throw new AuthenticationCredentialsNotFoundException("No se encontró autenticación válida");
+        }
+
         MovimientoInventario movimiento = mapper.toEntity(dto);
 
         // 1. Cargar entidades principales

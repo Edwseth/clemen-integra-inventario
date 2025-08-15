@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 
 @Service
 public class UsuarioService {
@@ -21,6 +22,10 @@ public class UsuarioService {
 
     public Usuario obtenerUsuarioAutenticado() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new AuthenticationCredentialsNotFoundException("No se encontró autenticación válida");
+        }
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         return usuarioRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));

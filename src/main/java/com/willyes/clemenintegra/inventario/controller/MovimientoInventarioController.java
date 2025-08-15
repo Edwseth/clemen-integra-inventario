@@ -22,6 +22,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -50,6 +51,7 @@ public class MovimientoInventarioController {
     @ApiResponse(responseCode = "404", description = "Producto o lote no encontrado")
     @ApiResponse(responseCode = "409", description = "No hay suficiente stock disponible")
     @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
         try {
@@ -93,6 +95,11 @@ public class MovimientoInventarioController {
             log.error("Violación de integridad en la base de datos", e);
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "Datos inválidos o faltantes"));
+
+        } catch (AuthenticationCredentialsNotFoundException e) {
+            log.warn("Acceso no autorizado: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", e.getMessage()));
 
         } catch (Exception e) {
             log.error("Error inesperado al registrar movimiento", e);
