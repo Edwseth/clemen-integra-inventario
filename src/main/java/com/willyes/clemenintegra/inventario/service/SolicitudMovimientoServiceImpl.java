@@ -143,6 +143,9 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         if (solicitud.getEstado() != EstadoSolicitudMovimiento.PENDIENTE) {
             throw new IllegalStateException("La solicitud ya fue procesada");
         }
+        if (solicitud.getMotivoMovimiento() == null) {
+            throw new IllegalStateException("La solicitud no tiene un motivo de movimiento asignado.");
+        }
         Usuario responsable = usuarioRepository.findById(responsableId)
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
         solicitud.setUsuarioResponsable(responsable);
@@ -161,14 +164,14 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                         solicitud.getLote() != null ? solicitud.getLote().getId() : null,
                         solicitud.getAlmacenOrigen() != null ? solicitud.getAlmacenOrigen().getId().intValue() : null,
                         solicitud.getAlmacenDestino() != null ? solicitud.getAlmacenDestino().getId().intValue() : null,
-                        null,
-                        null,
-                        null,
-                        null,
+                        solicitud.getProveedor() != null ? solicitud.getProveedor().getId().intValue() : null,
+                        solicitud.getOrdenCompra() != null ? solicitud.getOrdenCompra().getId().intValue() : null,
+                        solicitud.getMotivoMovimiento().getId(),
+                        solicitud.getTipoMovimientoDetalle() != null ? solicitud.getTipoMovimientoDetalle().getId() : null,
                         responsableId,
                         null,
-                        null,
-                        null,
+                        solicitud.getCodigoLote(),
+                        solicitud.getFechaVencimiento(),
                         null
                 )
         );
