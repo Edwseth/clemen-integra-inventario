@@ -17,7 +17,6 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
@@ -25,6 +24,9 @@ import com.itextpdf.layout.properties.TextAlignment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +53,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Override
     @Transactional
     public SolicitudMovimientoResponseDTO registrarSolicitud(SolicitudMovimientoRequestDTO dto) {
+        validarAutenticacion();
         Producto producto = productoRepository.findById(dto.getProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
 
@@ -134,6 +137,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Override
     @Transactional
     public SolicitudMovimientoResponseDTO aprobarSolicitud(Long id, Long responsableId) {
+        validarAutenticacion();
         SolicitudMovimiento solicitud = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
         if (solicitud.getEstado() != EstadoSolicitudMovimiento.PENDIENTE) {
@@ -176,6 +180,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Override
     @Transactional
     public SolicitudMovimientoResponseDTO rechazarSolicitud(Long id, Long responsableId, String observaciones) {
+        validarAutenticacion();
         SolicitudMovimiento solicitud = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
         if (solicitud.getEstado() != EstadoSolicitudMovimiento.PENDIENTE) {
@@ -189,6 +194,13 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         solicitud.setObservaciones(observaciones);
         SolicitudMovimiento actualizada = repository.save(solicitud);
         return toResponse(actualizada);
+    }
+
+    private void validarAutenticacion() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Token inválido o no proporcionado");
+        }
     }
 
     @Override

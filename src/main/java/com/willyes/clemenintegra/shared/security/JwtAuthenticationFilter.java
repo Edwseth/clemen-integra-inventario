@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.shared.security;
 
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,8 +10,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -47,8 +50,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // ✅ Aquí sí es seguro poner el log
                 log.info("Authorities asignadas: {}", authResult.getAuthorities());
             } catch (AuthenticationException ex) {
-                log.warn("Autenticación JWT fallida en {}: {}", request.getRequestURI(), ex.getMessage());
-                log.debug("Solicitud no autorizada en {}", request.getRequestURI());
+                Throwable cause = ex.getCause();
+                if (cause instanceof ExpiredJwtException) {
+                    log.warn("Token expirado en {}", requestURI);
+                } else if (cause instanceof SignatureException) {
+                    log.warn("Firma de token inválida en {}", requestURI);
+                } else if (cause instanceof UsernameNotFoundException) {
+                    log.warn("Usuario no encontrado al procesar token en {}", requestURI);
+                } else {
+                    log.warn("Autenticación JWT fallida en {}: {}", requestURI, ex.getMessage());
+                }
+                log.debug("Solicitud no autorizada en {}", requestURI);
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, ex.getMessage());
                 return;
             } catch (Exception ex) {
