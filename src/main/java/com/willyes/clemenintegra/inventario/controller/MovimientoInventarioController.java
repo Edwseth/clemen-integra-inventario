@@ -91,6 +91,11 @@ public class MovimientoInventarioController {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", e.getMessage()));
 
+        } catch (IllegalStateException e) {
+            log.warn("Estado inválido: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", e.getMessage()));
+
         } catch (DataIntegrityViolationException e) {
             log.error("Violación de integridad en la base de datos", e);
             return ResponseEntity.badRequest()

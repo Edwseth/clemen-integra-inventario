@@ -11,8 +11,10 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -43,6 +45,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -65,6 +68,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final MovimientoInventarioRepository repository;
     private final MovimientoInventarioMapper mapper;
     private final UsuarioService usuarioService;
+    private final SolicitudMovimientoRepository solicitudMovimientoRepository;
 
     @Resource
     private final EntityManager entityManager;
@@ -77,6 +81,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 || "anonymousUser".equals(authentication.getPrincipal())) {
             log.warn("Intento de registrar movimiento sin autenticación válida");
             throw new AuthenticationCredentialsNotFoundException("No se encontró autenticación válida");
+        }
+
+        if (dto.tipoMovimientoDetalleId() == null) {
+            throw new IllegalArgumentException("tipo_movimiento_detalle_id es obligatorio"); // [Codex Edit]
         }
 
         MovimientoInventario movimiento = mapper.toEntity(dto);
@@ -96,6 +104,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 : usuarioService.obtenerUsuarioAutenticado();
 
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
+
+        SolicitudMovimiento solicitud = null; // [Codex Edit]
+        if (dto.solicitudMovimientoId() != null) {
+            solicitud = solicitudMovimientoRepository.findById(dto.solicitudMovimientoId())
+                    .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
+            if (solicitud.getEstado() == EstadoSolicitudMovimiento.EJECUTADA) {
+                throw new IllegalStateException("La solicitud ya fue ejecutada");
+            }
+            if (solicitud.getEstado() != EstadoSolicitudMovimiento.APROBADO) {
+                throw new IllegalArgumentException("La solicitud no está aprobada");
+            }
+        }
 
         // Detección automática de devolución interna
         boolean devolucionInterna = false;
@@ -142,7 +162,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         LoteProducto lote;
 
         if (tipoMovimiento == TipoMovimiento.RECEPCION) {
-            lote = crearLoteRecepcion(dto, producto, almacenDestino, usuario, cantidad);
+            if (dto.ordenCompraId() == null) {
+                throw new IllegalArgumentException("Las recepciones sin Orden de Compra deben usar un lote existente");
+            }
+            lote = crearLoteRecepcion(dto, producto, almacenDestino, usuario, cantidad, motivoMovimiento);
         } else {
             lote = procesarMovimientoConLoteExistente(dto, tipoMovimiento, almacenOrigen,
                     almacenDestino, producto, cantidad, devolucionInterna);
@@ -171,8 +194,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setTipoMovimientoDetalle(dto.tipoMovimientoDetalleId() != null
                 ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null);
         movimiento.setRegistradoPor(usuario);
+        if (solicitud != null) {
+            movimiento.setSolicitudMovimiento(solicitud);
+        }
 
         MovimientoInventario guardado = repository.save(movimiento);
+        if (solicitud != null) {
+            solicitud.setEstado(EstadoSolicitudMovimiento.EJECUTADA);
+            solicitudMovimientoRepository.save(solicitud);
+        }
         return mapper.toResponseDTO(guardado);
     }
 
@@ -320,7 +350,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private LoteProducto crearLoteRecepcion(MovimientoInventarioDTO dto, Producto producto,
-                                            Almacen destino, Usuario usuario, BigDecimal cantidad) {
+                                            Almacen destino, Usuario usuario, BigDecimal cantidad,
+                                            MotivoMovimiento motivoMovimiento) {
         if (dto.loteProductoId() != null) {
             LoteProducto existente = loteProductoRepository.findById(dto.loteProductoId())
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
@@ -328,6 +359,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             existente.setStockLote(nuevo);
             existente.setAlmacen(destino);
             return loteProductoRepository.save(existente);
+        }
+
+        if (motivoMovimiento == null ||
+                motivoMovimiento.getMotivo() != ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
+            throw new IllegalArgumentException("Solo la recepción de compra puede crear un nuevo lote");
         }
 
         LoteProducto lote = LoteProducto.builder()
@@ -358,18 +394,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         LoteProducto loteOrigen = loteProductoRepository.findById(dto.loteProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
-        if (loteOrigen.getEstado() == EstadoLote.EN_CUARENTENA || loteOrigen.getEstado() == EstadoLote.RETENIDO) {
-            throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
-        }
-
-        if (loteOrigen.getEstado() == EstadoLote.VENCIDO) {
-            if (dto.motivoMovimientoId() == null) {
-                throw new IllegalStateException("No se puede mover: el lote está vencido");
-            }
-            MotivoMovimiento motivo = entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId());
-            if (motivo.getMotivo() != ClasificacionMovimientoInventario.AJUSTE_NEGATIVO) {
-                throw new IllegalStateException("No se puede mover: el lote está vencido");
-            }
+        if (EnumSet.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO,
+                EstadoLote.RECHAZADO, EstadoLote.VENCIDO).contains(loteOrigen.getEstado())) {
+            throw new IllegalStateException("El lote no se puede mover por su estado actual");
         }
 
         // Declaración necesaria (si aún no está)

@@ -48,7 +48,6 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     private final AlmacenRepository almacenRepository;
     private final OrdenProduccionRepository ordenProduccionRepository;
     private final UsuarioRepository usuarioRepository;
-    private final MovimientoInventarioService movimientoService;
 
     @Override
     @Transactional
@@ -146,36 +145,14 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         if (solicitud.getMotivoMovimiento() == null) {
             throw new IllegalStateException("La solicitud no tiene un motivo de movimiento asignado.");
         }
+        if (solicitud.getTipoMovimientoDetalle() == null) {
+            throw new IllegalStateException("Falta tipo de detalle de movimiento");
+        }
         Usuario responsable = usuarioRepository.findById(responsableId)
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
         solicitud.setUsuarioResponsable(responsable);
         solicitud.setEstado(EstadoSolicitudMovimiento.APROBADO);
         solicitud.setFechaResolucion(LocalDateTime.now());
-
-        // CODEx: aprobar actualmente crea un movimiento simple sin lógica FIFO ni prellenado
-        movimientoService.registrarMovimiento(
-                new com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO(
-                        null,
-                        solicitud.getCantidad(),
-                        solicitud.getTipoMovimiento(),
-                        null,
-                        solicitud.getObservaciones(),
-                        solicitud.getProducto().getId().intValue(),
-                        solicitud.getLote() != null ? solicitud.getLote().getId() : null,
-                        solicitud.getAlmacenOrigen() != null ? solicitud.getAlmacenOrigen().getId().intValue() : null,
-                        solicitud.getAlmacenDestino() != null ? solicitud.getAlmacenDestino().getId().intValue() : null,
-                        solicitud.getProveedor() != null ? solicitud.getProveedor().getId().intValue() : null,
-                        solicitud.getOrdenCompra() != null ? solicitud.getOrdenCompra().getId().intValue() : null,
-                        solicitud.getMotivoMovimiento().getId(),
-                        solicitud.getTipoMovimientoDetalle() != null ? solicitud.getTipoMovimientoDetalle().getId() : null,
-                        responsableId,
-                        null,
-                        solicitud.getCodigoLote(),
-                        solicitud.getFechaVencimiento(),
-                        null
-                )
-        );
-
         SolicitudMovimiento actualizada = repository.save(solicitud);
         return toResponse(actualizada);
     }

@@ -64,7 +64,6 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             lote.setEstado(EstadoLote.DISPONIBLE);
         } else {
             lote.setEstado(EstadoLote.EN_CUARENTENA);
-            lote.setEstado(EstadoLote.DISPONIBLE);
         }
 
         lote = loteRepo.saveAndFlush(lote); // sin try-catch, lo maneja el ControllerAdvice

@@ -20,6 +20,7 @@ public interface MovimientoInventarioMapper {
     //@Mapping(target = "registradoPor", ignore = true)
     //@Mapping(target = "ordenCompraDetalle", ignore = true)
     //@Mapping(target = "fechaIngreso", ignore = true)
+    @Mapping(target = "solicitudMovimiento", ignore = true)
     MovimientoInventario toEntity(MovimientoInventarioDTO dto);
 
     // Convertir entidad a DTO básico (para uso interno)
@@ -32,6 +33,7 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "motivoMovimientoId", expression = "java(movimiento.getMotivoMovimiento() != null ? movimiento.getMotivoMovimiento().getId() : null)")
     @Mapping(target = "tipoMovimientoDetalleId", expression = "java(movimiento.getTipoMovimientoDetalle() != null ? movimiento.getTipoMovimientoDetalle().getId() : null)")
     @Mapping(target = "ordenCompraDetalleId", expression = "java(movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null)")
+    @Mapping(target = "solicitudMovimientoId", expression = "java(movimiento.getSolicitudMovimiento() != null ? movimiento.getSolicitudMovimiento().getId() : null)")
     MovimientoInventarioDTO toDTO(MovimientoInventario movimiento);
 
     // Convertir a DTO de respuesta (más completo para vistas)
