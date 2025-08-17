@@ -12,8 +12,9 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -43,7 +44,6 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
@@ -110,10 +110,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             solicitud = solicitudMovimientoRepository.findById(dto.solicitudMovimientoId())
                     .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
             if (solicitud.getEstado() == EstadoSolicitudMovimiento.EJECUTADA) {
-                throw new IllegalStateException("La solicitud ya fue ejecutada");
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud ya fue ejecutada");
             }
-            if (solicitud.getEstado() != EstadoSolicitudMovimiento.APROBADO) {
-                throw new IllegalArgumentException("La solicitud no está aprobada");
+            if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud no está autorizada");
             }
         }
 

@@ -13,6 +13,7 @@ public interface SolicitudMovimientoService {
     List<SolicitudMovimientoResponseDTO> listarSolicitudes(EstadoSolicitudMovimiento estado, LocalDateTime desde, LocalDateTime hasta);
     SolicitudMovimientoResponseDTO aprobarSolicitud(Long id, Long responsableId);
     SolicitudMovimientoResponseDTO rechazarSolicitud(Long id, Long responsableId, String observaciones);
+    SolicitudMovimientoResponseDTO revertirAutorizacion(Long id, Long responsableId);
 
     Page<SolicitudesPorOrdenDTO> listGroupByOrden(EstadoSolicitudMovimiento estado,
                                                   LocalDateTime desde,

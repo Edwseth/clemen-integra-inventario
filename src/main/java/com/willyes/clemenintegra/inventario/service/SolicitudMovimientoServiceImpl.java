@@ -29,6 +29,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -50,6 +52,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     private final UsuarioRepository usuarioRepository;
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
+    private final MovimientoInventarioRepository movimientoInventarioRepository;
 
     @Override
     @Transactional
@@ -166,7 +169,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         Usuario responsable = usuarioRepository.findById(responsableId)
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
         solicitud.setUsuarioResponsable(responsable);
-        solicitud.setEstado(EstadoSolicitudMovimiento.APROBADO);
+        solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
         solicitud.setFechaResolucion(LocalDateTime.now());
         SolicitudMovimiento actualizada = repository.save(solicitud);
         return toResponse(actualizada);
@@ -187,6 +190,25 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         solicitud.setEstado(EstadoSolicitudMovimiento.RECHAZADO);
         solicitud.setFechaResolucion(LocalDateTime.now());
         solicitud.setObservaciones(observaciones);
+        SolicitudMovimiento actualizada = repository.save(solicitud);
+        return toResponse(actualizada);
+    }
+
+    @Override
+    @Transactional
+    public SolicitudMovimientoResponseDTO revertirAutorizacion(Long id, Long responsableId) {
+        validarAutenticacion();
+        SolicitudMovimiento solicitud = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
+        if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
+            throw new IllegalStateException("La solicitud no está autorizada");
+        }
+        if (movimientoInventarioRepository.existsBySolicitudMovimientoId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud ya tiene un movimiento registrado");
+        }
+        solicitud.setEstado(EstadoSolicitudMovimiento.PENDIENTE);
+        solicitud.setUsuarioResponsable(null);
+        solicitud.setFechaResolucion(null);
         SolicitudMovimiento actualizada = repository.save(solicitud);
         return toResponse(actualizada);
     }
@@ -368,12 +390,12 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             return "PENDIENTE";
         }
         boolean todosPendientes = items.stream().allMatch(i -> "PENDIENTE".equals(i.getEstado()));
-        boolean todosAprobados = items.stream().allMatch(i -> "APROBADO".equals(i.getEstado()));
+        boolean todosAutorizados = items.stream().allMatch(i -> "AUTORIZADA".equals(i.getEstado()));
         if (todosPendientes) {
             return "PENDIENTE";
         }
-        if (todosAprobados) {
-            return "APROBADO";
+        if (todosAutorizados) {
+            return "AUTORIZADA";
         }
         return "MIXTO";
     }

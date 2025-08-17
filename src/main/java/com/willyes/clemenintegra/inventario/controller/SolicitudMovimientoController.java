@@ -60,4 +60,14 @@ public class SolicitudMovimientoController {
                                                                    @RequestParam(required = false) String observaciones) {
         return ResponseEntity.ok(service.rechazarSolicitud(id, responsableId, observaciones));
     }
+
+    @PutMapping("/{id}/revertir-autorizacion")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    public ResponseEntity<SolicitudMovimientoResponseDTO> revertir(@PathVariable Long id,
+                                                                   Authentication authentication) {
+        String username = authentication.getName();
+        Usuario usuario = usuarioService.buscarPorNombreUsuario(username);
+        Long usuarioId = usuario.getId();
+        return ResponseEntity.ok(service.revertirAutorizacion(id, usuarioId));
+    }
 }

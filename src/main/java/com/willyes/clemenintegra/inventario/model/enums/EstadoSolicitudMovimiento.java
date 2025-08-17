@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.inventario.model.enums;
 
 public enum EstadoSolicitudMovimiento {
     PENDIENTE,
-    APROBADO,
+    AUTORIZADA,
     RECHAZADO,
     EJECUTADA
 }
