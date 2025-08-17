@@ -50,6 +50,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponseDTO> handleIllegalState(IllegalStateException ex,
+                                                               HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponseDTO> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
                                                                HttpServletRequest request) {

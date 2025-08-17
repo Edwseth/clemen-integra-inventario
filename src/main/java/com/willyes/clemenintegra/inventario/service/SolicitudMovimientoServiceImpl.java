@@ -48,6 +48,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     private final AlmacenRepository almacenRepository;
     private final OrdenProduccionRepository ordenProduccionRepository;
     private final UsuarioRepository usuarioRepository;
+    private final MotivoMovimientoRepository motivoMovimientoRepository;
+    private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
 
     @Override
     @Transactional
@@ -99,6 +101,17 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                     .orElseThrow(() -> new NoSuchElementException("Usuario responsable no encontrado"));
         }
 
+        MotivoMovimiento motivoMovimiento = null;
+        if (dto.getMotivoMovimientoId() != null) {
+            motivoMovimiento = motivoMovimientoRepository.findById(dto.getMotivoMovimientoId())
+                    .orElseThrow(() -> new NoSuchElementException("Motivo de movimiento no encontrado"));
+        }
+        TipoMovimientoDetalle tipoMovimientoDetalle = null;
+        if (dto.getTipoMovimientoDetalleId() != null) {
+            tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(dto.getTipoMovimientoDetalleId())
+                    .orElseThrow(() -> new NoSuchElementException("Tipo de detalle de movimiento no encontrado"));
+        }
+
         SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
                 .tipoMovimiento(dto.getTipoMovimiento())
                 .producto(producto)
@@ -106,6 +119,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .cantidad(dto.getCantidad())
                 .almacenOrigen(origen)
                 .almacenDestino(destino)
+                .motivoMovimiento(motivoMovimiento)
+                .tipoMovimientoDetalle(tipoMovimientoDetalle)
                 .ordenProduccion(orden)
                 .usuarioSolicitante(solicitante)
                 .usuarioResponsable(responsable)
@@ -143,10 +158,10 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             throw new IllegalStateException("La solicitud ya fue procesada");
         }
         if (solicitud.getMotivoMovimiento() == null) {
-            throw new IllegalStateException("La solicitud no tiene un motivo de movimiento asignado.");
+            throw new IllegalArgumentException("La solicitud no tiene un motivo de movimiento asignado.");
         }
         if (solicitud.getTipoMovimientoDetalle() == null) {
-            throw new IllegalStateException("Falta tipo de detalle de movimiento");
+            throw new IllegalArgumentException("Falta tipo de detalle de movimiento");
         }
         Usuario responsable = usuarioRepository.findById(responsableId)
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
@@ -339,6 +354,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .almacenDestinoId(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getId().longValue() : null)
                 .nombreAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : null)
                 .ubicacionAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getUbicacion() : "-")
+                .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
+                .tipoMovimientoDetalleId(s.getTipoMovimientoDetalle() != null ? s.getTipoMovimientoDetalle().getId() : null)
                 .estado(s.getEstado() != null ? s.getEstado().name() : null)
                 .fechaSolicitud(s.getFechaSolicitud())
                 .usuarioSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
@@ -375,6 +392,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .almacenDestinoId(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getId() : null)
                 .nombreAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : null)
                 .ordenProduccionId(s.getOrdenProduccion() != null ? s.getOrdenProduccion().getId() : null)
+                .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
+                .tipoMovimientoDetalleId(s.getTipoMovimientoDetalle() != null ? s.getTipoMovimientoDetalle().getId() : null)
                 .nombreSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
                 .nombreResponsable(s.getUsuarioResponsable() != null ? s.getUsuarioResponsable().getNombreCompleto() : null)
                 .estado(s.getEstado())

@@ -6,6 +6,8 @@ import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
+import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
@@ -16,6 +18,7 @@ import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -44,6 +47,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final SolicitudMovimientoService solicitudMovimientoService;
     private final OrdenProduccionRepository repository;
     private final OrdenProduccionMapper ordenProduccionMapper;
+    private final MotivoMovimientoRepository motivoMovimientoRepository;
+    private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
 
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -118,15 +123,26 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         OrdenProduccion guardada = repository.save(orden);
 
+        Long motivoId = motivoMovimientoRepository
+                .findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION)
+                .map(m -> m.getId())
+                .orElseThrow(() -> new IllegalStateException("Motivo TRANSFERENCIA_INTERNA_PRODUCCION no configurado"));
+        Long tipoDetalleId = tipoMovimientoDetalleRepository
+                .findByDescripcion("SALIDA_PRODUCCION")
+                .map(t -> t.getId())
+                .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
+
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();
             BigDecimal cantidad = cantidadesEscaladas.get(insumoId);
             SolicitudMovimientoRequestDTO req = SolicitudMovimientoRequestDTO.builder()
-                    .tipoMovimiento(TipoMovimiento.SALIDA)
+                    .tipoMovimiento(TipoMovimiento.TRANSFERENCIA)
                     .productoId(insumoId)
                     .cantidad(cantidad)
                     .ordenProduccionId(guardada.getId())
                     .usuarioSolicitanteId(guardada.getResponsable().getId())
+                    .motivoMovimientoId(motivoId)
+                    .tipoMovimientoDetalleId(tipoDetalleId)
                     .build();
             solicitudMovimientoService.registrarSolicitud(req);
         }
