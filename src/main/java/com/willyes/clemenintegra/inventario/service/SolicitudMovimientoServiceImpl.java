@@ -152,10 +152,10 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estado));
         }
         if (almacenOrigenId != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenOrigen", javax.persistence.criteria.JoinType.LEFT).get("id"), almacenOrigenId));
+            spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenOrigen", jakarta.persistence.criteria.JoinType.LEFT).get("id"), almacenOrigenId));
         }
         if (almacenDestinoId != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenDestino", javax.persistence.criteria.JoinType.LEFT).get("id"), almacenDestinoId));
+            spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenDestino", jakarta.persistence.criteria.JoinType.LEFT).get("id"), almacenDestinoId));
         }
         if (desde != null) {
             spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fechaSolicitud"), desde));
@@ -166,9 +166,9 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         if (busqueda != null && !busqueda.isBlank()) {
             String like = "%" + busqueda.toLowerCase() + "%";
             spec = spec.and((root, query, cb) -> {
-                var productoJoin = root.join("producto", javax.persistence.criteria.JoinType.LEFT);
-                var solicitanteJoin = root.join("usuarioSolicitante", javax.persistence.criteria.JoinType.LEFT);
-                var ordenJoin = root.join("ordenProduccion", javax.persistence.criteria.JoinType.LEFT);
+                var productoJoin = root.join("producto", jakarta.persistence.criteria.JoinType.LEFT);
+                var solicitanteJoin = root.join("usuarioSolicitante", jakarta.persistence.criteria.JoinType.LEFT);
+                var ordenJoin = root.join("ordenProduccion", jakarta.persistence.criteria.JoinType.LEFT);
                 return cb.or(
                         cb.like(cb.lower(productoJoin.get("nombre")), like),
                         cb.like(cb.lower(solicitanteJoin.get("nombreCompleto")), like),
