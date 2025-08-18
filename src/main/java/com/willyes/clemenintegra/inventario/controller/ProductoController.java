@@ -18,7 +18,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -157,8 +159,12 @@ public class ProductoController {
 
     @GetMapping
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerTodos(
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<ProductoResponseDTO> productos = productoService.listarTodos(pageable);
+            @PageableDefault(size = 10, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+            return ResponseEntity.badRequest().build();
+        }
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaCreacion", "id", "nombre"), "fechaCreacion");
+        Page<ProductoResponseDTO> productos = productoService.listarTodos(sanitized);
         return ResponseEntity.ok(productos);
     }
 

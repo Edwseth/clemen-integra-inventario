@@ -3,10 +3,11 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioResponseDTO;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface AjusteInventarioService {
-    List<AjusteInventarioResponseDTO> listar();
+    Page<AjusteInventarioResponseDTO> listar(Pageable pageable);
     AjusteInventarioResponseDTO crear(AjusteInventarioRequestDTO dto);
     void eliminar(Long id);
 }

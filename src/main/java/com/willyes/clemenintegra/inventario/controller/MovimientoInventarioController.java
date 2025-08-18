@@ -19,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -172,7 +173,11 @@ public class MovimientoInventarioController {
     @GetMapping
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> listarTodos(
             @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<MovimientoInventarioResponseDTO> movimientos = service.listarTodos(pageable);
+        if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+            return ResponseEntity.badRequest().build();
+        }
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaIngreso", "id"), "fechaIngreso");
+        Page<MovimientoInventarioResponseDTO> movimientos = service.listarTodos(sanitized);
         return ResponseEntity.ok(movimientos);
     }
 

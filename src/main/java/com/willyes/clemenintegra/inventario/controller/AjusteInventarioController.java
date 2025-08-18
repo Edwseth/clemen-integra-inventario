@@ -2,8 +2,12 @@ package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.service.AjusteInventarioService;
+import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,8 +21,13 @@ public class AjusteInventarioController {
     private final AjusteInventarioService service;
 
     @GetMapping
-    public ResponseEntity<List<AjusteInventarioResponseDTO>> listar() {
-        return ResponseEntity.ok(service.listar());
+    public ResponseEntity<Page<AjusteInventarioResponseDTO>> listar(
+            @PageableDefault(size = 10, sort = "fecha") Pageable pageable) {
+        if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+            return ResponseEntity.badRequest().build();
+        }
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fecha"), "fecha");
+        return ResponseEntity.ok(service.listar(sanitized));
     }
 
     @PostMapping
