@@ -24,6 +24,7 @@ import com.itextpdf.layout.properties.TextAlignment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -136,19 +137,48 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     }
 
     @Override
-    // CODEx: servicio que alimenta el listado de solicitudes
-    public List<SolicitudMovimientoResponseDTO> listarSolicitudes(EstadoSolicitudMovimiento estado, LocalDateTime desde, LocalDateTime hasta) {
-        List<SolicitudMovimiento> lista;
+    @Transactional(readOnly = true)
+    // servicio que alimenta el listado de solicitudes con paginación y filtros
+    public Page<SolicitudMovimientoListadoDTO> listarSolicitudes(EstadoSolicitudMovimiento estado,
+                                                                 String busqueda,
+                                                                 Long almacenOrigenId,
+                                                                 Long almacenDestinoId,
+                                                                 LocalDateTime desde,
+                                                                 LocalDateTime hasta,
+                                                                 Pageable pageable) {
+        Specification<SolicitudMovimiento> spec = Specification.where(null);
+
         if (estado != null) {
-            lista = repository.findByEstado(estado);
-        } else {
-            lista = repository.findAll();
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estado));
         }
-        return lista.stream()
-                .filter(s -> desde == null || !s.getFechaSolicitud().isBefore(desde))
-                .filter(s -> hasta == null || !s.getFechaSolicitud().isAfter(hasta))
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        if (almacenOrigenId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenOrigen", javax.persistence.criteria.JoinType.LEFT).get("id"), almacenOrigenId));
+        }
+        if (almacenDestinoId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenDestino", javax.persistence.criteria.JoinType.LEFT).get("id"), almacenDestinoId));
+        }
+        if (desde != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fechaSolicitud"), desde));
+        }
+        if (hasta != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("fechaSolicitud"), hasta));
+        }
+        if (busqueda != null && !busqueda.isBlank()) {
+            String like = "%" + busqueda.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> {
+                var productoJoin = root.join("producto", javax.persistence.criteria.JoinType.LEFT);
+                var solicitanteJoin = root.join("usuarioSolicitante", javax.persistence.criteria.JoinType.LEFT);
+                var ordenJoin = root.join("ordenProduccion", javax.persistence.criteria.JoinType.LEFT);
+                return cb.or(
+                        cb.like(cb.lower(productoJoin.get("nombre")), like),
+                        cb.like(cb.lower(solicitanteJoin.get("nombreCompleto")), like),
+                        cb.like(cb.lower(ordenJoin.get("codigoOrden")), like)
+                );
+            });
+        }
+
+        return repository.findAll(spec, pageable)
+                .map(this::toListadoDTO);
     }
 
     @Override
@@ -422,6 +452,25 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .fechaSolicitud(s.getFechaSolicitud())
                 .fechaResolucion(s.getFechaResolucion())
                 .observaciones(s.getObservaciones())
+                .build();
+    }
+
+    private SolicitudMovimientoListadoDTO toListadoDTO(SolicitudMovimiento s) {
+        String op;
+        if (s.getOrdenProduccion() != null) {
+            op = s.getOrdenProduccion().getCodigoOrden();
+        } else if (s.getId() != null) {
+            op = s.getId().toString();
+        } else {
+            op = "";
+        }
+        return SolicitudMovimientoListadoDTO.builder()
+                .id(s.getId())
+                .op(op)
+                .fechaSolicitud(s.getFechaSolicitud())
+                .items(1)
+                .estado(s.getEstado() != null ? s.getEstado().name() : "")
+                .solicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : "")
                 .build();
     }
 }

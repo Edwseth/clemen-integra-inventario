@@ -1,9 +1,11 @@
 package com.willyes.clemenintegra.inventario.controller;
 
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoListadoDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
+import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +14,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,15 +37,19 @@ public class SolicitudMovimientoController {
     }
 
     @GetMapping
-    // CODEx: endpoint que lista las solicitudes de movimiento
-    public ResponseEntity<List<SolicitudMovimientoResponseDTO>> listar(
+    // endpoint que lista las solicitudes de movimiento con paginación
+    public ResponseEntity<Page<SolicitudMovimientoListadoDTO>> listar(
+            @PageableDefault(size = 10, sort = "fechaSolicitud", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(required = false) EstadoSolicitudMovimiento estado,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta
+            @RequestParam(required = false) String busqueda,
+            @RequestParam(required = false) Long almacenOrigenId,
+            @RequestParam(required = false) Long almacenDestinoId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta
     ) {
-        LocalDateTime d = desde != null ? desde.atStartOfDay() : null;
-        LocalDateTime h = hasta != null ? hasta.atTime(23,59,59) : null;
-        return ResponseEntity.ok(service.listarSolicitudes(estado, d, h));
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaSolicitud", "estado", "id"), "fechaSolicitud");
+        Page<SolicitudMovimientoListadoDTO> page = service.listarSolicitudes(estado, busqueda, almacenOrigenId, almacenDestinoId, fechaDesde, fechaHasta, sanitized);
+        return ResponseEntity.ok(page);
     }
 
     @PutMapping("/{id}/aprobar")
