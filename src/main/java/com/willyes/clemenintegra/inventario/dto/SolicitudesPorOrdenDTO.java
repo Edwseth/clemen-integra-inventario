@@ -16,10 +16,12 @@ import java.util.Collections;
 public class SolicitudesPorOrdenDTO {
     private Long ordenProduccionId;
     private String codigoOrden;
+    private String op;
     private String estadoAgregado;
     private String solicitanteOrden;
     private LocalDateTime fechaOrden;
     private List<SolicitudMovimientoItemDTO> items;
+    private Integer itemsCount;
 
     public List<SolicitudMovimientoItemDTO> getItems() {
         return items != null ? items : Collections.emptyList();

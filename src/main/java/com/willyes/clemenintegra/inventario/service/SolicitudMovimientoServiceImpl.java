@@ -274,10 +274,12 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                     return SolicitudesPorOrdenDTO.builder()
                             .ordenProduccionId(op.getId())
                             .codigoOrden(op.getCodigoOrden())
+                            .op(op.getCodigoOrden())
                             .estadoAgregado(estadoAgregado)
                             .solicitanteOrden(op.getResponsable() != null ? op.getResponsable().getNombreCompleto() : null)
                             .fechaOrden(op.getFechaInicio())
                             .items(items)
+                            .itemsCount(items.size())
                             .build();
                 })
                 .collect(Collectors.toList());
