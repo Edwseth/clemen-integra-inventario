@@ -24,6 +24,7 @@ import com.itextpdf.layout.properties.TextAlignment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -284,10 +285,50 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 })
                 .collect(Collectors.toList());
 
+        Sort.Order order = pageable.getSort().isEmpty()
+                ? Sort.Order.desc("fechaOrden")
+                : pageable.getSort().iterator().next();
+        Comparator<SolicitudesPorOrdenDTO> comparator;
+        if ("codigoOrden".equals(order.getProperty()) || "op".equals(order.getProperty())) {
+            comparator = Comparator.comparing(SolicitudesPorOrdenDTO::getCodigoOrden,
+                    Comparator.nullsLast(String::compareTo));
+        } else {
+            comparator = Comparator.comparing(SolicitudesPorOrdenDTO::getFechaOrden,
+                    Comparator.nullsLast(LocalDateTime::compareTo));
+        }
+        if (order.getDirection().isDescending()) {
+            comparator = comparator.reversed();
+        }
+        dtos.sort(comparator);
+
         int start = (int) pageable.getOffset();
         int end = Math.min(start + pageable.getPageSize(), dtos.size());
         List<SolicitudesPorOrdenDTO> contenido = start > end ? Collections.emptyList() : dtos.subList(start, end);
         return new PageImpl<>(contenido, pageable, dtos.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SolicitudesPorOrdenDTO obtenerPorOrden(Long ordenId) {
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(ordenId, null, null, null);
+        if (solicitudes.isEmpty()) {
+            throw new NoSuchElementException("No se encontraron solicitudes para la orden");
+        }
+        OrdenProduccion op = solicitudes.get(0).getOrdenProduccion();
+        List<SolicitudMovimientoItemDTO> items = solicitudes.stream()
+                .map(this::toItemDTO)
+                .collect(Collectors.toList());
+        String estadoAgregado = calcularEstadoAgregado(items);
+        return SolicitudesPorOrdenDTO.builder()
+                .ordenProduccionId(op.getId())
+                .codigoOrden(op.getCodigoOrden())
+                .op(op.getCodigoOrden())
+                .estadoAgregado(estadoAgregado)
+                .solicitanteOrden(op.getResponsable() != null ? op.getResponsable().getNombreCompleto() : null)
+                .fechaOrden(op.getFechaInicio())
+                .items(items)
+                .itemsCount(items.size())
+                .build();
     }
 
     @Override

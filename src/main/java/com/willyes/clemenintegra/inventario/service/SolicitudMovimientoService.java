@@ -25,5 +25,7 @@ public interface SolicitudMovimientoService {
                                                   LocalDateTime hasta,
                                                   Pageable pageable);
 
+    SolicitudesPorOrdenDTO obtenerPorOrden(Long ordenId);
+
     PicklistDTO generarPicklist(Long ordenId, boolean incluirAprobadas);
 }

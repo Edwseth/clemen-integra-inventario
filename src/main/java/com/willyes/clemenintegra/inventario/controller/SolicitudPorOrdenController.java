@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -43,16 +44,27 @@ public class SolicitudPorOrdenController {
             @Parameter(description = "Filtrar hasta esta fecha (inclusive)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "fechaOrden,desc") String sort
     ) {
         LocalDateTime desde = fechaDesde != null ? fechaDesde.atStartOfDay() : null;
         LocalDateTime hasta = fechaHasta != null ? fechaHasta.atTime(23, 59, 59) : null;
-        Pageable pageable = PageRequest.of(page, size);
+        String[] partes = sort.split(",");
+        Sort sortObj = partes.length == 2
+                ? Sort.by(Sort.Direction.fromString(partes[1]), partes[0])
+                : Sort.by(partes[0]);
+        Pageable pageable = PageRequest.of(page, size, sortObj);
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null) {
             log.debug("listarPorOrden invocado por {} con authorities {}", auth.getName(), auth.getAuthorities());
         }
         return ResponseEntity.ok(service.listGroupByOrden(estado, desde, hasta, pageable));
+    }
+
+    @GetMapping("/orden/{ordenId}")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public ResponseEntity<SolicitudesPorOrdenDTO> obtenerPorOrden(@PathVariable Long ordenId) {
+        return ResponseEntity.ok(service.obtenerPorOrden(ordenId));
     }
 
     @GetMapping("/orden/{ordenId}/picklist")
