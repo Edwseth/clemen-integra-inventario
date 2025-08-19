@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +17,6 @@ import java.util.Collections;
 public class SolicitudesPorOrdenDTO {
     private Long ordenProduccionId;
     private String codigoOrden;
-    private String op;
     private String estadoAgregado;
     private String solicitanteOrden;
     private LocalDateTime fechaOrden;
@@ -25,5 +25,10 @@ public class SolicitudesPorOrdenDTO {
 
     public List<SolicitudMovimientoItemDTO> getItems() {
         return items != null ? items : Collections.emptyList();
+    }
+
+    @JsonProperty("op")
+    public String getOp() {
+        return codigoOrden;
     }
 }
