@@ -73,14 +73,14 @@ public class ProductoServiceImpl implements ProductoService {
                 System.out.println("📦 Producto cargado: " + p.getId() + " - " + p.getNombre());
             }
         });
-        return productos.map(productoMapper::safeToDto);
+        return productos.map(this::buildDto);
     }
 
     public List<ProductoResponseDTO> buscarPorCategoria(String categoria) {
         TipoCategoria tipo = TipoCategoria.valueOf(categoria.toUpperCase());
         return productoRepository.findByCategoriaProducto_Tipo(tipo)
                 .stream()
-                .map(ProductoResponseDTO::new)
+                .map(this::buildDto)
                 .collect(Collectors.toList());
     }
 
@@ -88,7 +88,7 @@ public class ProductoServiceImpl implements ProductoService {
         TipoCategoria tipoEnum = TipoCategoria.valueOf(tipo); // conversión aquí
         return productoRepository.findByCategoriaProducto_Tipo(tipoEnum)
                 .stream()
-                .map(productoMapper::toDto)
+                .map(this::buildDto)
                 .toList();
     }
 
@@ -98,7 +98,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .toList();
         return productoRepository.findByCategoriaProducto_TipoIn(tiposEnum)
                 .stream()
-                .map(productoMapper::toDto)
+                .map(this::buildDto)
                 .toList();
     }
 
@@ -133,7 +133,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .build();
 
         productoRepository.save(producto);
-        return productoMapper.toDto(producto);
+        return buildDto(producto);
     }
 
     private void validarDuplicados(String sku, String nombre) {
@@ -159,7 +159,7 @@ public class ProductoServiceImpl implements ProductoService {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
-        return productoMapper.toDto(producto);
+        return buildDto(producto);
     }
 
     public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto) {
@@ -191,7 +191,7 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setCreadoPor(usuario);
 
         productoRepository.save(producto);
-        return productoMapper.toDto(producto);
+        return buildDto(producto);
     }
 
     @Transactional
@@ -213,18 +213,38 @@ public class ProductoServiceImpl implements ProductoService {
         return new UnidadMedidaResponseDTO(unidad.getId(), unidad.getNombre(), unidad.getSimbolo());
     }
 
+    // PROD-INACTIVAR BEGIN
     public void eliminarProducto(Long id) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
-
-        // Aquí debes validar relaciones activas (ejemplo con lotes)
-        boolean tieneRelacion = loteProductoRepository.existsByProducto(producto);
-        if (tieneRelacion) {
-            throw new IllegalStateException("No se puede eliminar el producto porque tiene lotes registrados.");
+        boolean hasLotes = loteProductoRepository.existsByProducto(producto);
+        boolean hasMovimientos = movimientoInventarioRepository.existsByProductoId(id);
+        if (hasLotes || hasMovimientos) {
+            throw new IllegalStateException("El producto tiene dependencias y no puede eliminarse");
         }
-
         productoRepository.delete(producto);
     }
+
+    public ProductoResponseDTO actualizarEstado(Long id, Boolean activo) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
+        producto.setActivo(Boolean.TRUE.equals(activo));
+        productoRepository.save(producto);
+        return buildDto(producto);
+    }
+    // PROD-INACTIVAR END
+
+    // PROD-FLAGS BEGIN
+    private ProductoResponseDTO buildDto(Producto producto) {
+        ProductoResponseDTO dto = productoMapper.toDto(producto);
+        dto.setEditable(producto.isActivo());
+        boolean hasLotes = loteProductoRepository.existsByProducto(producto);
+        boolean hasMovimientos = movimientoInventarioRepository.existsByProductoId(producto.getId().longValue());
+        dto.setEliminable(!hasLotes && !hasMovimientos);
+        dto.setInactivable(true);
+        return dto;
+    }
+    // PROD-FLAGS END
 
     public List<ProductoConEstadoLoteDTO> buscarProductosConLotesPorEstado(String estado) {
         EstadoLote estadoEnum = EstadoLote.valueOf(estado.toUpperCase());

@@ -103,12 +103,27 @@ public class ProductoController {
         return ResponseEntity.ok(actualizado);
     }
 
+    // PROD-INACTIVAR BEGIN
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        productoService.eliminarProducto(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        try {
+            productoService.eliminarProducto(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("code", "PRODUCT_HAS_DEPENDENCIES", "message", e.getMessage()));
+        }
     }
+
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    public ResponseEntity<ProductoResponseDTO> cambiarEstado(@PathVariable Long id,
+                                                             @RequestBody ProductoEstadoRequestDTO body) {
+        ProductoResponseDTO dto = productoService.actualizarEstado(id, body.activo());
+        return ResponseEntity.ok(dto);
+    }
+    // PROD-INACTIVAR END
 
     @PutMapping("/{id}/unidad-medida")
     public ResponseEntity<?> cambiarUnidadMedida(

@@ -24,6 +24,15 @@ public class ProductoResponseDTO {
     private String unidadMedida;
     private String categoria;
     private LocalDateTime fechaCreacion;
+    // PROD-DETAIL-IDS BEGIN
+    private Long unidadMedidaId;
+    private Long categoriaProductoId;
+    // PROD-DETAIL-IDS END
+    // PROD-FLAGS BEGIN
+    private Boolean editable;
+    private Boolean eliminable;
+    private Boolean inactivable;
+    // PROD-FLAGS END
 
     public ProductoResponseDTO(Producto producto) {
         this.id = producto.getId().longValue();
@@ -38,6 +47,14 @@ public class ProductoResponseDTO {
         this.unidadMedida = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null;
         this.categoria = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null;
         this.fechaCreacion = producto.getFechaCreacion();
+        // PROD-DETAIL-IDS BEGIN
+        this.unidadMedidaId = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null;
+        this.categoriaProductoId = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null;
+        // PROD-DETAIL-IDS END
+        // PROD-FLAGS BEGIN
+        this.editable = producto.isActivo();
+        this.inactivable = true;
+        // PROD-FLAGS END
     }
 
     public Long getId() {return id;}
@@ -64,5 +81,19 @@ public class ProductoResponseDTO {
     public void setCategoria(String categoria) {this.categoria = categoria;}
     public LocalDateTime getFechaCreacion() {return fechaCreacion;}
     public void setFechaCreacion(LocalDateTime fechaCreacion) {this.fechaCreacion = fechaCreacion;}
+    // PROD-DETAIL-IDS BEGIN
+    public Long getUnidadMedidaId() {return unidadMedidaId;}
+    public void setUnidadMedidaId(Long unidadMedidaId) {this.unidadMedidaId = unidadMedidaId;}
+    public Long getCategoriaProductoId() {return categoriaProductoId;}
+    public void setCategoriaProductoId(Long categoriaProductoId) {this.categoriaProductoId = categoriaProductoId;}
+    // PROD-DETAIL-IDS END
+    // PROD-FLAGS BEGIN
+    public Boolean getEditable() {return editable;}
+    public void setEditable(Boolean editable) {this.editable = editable;}
+    public Boolean getEliminable() {return eliminable;}
+    public void setEliminable(Boolean eliminable) {this.eliminable = eliminable;}
+    public Boolean getInactivable() {return inactivable;}
+    public void setInactivable(Boolean inactivable) {this.inactivable = inactivable;}
+    // PROD-FLAGS END
 }
 

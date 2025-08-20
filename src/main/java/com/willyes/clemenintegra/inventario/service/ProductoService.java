@@ -16,6 +16,9 @@ public interface ProductoService {
     ProductoResponseDTO crearProducto(ProductoRequestDTO dto);
     ProductoResponseDTO obtenerPorId(Long id);
     ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto);
+    // PROD-INACTIVAR BEGIN
+    ProductoResponseDTO actualizarEstado(Long id, Boolean activo);
+    // PROD-INACTIVAR END
     UnidadMedidaResponseDTO cambiarUnidadMedida(Long productoId, UnidadMedidaRequestDTO dto);
     void eliminarProducto(Long id);
     List<ProductoConEstadoLoteDTO> buscarProductosConLotesPorEstado(String estado);
