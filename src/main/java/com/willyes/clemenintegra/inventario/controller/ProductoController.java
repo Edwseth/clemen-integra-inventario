@@ -174,12 +174,16 @@ public class ProductoController {
 
     @GetMapping
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerTodos(
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) String codigoSku,
+            @RequestParam(required = false) Long categoriaProductoId,
+            @RequestParam(required = false) Boolean activo,
             @PageableDefault(size = 10, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             return ResponseEntity.badRequest().build();
         }
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaCreacion", "id", "nombre"), "fechaCreacion");
-        Page<ProductoResponseDTO> productos = productoService.listarTodos(sanitized);
+        Page<ProductoResponseDTO> productos = productoService.listarTodos(nombre, codigoSku, categoriaProductoId, activo, sanitized);
         return ResponseEntity.ok(productos);
     }
 

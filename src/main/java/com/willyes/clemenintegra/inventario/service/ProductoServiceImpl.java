@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import static com.willyes.clemenintegra.inventario.service.spec.ProductoSpecifications.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -60,10 +62,17 @@ public class ProductoServiceImpl implements ProductoService {
         throw new IllegalStateException("No se pudo extraer el token JWT");
     }
 
-    public Page<ProductoResponseDTO> listarTodos(Pageable pageable) {
+    public Page<ProductoResponseDTO> listarTodos(String nombre, String codigoSku, Long categoriaProductoId, Boolean activo, Pageable pageable) {
 
         System.out.println("🟢 Entró correctamente a ProductoServiceImpl.listarTodos()");
-        Page<Producto> productos = productoRepository.findAll(pageable);
+
+        Specification<Producto> spec = Specification
+                .where(nombreContains(nombre))
+                .and(codigoSkuContains(codigoSku))
+                .and(categoriaProductoIdEquals(categoriaProductoId))
+                .and(activoEquals(activo));
+
+        Page<Producto> productos = productoRepository.findAll(spec, pageable);
         System.out.println("▶️ Total productos devueltos: " + productos.getTotalElements());
 
         productos.forEach(p -> {
@@ -73,6 +82,7 @@ public class ProductoServiceImpl implements ProductoService {
                 System.out.println("📦 Producto cargado: " + p.getId() + " - " + p.getNombre());
             }
         });
+
         return productos.map(this::buildDto);
     }
 
