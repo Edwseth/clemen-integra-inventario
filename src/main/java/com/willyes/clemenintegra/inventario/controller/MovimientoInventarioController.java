@@ -125,8 +125,9 @@ public class MovimientoInventarioController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable
     ) {
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaIngreso", "id"), "fechaIngreso");
         Page<MovimientoInventarioResponseDTO> page = service.filtrar(
-                fechaInicio, fechaFin, productoId, almacenId, tipoMovimiento, clasificacion, pageable
+                fechaInicio, fechaFin, productoId, almacenId, tipoMovimiento, clasificacion, sanitized
         );
         return ResponseEntity.ok(page);
     }
@@ -148,7 +149,7 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping("/reporte-excel")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD')")
     public ResponseEntity<byte[]> exportarReporteMovimientos() throws IOException {
         byte[] contenido;
 
