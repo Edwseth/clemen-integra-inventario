@@ -46,6 +46,15 @@ public class ProductoController {
     private final ProductoRepository productoRepo;
     private final LoteProductoRepository loteRepo;
 
+    @GetMapping("/buscar")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION')")
+    public ResponseEntity<Page<ProductoOptionDTO>> buscarProductos(
+            @RequestParam(name = "q", required = false) String q,
+            @PageableDefault(size = 10, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<ProductoOptionDTO> page = productoService.buscarOpciones(q, pageable);
+        return ResponseEntity.ok(page);
+    }
+
     @GetMapping("/categoria/{nombre}")
     public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
             @PathVariable String nombre) {

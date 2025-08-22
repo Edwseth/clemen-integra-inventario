@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import static com.willyes.clemenintegra.inventario.service.spec.ProductoSpecifications.*;
 
@@ -352,6 +354,26 @@ public class ProductoServiceImpl implements ProductoService {
             return TipoAnalisisCalidad.NINGUNO;
         }
         return TipoAnalisisCalidad.valueOf(valor);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable) {
+        Sort sort = pageable.getSort();
+        Sort safe = Sort.by(sort.stream()
+                .map(o -> switch (o.getProperty()) {
+                    case "nombre", "codigoSku", "id" -> o;
+                    default -> new Sort.Order(o.isAscending() ? Sort.Direction.ASC : Sort.Direction.DESC, "nombre");
+                }).toList());
+        Pageable safePage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
+
+        Page<Producto> page = productoRepository.buscarPorTexto(q, safePage);
+        return page.map(p -> ProductoOptionDTO.builder()
+                .id(p.getId() == null ? null : Long.valueOf(p.getId()))
+                .nombre(p.getNombre())
+                .codigoSku(p.getCodigoSku())
+                .build()
+        );
     }
 
     @Override

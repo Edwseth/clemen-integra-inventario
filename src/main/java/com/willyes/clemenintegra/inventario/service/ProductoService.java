@@ -33,4 +33,6 @@ public interface ProductoService {
      * @throws IllegalArgumentException si no existe el producto
      */
     Producto findById(Long id);
+
+    Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable);
 }
