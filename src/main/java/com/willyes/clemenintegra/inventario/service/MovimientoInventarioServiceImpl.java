@@ -44,7 +44,9 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -203,7 +205,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             solicitud.setEstado(EstadoSolicitudMovimiento.EJECUTADA);
             solicitudMovimientoRepository.save(solicitud);
         }
-        return mapper.toResponseDTO(guardado);
+        return mapper.safeToResponseDTO(guardado);
     }
 
     @Override
@@ -214,23 +216,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         Page<MovimientoInventario> movimientos = repository.findAll(sortedPageable);
-        return movimientos.map(mapper::toResponseDTO);
+        return movimientos.map(mapper::safeToResponseDTO);
     }
 
+    @Transactional(readOnly = true)
     @Override
-    public Page<MovimientoInventario> consultarMovimientosConFiltros(
-            MovimientoInventarioFiltroDTO filtro, Pageable pageable) {
-        LocalDateTime inicio = filtro.fechaInicio() != null ? filtro.fechaInicio().atStartOfDay() : null;
-        LocalDateTime fin = filtro.fechaFin() != null ? filtro.fechaFin().atTime(23, 59, 59) : null;
-        return repository.filtrarMovimientos(
-                filtro.productoId(),
-                filtro.almacenId(),
-                filtro.tipoMovimiento(),
-                filtro.clasificacion(),
-                inicio,
-                fin,
-                pageable
-        );
+    public Page<MovimientoInventarioResponseDTO> filtrar(
+            LocalDate fechaInicio, LocalDate fechaFin,
+            Long productoId, Long almacenId,
+            TipoMovimiento tipoMovimiento, ClasificacionMovimientoInventario clasificacion,
+            Pageable pageable) {
+        LocalDateTime inicio = (fechaInicio != null) ? fechaInicio.atStartOfDay() : null;
+        LocalDateTime fin = (fechaFin != null) ? fechaFin.atTime(LocalTime.MAX) : null;
+        Page<MovimientoInventario> page = repository.filtrar(
+                inicio, fin, productoId, almacenId, tipoMovimiento, clasificacion, pageable);
+        return page.map(mapper::safeToResponseDTO);
     }
 
     @Override
@@ -239,14 +239,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         LocalDateTime fin = filtro.fechaFin() != null ? filtro.fechaFin().atTime(23, 59, 59) : null;
 
         List<MovimientoInventario> lista = repository.buscarMovimientos(
+                inicio, fin,
                 filtro.productoId(),
                 filtro.almacenId(),
                 filtro.tipoMovimiento(),
-                filtro.clasificacion(),
-                inicio,
-                fin
+                filtro.clasificacion()
         );
-        return lista.stream().map(mapper::toResponseDTO).toList();
+        return lista.stream().map(mapper::safeToResponseDTO).toList();
     }
 
     @Override

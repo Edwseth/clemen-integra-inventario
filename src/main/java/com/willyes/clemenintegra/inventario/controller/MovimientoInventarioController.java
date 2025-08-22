@@ -7,7 +7,6 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
-import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
@@ -79,7 +78,7 @@ public class MovimientoInventarioController {
 
             // 2) Registrar movimiento
             MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto);
-            log.info("Movimiento registrado correctamente: {}", creado.id());
+            log.info("Movimiento registrado correctamente: {}", creado.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(creado);
 
         } catch (NoSuchElementException e) {
@@ -117,7 +116,7 @@ public class MovimientoInventarioController {
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
-    public ResponseEntity<Page<MovimientoInventario>> filtrar(
+    public ResponseEntity<Page<MovimientoInventarioResponseDTO>> filtrar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) TipoMovimiento tipoMovimiento,
@@ -126,11 +125,10 @@ public class MovimientoInventarioController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        MovimientoInventarioFiltroDTO filtro = new MovimientoInventarioFiltroDTO(
-                productoId, almacenId, tipoMovimiento, clasificacion, fechaInicio, fechaFin
+        Page<MovimientoInventarioResponseDTO> page = service.filtrar(
+                fechaInicio, fechaFin, productoId, almacenId, tipoMovimiento, clasificacion, pageable
         );
-        Page<MovimientoInventario> resultados = service.consultarMovimientosConFiltros(filtro, pageable);
-        return ResponseEntity.ok(resultados);
+        return ResponseEntity.ok(page);
     }
 
     @GetMapping("/buscar")

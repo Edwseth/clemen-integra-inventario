@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,50 +16,50 @@ import java.util.List;
 
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
 
+    @EntityGraph(attributePaths = {
+            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor"
+    })
     @Query("""
-    SELECT m FROM MovimientoInventario m LEFT JOIN m.motivoMovimiento mm
-    WHERE (:productoId IS NULL OR m.producto.id = :productoId)
-      AND (
-        :almacenId IS NULL OR
-        m.almacenOrigen.id = :almacenId OR
-        m.almacenDestino.id = :almacenId
-      )
-      AND (:tipoMovimiento IS NULL OR m.tipoMovimiento = :tipoMovimiento)
-      AND (:clasificacion IS NULL OR mm.motivo = :clasificacion)
-      AND (:fechaInicio IS NULL OR m.fechaIngreso >= :fechaInicio)
-      AND (:fechaFin IS NULL OR m.fechaIngreso <= :fechaFin)
-""")
-    Page<MovimientoInventario> filtrarMovimientos(
+    select m
+      from MovimientoInventario m
+      where (:inicio is null or m.fechaIngreso >= :inicio)
+        and (:fin    is null or m.fechaIngreso <= :fin)
+        and (:productoId is null or m.producto.id = :productoId)
+        and (:almacenId  is null or m.almacenOrigen.id = :almacenId or m.almacenDestino.id = :almacenId)
+        and (:tipoMovimiento is null or m.tipoMovimiento = :tipoMovimiento)
+        and (:clasificacion  is null or m.clasificacion = :clasificacion)
+    """)
+    Page<MovimientoInventario> filtrar(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
             @Param("productoId") Long productoId,
             @Param("almacenId") Long almacenId,
             @Param("tipoMovimiento") TipoMovimiento tipoMovimiento,
             @Param("clasificacion") ClasificacionMovimientoInventario clasificacion,
-            @Param("fechaInicio") LocalDateTime fechaInicio,
-            @Param("fechaFin") LocalDateTime fechaFin,
             Pageable pageable
     );
 
+    @EntityGraph(attributePaths = {
+            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor"
+    })
     @Query("""
-    SELECT m FROM MovimientoInventario m LEFT JOIN m.motivoMovimiento mm
-    WHERE (:productoId IS NULL OR m.producto.id = :productoId)
-      AND (
-        :almacenId IS NULL OR
-        m.almacenOrigen.id = :almacenId OR
-        m.almacenDestino.id = :almacenId
-      )
-      AND (:tipoMovimiento IS NULL OR m.tipoMovimiento = :tipoMovimiento)
-      AND (:clasificacion IS NULL OR mm.motivo = :clasificacion)
-      AND (:fechaInicio IS NULL OR m.fechaIngreso >= :fechaInicio)
-      AND (:fechaFin IS NULL OR m.fechaIngreso <= :fechaFin)
-    ORDER BY m.fechaIngreso DESC
-""")
+    select m
+      from MovimientoInventario m
+      where (:inicio is null or m.fechaIngreso >= :inicio)
+        and (:fin    is null or m.fechaIngreso <= :fin)
+        and (:productoId is null or m.producto.id = :productoId)
+        and (:almacenId  is null or m.almacenOrigen.id = :almacenId or m.almacenDestino.id = :almacenId)
+        and (:tipoMovimiento is null or m.tipoMovimiento = :tipoMovimiento)
+        and (:clasificacion  is null or m.clasificacion = :clasificacion)
+      order by m.fechaIngreso desc
+    """)
     List<MovimientoInventario> buscarMovimientos(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
             @Param("productoId") Long productoId,
             @Param("almacenId") Long almacenId,
             @Param("tipoMovimiento") TipoMovimiento tipoMovimiento,
-            @Param("clasificacion") ClasificacionMovimientoInventario clasificacion,
-            @Param("fechaInicio") LocalDateTime fechaInicio,
-            @Param("fechaFin") LocalDateTime fechaFin
+            @Param("clasificacion") ClasificacionMovimientoInventario clasificacion
     );
 
     @Query("""

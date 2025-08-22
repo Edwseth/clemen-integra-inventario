@@ -30,6 +30,10 @@ public class MovimientoInventario {
     @Column(name = "tipo_mov", nullable = false, length = 20)
     private TipoMovimiento tipoMovimiento;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "clasificacion", length = 50)
+    private ClasificacionMovimientoInventario clasificacion;
+
     @Column(name = "fecha_ingreso", nullable = false, updatable = false)
     private LocalDateTime fechaIngreso;
 

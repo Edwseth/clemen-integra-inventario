@@ -21,6 +21,7 @@ public interface MovimientoInventarioMapper {
     //@Mapping(target = "ordenCompraDetalle", ignore = true)
     //@Mapping(target = "fechaIngreso", ignore = true)
     @Mapping(target = "solicitudMovimiento", ignore = true)
+    @Mapping(target = "clasificacion", source = "clasificacionMovimientoInventario")
     MovimientoInventario toEntity(MovimientoInventarioDTO dto);
 
     // Convertir entidad a DTO básico (para uso interno)
@@ -34,21 +35,38 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "tipoMovimientoDetalleId", expression = "java(movimiento.getTipoMovimientoDetalle() != null ? movimiento.getTipoMovimientoDetalle().getId() : null)")
     @Mapping(target = "ordenCompraDetalleId", expression = "java(movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null)")
     @Mapping(target = "solicitudMovimientoId", expression = "java(movimiento.getSolicitudMovimiento() != null ? movimiento.getSolicitudMovimiento().getId() : null)")
+    @Mapping(target = "clasificacionMovimientoInventario", source = "clasificacion")
     MovimientoInventarioDTO toDTO(MovimientoInventario movimiento);
 
-    // Convertir a DTO de respuesta (más completo para vistas)
-    @Mapping(target = "tipoMovimiento", source = "tipoMovimiento")
-    @Mapping(target = "nombreProducto", expression = "java(movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null)")
-    @Mapping(target = "nombreLote", expression = "java(movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null)")
-    @Mapping(target = "nombreMotivo", expression = "java(movimiento.getMotivoMovimiento() != null && movimiento.getMotivoMovimiento().getMotivo() != null ? movimiento.getMotivoMovimiento().getMotivo().name() : null)")
-    @Mapping(target = "nombreAlmacenOrigen", expression = "java(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getNombre() : null)")
-    @Mapping(target = "nombreAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getNombre() : null)")
-    @Mapping(target = "tipoAlmacenOrigen", expression = "java(movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenOrigen().getTipo() != null ? movimiento.getAlmacenOrigen().getTipo().name() : null)")
-    @Mapping(target = "tipoAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null && movimiento.getAlmacenDestino().getTipo() != null ? movimiento.getAlmacenDestino().getTipo().name() : null)")
-    @Mapping(target = "categoriaAlmacenOrigen", expression = "java(movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenOrigen().getCategoria() != null ? movimiento.getAlmacenOrigen().getCategoria().name() : null)")
-    @Mapping(target = "categoriaAlmacenDestino", expression = "java(movimiento.getAlmacenDestino() != null && movimiento.getAlmacenDestino().getCategoria() != null ? movimiento.getAlmacenDestino().getCategoria().name() : null)")
-    @Mapping(target = "fechaIngreso", source = "fechaIngreso")
-    @Mapping(target = "nombreUsuario", expression = "java(movimiento.getRegistradoPor() != null ? movimiento.getRegistradoPor().getNombreCompleto() : null)")
-    MovimientoInventarioResponseDTO toResponseDTO(MovimientoInventario movimiento);
+    // Conversión segura para respuesta evitando ciclos y proxys
+    default MovimientoInventarioResponseDTO safeToResponseDTO(MovimientoInventario m) {
+        if (m == null) return null;
+        MovimientoInventarioResponseDTO dto = new MovimientoInventarioResponseDTO();
+        dto.setId(m.getId());
+        dto.setFechaIngreso(m.getFechaIngreso());
+        dto.setTipoMovimiento(m.getTipoMovimiento());
+        dto.setClasificacion(m.getClasificacion());
+        dto.setCantidad(m.getCantidad());
+
+        var p = m.getProducto();
+        dto.setProductoId(p != null ? (p.getId() == null ? null : Long.valueOf(p.getId())) : null);
+        dto.setNombreProducto(p != null ? p.getNombre() : null);
+        dto.setCodigoSku(p != null ? p.getCodigoSku() : null);
+
+        var l = m.getLote();
+        dto.setLoteId(l != null ? l.getId() : null);
+        dto.setCodigoLote(l != null ? l.getCodigoLote() : null);
+
+        var ao = m.getAlmacenOrigen();
+        dto.setNombreAlmacenOrigen(ao != null ? ao.getNombre() : null);
+
+        var ad = m.getAlmacenDestino();
+        dto.setNombreAlmacenDestino(ad != null ? ad.getNombre() : null);
+
+        var u = m.getRegistradoPor();
+        dto.setNombreUsuarioRegistrador(u != null ? u.getNombreCompleto() : null);
+
+        return dto;
+    }
 }
 
