@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface LoteProductoService {
@@ -16,7 +17,7 @@ public interface LoteProductoService {
     List<LoteProductoResponseDTO> obtenerLotesPorEvaluar();
     Workbook generarReporteLotesPorVencerExcel();
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
-    Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen, Pageable pageable);
+    Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen, Boolean vencidos, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);
 
     LoteProductoResponseDTO liberarLote(Long id);
     LoteProductoResponseDTO rechazarLote(Long id);

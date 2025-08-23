@@ -115,10 +115,25 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     }
 
     @Override
-    public Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen, Pageable pageable) {
+    public Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen,
+                                                     Boolean vencidos, LocalDateTime fechaInicio,
+                                                     LocalDateTime fechaFin, Pageable pageable) {
         Specification<LoteProducto> spec = Specification.where(productoNombreContains(producto))
                 .and(equalsEstado(estado))
                 .and(almacenNombreContains(almacen));
+
+        if (Boolean.TRUE.equals(vencidos)) {
+            spec = spec.and(fechaVencimientoAntesDe(LocalDateTime.now()));
+        } else {
+            if (fechaInicio != null) {
+                LocalDateTime fi = fechaInicio;
+                spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fechaVencimiento"), fi));
+            }
+            if (fechaFin != null) {
+                spec = spec.and(fechaVencimientoAntesDe(fechaFin));
+            }
+        }
+
         Page<LoteProducto> lotes = loteProductoRepository.findAll(spec, pageable);
         return lotes.map(loteProductoMapper::toResponseDTO);
     }

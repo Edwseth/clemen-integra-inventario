@@ -4,6 +4,7 @@ import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.JoinType;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import java.time.LocalDateTime;
 
 public final class LoteProductoSpecifications {
     private LoteProductoSpecifications() {}
@@ -26,5 +27,9 @@ public final class LoteProductoSpecifications {
             var a = root.join("almacen", JoinType.LEFT);
             return cb.like(cb.upper(a.get("nombre")), "%" + texto.trim().toUpperCase() + "%");
         };
+    }
+
+    public static Specification<LoteProducto> fechaVencimientoAntesDe(LocalDateTime fecha) {
+        return (root, query, cb) -> (fecha == null) ? cb.conjunction() : cb.lessThan(root.get("fechaVencimiento"), fecha);
     }
 }
