@@ -30,12 +30,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import java.util.stream.Collectors;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import static com.willyes.clemenintegra.inventario.service.spec.LoteProductoSpecifications.*;
 
 @Service
 @RequiredArgsConstructor
@@ -113,8 +115,11 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     }
 
     @Override
-    public Page<LoteProductoResponseDTO> listarTodos(Pageable pageable) {
-        Page<LoteProducto> lotes = loteProductoRepository.findAll(pageable);
+    public Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen, Pageable pageable) {
+        Specification<LoteProducto> spec = Specification.where(productoNombreContains(producto))
+                .and(equalsEstado(estado))
+                .and(almacenNombreContains(almacen));
+        Page<LoteProducto> lotes = loteProductoRepository.findAll(spec, pageable);
         return lotes.map(loteProductoMapper::toResponseDTO);
     }
 

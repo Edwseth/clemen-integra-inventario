@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 
@@ -79,13 +80,24 @@ public class LoteProductoController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<Page<LoteProductoResponseDTO>> listarTodos(
+    public ResponseEntity<Page<LoteProductoResponseDTO>> listar(
+            @RequestParam(required = false) String producto,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String almacen,
             @PageableDefault(size = 10, sort = "fechaFabricacion", direction = Sort.Direction.DESC) Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             return ResponseEntity.badRequest().build();
         }
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaFabricacion", "id"), "fechaFabricacion");
-        Page<LoteProductoResponseDTO> lotes = service.listarTodos(sanitized);
+        EstadoLote enumEstado = null;
+        if (estado != null && !estado.isBlank()) {
+            try {
+                enumEstado = EstadoLote.valueOf(estado.trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                // ignorar filtro inválido
+            }
+        }
+        Page<LoteProductoResponseDTO> lotes = service.listarTodos(producto, enumEstado, almacen, sanitized);
         return ResponseEntity.ok(lotes);
     }
 
