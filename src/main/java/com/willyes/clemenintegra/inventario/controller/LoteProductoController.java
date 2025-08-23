@@ -22,9 +22,11 @@ import org.springframework.data.web.PageableDefault;
 import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -84,11 +86,14 @@ public class LoteProductoController {
             @RequestParam(required = false) String producto,
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String almacen,
+            @RequestParam(required = false) Boolean vencidos,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
             @PageableDefault(size = 10, sort = "fechaFabricacion", direction = Sort.Direction.DESC) Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             return ResponseEntity.badRequest().build();
         }
-        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaFabricacion", "id"), "fechaFabricacion");
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaFabricacion", "fechaVencimiento", "id"), "fechaFabricacion");
         EstadoLote enumEstado = null;
         if (estado != null && !estado.isBlank()) {
             try {
@@ -97,7 +102,7 @@ public class LoteProductoController {
                 // ignorar filtro inválido
             }
         }
-        Page<LoteProductoResponseDTO> lotes = service.listarTodos(producto, enumEstado, almacen, sanitized);
+        Page<LoteProductoResponseDTO> lotes = service.listarTodos(producto, enumEstado, almacen, vencidos, fechaInicio, fechaFin, sanitized);
         return ResponseEntity.ok(lotes);
     }
 
