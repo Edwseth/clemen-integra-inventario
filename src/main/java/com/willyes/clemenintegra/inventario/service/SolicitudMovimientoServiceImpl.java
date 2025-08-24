@@ -144,10 +144,14 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                                                                  String busqueda,
                                                                  Long almacenOrigenId,
                                                                  Long almacenDestinoId,
-                                                                 LocalDateTime desde,
-                                                                 LocalDateTime hasta,
+                                                                 LocalDate desde,
+                                                                 LocalDate hasta,
                                                                  Pageable pageable) {
         Specification<SolicitudMovimiento> spec = Specification.where(null);
+
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            throw new IllegalArgumentException("La fecha inicial no puede ser posterior a la final");
+        }
 
         if (estado != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estado));
@@ -158,11 +162,13 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         if (almacenDestinoId != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenDestino", jakarta.persistence.criteria.JoinType.LEFT).get("id"), almacenDestinoId));
         }
-        if (desde != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fechaSolicitud"), desde));
+        LocalDateTime inicio = desde != null ? desde.atStartOfDay() : null;
+        LocalDateTime fin = hasta != null ? hasta.atTime(23, 59, 59) : null;
+        if (inicio != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fechaSolicitud"), inicio));
         }
-        if (hasta != null) {
-            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("fechaSolicitud"), hasta));
+        if (fin != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("fechaSolicitud"), fin));
         }
         if (busqueda != null && !busqueda.isBlank()) {
             String like = "%" + busqueda.toLowerCase() + "%";
@@ -254,11 +260,16 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Override
     @Transactional(readOnly = true)
     public Page<SolicitudesPorOrdenDTO> listGroupByOrden(EstadoSolicitudMovimiento estado,
-                                                         LocalDateTime desde,
-                                                         LocalDateTime hasta,
+                                                         LocalDate desde,
+                                                         LocalDate hasta,
                                                          Pageable pageable) {
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            throw new IllegalArgumentException("La fecha inicial no puede ser posterior a la final");
+        }
         EstadoSolicitudMovimiento filtro = estado != null ? estado : EstadoSolicitudMovimiento.PENDIENTE;
-        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(null, filtro, desde, hasta);
+        LocalDateTime inicio = desde != null ? desde.atStartOfDay() : null;
+        LocalDateTime fin = hasta != null ? hasta.atTime(23, 59, 59) : null;
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(null, filtro, inicio, fin);
         Map<Long, List<SolicitudMovimiento>> agrupadas = new LinkedHashMap<>();
         for (SolicitudMovimiento s : solicitudes) {
             if (s.getOrdenProduccion() == null) continue;

@@ -20,8 +20,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/inventarios/solicitudes")
@@ -44,9 +43,12 @@ public class SolicitudMovimientoController {
             @RequestParam(required = false) String busqueda,
             @RequestParam(required = false) Long almacenOrigenId,
             @RequestParam(required = false) Long almacenDestinoId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHasta
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta
     ) {
+        if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
+            return ResponseEntity.badRequest().build();
+        }
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaSolicitud", "estado", "id"), "fechaSolicitud");
         Page<SolicitudMovimientoListadoDTO> page = service.listarSolicitudes(estado, busqueda, almacenOrigenId, almacenDestinoId, fechaDesde, fechaHasta, sanitized);
         return ResponseEntity.ok(page);

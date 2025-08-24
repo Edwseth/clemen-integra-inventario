@@ -26,7 +26,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -87,8 +87,8 @@ public class LoteProductoController {
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String almacen,
             @RequestParam(required = false) Boolean vencidos,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @PageableDefault(size = 10, sort = "fechaFabricacion", direction = Sort.Direction.DESC) Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             return ResponseEntity.badRequest().build();
@@ -101,6 +101,9 @@ public class LoteProductoController {
             } catch (IllegalArgumentException ex) {
                 // ignorar filtro inválido
             }
+        }
+        if (fechaInicio != null && fechaFin != null && fechaInicio.isAfter(fechaFin)) {
+            return ResponseEntity.badRequest().build();
         }
         Page<LoteProductoResponseDTO> lotes = service.listarTodos(producto, enumEstado, almacen, vencidos, fechaInicio, fechaFin, sanitized);
         return ResponseEntity.ok(lotes);
