@@ -51,7 +51,7 @@ public interface MovimientoInventarioMapper {
         var p = m.getProducto();
         dto.setProductoId(p != null ? (p.getId() == null ? null : Long.valueOf(p.getId())) : null);
         dto.setNombreProducto(p != null ? p.getNombre() : null);
-        dto.setCodigoSku(p != null ? p.getCodigoSku() : null);
+        dto.setSku(p != null ? p.getCodigoSku() : null);
 
         var l = m.getLote();
         dto.setLoteId(l != null ? l.getId() : null);

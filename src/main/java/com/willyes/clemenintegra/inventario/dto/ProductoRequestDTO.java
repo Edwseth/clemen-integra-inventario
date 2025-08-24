@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
@@ -14,7 +16,9 @@ public class ProductoRequestDTO {
 
     @NotBlank
     @Size(max = 50)
-    private String codigoSku;
+    @JsonProperty("sku")
+    @JsonAlias("codigoSku")
+    private String sku;
 
     @NotBlank
     @Size(max = 100)

@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import lombok.*;
@@ -13,7 +15,9 @@ import java.time.LocalDateTime;
 @Builder
 public class ProductoResponseDTO {
     private Long id;
-    private String codigoSku;
+    @JsonProperty("sku")
+    @JsonAlias("codigoSku")
+    private String sku;
     private String nombre;
     private String descripcionProducto;
     private BigDecimal stockActual;
@@ -36,7 +40,7 @@ public class ProductoResponseDTO {
 
     public ProductoResponseDTO(Producto producto) {
         this.id = producto.getId().longValue();
-        this.codigoSku = producto.getCodigoSku();
+        this.sku = producto.getCodigoSku();
         this.nombre = producto.getNombre();
         this.descripcionProducto = producto.getDescripcionProducto();
         this.stockActual = producto.getStockActual();
@@ -59,8 +63,10 @@ public class ProductoResponseDTO {
 
     public Long getId() {return id;}
     public void setId(Long id) {this.id = id;}
-    public String getCodigoSku() {return codigoSku;}
-    public void setCodigoSku(String codigoSku) {this.codigoSku = codigoSku;}
+    public String getSku() {return sku;}
+    public void setSku(String sku) {this.sku = sku;}
+    @JsonProperty("codigoSku")
+    public String getCodigoSku() {return sku;}
     public String getNombre() {return nombre;}
     public void setNombre(String nombre) {this.nombre = nombre;}
     public String getDescripcionProducto() {return descripcionProducto;}

@@ -9,7 +9,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface ProductoService {
-    Page<ProductoResponseDTO> listarTodos(String nombre, String codigoSku, Long categoriaProductoId, Boolean activo, Pageable pageable);
+    Page<ProductoResponseDTO> listarTodos(String nombre, String sku, Long categoriaProductoId, Boolean activo, Pageable pageable);
     List<ProductoResponseDTO> buscarPorCategoria(String categoria);
     List<ProductoResponseDTO> findByCategoriaTipo(String tipo);
     List<ProductoResponseDTO> findByCategoriaTipoIn(List<String> tipos);
