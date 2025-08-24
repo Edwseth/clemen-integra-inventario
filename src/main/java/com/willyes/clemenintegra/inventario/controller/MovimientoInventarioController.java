@@ -117,6 +117,7 @@ public class MovimientoInventarioController {
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> filtrar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,

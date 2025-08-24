@@ -182,6 +182,7 @@ public class ProductoController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD')")
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerTodos(
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) String codigoSku,

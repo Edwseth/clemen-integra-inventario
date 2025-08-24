@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -335,9 +336,9 @@ public class ProductoServiceImpl implements ProductoService {
             row.createCell(0).setCellValue(producto.getId());
             row.createCell(1).setCellValue(producto.getCodigoSku());
             row.createCell(2).setCellValue(producto.getNombre());
-            row.createCell(3).setCellValue(producto.getStockActual() != null ? producto.getStockActual().doubleValue() : 0);
+            row.createCell(3).setCellValue((RichTextString) (producto.getStockActual() != null ? producto.getStockActual() : BigDecimal.ZERO));
             row.createCell(4).setCellValue(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : "");
-            row.createCell(5).setCellValue(producto.getStockMinimo() != null ? producto.getStockMinimo().doubleValue() : 0);
+            row.createCell(5).setCellValue((RichTextString) (producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO));
             row.createCell(6).setCellValue(producto.isActivo());
             row.createCell(7).setCellValue(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : "");
         }

@@ -23,7 +23,8 @@ import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,8 +43,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
@@ -248,6 +251,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Movimientos Inventario");
 
+        // NUEVO: estilo con 2 decimales
+        DataFormat df = workbook.createDataFormat();
+        CellStyle styleDec2 = workbook.createCellStyle();
+        styleDec2.setDataFormat(df.getFormat("0.00"));
+
         // Cabecera
         String[] encabezados = {
                 "ID", "Fecha", "Tipo Movimiento", "Producto", "SKU", "Cantidad", "Unidad Medida",
@@ -275,7 +283,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
             row.createCell(3).setCellValue(nombreProducto);
             row.createCell(4).setCellValue(codigoSku);
-            row.createCell(5).setCellValue(mov.getCantidad().doubleValue());
+            BigDecimal cant = mov.getCantidad();
+            Cell cCant = row.createCell(5);
+            if (cant != null) {
+                cCant.setCellValue(cant.setScale(2, RoundingMode.HALF_UP).doubleValue());
+                cCant.setCellStyle(styleDec2);
+            } else {
+                cCant.setBlank();
+            }
             row.createCell(6).setCellValue(unidad);
             row.createCell(7).setCellValue(mov.getLote() != null ? mov.getLote().getCodigoLote() : "");
             String nombreAlmacen = mov.getAlmacenDestino() != null
@@ -299,6 +314,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     public ByteArrayInputStream exportarMovimientosAExcel(List<MovimientoInventario> movimientos) {
         try (Workbook workbook = new XSSFWorkbook()) {
+            // NUEVO: estilo con 2 decimales
+            DataFormat df = workbook.createDataFormat();
+            CellStyle styleDec2 = workbook.createCellStyle();
+            styleDec2.setDataFormat(df.getFormat("0.00"));
             Sheet sheet = workbook.createSheet("Movimientos");
             Row header = sheet.createRow(0);
             String[] columnas = {"ID", "Producto", "Cantidad", "Tipo Movimiento", "Fecha"};
@@ -312,7 +331,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 row.createCell(0).setCellValue(mov.getId());
                 String nombreProducto = mov.getProducto() != null ? mov.getProducto().getNombre() : "";
                 row.createCell(1).setCellValue(nombreProducto);
-                row.createCell(2).setCellValue(mov.getCantidad().doubleValue());
+                BigDecimal cant = mov.getCantidad();
+                Cell c2 = row.createCell(2);
+                if (cant != null) {
+                    c2.setCellValue(cant.setScale(2, RoundingMode.HALF_UP).doubleValue());
+                    c2.setCellStyle(styleDec2);
+                } else {
+                    c2.setBlank();
+                }
                 row.createCell(3).setCellValue(mov.getTipoMovimiento().name());
                 row.createCell(4).setCellValue(mov.getFechaIngreso().toString());
             }

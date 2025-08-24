@@ -36,7 +36,6 @@ public interface BomMapper {
     DetalleFormula toEntity(DetalleFormulaRequest dto, FormulaProducto formula, Producto insumo, UnidadMedida unidad);
 
     @Mapping(target = "insumoNombre", source = "insumo", qualifiedByName = "mapProductoNombre")
-    @Mapping(target = "cantidadNecesaria", expression = "java(detalle.getCantidadNecesaria() != null ? detalle.getCantidadNecesaria().doubleValue() : null)")
     @Mapping(target = "unidad", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
     DetalleFormulaResponse toResponseDTO(DetalleFormula detalle);
 
