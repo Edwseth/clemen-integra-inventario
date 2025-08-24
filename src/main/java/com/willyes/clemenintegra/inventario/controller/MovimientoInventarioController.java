@@ -11,8 +11,6 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +26,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -172,27 +169,6 @@ public class MovimientoInventarioController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
-    }
-
-    @GetMapping("/reporte-excel")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD')")
-    public ResponseEntity<byte[]> exportarReporteMovimientos() throws IOException {
-        byte[] contenido;
-
-        try (Workbook workbook = service.generarReporteMovimientosExcel();
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            workbook.write(bos);
-            contenido = bos.toByteArray();
-        }
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDisposition(ContentDisposition
-                .attachment()
-                .filename("reporte_movimientos.xlsx")
-                .build());
-
-        return new ResponseEntity<>(contenido, headers, HttpStatus.OK);
     }
 
     @GetMapping

@@ -126,6 +126,9 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 

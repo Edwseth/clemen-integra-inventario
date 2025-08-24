@@ -60,11 +60,13 @@ El código ha sido refactorizado mediante **Codex Workspace**, mejorando la legi
 
 ## API REST Principal
 ### Inventario
-- **Productos** `/api/productos` – CRUD y `/reporte-stock` (Excel).
-- **Lotes** `/api/lotes` – CRUD, `/reporte-vencimiento` y `/reporte-alertas` (Excel).
-- **Movimientos** `/api/movimientos` – registrar y consultar con filtros `productoId`, `almacenId`, `tipoMovimiento`, `clasificacion`, `fechaInicio`, `fechaFin`. Exportación en `/reporte-excel`.
+- **Productos** `/api/productos` – CRUD.
+- **Lotes** `/api/lotes` – CRUD.
+- **Movimientos** `/api/movimientos` – registrar y consultar con filtros `productoId`, `almacenId`, `tipoMovimiento`, `clasificacion`, `fechaInicio`, `fechaFin`.
 - **Ajustes de inventario** `/api/inventario/ajustes` – listar, crear y eliminar.
 - **Reportes** `/api/reportes` – alta/baja rotación (`fechaInicio`, `fechaFin`), productos más costosos (`categoria`), trazabilidad por lote (`codigoLote`), productos en retención o liberación (`estadoLote`, `desde`, `hasta`), no conformidades (`tipo`, `area`, `desde`, `hasta`), CAPA (`estado`, `desde`, `hasta`), stock actual, productos por vencer, alertas de inventario y movimientos. Todos devuelven Excel.
+
+Los antiguos endpoints `/api/productos/reporte-stock`, `/api/lotes/reporte-vencimiento`, `/api/lotes/reporte-alertas` y `/api/movimientos/reporte-excel` fueron eliminados en favor de las rutas unificadas bajo `/api/reportes`.
 
 ### Producción
 - **Órdenes de producción** `/api/produccion/ordenes` – CRUD.
