@@ -9,7 +9,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface MovimientoInventarioService {
@@ -17,7 +17,7 @@ public interface MovimientoInventarioService {
     MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto);
 
     Page<MovimientoInventarioResponseDTO> filtrar(
-            LocalDate fechaInicio, LocalDate fechaFin,
+            LocalDateTime fechaInicio, LocalDateTime fechaFin,
             Long productoId, Long almacenId,
             TipoMovimiento tipoMovimiento, ClasificacionMovimientoInventario clasificacion,
             Pageable pageable);

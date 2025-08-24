@@ -44,9 +44,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -222,24 +220,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     @Transactional(readOnly = true)
     @Override
     public Page<MovimientoInventarioResponseDTO> filtrar(
-            LocalDate fechaInicio, LocalDate fechaFin,
+            LocalDateTime fechaInicio, LocalDateTime fechaFin,
             Long productoId, Long almacenId,
             TipoMovimiento tipoMovimiento, ClasificacionMovimientoInventario clasificacion,
             Pageable pageable) {
-        LocalDateTime inicio = (fechaInicio != null) ? fechaInicio.atStartOfDay() : null;
-        LocalDateTime fin = (fechaFin != null) ? fechaFin.atTime(LocalTime.MAX) : null;
         Page<MovimientoInventario> page = repository.filtrar(
-                inicio, fin, productoId, almacenId, tipoMovimiento, clasificacion, pageable);
+                fechaInicio, fechaFin, productoId, almacenId, tipoMovimiento, clasificacion, pageable);
         return page.map(mapper::safeToResponseDTO);
     }
 
     @Override
     public List<MovimientoInventarioResponseDTO> consultarMovimientos(MovimientoInventarioFiltroDTO filtro) {
-        LocalDateTime inicio = filtro.fechaInicio() != null ? filtro.fechaInicio().atStartOfDay() : null;
-        LocalDateTime fin = filtro.fechaFin() != null ? filtro.fechaFin().atTime(23, 59, 59) : null;
-
         List<MovimientoInventario> lista = repository.buscarMovimientos(
-                inicio, fin,
+                filtro.fechaInicio(), filtro.fechaFin(),
                 filtro.productoId(),
                 filtro.almacenId(),
                 filtro.tipoMovimiento(),

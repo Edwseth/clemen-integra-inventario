@@ -6,10 +6,10 @@ import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.shared.util.PaginationUtil;
+import com.willyes.clemenintegra.shared.util.DateParser;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,8 +19,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/inventarios/solicitudes")
@@ -43,15 +46,28 @@ public class SolicitudMovimientoController {
             @RequestParam(required = false) String busqueda,
             @RequestParam(required = false) Long almacenOrigenId,
             @RequestParam(required = false) Long almacenDestinoId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta
+            @RequestParam(required = false) String fechaDesde,
+            @RequestParam(required = false) String fechaHasta
     ) {
-        if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
-            return ResponseEntity.badRequest().build();
-        }
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaSolicitud", "estado", "id"), "fechaSolicitud");
-        Page<SolicitudMovimientoListadoDTO> page = service.listarSolicitudes(estado, busqueda, almacenOrigenId, almacenDestinoId, fechaDesde, fechaHasta, sanitized);
-        return ResponseEntity.ok(page);
+        LocalDateTime inicio = null;
+        LocalDateTime fin = null;
+        if ((fechaDesde != null && fechaHasta == null) || (fechaDesde == null && fechaHasta != null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requieren fechaDesde y fechaHasta");
+        }
+        try {
+            if (fechaDesde != null) {
+                inicio = DateParser.parseStart(fechaDesde);
+                fin = DateParser.parseEnd(fechaHasta);
+                if (inicio.isAfter(fin)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaDesde no puede ser mayor a fechaHasta");
+                }
+            }
+            Page<SolicitudMovimientoListadoDTO> page = service.listarSolicitudes(estado, busqueda, almacenOrigenId, almacenDestinoId, inicio, fin, sanitized);
+            return ResponseEntity.ok(page);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     @PutMapping("/{id}/aprobar")

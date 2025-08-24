@@ -19,17 +19,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import com.willyes.clemenintegra.shared.util.PaginationUtil;
-import org.springframework.format.annotation.DateTimeFormat;
+import com.willyes.clemenintegra.shared.util.DateParser;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -121,15 +122,27 @@ public class MovimientoInventarioController {
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) TipoMovimiento tipoMovimiento,
             @RequestParam(required = false) ClasificacionMovimientoInventario clasificacion,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
             @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaIngreso", "id"), "fechaIngreso");
-        Page<MovimientoInventarioResponseDTO> page = service.filtrar(
-                fechaInicio, fechaFin, productoId, almacenId, tipoMovimiento, clasificacion, sanitized
-        );
-        return ResponseEntity.ok(page);
+        if (fechaInicio == null || fechaFin == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requieren fechaInicio y fechaFin");
+        }
+        try {
+            LocalDateTime inicio = DateParser.parseStart(fechaInicio);
+            LocalDateTime fin = DateParser.parseEnd(fechaFin);
+            if (inicio.isAfter(fin)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaInicio no puede ser mayor a fechaFin");
+            }
+            Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaIngreso", "id"), "fechaIngreso");
+            Page<MovimientoInventarioResponseDTO> page = service.filtrar(
+                    inicio, fin, productoId, almacenId, tipoMovimiento, clasificacion, sanitized
+            );
+            return ResponseEntity.ok(page);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     @GetMapping("/buscar")
@@ -138,14 +151,26 @@ public class MovimientoInventarioController {
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) TipoMovimiento tipoMovimiento,
             @RequestParam(required = false) ClasificacionMovimientoInventario clasificacion,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin
     ) {
-        MovimientoInventarioFiltroDTO filtro = new MovimientoInventarioFiltroDTO(
-                productoId, almacenId, tipoMovimiento, clasificacion, fechaInicio, fechaFin
-        );
-        List<MovimientoInventarioResponseDTO> lista = service.consultarMovimientos(filtro);
-        return ResponseEntity.ok(lista);
+        if (fechaInicio == null || fechaFin == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requieren fechaInicio y fechaFin");
+        }
+        try {
+            LocalDateTime inicio = DateParser.parseStart(fechaInicio);
+            LocalDateTime fin = DateParser.parseEnd(fechaFin);
+            if (inicio.isAfter(fin)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaInicio no puede ser mayor a fechaFin");
+            }
+            MovimientoInventarioFiltroDTO filtro = new MovimientoInventarioFiltroDTO(
+                    productoId, almacenId, tipoMovimiento, clasificacion, inicio, fin
+            );
+            List<MovimientoInventarioResponseDTO> lista = service.consultarMovimientos(filtro);
+            return ResponseEntity.ok(lista);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     @GetMapping("/reporte-excel")

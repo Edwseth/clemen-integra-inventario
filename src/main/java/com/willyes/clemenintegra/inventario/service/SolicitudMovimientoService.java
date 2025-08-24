@@ -4,6 +4,8 @@ import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,16 +15,16 @@ public interface SolicitudMovimientoService {
                                                           String busqueda,
                                                           Long almacenOrigenId,
                                                           Long almacenDestinoId,
-                                                          LocalDate desde,
-                                                          LocalDate hasta,
+                                                          LocalDateTime inicio,
+                                                          LocalDateTime fin,
                                                           Pageable pageable);
     SolicitudMovimientoResponseDTO aprobarSolicitud(Long id, Long responsableId);
     SolicitudMovimientoResponseDTO rechazarSolicitud(Long id, Long responsableId, String observaciones);
     SolicitudMovimientoResponseDTO revertirAutorizacion(Long id, Long responsableId);
 
     Page<SolicitudesPorOrdenDTO> listGroupByOrden(EstadoSolicitudMovimiento estado,
-                                                  LocalDate desde,
-                                                  LocalDate hasta,
+                                                  LocalDateTime inicio,
+                                                  LocalDateTime fin,
                                                   Pageable pageable);
 
     SolicitudesPorOrdenDTO obtenerPorOrden(Long ordenId);

@@ -116,8 +116,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
     @Override
     public Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen,
-                                                     Boolean vencidos, LocalDate fechaInicio,
-                                                     LocalDate fechaFin, Pageable pageable) {
+                                                     Boolean vencidos, LocalDateTime fechaInicio,
+                                                     LocalDateTime fechaFin, Pageable pageable) {
         Specification<LoteProducto> spec = Specification.where(productoNombreContains(producto))
                 .and(equalsEstado(estado))
                 .and(almacenNombreContains(almacen));
@@ -125,8 +125,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         if (Boolean.TRUE.equals(vencidos)) {
             spec = spec.and(fechaVencimientoAntesDe(LocalDateTime.now()));
         } else {
-            LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
-            LocalDateTime fin = fechaFin != null ? fechaFin.atTime(23, 59, 59) : null;
+            LocalDateTime inicio = fechaInicio;
+            LocalDateTime fin = fechaFin;
             if (inicio != null) {
                 spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fechaVencimiento"), inicio));
             }
