@@ -176,7 +176,8 @@ public class ProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD')")
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerTodos(
             @RequestParam(required = false) String nombre,
-            @RequestParam(required = false) String codigoSku,
+            @RequestParam(required = false) String sku,
+            @RequestParam(required = false, name = "codigoSku") String codigoSkuLegacy,
             @RequestParam(required = false) Long categoriaProductoId,
             @RequestParam(required = false) Boolean activo,
             @PageableDefault(size = 10, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -184,7 +185,8 @@ public class ProductoController {
             return ResponseEntity.badRequest().build();
         }
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaCreacion", "id", "nombre"), "fechaCreacion");
-        Page<ProductoResponseDTO> productos = productoService.listarTodos(nombre, codigoSku, categoriaProductoId, activo, sanitized);
+        String finalSku = sku != null ? sku : codigoSkuLegacy;
+        Page<ProductoResponseDTO> productos = productoService.listarTodos(nombre, finalSku, categoriaProductoId, activo, sanitized);
         return ResponseEntity.ok(productos);
     }
 

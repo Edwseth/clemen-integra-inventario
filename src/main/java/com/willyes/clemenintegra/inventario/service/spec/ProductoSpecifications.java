@@ -14,7 +14,7 @@ public final class ProductoSpecifications {
                 : cb.like(cb.upper(root.get("nombre")), "%" + q.trim().toUpperCase() + "%");
     }
 
-    public static Specification<Producto> codigoSkuContains(String sku) {
+    public static Specification<Producto> skuContains(String sku) {
         return (root, cq, cb) -> (sku == null || sku.isBlank())
                 ? cb.conjunction()
                 : cb.like(cb.upper(root.get("codigoSku")), "%" + sku.trim().toUpperCase() + "%");

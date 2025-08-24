@@ -65,13 +65,13 @@ public class ProductoServiceImpl implements ProductoService {
         throw new IllegalStateException("No se pudo extraer el token JWT");
     }
 
-    public Page<ProductoResponseDTO> listarTodos(String nombre, String codigoSku, Long categoriaProductoId, Boolean activo, Pageable pageable) {
+    public Page<ProductoResponseDTO> listarTodos(String nombre, String sku, Long categoriaProductoId, Boolean activo, Pageable pageable) {
 
         System.out.println("🟢 Entró correctamente a ProductoServiceImpl.listarTodos()");
 
         Specification<Producto> spec = Specification
                 .where(nombreContains(nombre))
-                .and(codigoSkuContains(codigoSku))
+                .and(skuContains(sku))
                 .and(categoriaProductoIdEquals(categoriaProductoId))
                 .and(activoEquals(activo));
 
@@ -117,7 +117,7 @@ public class ProductoServiceImpl implements ProductoService {
 
 
     public ProductoResponseDTO crearProducto(ProductoRequestDTO dto) {
-        validarDuplicados(dto.getCodigoSku(), dto.getNombre());
+        validarDuplicados(dto.getSku(), dto.getNombre());
 
         var unidad = unidadMedidaRepository.findById(dto.getUnidadMedidaId())
                 .orElseThrow(() -> new IllegalArgumentException("Unidad de medida no encontrada"));
@@ -131,7 +131,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         Producto producto = Producto.builder()
-                .codigoSku(dto.getCodigoSku())
+                .codigoSku(dto.getSku())
                 .nombre(dto.getNombre())
                 .descripcionProducto(dto.getDescripcionProducto())
                 .stockActual(BigDecimal.ZERO)
@@ -180,7 +180,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
         // Validar duplicados de SKU y nombre excluyendo el mismo producto actual
-        validarDuplicadosAlActualizar(id, dto.getCodigoSku(), dto.getNombre());
+        validarDuplicadosAlActualizar(id, dto.getSku(), dto.getNombre());
 
         var unidad = unidadMedidaRepository.findById(dto.getUnidadMedidaId())
                 .orElseThrow(() -> new IllegalArgumentException("Unidad de medida no encontrada"));
@@ -193,7 +193,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         // Actualizar campos
-        producto.setCodigoSku(dto.getCodigoSku());
+        producto.setCodigoSku(dto.getSku());
         producto.setNombre(dto.getNombre());
         producto.setDescripcionProducto(dto.getDescripcionProducto());
         producto.setStockMinimo(dto.getStockMinimo());
@@ -363,7 +363,8 @@ public class ProductoServiceImpl implements ProductoService {
         Sort sort = pageable.getSort();
         Sort safe = Sort.by(sort.stream()
                 .map(o -> switch (o.getProperty()) {
-                    case "nombre", "codigoSku", "id" -> o;
+                    case "nombre", "codigoSku", "sku", "id" ->
+                            "sku".equals(o.getProperty()) ? new Sort.Order(o.getDirection(), "codigoSku") : o;
                     default -> new Sort.Order(o.isAscending() ? Sort.Direction.ASC : Sort.Direction.DESC, "nombre");
                 }).toList());
         Pageable safePage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
@@ -372,7 +373,7 @@ public class ProductoServiceImpl implements ProductoService {
         return page.map(p -> ProductoOptionDTO.builder()
                 .id(p.getId() == null ? null : Long.valueOf(p.getId()))
                 .nombre(p.getNombre())
-                .codigoSku(p.getCodigoSku())
+                .sku(p.getCodigoSku())
                 .build()
         );
     }

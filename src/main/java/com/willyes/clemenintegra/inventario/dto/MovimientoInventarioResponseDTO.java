@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import lombok.AllArgsConstructor;
@@ -22,12 +24,17 @@ public class MovimientoInventarioResponseDTO {
     private BigDecimal cantidad;
     private Long productoId;
     private String nombreProducto;
-    private String codigoSku;
+    @JsonProperty("sku")
+    @JsonAlias("codigoSku")
+    private String sku;
     private Long loteId;
     private String codigoLote;
     private String nombreAlmacenOrigen;
     private String nombreAlmacenDestino;
     private String nombreUsuarioRegistrador;
 
+
+    @JsonProperty("codigoSku")
+    public String getCodigoSku() {return sku;}
 }
 

@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 @Data
@@ -9,11 +11,16 @@ import lombok.*;
 public class ProductoOptionDTO {
     private Long id;
     private String nombre;
-    private String codigoSku;
+    @JsonProperty("sku")
+    @JsonAlias("codigoSku")
+    private String sku;
     // Texto listo para pintar en el autocomplete (NOMBRE (SKU))
     public String getEtiqueta() {
-        return (codigoSku == null || codigoSku.isBlank())
+        return (sku == null || sku.isBlank())
                 ? (nombre == null ? "" : nombre)
-                : (nombre == null ? codigoSku : nombre + " (" + codigoSku + ")");
+                : (nombre == null ? sku : nombre + " (" + sku + ")");
     }
+
+    @JsonProperty("codigoSku")
+    public String getCodigoSku() {return sku;}
 }

@@ -61,6 +61,7 @@ El código ha sido refactorizado mediante **Codex Workspace**, mejorando la legi
 ## API REST Principal
 ### Inventario
 - **Productos** `/api/productos` – CRUD.
+  - El identificador de catálogo se expone ahora como `sku`. Por compatibilidad, las peticiones aún aceptan y las respuestas incluyen el alias `codigoSku`.
 - **Lotes** `/api/lotes` – CRUD.
 - **Movimientos** `/api/movimientos` – registrar y consultar con filtros `productoId`, `almacenId`, `tipoMovimiento`, `clasificacion`, `fechaInicio`, `fechaFin`.
 - **Ajustes de inventario** `/api/inventario/ajustes` – listar, crear y eliminar.
