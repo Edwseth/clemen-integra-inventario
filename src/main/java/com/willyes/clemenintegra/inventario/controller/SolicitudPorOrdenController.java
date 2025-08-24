@@ -47,8 +47,9 @@ public class SolicitudPorOrdenController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "fechaOrden,desc") String sort
     ) {
-        LocalDateTime desde = fechaDesde != null ? fechaDesde.atStartOfDay() : null;
-        LocalDateTime hasta = fechaHasta != null ? fechaHasta.atTime(23, 59, 59) : null;
+        if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
+            return ResponseEntity.badRequest().build();
+        }
         String[] partes = sort.split(",");
         Sort sortObj = partes.length == 2
                 ? Sort.by(Sort.Direction.fromString(partes[1]), partes[0])
@@ -58,7 +59,7 @@ public class SolicitudPorOrdenController {
         if (auth != null) {
             log.debug("listarPorOrden invocado por {} con authorities {}", auth.getName(), auth.getAuthorities());
         }
-        return ResponseEntity.ok(service.listGroupByOrden(estado, desde, hasta, pageable));
+        return ResponseEntity.ok(service.listGroupByOrden(estado, fechaDesde, fechaHasta, pageable));
     }
 
     @GetMapping("/orden/{ordenId}")
