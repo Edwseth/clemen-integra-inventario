@@ -3,17 +3,11 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -42,9 +36,6 @@ public class ProductoController {
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final UnidadMedidaRepository unidadMedidaRepository;
     private final UsuarioRepository usuarioRepository;
-    private final MovimientoInventarioService service;
-    private final ProductoRepository productoRepo;
-    private final LoteProductoRepository loteRepo;
 
     @GetMapping("/buscar")
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION')")
@@ -195,22 +186,6 @@ public class ProductoController {
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaCreacion", "id", "nombre"), "fechaCreacion");
         Page<ProductoResponseDTO> productos = productoService.listarTodos(nombre, codigoSku, categoriaProductoId, activo, sanitized);
         return ResponseEntity.ok(productos);
-    }
-
-    @GetMapping("/reporte-stock")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
-    @Operation(summary = "Exportar reporte de stock actual de productos a Excel")
-    @ApiResponse(responseCode = "200", description = "Reporte generado correctamente")
-    public void exportarStockActual(HttpServletResponse response) throws IOException {
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=stock_actual.xlsx");
-
-        Workbook workbook = productoService.generarReporteStockActualExcel();
-        try (ServletOutputStream out = response.getOutputStream()) {
-            workbook.write(out);
-            out.flush();
-        }
-        workbook.close();
     }
 
 }
