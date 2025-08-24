@@ -20,14 +20,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import com.willyes.clemenintegra.shared.util.PaginationUtil;
+import com.willyes.clemenintegra.shared.util.DateParser;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/lotes")
@@ -87,23 +88,35 @@ public class LoteProductoController {
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String almacen,
             @RequestParam(required = false) Boolean vencidos,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
             @PageableDefault(size = 10, sort = "fechaFabricacion", direction = Sort.Direction.DESC) Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             return ResponseEntity.badRequest().build();
         }
-        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaFabricacion", "fechaVencimiento", "id"), "fechaFabricacion");
-        EstadoLote enumEstado = null;
-        if (estado != null && !estado.isBlank()) {
-            try {
-                enumEstado = EstadoLote.valueOf(estado.trim().toUpperCase());
-            } catch (IllegalArgumentException ex) {
-                // ignorar filtro inválido
-            }
+        if (fechaInicio == null || fechaFin == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Se requieren fechaInicio y fechaFin"));
         }
-        Page<LoteProductoResponseDTO> lotes = service.listarTodos(producto, enumEstado, almacen, vencidos, fechaInicio, fechaFin, sanitized);
-        return ResponseEntity.ok(lotes);
+        try {
+            LocalDateTime inicio = DateParser.parseStart(fechaInicio);
+            LocalDateTime fin = DateParser.parseEnd(fechaFin);
+            if (inicio.isAfter(fin)) {
+                return ResponseEntity.badRequest().body(Map.of("message", "fechaInicio no puede ser mayor a fechaFin"));
+            }
+            Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaFabricacion", "fechaVencimiento", "id"), "fechaFabricacion");
+            EstadoLote enumEstado = null;
+            if (estado != null && !estado.isBlank()) {
+                try {
+                    enumEstado = EstadoLote.valueOf(estado.trim().toUpperCase());
+                } catch (IllegalArgumentException ex) {
+                    // ignorar filtro inválido
+                }
+            }
+            Page<LoteProductoResponseDTO> lotes = service.listarTodos(producto, enumEstado, almacen, vencidos, inicio, fin, sanitized);
+            return ResponseEntity.ok(lotes);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")

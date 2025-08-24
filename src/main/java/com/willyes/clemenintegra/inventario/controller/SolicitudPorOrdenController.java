@@ -12,7 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.format.annotation.DateTimeFormat;
+import com.willyes.clemenintegra.shared.util.DateParser;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +21,9 @@ import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 @RestController
 @RequestMapping({"/api/inventario/solicitudes", "/api/inventarios/solicitudes"})
@@ -40,25 +40,39 @@ public class SolicitudPorOrdenController {
             @Parameter(description = "Estado de las solicitudes. Si se omite, se usa PENDIENTE por defecto")
             @RequestParam(required = false) EstadoSolicitudMovimiento estado,
             @Parameter(description = "Filtrar desde esta fecha (inclusive)")
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(required = false) String fechaDesde,
             @Parameter(description = "Filtrar hasta esta fecha (inclusive)")
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            @RequestParam(required = false) String fechaHasta,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "fechaOrden,desc") String sort
     ) {
-        LocalDateTime desde = fechaDesde != null ? fechaDesde.atStartOfDay() : null;
-        LocalDateTime hasta = fechaHasta != null ? fechaHasta.atTime(23, 59, 59) : null;
-        String[] partes = sort.split(",");
-        Sort sortObj = partes.length == 2
-                ? Sort.by(Sort.Direction.fromString(partes[1]), partes[0])
-                : Sort.by(partes[0]);
-        Pageable pageable = PageRequest.of(page, size, sortObj);
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null) {
-            log.debug("listarPorOrden invocado por {} con authorities {}", auth.getName(), auth.getAuthorities());
+        LocalDateTime inicio = null;
+        LocalDateTime fin = null;
+        if ((fechaDesde != null && fechaHasta == null) || (fechaDesde == null && fechaHasta != null)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Se requieren fechaDesde y fechaHasta"));
         }
-        return ResponseEntity.ok(service.listGroupByOrden(estado, desde, hasta, pageable));
+        try {
+            if (fechaDesde != null) {
+                inicio = DateParser.parseStart(fechaDesde);
+                fin = DateParser.parseEnd(fechaHasta);
+                if (inicio.isAfter(fin)) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "fechaDesde no puede ser mayor a fechaHasta"));
+                }
+            }
+            String[] partes = sort.split(",");
+            Sort sortObj = partes.length == 2
+                    ? Sort.by(Sort.Direction.fromString(partes[1]), partes[0])
+                    : Sort.by(partes[0]);
+            Pageable pageable = PageRequest.of(page, size, sortObj);
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                log.debug("listarPorOrden invocado por {} con authorities {}", auth.getName(), auth.getAuthorities());
+            }
+            return ResponseEntity.ok(service.listGroupByOrden(estado, inicio, fin, pageable));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @GetMapping("/orden/{ordenId}")
