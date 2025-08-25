@@ -258,7 +258,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         // Cabecera
         String[] encabezados = {
-                "ID", "Fecha", "Tipo Movimiento", "Producto", "SKU", "Cantidad", "Unidad Medida",
+                "ID", "Fecha", "Tipo Movimiento", "Clasificación", "Producto", "SKU", "Cantidad", "Unidad Medida",
                 "Lote", "Almacén", "Proveedor", "Orden Compra", "Motivo", "Detalle Tipo Movimiento", "Usuario"
         };
 
@@ -276,32 +276,40 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             row.createCell(0).setCellValue(mov.getId());
             row.createCell(1).setCellValue(mov.getFechaIngreso() != null ? mov.getFechaIngreso().toString() : "");
             row.createCell(2).setCellValue(mov.getTipoMovimiento().name());
+            String clasificacion = "-";
+            if (mov.getClasificacion() != null) {
+                clasificacion = mov.getClasificacion().name();
+            } else if (mov.getMotivoMovimiento() != null && mov.getMotivoMovimiento().getMotivo() != null) {
+                clasificacion = mov.getMotivoMovimiento().getMotivo().name();
+            }
+            row.createCell(3).setCellValue(clasificacion);
+
             String nombreProducto = mov.getProducto() != null ? mov.getProducto().getNombre() : "";
             String codigoSku = mov.getProducto() != null ? mov.getProducto().getCodigoSku() : "";
             String unidad = (mov.getProducto() != null && mov.getProducto().getUnidadMedida() != null)
                     ? mov.getProducto().getUnidadMedida().getNombre() : "";
 
-            row.createCell(3).setCellValue(nombreProducto);
-            row.createCell(4).setCellValue(codigoSku);
+            row.createCell(4).setCellValue(nombreProducto);
+            row.createCell(5).setCellValue(codigoSku);
             BigDecimal cant = mov.getCantidad();
-            Cell cCant = row.createCell(5);
+            Cell cCant = row.createCell(6);
             if (cant != null) {
                 cCant.setCellValue(cant.setScale(2, RoundingMode.HALF_UP).doubleValue());
                 cCant.setCellStyle(styleDec2);
             } else {
                 cCant.setBlank();
             }
-            row.createCell(6).setCellValue(unidad);
-            row.createCell(7).setCellValue(mov.getLote() != null ? mov.getLote().getCodigoLote() : "");
+            row.createCell(7).setCellValue(unidad);
+            row.createCell(8).setCellValue(mov.getLote() != null ? mov.getLote().getCodigoLote() : "");
             String nombreAlmacen = mov.getAlmacenDestino() != null
                     ? mov.getAlmacenDestino().getNombre()
                     : (mov.getAlmacenOrigen() != null ? mov.getAlmacenOrigen().getNombre() : "");
-            row.createCell(8).setCellValue(nombreAlmacen);
-            row.createCell(9).setCellValue(mov.getProveedor() != null ? mov.getProveedor().getNombre() : "");
-            row.createCell(10).setCellValue(mov.getOrdenCompra() != null ? mov.getOrdenCompra().getId().toString() : "");
-            row.createCell(11).setCellValue(mov.getMotivoMovimiento() != null ? mov.getMotivoMovimiento().getDescripcion() : "");
-            row.createCell(12).setCellValue(mov.getTipoMovimientoDetalle() != null ? mov.getTipoMovimientoDetalle().getDescripcion() : "");
-            row.createCell(13).setCellValue(mov.getRegistradoPor() != null ? mov.getRegistradoPor().getNombreCompleto() : "");
+            row.createCell(9).setCellValue(nombreAlmacen);
+            row.createCell(10).setCellValue(mov.getProveedor() != null ? mov.getProveedor().getNombre() : "");
+            row.createCell(11).setCellValue(mov.getOrdenCompra() != null ? mov.getOrdenCompra().getId().toString() : "");
+            row.createCell(12).setCellValue(mov.getMotivoMovimiento() != null ? mov.getMotivoMovimiento().getDescripcion() : "");
+            row.createCell(13).setCellValue(mov.getTipoMovimientoDetalle() != null ? mov.getTipoMovimientoDetalle().getDescripcion() : "");
+            row.createCell(14).setCellValue(mov.getRegistradoPor() != null ? mov.getRegistradoPor().getNombreCompleto() : "");
         }
 
         // Autosize columnas

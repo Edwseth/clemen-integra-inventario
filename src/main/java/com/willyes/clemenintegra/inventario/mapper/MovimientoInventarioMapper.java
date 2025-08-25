@@ -45,7 +45,15 @@ public interface MovimientoInventarioMapper {
         dto.setId(m.getId());
         dto.setFechaIngreso(m.getFechaIngreso());
         dto.setTipoMovimiento(m.getTipoMovimiento());
-        dto.setClasificacion(m.getClasificacion());
+
+        String clasificacion = "-";
+        if (m.getClasificacion() != null) {
+            clasificacion = m.getClasificacion().name();
+        } else if (m.getMotivoMovimiento() != null && m.getMotivoMovimiento().getMotivo() != null) {
+            clasificacion = m.getMotivoMovimiento().getMotivo().name();
+        }
+        dto.setClasificacion(clasificacion);
+
         dto.setCantidad(m.getCantidad());
 
         var p = m.getProducto();
