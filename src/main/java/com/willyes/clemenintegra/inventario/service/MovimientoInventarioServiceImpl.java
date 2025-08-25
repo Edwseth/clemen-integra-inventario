@@ -11,8 +11,11 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -20,13 +23,17 @@ import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -36,10 +43,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -62,13 +71,25 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final MovimientoInventarioRepository repository;
     private final MovimientoInventarioMapper mapper;
     private final UsuarioService usuarioService;
+    private final SolicitudMovimientoRepository solicitudMovimientoRepository;
 
     @Resource
     private final EntityManager entityManager;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            log.warn("Intento de registrar movimiento sin autenticación válida");
+            throw new AuthenticationCredentialsNotFoundException("No se encontró autenticación válida");
+        }
+
+        if (dto.tipoMovimientoDetalleId() == null) {
+            throw new IllegalArgumentException("tipo_movimiento_detalle_id es obligatorio"); // [Codex Edit]
+        }
+
         MovimientoInventario movimiento = mapper.toEntity(dto);
 
         // 1. Cargar entidades principales
@@ -86,6 +107,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 : usuarioService.obtenerUsuarioAutenticado();
 
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
+
+        SolicitudMovimiento solicitud = null; // [Codex Edit]
+        if (dto.solicitudMovimientoId() != null) {
+            solicitud = solicitudMovimientoRepository.findById(dto.solicitudMovimientoId())
+                    .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
+            if (solicitud.getEstado() == EstadoSolicitudMovimiento.EJECUTADA) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud ya fue ejecutada");
+            }
+            if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud no está autorizada");
+            }
+        }
 
         // Detección automática de devolución interna
         boolean devolucionInterna = false;
@@ -132,7 +165,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         LoteProducto lote;
 
         if (tipoMovimiento == TipoMovimiento.RECEPCION) {
-            lote = crearLoteRecepcion(dto, producto, almacenDestino, usuario, cantidad);
+            if (dto.ordenCompraId() == null) {
+                throw new IllegalArgumentException("Las recepciones sin Orden de Compra deben usar un lote existente");
+            }
+            lote = crearLoteRecepcion(dto, producto, almacenDestino, usuario, cantidad, motivoMovimiento);
         } else {
             lote = procesarMovimientoConLoteExistente(dto, tipoMovimiento, almacenOrigen,
                     almacenDestino, producto, cantidad, devolucionInterna);
@@ -161,9 +197,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setTipoMovimientoDetalle(dto.tipoMovimientoDetalleId() != null
                 ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null);
         movimiento.setRegistradoPor(usuario);
+        if (solicitud != null) {
+            movimiento.setSolicitudMovimiento(solicitud);
+        }
 
         MovimientoInventario guardado = repository.save(movimiento);
-        return mapper.toResponseDTO(guardado);
+        if (solicitud != null) {
+            solicitud.setEstado(EstadoSolicitudMovimiento.EJECUTADA);
+            solicitudMovimientoRepository.save(solicitud);
+        }
+        return mapper.safeToResponseDTO(guardado);
     }
 
     @Override
@@ -174,39 +217,31 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         Page<MovimientoInventario> movimientos = repository.findAll(sortedPageable);
-        return movimientos.map(mapper::toResponseDTO);
+        return movimientos.map(mapper::safeToResponseDTO);
     }
 
+    @Transactional(readOnly = true)
     @Override
-    public Page<MovimientoInventario> consultarMovimientosConFiltros(
-            MovimientoInventarioFiltroDTO filtro, Pageable pageable) {
-        LocalDateTime inicio = filtro.fechaInicio() != null ? filtro.fechaInicio().atStartOfDay() : null;
-        LocalDateTime fin = filtro.fechaFin() != null ? filtro.fechaFin().atTime(23, 59, 59) : null;
-        return repository.filtrarMovimientos(
-                filtro.productoId(),
-                filtro.almacenId(),
-                filtro.tipoMovimiento(),
-                filtro.clasificacion(),
-                inicio,
-                fin,
-                pageable
-        );
+    public Page<MovimientoInventarioResponseDTO> filtrar(
+            LocalDateTime fechaInicio, LocalDateTime fechaFin,
+            Long productoId, Long almacenId,
+            TipoMovimiento tipoMovimiento, ClasificacionMovimientoInventario clasificacion,
+            Pageable pageable) {
+        Page<MovimientoInventario> page = repository.filtrar(
+                fechaInicio, fechaFin, productoId, almacenId, tipoMovimiento, clasificacion, pageable);
+        return page.map(mapper::safeToResponseDTO);
     }
 
     @Override
     public List<MovimientoInventarioResponseDTO> consultarMovimientos(MovimientoInventarioFiltroDTO filtro) {
-        LocalDateTime inicio = filtro.fechaInicio() != null ? filtro.fechaInicio().atStartOfDay() : null;
-        LocalDateTime fin = filtro.fechaFin() != null ? filtro.fechaFin().atTime(23, 59, 59) : null;
-
         List<MovimientoInventario> lista = repository.buscarMovimientos(
+                filtro.fechaInicio(), filtro.fechaFin(),
                 filtro.productoId(),
                 filtro.almacenId(),
                 filtro.tipoMovimiento(),
-                filtro.clasificacion(),
-                inicio,
-                fin
+                filtro.clasificacion()
         );
-        return lista.stream().map(mapper::toResponseDTO).toList();
+        return lista.stream().map(mapper::safeToResponseDTO).toList();
     }
 
     @Override
@@ -216,9 +251,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Movimientos Inventario");
 
+        // NUEVO: estilo con 2 decimales
+        DataFormat df = workbook.createDataFormat();
+        CellStyle styleDec2 = workbook.createCellStyle();
+        styleDec2.setDataFormat(df.getFormat("0.00"));
+
         // Cabecera
         String[] encabezados = {
-                "ID", "Fecha", "Tipo Movimiento", "Producto", "SKU", "Cantidad", "Unidad Medida",
+                "ID", "Fecha", "Tipo Movimiento", "Clasificación", "Producto", "SKU", "Cantidad", "Unidad Medida",
                 "Lote", "Almacén", "Proveedor", "Orden Compra", "Motivo", "Detalle Tipo Movimiento", "Usuario"
         };
 
@@ -236,25 +276,40 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             row.createCell(0).setCellValue(mov.getId());
             row.createCell(1).setCellValue(mov.getFechaIngreso() != null ? mov.getFechaIngreso().toString() : "");
             row.createCell(2).setCellValue(mov.getTipoMovimiento().name());
+            String clasificacion = "-";
+            if (mov.getClasificacion() != null) {
+                clasificacion = mov.getClasificacion().name();
+            } else if (mov.getMotivoMovimiento() != null && mov.getMotivoMovimiento().getMotivo() != null) {
+                clasificacion = mov.getMotivoMovimiento().getMotivo().name();
+            }
+            row.createCell(3).setCellValue(clasificacion);
+
             String nombreProducto = mov.getProducto() != null ? mov.getProducto().getNombre() : "";
             String codigoSku = mov.getProducto() != null ? mov.getProducto().getCodigoSku() : "";
             String unidad = (mov.getProducto() != null && mov.getProducto().getUnidadMedida() != null)
                     ? mov.getProducto().getUnidadMedida().getNombre() : "";
 
-            row.createCell(3).setCellValue(nombreProducto);
-            row.createCell(4).setCellValue(codigoSku);
-            row.createCell(5).setCellValue(mov.getCantidad().doubleValue());
-            row.createCell(6).setCellValue(unidad);
-            row.createCell(7).setCellValue(mov.getLote() != null ? mov.getLote().getCodigoLote() : "");
+            row.createCell(4).setCellValue(nombreProducto);
+            row.createCell(5).setCellValue(codigoSku);
+            BigDecimal cant = mov.getCantidad();
+            Cell cCant = row.createCell(6);
+            if (cant != null) {
+                cCant.setCellValue(cant.setScale(2, RoundingMode.HALF_UP).doubleValue());
+                cCant.setCellStyle(styleDec2);
+            } else {
+                cCant.setBlank();
+            }
+            row.createCell(7).setCellValue(unidad);
+            row.createCell(8).setCellValue(mov.getLote() != null ? mov.getLote().getCodigoLote() : "");
             String nombreAlmacen = mov.getAlmacenDestino() != null
                     ? mov.getAlmacenDestino().getNombre()
                     : (mov.getAlmacenOrigen() != null ? mov.getAlmacenOrigen().getNombre() : "");
-            row.createCell(8).setCellValue(nombreAlmacen);
-            row.createCell(9).setCellValue(mov.getProveedor() != null ? mov.getProveedor().getNombre() : "");
-            row.createCell(10).setCellValue(mov.getOrdenCompra() != null ? mov.getOrdenCompra().getId().toString() : "");
-            row.createCell(11).setCellValue(mov.getMotivoMovimiento() != null ? mov.getMotivoMovimiento().getDescripcion() : "");
-            row.createCell(12).setCellValue(mov.getTipoMovimientoDetalle() != null ? mov.getTipoMovimientoDetalle().getDescripcion() : "");
-            row.createCell(13).setCellValue(mov.getRegistradoPor() != null ? mov.getRegistradoPor().getNombreCompleto() : "");
+            row.createCell(9).setCellValue(nombreAlmacen);
+            row.createCell(10).setCellValue(mov.getProveedor() != null ? mov.getProveedor().getNombre() : "");
+            row.createCell(11).setCellValue(mov.getOrdenCompra() != null ? mov.getOrdenCompra().getId().toString() : "");
+            row.createCell(12).setCellValue(mov.getMotivoMovimiento() != null ? mov.getMotivoMovimiento().getDescripcion() : "");
+            row.createCell(13).setCellValue(mov.getTipoMovimientoDetalle() != null ? mov.getTipoMovimientoDetalle().getDescripcion() : "");
+            row.createCell(14).setCellValue(mov.getRegistradoPor() != null ? mov.getRegistradoPor().getNombreCompleto() : "");
         }
 
         // Autosize columnas
@@ -267,6 +322,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     public ByteArrayInputStream exportarMovimientosAExcel(List<MovimientoInventario> movimientos) {
         try (Workbook workbook = new XSSFWorkbook()) {
+            // NUEVO: estilo con 2 decimales
+            DataFormat df = workbook.createDataFormat();
+            CellStyle styleDec2 = workbook.createCellStyle();
+            styleDec2.setDataFormat(df.getFormat("0.00"));
             Sheet sheet = workbook.createSheet("Movimientos");
             Row header = sheet.createRow(0);
             String[] columnas = {"ID", "Producto", "Cantidad", "Tipo Movimiento", "Fecha"};
@@ -280,7 +339,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 row.createCell(0).setCellValue(mov.getId());
                 String nombreProducto = mov.getProducto() != null ? mov.getProducto().getNombre() : "";
                 row.createCell(1).setCellValue(nombreProducto);
-                row.createCell(2).setCellValue(mov.getCantidad().doubleValue());
+                BigDecimal cant = mov.getCantidad();
+                Cell c2 = row.createCell(2);
+                if (cant != null) {
+                    c2.setCellValue(cant.setScale(2, RoundingMode.HALF_UP).doubleValue());
+                    c2.setCellStyle(styleDec2);
+                } else {
+                    c2.setBlank();
+                }
                 row.createCell(3).setCellValue(mov.getTipoMovimiento().name());
                 row.createCell(4).setCellValue(mov.getFechaIngreso().toString());
             }
@@ -310,7 +376,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private LoteProducto crearLoteRecepcion(MovimientoInventarioDTO dto, Producto producto,
-                                            Almacen destino, Usuario usuario, BigDecimal cantidad) {
+                                            Almacen destino, Usuario usuario, BigDecimal cantidad,
+                                            MotivoMovimiento motivoMovimiento) {
         if (dto.loteProductoId() != null) {
             LoteProducto existente = loteProductoRepository.findById(dto.loteProductoId())
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
@@ -318,6 +385,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             existente.setStockLote(nuevo);
             existente.setAlmacen(destino);
             return loteProductoRepository.save(existente);
+        }
+
+        if (motivoMovimiento == null ||
+                motivoMovimiento.getMotivo() != ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
+            throw new IllegalArgumentException("Solo la recepción de compra puede crear un nuevo lote");
         }
 
         LoteProducto lote = LoteProducto.builder()
@@ -348,18 +420,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         LoteProducto loteOrigen = loteProductoRepository.findById(dto.loteProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
-        if (loteOrigen.getEstado() == EstadoLote.EN_CUARENTENA || loteOrigen.getEstado() == EstadoLote.RETENIDO) {
-            throw new IllegalStateException("No se puede mover: el lote está en cuarentena o retenido");
-        }
-
-        if (loteOrigen.getEstado() == EstadoLote.VENCIDO) {
-            if (dto.motivoMovimientoId() == null) {
-                throw new IllegalStateException("No se puede mover: el lote está vencido");
-            }
-            MotivoMovimiento motivo = entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId());
-            if (motivo.getMotivo() != ClasificacionMovimientoInventario.AJUSTE_NEGATIVO) {
-                throw new IllegalStateException("No se puede mover: el lote está vencido");
-            }
+        if (EnumSet.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO,
+                EstadoLote.RECHAZADO, EstadoLote.VENCIDO).contains(loteOrigen.getEstado())) {
+            throw new IllegalStateException("El lote no se puede mover por su estado actual");
         }
 
         // Declaración necesaria (si aún no está)

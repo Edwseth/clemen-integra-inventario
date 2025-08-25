@@ -5,62 +5,63 @@ import com.willyes.clemenintegra.shared.dto.auth.Codigo2FARequestDTO;
 import com.willyes.clemenintegra.shared.dto.auth.LoginRequestDTO;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private static final SecureRandom RNG = new SecureRandom();
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
 
+    @Transactional
     public void iniciarLogin(LoginRequestDTO dto) {
-        Usuario usuario = usuarioRepository.findByNombreUsuario(dto.nombreUsuario())
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        final String username = dto.nombreUsuario() != null ? dto.nombreUsuario().trim() : "";
+        final String rawPassword = dto.clave() != null ? dto.clave() : "";
+
+        Usuario usuario = usuarioRepository.findByNombreUsuario(username)
+                .orElseThrow(() -> new IllegalArgumentException("Credenciales inválidas"));
 
         if (!usuario.isActivo() || usuario.isBloqueado()) {
             throw new IllegalStateException("Usuario inactivo o bloqueado");
         }
 
-        if (!passwordEncoder.matches(dto.clave(), usuario.getClave())) {
-            throw new IllegalArgumentException("Contraseña incorrecta");
+        if (!passwordEncoder.matches(rawPassword, usuario.getClave())) {
+            throw new IllegalArgumentException("Credenciales inválidas");
         }
 
-        // Generar código 2FA
-        String codigo = String.format("%06d", new Random().nextInt(1_000_000));
+        // Generar código 2FA de 6 dígitos
+        String codigo = String.format("%06d", RNG.nextInt(1_000_000));
         usuario.setCodigo2FA(codigo);
         usuario.setCodigo2FAExpiraEn(LocalDateTime.now().plusMinutes(5));
-
         usuarioRepository.save(usuario);
 
-        // Aquí podrías enviar el código por email o WhatsApp si se desea
-        log.info("\uD83D\uDD10 Código 2FA generado: {}", codigo);
+        // TODO: enviar el código por el canal deseado
+        log.info("🔐 Código 2FA generado para {}: {}", usuario.getNombreUsuario(), codigo);
     }
 
     @Transactional
     public AuthResponseDTO verificarCodigo2FA(Codigo2FARequestDTO dto) {
-        Usuario usuario = usuarioRepository.findByNombreUsuario(dto.nombreUsuario())
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        final String username = dto.nombreUsuario() != null ? dto.nombreUsuario().trim() : "";
+        final String codigo = dto.codigo() != null ? dto.codigo().trim() : "";
 
-        log.info("Validando código 2FA...");
-        log.info("Usuario: {}", usuario.getNombreUsuario());
-        log.info("Codigo 2FA almacenado: {}", usuario.getCodigo2FA());
-        log.info("Codigo 2FA recibido: {}", dto.codigo());
-        log.info("Fecha expiración: {}", usuario.getCodigo2FAExpiraEn());
-        log.info("Fecha actual: {}", LocalDateTime.now());
+        Usuario usuario = usuarioRepository.findByNombreUsuario(username)
+                .orElseThrow(() -> new IllegalArgumentException("Código inválido o expirado"));
+
         if (usuario.getCodigo2FA() == null || usuario.getCodigo2FAExpiraEn() == null ||
-                !usuario.getCodigo2FA().equals(dto.codigo()) ||
+                !codigo.equals(usuario.getCodigo2FA()) ||
                 usuario.getCodigo2FAExpiraEn().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Código inválido o expirado");
         }
@@ -74,3 +75,4 @@ public class AuthServiceImpl implements AuthService {
         return new AuthResponseDTO(token, usuario.getNombreUsuario(), usuario.getRol().name());
     }
 }
+

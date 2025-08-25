@@ -61,7 +61,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                 DetalleFormulaResponse dto = response.detalles.get(i);
 
                 BigDecimal totalNecesaria = entidad.getCantidadNecesaria().multiply(cantidadProduccion);
-                dto.cantidadTotalNecesaria = totalNecesaria.doubleValue();
+                dto.cantidadTotalNecesaria = totalNecesaria;
 
                 // LÍNEA CODEx: antes se tomaba stockActual directo del producto sin discriminar lotes
                 Long insumoId = entidad.getInsumo().getId().longValue();

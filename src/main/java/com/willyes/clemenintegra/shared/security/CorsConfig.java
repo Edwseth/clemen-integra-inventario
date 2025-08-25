@@ -2,9 +2,6 @@ package com.willyes.clemenintegra.shared.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -21,7 +18,11 @@ public class CorsConfig {
     };
 
     private static final String[] ALLOWED_HEADERS = {
-            "Authorization", "Content-Type"
+            "Authorization", "Content-Type", "Accept", "X-Bypass-Auth-Redirect"
+    };
+
+    private static final String[] EXPOSED_HEADERS = {
+            "Content-Disposition"
     };
 
     @Bean
@@ -33,6 +34,7 @@ public class CorsConfig {
                         .allowedOrigins(ALLOWED_ORIGINS)
                         .allowedMethods(ALLOWED_METHODS)
                         .allowedHeaders(ALLOWED_HEADERS)
+                        .exposedHeaders(EXPOSED_HEADERS)
                         .allowCredentials(true);
             }
         };

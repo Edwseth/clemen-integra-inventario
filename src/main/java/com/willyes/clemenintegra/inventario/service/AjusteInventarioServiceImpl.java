@@ -2,14 +2,16 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.mapper.AjusteInventarioMapper;
+import com.willyes.clemenintegra.inventario.model.AjusteInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDateTime;
 
 @Service
@@ -23,11 +25,9 @@ public class AjusteInventarioServiceImpl implements AjusteInventarioService {
     private final UsuarioRepository usuarioRepository;
 
 
-    public List<AjusteInventarioResponseDTO> listar() {
-        return repository.findAll()
-                .stream()
-                .map(mapper::toResponseDTO)
-                .collect(Collectors.toList());
+    public Page<AjusteInventarioResponseDTO> listar(Pageable pageable) {
+        Page<AjusteInventario> page = repository.findAll(pageable);
+        return page.map(mapper::toResponseDTO);
     }
 
     public AjusteInventarioResponseDTO crear(AjusteInventarioRequestDTO dto) {

@@ -3,22 +3,18 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -40,9 +36,15 @@ public class ProductoController {
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final UnidadMedidaRepository unidadMedidaRepository;
     private final UsuarioRepository usuarioRepository;
-    private final MovimientoInventarioService service;
-    private final ProductoRepository productoRepo;
-    private final LoteProductoRepository loteRepo;
+
+    @GetMapping("/buscar")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION')")
+    public ResponseEntity<Page<ProductoOptionDTO>> buscarProductos(
+            @RequestParam(name = "q", required = false) String q,
+            @PageableDefault(size = 10, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<ProductoOptionDTO> page = productoService.buscarOpciones(q, pageable);
+        return ResponseEntity.ok(page);
+    }
 
     @GetMapping("/categoria/{nombre}")
     public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
@@ -101,12 +103,27 @@ public class ProductoController {
         return ResponseEntity.ok(actualizado);
     }
 
+    // PROD-INACTIVAR BEGIN
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        productoService.eliminarProducto(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        try {
+            productoService.eliminarProducto(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("code", "PRODUCT_HAS_DEPENDENCIES", "message", e.getMessage()));
+        }
     }
+
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    public ResponseEntity<ProductoResponseDTO> cambiarEstado(@PathVariable Long id,
+                                                             @RequestBody ProductoEstadoRequestDTO body) {
+        ProductoResponseDTO dto = productoService.actualizarEstado(id, body.activo());
+        return ResponseEntity.ok(dto);
+    }
+    // PROD-INACTIVAR END
 
     @PutMapping("/{id}/unidad-medida")
     public ResponseEntity<?> cambiarUnidadMedida(
@@ -156,26 +173,21 @@ public class ProductoController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD')")
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerTodos(
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<ProductoResponseDTO> productos = productoService.listarTodos(pageable);
-        return ResponseEntity.ok(productos);
-    }
-
-    @GetMapping("/reporte-stock")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
-    @Operation(summary = "Exportar reporte de stock actual de productos a Excel")
-    @ApiResponse(responseCode = "200", description = "Reporte generado correctamente")
-    public void exportarStockActual(HttpServletResponse response) throws IOException {
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=stock_actual.xlsx");
-
-        Workbook workbook = productoService.generarReporteStockActualExcel();
-        try (ServletOutputStream out = response.getOutputStream()) {
-            workbook.write(out);
-            out.flush();
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) String sku,
+            @RequestParam(required = false, name = "codigoSku") String codigoSkuLegacy,
+            @RequestParam(required = false) Long categoriaProductoId,
+            @RequestParam(required = false) Boolean activo,
+            @PageableDefault(size = 10, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+            return ResponseEntity.badRequest().build();
         }
-        workbook.close();
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaCreacion", "id", "nombre"), "fechaCreacion");
+        String finalSku = sku != null ? sku : codigoSkuLegacy;
+        Page<ProductoResponseDTO> productos = productoService.listarTodos(nombre, finalSku, categoriaProductoId, activo, sanitized);
+        return ResponseEntity.ok(productos);
     }
 
 }

@@ -156,7 +156,7 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/productos-por-vencer")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarLotesPorVencer() throws IOException {
         Workbook workbook = loteProductoService.generarReporteLotesPorVencerExcel();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -169,7 +169,7 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/alertas-inventario")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarAlertasInventario() {
         ByteArrayOutputStream stream = loteProductoService.generarReporteAlertasActivasExcel();
         return ResponseEntity.ok()
@@ -179,7 +179,7 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/movimientos")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarReporteMovimientos() throws IOException {
         byte[] contenido;
         try (Workbook workbook = movimientoService.generarReporteMovimientosExcel();

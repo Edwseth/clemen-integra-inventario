@@ -11,7 +11,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import com.willyes.clemenintegra.shared.util.PaginationUtil;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +53,12 @@ public class AlmacenController {
     public ResponseEntity<Page<AlmacenResponseDTO>> buscarPorTipoYCategoria(
             @RequestParam(required = false) TipoAlmacen tipo,
             @RequestParam(required = false) TipoCategoria categoria,
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<AlmacenResponseDTO> page = almacenService.buscarPorTipoYCategoria(tipo, categoria, pageable);
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+            return ResponseEntity.badRequest().build();
+        }
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("id", "nombre"), "id");
+        Page<AlmacenResponseDTO> page = almacenService.buscarPorTipoYCategoria(tipo, categoria, sanitized);
         return ResponseEntity.ok(page);
     }
 }

@@ -21,6 +21,7 @@ public class LoteProductoResponseDTO {
     private LocalDateTime fechaLiberacion;
     private String nombreProducto;
     private String nombreAlmacen;
+    private String ubicacionAlmacen;
     private String nombreUsuarioLiberador;
 
     public String getNombreProducto() {
@@ -31,6 +32,10 @@ public class LoteProductoResponseDTO {
         return nombreAlmacen;}
     public void setNombreAlmacen(String nombreAlmacen) {
         this.nombreAlmacen = nombreAlmacen;}
+    public String getUbicacionAlmacen() {
+        return ubicacionAlmacen;}
+    public void setUbicacionAlmacen(String ubicacionAlmacen) {
+        this.ubicacionAlmacen = ubicacionAlmacen;}
     public String getNombreUsuarioLiberador() {
         return nombreUsuarioLiberador;}
     public void setNombreUsuarioLiberador(String nombreUsuarioLiberador) {

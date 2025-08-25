@@ -25,6 +25,8 @@ public class SolicitudMovimientoItemDTO {
     private Long almacenDestinoId;
     private String nombreAlmacenDestino;
     private String ubicacionAlmacenDestino;
+    private Long motivoMovimientoId;
+    private Long tipoMovimientoDetalleId;
     private String estado;
     private LocalDateTime fechaSolicitud;
     private String usuarioSolicitante;

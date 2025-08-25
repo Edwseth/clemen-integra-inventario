@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.shared.security;
 
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.security.model.UsuarioPrincipal;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -12,8 +14,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -28,14 +32,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final CustomUserDetailsService customUserDetailsService;
+    //private final CustomUserDetailsService customUserDetailsService;
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    //private final UsuarioPrincipal usuarioPrincipal;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    //@Bean
+    //public PasswordEncoder passwordEncoder() {
+        //return new BCryptPasswordEncoder();
+    //}
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
@@ -45,7 +50,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> {})
+                .cors(c -> {})
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
@@ -126,6 +131,9 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -139,16 +147,17 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
-                    // Mantener esta regla genérica al final para que las reglas específicas previas tengan precedencia.
-                    // Nuevas rutas específicas deben agregarse antes de esta sección.
+                    // Mantener esta regla genérica al final
                     auth.requestMatchers("/api/**").authenticated();
-
                     auth.anyRequest().authenticated();
                 })
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) ->
-                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autorizado"))
-                )
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                                (request, response, authEx) -> {
+                                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                    response.setContentType("application/json");
+                                    response.getWriter().write("{\"error\":\"No autorizado\"}");
+                                }
+                ))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class);
 
@@ -158,12 +167,32 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Bypass-Auth-Redirect"
+        ));
+        configuration.setExposedHeaders(List.of("Content-Disposition"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    //@Bean
+    //public AuthenticationEntryPoint authenticationEntryPoint() {
+        //return (request, response, authException) ->
+                //response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autorizado");
+    //}
+
+    @Bean
+    public UserDetailsService userDetailsService(UsuarioRepository usuarioRepository) {
+        return username -> usuarioRepository
+                .findByNombreUsuario(username.trim())
+                .map(UsuarioPrincipal::new) // usa tu clase que implementa UserDetails
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
     }
 }

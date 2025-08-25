@@ -15,9 +15,7 @@ import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,17 +23,20 @@ import lombok.RequiredArgsConstructor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import java.util.stream.Collectors;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import static com.willyes.clemenintegra.inventario.service.spec.LoteProductoSpecifications.*;
 
 @Service
 @RequiredArgsConstructor
@@ -64,7 +65,6 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             lote.setEstado(EstadoLote.DISPONIBLE);
         } else {
             lote.setEstado(EstadoLote.EN_CUARENTENA);
-            lote.setEstado(EstadoLote.DISPONIBLE);
         }
 
         lote = loteRepo.saveAndFlush(lote); // sin try-catch, lo maneja el ControllerAdvice
@@ -114,8 +114,27 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     }
 
     @Override
-    public Page<LoteProductoResponseDTO> listarTodos(Pageable pageable) {
-        Page<LoteProducto> lotes = loteProductoRepository.findAll(pageable);
+    public Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen,
+                                                     Boolean vencidos, LocalDateTime fechaInicio,
+                                                     LocalDateTime fechaFin, Pageable pageable) {
+        Specification<LoteProducto> spec = Specification.where(productoNombreContains(producto))
+                .and(equalsEstado(estado))
+                .and(almacenNombreContains(almacen));
+
+        if (Boolean.TRUE.equals(vencidos)) {
+            spec = spec.and(fechaVencimientoAntesDe(LocalDateTime.now()));
+        } else {
+            LocalDateTime inicio = fechaInicio;
+            LocalDateTime fin = fechaFin;
+            if (inicio != null) {
+                spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fechaVencimiento"), inicio));
+            }
+            if (fin != null) {
+                spec = spec.and(fechaVencimientoAntesDe(fin));
+            }
+        }
+
+        Page<LoteProducto> lotes = loteProductoRepository.findAll(spec, pageable);
         return lotes.map(loteProductoMapper::toResponseDTO);
     }
 
@@ -134,7 +153,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         // Encabezados
         Row header = sheet.createRow(0);
         String[] columnas = {
-                "ID Lote", "Código Lote", "Producto", "Fecha Vencimiento", "Stock Lote", "Estado", "Almacén"
+                "ID Lote", "Código Lote", "Producto", "Fecha Vencimiento", "Stock Lote", "Estado", "Almacén", "Ubicación"
         };
         for (int i = 0; i < columnas.length; i++) {
             header.createCell(i).setCellValue(columnas[i]);
@@ -149,9 +168,13 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             String nombreProd = lote.getProducto() != null ? lote.getProducto().getNombre() : "";
             row.createCell(2).setCellValue(nombreProd);
             row.createCell(3).setCellValue(lote.getFechaVencimiento() != null ? lote.getFechaVencimiento().toString() : "");
-            row.createCell(4).setCellValue(lote.getStockLote() != null ? lote.getStockLote().doubleValue() : 0);
+            Cell cell = row.createCell(4);
+            BigDecimal stock = (lote.getStockLote() != null) ? lote.getStockLote() : BigDecimal.ZERO;
+            cell.setCellValue(stock.doubleValue());
             row.createCell(5).setCellValue(lote.getEstado().name());
             row.createCell(6).setCellValue(lote.getAlmacen().getNombre());
+            String ubicacion = lote.getAlmacen() != null ? lote.getAlmacen().getUbicacion() : null;
+            row.createCell(7).setCellValue(ubicacion != null ? ubicacion : "-");
         }
 
         for (int i = 0; i < columnas.length; i++) {

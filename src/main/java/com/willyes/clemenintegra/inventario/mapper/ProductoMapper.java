@@ -18,9 +18,14 @@ public interface ProductoMapper {
         return toDto(producto);
     }
 
+    @Mapping(source = "codigoSku", target = "sku")
     @Mapping(target = "unidadMedida", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null)")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
     @Mapping(target = "tipoAnalisisCalidad", expression = "java(producto.getTipoAnalisis() != null ? producto.getTipoAnalisis().name() : null)")
+    // PROD-DETAIL-IDS BEGIN
+    @Mapping(target = "unidadMedidaId", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null)")
+    @Mapping(target = "categoriaProductoId", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null)")
+        // PROD-DETAIL-IDS END
     ProductoResponseDTO toDto(Producto producto);
 
     @Named("mapUnidadMedida")

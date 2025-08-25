@@ -48,6 +48,28 @@ public class SolicitudMovimiento {
     private Almacen almacenDestino;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "proveedor_id")
+    private Proveedor proveedor;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "orden_compra_id")
+    private OrdenCompra ordenCompra;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "motivo_movimiento_id")
+    private MotivoMovimiento motivoMovimiento;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tipo_movimiento_detalle_id")
+    private TipoMovimientoDetalle tipoMovimientoDetalle;
+
+    @Column(name = "codigo_lote")
+    private String codigoLote;
+
+    @Column(name = "fecha_vencimiento")
+    private LocalDateTime fechaVencimiento;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "orden_produccion_id")
     private OrdenProduccion ordenProduccion;
 

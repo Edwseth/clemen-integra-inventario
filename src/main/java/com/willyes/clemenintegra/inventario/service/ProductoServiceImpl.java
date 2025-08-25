@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -24,6 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
+import static com.willyes.clemenintegra.inventario.service.spec.ProductoSpecifications.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -60,10 +65,17 @@ public class ProductoServiceImpl implements ProductoService {
         throw new IllegalStateException("No se pudo extraer el token JWT");
     }
 
-    public Page<ProductoResponseDTO> listarTodos(Pageable pageable) {
+    public Page<ProductoResponseDTO> listarTodos(String nombre, String sku, Long categoriaProductoId, Boolean activo, Pageable pageable) {
 
         System.out.println("🟢 Entró correctamente a ProductoServiceImpl.listarTodos()");
-        Page<Producto> productos = productoRepository.findAll(pageable);
+
+        Specification<Producto> spec = Specification
+                .where(nombreContains(nombre))
+                .and(skuContains(sku))
+                .and(categoriaProductoIdEquals(categoriaProductoId))
+                .and(activoEquals(activo));
+
+        Page<Producto> productos = productoRepository.findAll(spec, pageable);
         System.out.println("▶️ Total productos devueltos: " + productos.getTotalElements());
 
         productos.forEach(p -> {
@@ -73,14 +85,15 @@ public class ProductoServiceImpl implements ProductoService {
                 System.out.println("📦 Producto cargado: " + p.getId() + " - " + p.getNombre());
             }
         });
-        return productos.map(productoMapper::safeToDto);
+
+        return productos.map(this::buildDto);
     }
 
     public List<ProductoResponseDTO> buscarPorCategoria(String categoria) {
         TipoCategoria tipo = TipoCategoria.valueOf(categoria.toUpperCase());
         return productoRepository.findByCategoriaProducto_Tipo(tipo)
                 .stream()
-                .map(ProductoResponseDTO::new)
+                .map(this::buildDto)
                 .collect(Collectors.toList());
     }
 
@@ -88,7 +101,7 @@ public class ProductoServiceImpl implements ProductoService {
         TipoCategoria tipoEnum = TipoCategoria.valueOf(tipo); // conversión aquí
         return productoRepository.findByCategoriaProducto_Tipo(tipoEnum)
                 .stream()
-                .map(productoMapper::toDto)
+                .map(this::buildDto)
                 .toList();
     }
 
@@ -98,13 +111,13 @@ public class ProductoServiceImpl implements ProductoService {
                 .toList();
         return productoRepository.findByCategoriaProducto_TipoIn(tiposEnum)
                 .stream()
-                .map(productoMapper::toDto)
+                .map(this::buildDto)
                 .toList();
     }
 
 
     public ProductoResponseDTO crearProducto(ProductoRequestDTO dto) {
-        validarDuplicados(dto.getCodigoSku(), dto.getNombre());
+        validarDuplicados(dto.getSku(), dto.getNombre());
 
         var unidad = unidadMedidaRepository.findById(dto.getUnidadMedidaId())
                 .orElseThrow(() -> new IllegalArgumentException("Unidad de medida no encontrada"));
@@ -118,7 +131,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         Producto producto = Producto.builder()
-                .codigoSku(dto.getCodigoSku())
+                .codigoSku(dto.getSku())
                 .nombre(dto.getNombre())
                 .descripcionProducto(dto.getDescripcionProducto())
                 .stockActual(BigDecimal.ZERO)
@@ -133,7 +146,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .build();
 
         productoRepository.save(producto);
-        return productoMapper.toDto(producto);
+        return buildDto(producto);
     }
 
     private void validarDuplicados(String sku, String nombre) {
@@ -159,7 +172,7 @@ public class ProductoServiceImpl implements ProductoService {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
-        return productoMapper.toDto(producto);
+        return buildDto(producto);
     }
 
     public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto) {
@@ -167,7 +180,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
         // Validar duplicados de SKU y nombre excluyendo el mismo producto actual
-        validarDuplicadosAlActualizar(id, dto.getCodigoSku(), dto.getNombre());
+        validarDuplicadosAlActualizar(id, dto.getSku(), dto.getNombre());
 
         var unidad = unidadMedidaRepository.findById(dto.getUnidadMedidaId())
                 .orElseThrow(() -> new IllegalArgumentException("Unidad de medida no encontrada"));
@@ -180,7 +193,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         // Actualizar campos
-        producto.setCodigoSku(dto.getCodigoSku());
+        producto.setCodigoSku(dto.getSku());
         producto.setNombre(dto.getNombre());
         producto.setDescripcionProducto(dto.getDescripcionProducto());
         producto.setStockMinimo(dto.getStockMinimo());
@@ -191,7 +204,7 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setCreadoPor(usuario);
 
         productoRepository.save(producto);
-        return productoMapper.toDto(producto);
+        return buildDto(producto);
     }
 
     @Transactional
@@ -213,18 +226,38 @@ public class ProductoServiceImpl implements ProductoService {
         return new UnidadMedidaResponseDTO(unidad.getId(), unidad.getNombre(), unidad.getSimbolo());
     }
 
+    // PROD-INACTIVAR BEGIN
     public void eliminarProducto(Long id) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
-
-        // Aquí debes validar relaciones activas (ejemplo con lotes)
-        boolean tieneRelacion = loteProductoRepository.existsByProducto(producto);
-        if (tieneRelacion) {
-            throw new IllegalStateException("No se puede eliminar el producto porque tiene lotes registrados.");
+        boolean hasLotes = loteProductoRepository.existsByProducto(producto);
+        boolean hasMovimientos = movimientoInventarioRepository.existsByProductoId(id);
+        if (hasLotes || hasMovimientos) {
+            throw new IllegalStateException("El producto tiene dependencias y no puede eliminarse");
         }
-
         productoRepository.delete(producto);
     }
+
+    public ProductoResponseDTO actualizarEstado(Long id, Boolean activo) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
+        producto.setActivo(Boolean.TRUE.equals(activo));
+        productoRepository.save(producto);
+        return buildDto(producto);
+    }
+    // PROD-INACTIVAR END
+
+    // PROD-FLAGS BEGIN
+    private ProductoResponseDTO buildDto(Producto producto) {
+        ProductoResponseDTO dto = productoMapper.toDto(producto);
+        dto.setEditable(producto.isActivo());
+        boolean hasLotes = loteProductoRepository.existsByProducto(producto);
+        boolean hasMovimientos = movimientoInventarioRepository.existsByProductoId(producto.getId().longValue());
+        dto.setEliminable(!hasLotes && !hasMovimientos);
+        dto.setInactivable(true);
+        return dto;
+    }
+    // PROD-FLAGS END
 
     public List<ProductoConEstadoLoteDTO> buscarProductosConLotesPorEstado(String estado) {
         EstadoLote estadoEnum = EstadoLote.valueOf(estado.toUpperCase());
@@ -303,9 +336,9 @@ public class ProductoServiceImpl implements ProductoService {
             row.createCell(0).setCellValue(producto.getId());
             row.createCell(1).setCellValue(producto.getCodigoSku());
             row.createCell(2).setCellValue(producto.getNombre());
-            row.createCell(3).setCellValue(producto.getStockActual() != null ? producto.getStockActual().doubleValue() : 0);
+            row.createCell(3).setCellValue((RichTextString) (producto.getStockActual() != null ? producto.getStockActual() : BigDecimal.ZERO));
             row.createCell(4).setCellValue(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : "");
-            row.createCell(5).setCellValue(producto.getStockMinimo() != null ? producto.getStockMinimo().doubleValue() : 0);
+            row.createCell(5).setCellValue((RichTextString) (producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO));
             row.createCell(6).setCellValue(producto.isActivo());
             row.createCell(7).setCellValue(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : "");
         }
@@ -322,6 +355,27 @@ public class ProductoServiceImpl implements ProductoService {
             return TipoAnalisisCalidad.NINGUNO;
         }
         return TipoAnalisisCalidad.valueOf(valor);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable) {
+        Sort sort = pageable.getSort();
+        Sort safe = Sort.by(sort.stream()
+                .map(o -> switch (o.getProperty()) {
+                    case "nombre", "codigoSku", "sku", "id" ->
+                            "sku".equals(o.getProperty()) ? new Sort.Order(o.getDirection(), "codigoSku") : o;
+                    default -> new Sort.Order(o.isAscending() ? Sort.Direction.ASC : Sort.Direction.DESC, "nombre");
+                }).toList());
+        Pageable safePage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
+
+        Page<Producto> page = productoRepository.buscarPorTexto(q, safePage);
+        return page.map(p -> ProductoOptionDTO.builder()
+                .id(p.getId() == null ? null : Long.valueOf(p.getId()))
+                .nombre(p.getNombre())
+                .sku(p.getCodigoSku())
+                .build()
+        );
     }
 
     @Override

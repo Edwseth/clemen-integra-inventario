@@ -5,24 +5,26 @@ import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import com.willyes.clemenintegra.shared.util.PaginationUtil;
+import com.willyes.clemenintegra.shared.util.DateParser;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
-import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/lotes")
@@ -47,39 +49,67 @@ public class LoteProductoController {
         return ResponseEntity.ok(lotes);
     }
 
-    @GetMapping("/reporte-vencimiento")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ANALISTA_CALIDAD', 'ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportarLotesPorVencer() throws IOException {
-        Workbook workbook = service.generarReporteLotesPorVencerExcel();
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        workbook.write(bos);
-        workbook.close();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=lotes_por_vencer.xlsx");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(bos.toByteArray());
-    }
-
-    @GetMapping("/reporte-alertas")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ANALISTA_CALIDAD', 'ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportarAlertasActivas() {
-        ByteArrayOutputStream stream = service.generarReporteAlertasActivasExcel();
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=alertas_activas.xlsx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(stream.toByteArray());
-    }
-
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<Page<LoteProductoResponseDTO>> listarTodos(
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<LoteProductoResponseDTO> lotes = service.listarTodos(pageable);
+    public ResponseEntity<Page<LoteProductoResponseDTO>> listar(
+            @RequestParam(required = false) String producto,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String almacen,
+            @RequestParam(required = false, defaultValue = "false") Boolean vencidos,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
+            @PageableDefault(size = 10, sort = "fechaFabricacion", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        // Validación básica de paginación
+        if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // Sanitiza sort y define default distinto si es "vencidos"
+        Pageable sanitized = PaginationUtil.sanitize(
+                pageable,
+                java.util.List.of("fechaFabricacion", "fechaVencimiento", "id"),
+                Boolean.TRUE.equals(vencidos) ? "fechaVencimiento" : "fechaFabricacion"
+        );
+
+        // Parse de estado (opcional)
+        EstadoLote enumEstado = null;
+        if (estado != null && !estado.isBlank()) {
+            try {
+                enumEstado = EstadoLote.valueOf(estado.trim().toUpperCase());
+            } catch (IllegalArgumentException ignore) {
+                // estado inválido: se ignora el filtro
+            }
+        }
+
+        LocalDateTime inicio = null;
+        LocalDateTime fin = null;
+
+        // ✅ Si ES consulta de vencidos, ignorar fechas (no son requeridas)
+        if (!Boolean.TRUE.equals(vencidos)) {
+            // Si llega UNO de los dos, exige ambos
+            if ((fechaInicio == null) ^ (fechaFin == null)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requieren fechaInicio y fechaFin");
+            }
+
+            // Si llegan ambos, parsea y valida rango
+            if (fechaInicio != null && fechaFin != null) {
+                try {
+                    inicio = DateParser.parseStart(fechaInicio);
+                    fin = DateParser.parseEnd(fechaFin);
+                } catch (IllegalArgumentException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+                }
+                if (inicio.isAfter(fin)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaInicio no puede ser mayor a fechaFin");
+                }
+            }
+            // Si no llega ninguno, se listará sin filtro de fechas
+        }
+
+        Page<LoteProductoResponseDTO> lotes =
+                service.listarTodos(producto, enumEstado, almacen, vencidos, inicio, fin, sanitized);
+
         return ResponseEntity.ok(lotes);
     }
 

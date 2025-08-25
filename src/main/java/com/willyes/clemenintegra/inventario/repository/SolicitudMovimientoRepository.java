@@ -2,14 +2,19 @@ package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMovimiento, Long> {
+public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMovimiento, Long>, JpaSpecificationExecutor<SolicitudMovimiento> {
     List<SolicitudMovimiento> findByEstado(EstadoSolicitudMovimiento estado);
     List<SolicitudMovimiento> findByUsuarioResponsableId(Long usuarioResponsableId);
 
@@ -30,4 +35,8 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
                                                @Param("estado") EstadoSolicitudMovimiento estado,
                                                @Param("desde") LocalDateTime desde,
                                                @Param("hasta") LocalDateTime hasta);
+
+    @Override
+    @EntityGraph(attributePaths = {"usuarioSolicitante", "ordenProduccion"})
+    Page<SolicitudMovimiento> findAll(Specification<SolicitudMovimiento> spec, Pageable pageable);
 }

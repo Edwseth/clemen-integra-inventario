@@ -24,5 +24,7 @@ public class SolicitudMovimientoRequestDTO {
     @NotNull
     private Long usuarioSolicitanteId;
     private Long usuarioResponsableId;
+    private Long motivoMovimientoId;
+    private Long tipoMovimientoDetalleId;
     private String observaciones;
 }

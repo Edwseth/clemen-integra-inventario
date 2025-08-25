@@ -24,6 +24,8 @@ public class SolicitudMovimientoResponseDTO {
     private Integer almacenDestinoId;
     private String nombreAlmacenDestino;
     private Long ordenProduccionId;
+    private Long motivoMovimientoId;
+    private Long tipoMovimientoDetalleId;
     private String nombreSolicitante;
     private String nombreResponsable;
     private EstadoSolicitudMovimiento estado;

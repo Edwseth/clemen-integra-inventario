@@ -30,6 +30,10 @@ public class MovimientoInventario {
     @Column(name = "tipo_mov", nullable = false, length = 20)
     private TipoMovimiento tipoMovimiento;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "clasificacion", length = 50)
+    private ClasificacionMovimientoInventario clasificacion;
+
     @Column(name = "fecha_ingreso", nullable = false, updatable = false)
     private LocalDateTime fechaIngreso;
 
@@ -86,6 +90,10 @@ public class MovimientoInventario {
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_orden_compra_detalle"))
     private OrdenCompraDetalle ordenCompraDetalle;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "solicitud_movimiento_id")
+    private SolicitudMovimiento solicitudMovimiento;
+
     @PrePersist
     public void prePersist() {
         if (this.fechaIngreso == null) {
@@ -101,6 +109,31 @@ public class MovimientoInventario {
     public void setAlmacenOrigen(Almacen almacenOrigen) {this.almacenOrigen = almacenOrigen;}
     public Almacen getAlmacenDestino() {return almacenDestino;}
     public void setAlmacenDestino(Almacen almacenDestino) {this.almacenDestino = almacenDestino;}
+
+    public Long getId() {return id;}
+    public void setId(Long id) {this.id = id;}
+    public BigDecimal getCantidad() {return cantidad;}
+    public void setCantidad(BigDecimal cantidad) {this.cantidad = cantidad;}
+    public String getDocReferencia() {return docReferencia;}
+    public void setDocReferencia(String docReferencia) {this.docReferencia = docReferencia;}
+    public Usuario getRegistradoPor() {return registradoPor;}
+    public void setRegistradoPor(Usuario registradoPor) {this.registradoPor = registradoPor;}
+    public Producto getProducto() {return producto;}
+    public void setProducto(Producto producto) {this.producto = producto;}
+    public LoteProducto getLote() {return lote;}
+    public void setLote(LoteProducto lote) {this.lote = lote;}
+    public Proveedor getProveedor() {return proveedor;}
+    public void setProveedor(Proveedor proveedor) {this.proveedor = proveedor;}
+    public OrdenCompra getOrdenCompra() {return ordenCompra;}
+    public void setOrdenCompra(OrdenCompra ordenCompra) {this.ordenCompra = ordenCompra;}
+    public MotivoMovimiento getMotivoMovimiento() {return motivoMovimiento;}
+    public void setMotivoMovimiento(MotivoMovimiento motivoMovimiento) {this.motivoMovimiento = motivoMovimiento;}
+    public TipoMovimientoDetalle getTipoMovimientoDetalle() {return tipoMovimientoDetalle;}
+    public void setTipoMovimientoDetalle(TipoMovimientoDetalle tipoMovimientoDetalle) {this.tipoMovimientoDetalle = tipoMovimientoDetalle;}
+    public OrdenCompraDetalle getOrdenCompraDetalle() {return ordenCompraDetalle;}
+    public void setOrdenCompraDetalle(OrdenCompraDetalle ordenCompraDetalle) {this.ordenCompraDetalle = ordenCompraDetalle;}
+    public SolicitudMovimiento getSolicitudMovimiento() {return solicitudMovimiento;}
+    public void setSolicitudMovimiento(SolicitudMovimiento solicitudMovimiento) {this.solicitudMovimiento = solicitudMovimiento;}
 }
 
 

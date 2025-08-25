@@ -5,10 +5,9 @@ import com.willyes.clemenintegra.inventario.mapper.TipoMovimientoDetalleMapper;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -17,11 +16,8 @@ public class TipoMovimientoDetalleServiceImpl implements TipoMovimientoDetalleSe
     private final TipoMovimientoDetalleRepository repository;
     private final TipoMovimientoDetalleMapper mapper;
 
-    public List<TipoMovimientoDetalleDTO> listarTodos() {
-        return repository.findAll()
-                .stream()
-                .map(mapper::toDTO)
-                .collect(Collectors.toList());
+    public Page<TipoMovimientoDetalleDTO> listarTodos(Pageable pageable) {
+        return repository.findAll(pageable).map(mapper::toDTO);
     }
 
     public TipoMovimientoDetalleDTO crear(TipoMovimientoDetalleDTO dto) {

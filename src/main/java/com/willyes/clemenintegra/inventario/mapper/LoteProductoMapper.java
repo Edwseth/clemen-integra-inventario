@@ -6,7 +6,6 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
 
 @Mapper(componentModel = "spring")
 public interface LoteProductoMapper {
@@ -18,26 +17,15 @@ public interface LoteProductoMapper {
     LoteProducto toEntity(LoteProductoRequestDTO dto, Producto producto, Almacen almacen, Usuario usuario);
 
     // Mapeo de respuesta
-    @Mapping(target = "nombreProducto", expression = "java(mapNombreProducto(lote.getProducto()))")
-    @Mapping(target = "nombreAlmacen", expression = "java(mapNombreAlmacen(lote.getAlmacen()))")
-    @Mapping(target = "nombreUsuarioLiberador", expression = "java(mapNombreUsuario(lote.getUsuarioLiberador()))")
+    @Mapping(target = "nombreAlmacen", expression = "java(lote.getAlmacen()!=null ? lote.getAlmacen().getNombre() : null)")
+    @Mapping(target = "ubicacionAlmacen", expression = "java(lote.getAlmacen()!=null ? lote.getAlmacen().getUbicacion() : null)")
+    @Mapping(target = "nombreProducto", expression = "java(lote.getProducto()!=null ? lote.getProducto().getNombre() : null)")
+    @Mapping(target = "nombreUsuarioLiberador", expression = "java(lote.getUsuarioLiberador()!=null ? lote.getUsuarioLiberador().getNombreCompleto() : null)")
     LoteProductoResponseDTO toResponseDTO(LoteProducto lote);
-
-    @Named("mapNombreProducto")
-    default String mapNombreProducto(Producto producto) {
-        return (producto != null) ? producto.getNombre() : null;
-    }
-
-    @Named("mapNombreAlmacen")
-    default String mapNombreAlmacen(Almacen almacen) {
-        return (almacen != null) ? almacen.getNombre() : null;
-    }
-
-    @Named("mapNombreUsuario")
-    default String mapNombreUsuario(Usuario usuario) {return (usuario != null) ? usuario.getNombreCompleto() : null;}
 
     @Mapping(source = "producto.nombre", target = "nombreProducto")
     @Mapping(source = "almacen.nombre", target = "nombreAlmacen")
+    @Mapping(source = "almacen.ubicacion", target = "ubicacionAlmacen")
     @Mapping(source = "usuarioLiberador.nombreCompleto", target = "nombreUsuarioLiberador")
     LoteProductoResponseDTO toDto(LoteProducto entity);
 

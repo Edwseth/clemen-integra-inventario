@@ -7,28 +7,27 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
-import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.format.annotation.DateTimeFormat;
+import com.willyes.clemenintegra.shared.util.PaginationUtil;
+import com.willyes.clemenintegra.shared.util.DateParser;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -50,6 +49,7 @@ public class MovimientoInventarioController {
     @ApiResponse(responseCode = "404", description = "Producto o lote no encontrado")
     @ApiResponse(responseCode = "409", description = "No hay suficiente stock disponible")
     @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
         try {
@@ -76,7 +76,7 @@ public class MovimientoInventarioController {
 
             // 2) Registrar movimiento
             MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto);
-            log.info("Movimiento registrado correctamente: {}", creado.id());
+            log.info("Movimiento registrado correctamente: {}", creado.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(creado);
 
         } catch (NoSuchElementException e) {
@@ -89,10 +89,20 @@ public class MovimientoInventarioController {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", e.getMessage()));
 
+        } catch (IllegalStateException e) {
+            log.warn("Estado inválido: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", e.getMessage()));
+
         } catch (DataIntegrityViolationException e) {
             log.error("Violación de integridad en la base de datos", e);
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "Datos inválidos o faltantes"));
+
+        } catch (AuthenticationCredentialsNotFoundException e) {
+            log.warn("Acceso no autorizado: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", e.getMessage()));
 
         } catch (Exception e) {
             log.error("Error inesperado al registrar movimiento", e);
@@ -104,20 +114,33 @@ public class MovimientoInventarioController {
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
-    public ResponseEntity<Page<MovimientoInventario>> filtrar(
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD')")
+    public ResponseEntity<Page<MovimientoInventarioResponseDTO>> filtrar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) TipoMovimiento tipoMovimiento,
             @RequestParam(required = false) ClasificacionMovimientoInventario clasificacion,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
             @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        MovimientoInventarioFiltroDTO filtro = new MovimientoInventarioFiltroDTO(
-                productoId, almacenId, tipoMovimiento, clasificacion, fechaInicio, fechaFin
-        );
-        Page<MovimientoInventario> resultados = service.consultarMovimientosConFiltros(filtro, pageable);
-        return ResponseEntity.ok(resultados);
+        if (fechaInicio == null || fechaFin == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requieren fechaInicio y fechaFin");
+        }
+        try {
+            LocalDateTime inicio = DateParser.parseStart(fechaInicio);
+            LocalDateTime fin = DateParser.parseEnd(fechaFin);
+            if (inicio.isAfter(fin)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaInicio no puede ser mayor a fechaFin");
+            }
+            Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaIngreso", "id"), "fechaIngreso");
+            Page<MovimientoInventarioResponseDTO> page = service.filtrar(
+                    inicio, fin, productoId, almacenId, tipoMovimiento, clasificacion, sanitized
+            );
+            return ResponseEntity.ok(page);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     @GetMapping("/buscar")
@@ -126,41 +149,36 @@ public class MovimientoInventarioController {
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) TipoMovimiento tipoMovimiento,
             @RequestParam(required = false) ClasificacionMovimientoInventario clasificacion,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin
     ) {
-        MovimientoInventarioFiltroDTO filtro = new MovimientoInventarioFiltroDTO(
-                productoId, almacenId, tipoMovimiento, clasificacion, fechaInicio, fechaFin
-        );
-        List<MovimientoInventarioResponseDTO> lista = service.consultarMovimientos(filtro);
-        return ResponseEntity.ok(lista);
-    }
-
-    @GetMapping("/reporte-excel")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportarReporteMovimientos() throws IOException {
-        byte[] contenido;
-
-        try (Workbook workbook = service.generarReporteMovimientosExcel();
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            workbook.write(bos);
-            contenido = bos.toByteArray();
+        if (fechaInicio == null || fechaFin == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requieren fechaInicio y fechaFin");
         }
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDisposition(ContentDisposition
-                .attachment()
-                .filename("reporte_movimientos.xlsx")
-                .build());
-
-        return new ResponseEntity<>(contenido, headers, HttpStatus.OK);
+        try {
+            LocalDateTime inicio = DateParser.parseStart(fechaInicio);
+            LocalDateTime fin = DateParser.parseEnd(fechaFin);
+            if (inicio.isAfter(fin)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaInicio no puede ser mayor a fechaFin");
+            }
+            MovimientoInventarioFiltroDTO filtro = new MovimientoInventarioFiltroDTO(
+                    productoId, almacenId, tipoMovimiento, clasificacion, inicio, fin
+            );
+            List<MovimientoInventarioResponseDTO> lista = service.consultarMovimientos(filtro);
+            return ResponseEntity.ok(lista);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     @GetMapping
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> listarTodos(
             @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<MovimientoInventarioResponseDTO> movimientos = service.listarTodos(pageable);
+        if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+            return ResponseEntity.badRequest().build();
+        }
+        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaIngreso", "id"), "fechaIngreso");
+        Page<MovimientoInventarioResponseDTO> movimientos = service.listarTodos(sanitized);
         return ResponseEntity.ok(movimientos);
     }
 
