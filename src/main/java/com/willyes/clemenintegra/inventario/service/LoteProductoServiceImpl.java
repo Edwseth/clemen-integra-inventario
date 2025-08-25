@@ -15,10 +15,7 @@ import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
-import org.apache.poi.ss.usermodel.RichTextString;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -171,7 +168,9 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             String nombreProd = lote.getProducto() != null ? lote.getProducto().getNombre() : "";
             row.createCell(2).setCellValue(nombreProd);
             row.createCell(3).setCellValue(lote.getFechaVencimiento() != null ? lote.getFechaVencimiento().toString() : "");
-            row.createCell(4).setCellValue((RichTextString) (lote.getStockLote() != null ? lote.getStockLote() : BigDecimal.ZERO));
+            Cell cell = row.createCell(4);
+            BigDecimal stock = (lote.getStockLote() != null) ? lote.getStockLote() : BigDecimal.ZERO;
+            cell.setCellValue(stock.doubleValue());
             row.createCell(5).setCellValue(lote.getEstado().name());
             row.createCell(6).setCellValue(lote.getAlmacen().getNombre());
         }

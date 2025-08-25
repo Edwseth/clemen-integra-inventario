@@ -55,36 +55,62 @@ public class LoteProductoController {
             @RequestParam(required = false) String producto,
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String almacen,
-            @RequestParam(required = false) Boolean vencidos,
+            @RequestParam(required = false, defaultValue = "false") Boolean vencidos,
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
             @PageableDefault(size = 10, sort = "fechaFabricacion", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        // Validación básica de paginación
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             return ResponseEntity.badRequest().build();
         }
-        if (fechaInicio == null || fechaFin == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requieren fechaInicio y fechaFin");
-        }
-        try {
-        LocalDateTime inicio = DateParser.parseStart(fechaInicio);
-        LocalDateTime fin = DateParser.parseEnd(fechaFin);
-        if (inicio.isAfter(fin)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaInicio no puede ser mayor a fechaFin");
-        }
-        Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaFabricacion", "fechaVencimiento", "id"), "fechaFabricacion");
+
+        // Sanitiza sort y define default distinto si es "vencidos"
+        Pageable sanitized = PaginationUtil.sanitize(
+                pageable,
+                java.util.List.of("fechaFabricacion", "fechaVencimiento", "id"),
+                Boolean.TRUE.equals(vencidos) ? "fechaVencimiento" : "fechaFabricacion"
+        );
+
+        // Parse de estado (opcional)
         EstadoLote enumEstado = null;
         if (estado != null && !estado.isBlank()) {
             try {
                 enumEstado = EstadoLote.valueOf(estado.trim().toUpperCase());
-            } catch (IllegalArgumentException ex) {
-                // ignorar filtro inválido
+            } catch (IllegalArgumentException ignore) {
+                // estado inválido: se ignora el filtro
             }
         }
-            Page<LoteProductoResponseDTO> lotes = service.listarTodos(producto, enumEstado, almacen, vencidos, inicio, fin, sanitized);
-            return ResponseEntity.ok(lotes);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        LocalDateTime inicio = null;
+        LocalDateTime fin = null;
+
+        // ✅ Si ES consulta de vencidos, ignorar fechas (no son requeridas)
+        if (!Boolean.TRUE.equals(vencidos)) {
+            // Si llega UNO de los dos, exige ambos
+            if ((fechaInicio == null) ^ (fechaFin == null)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requieren fechaInicio y fechaFin");
+            }
+
+            // Si llegan ambos, parsea y valida rango
+            if (fechaInicio != null && fechaFin != null) {
+                try {
+                    inicio = DateParser.parseStart(fechaInicio);
+                    fin = DateParser.parseEnd(fechaFin);
+                } catch (IllegalArgumentException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+                }
+                if (inicio.isAfter(fin)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaInicio no puede ser mayor a fechaFin");
+                }
+            }
+            // Si no llega ninguno, se listará sin filtro de fechas
         }
+
+        Page<LoteProductoResponseDTO> lotes =
+                service.listarTodos(producto, enumEstado, almacen, vencidos, inicio, fin, sanitized);
+
+        return ResponseEntity.ok(lotes);
     }
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
