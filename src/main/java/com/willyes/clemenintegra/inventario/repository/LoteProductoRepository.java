@@ -23,7 +23,9 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     boolean existsByCodigoLote(String codigoLote);
     List<LoteProducto> findByEstado(EstadoLote estado);
     Optional<LoteProducto> findByCodigoLote(String codigoLote);
-    List<LoteProducto> findByFechaVencimientoBetween(LocalDateTime inicio, LocalDateTime fin);
+    @Query("SELECT lp FROM LoteProducto lp JOIN FETCH lp.almacen a WHERE lp.fechaVencimiento BETWEEN :inicio AND :fin")
+    List<LoteProducto> findByFechaVencimientoBetween(@Param("inicio") LocalDateTime inicio,
+                                                     @Param("fin") LocalDateTime fin);
     Optional<LoteProducto> findByCodigoLoteAndProductoIdAndAlmacenId(String codigoLote, Integer productoId, Integer almacenId);
     List<LoteProducto> findByEstadoIn(List<EstadoLote> estados);
     List<LoteProducto> findByEstadoInAndProducto_TipoAnalisisIn(List<EstadoLote> estados, List<TipoAnalisisCalidad> tipos);

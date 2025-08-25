@@ -153,7 +153,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         // Encabezados
         Row header = sheet.createRow(0);
         String[] columnas = {
-                "ID Lote", "Código Lote", "Producto", "Fecha Vencimiento", "Stock Lote", "Estado", "Almacén"
+                "ID Lote", "Código Lote", "Producto", "Fecha Vencimiento", "Stock Lote", "Estado", "Almacén", "Ubicación"
         };
         for (int i = 0; i < columnas.length; i++) {
             header.createCell(i).setCellValue(columnas[i]);
@@ -173,6 +173,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             cell.setCellValue(stock.doubleValue());
             row.createCell(5).setCellValue(lote.getEstado().name());
             row.createCell(6).setCellValue(lote.getAlmacen().getNombre());
+            String ubicacion = lote.getAlmacen() != null ? lote.getAlmacen().getUbicacion() : null;
+            row.createCell(7).setCellValue(ubicacion != null ? ubicacion : "-");
         }
 
         for (int i = 0; i < columnas.length; i++) {
