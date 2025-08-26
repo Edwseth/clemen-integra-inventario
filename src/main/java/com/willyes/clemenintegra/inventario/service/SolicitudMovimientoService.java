@@ -18,6 +18,7 @@ public interface SolicitudMovimientoService {
                                                           LocalDateTime inicio,
                                                           LocalDateTime fin,
                                                           Pageable pageable);
+    SolicitudMovimientoResponseDTO obtenerSolicitud(Long id);
     SolicitudMovimientoResponseDTO aprobarSolicitud(Long id, Long responsableId);
     SolicitudMovimientoResponseDTO rechazarSolicitud(Long id, Long responsableId, String observaciones);
     SolicitudMovimientoResponseDTO revertirAutorizacion(Long id, Long responsableId);

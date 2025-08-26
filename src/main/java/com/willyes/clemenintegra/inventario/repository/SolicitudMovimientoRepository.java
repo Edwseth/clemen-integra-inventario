@@ -36,6 +36,19 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
                                                @Param("desde") LocalDateTime desde,
                                                @Param("hasta") LocalDateTime hasta);
 
+    @Query("select s from SolicitudMovimiento s " +
+            "left join fetch s.producto p " +
+            "left join fetch p.unidadMedida um " +
+            "left join fetch s.lote l " +
+            "left join fetch s.almacenOrigen ao " +
+            "left join fetch s.almacenDestino ad " +
+            "left join fetch s.usuarioSolicitante us " +
+            "left join fetch s.ordenProduccion op " +
+            "left join fetch s.motivoMovimiento mm " +
+            "left join fetch s.tipoMovimientoDetalle tmd " +
+            "where s.id = :id")
+    java.util.Optional<SolicitudMovimiento> findWithDetalles(@Param("id") Long id);
+
     @Override
     @EntityGraph(attributePaths = {"usuarioSolicitante", "ordenProduccion"})
     Page<SolicitudMovimiento> findAll(Specification<SolicitudMovimiento> spec, Pageable pageable);

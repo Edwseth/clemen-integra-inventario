@@ -16,6 +16,7 @@ public class SolicitudMovimientoResponseDTO {
     private TipoMovimiento tipoMovimiento;
     private Integer productoId;
     private String nombreProducto;
+    private String codigoSku;     // SKU del producto para prefill
     private Long loteProductoId;
     private String nombreLote;
     private BigDecimal cantidad;
@@ -24,6 +25,7 @@ public class SolicitudMovimientoResponseDTO {
     private Integer almacenDestinoId;
     private String nombreAlmacenDestino;
     private Long ordenProduccionId;
+    private String codigoOrden;   // Código de la OP (si aplica) para banner/prefill
     private Long motivoMovimientoId;
     private Long tipoMovimientoDetalleId;
     private String nombreSolicitante;

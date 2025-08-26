@@ -70,6 +70,12 @@ public class SolicitudMovimientoController {
         }
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    public ResponseEntity<SolicitudMovimientoResponseDTO> obtener(@PathVariable Long id) {
+        return ResponseEntity.ok(service.obtenerSolicitud(id));
+    }
+
     @PutMapping("/{id}/aprobar")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> aprobar(@PathVariable Long id,
