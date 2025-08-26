@@ -41,6 +41,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -186,6 +187,23 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
 
         return repository.findAll(spec, pageable)
                 .map(this::toListadoDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SolicitudMovimientoResponseDTO obtenerSolicitud(Long id) {
+        var solicitud = repository.findWithDetalles(id)
+                .orElseGet(() -> repository.findById(id)
+                        .orElseThrow(() -> new EntityNotFoundException("Solicitud no encontrada: " + id)));
+
+        SolicitudMovimientoResponseDTO dto = toResponse(solicitud);
+        if (solicitud.getProducto() != null) {
+            dto.setCodigoSku(solicitud.getProducto().getCodigoSku());
+        }
+        if (solicitud.getOrdenProduccion() != null) {
+            dto.setCodigoOrden(solicitud.getOrdenProduccion().getCodigoOrden());
+        }
+        return dto;
     }
 
     @Override
@@ -488,6 +506,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .tipoMovimiento(s.getTipoMovimiento())
                 .productoId(s.getProducto() != null ? s.getProducto().getId() : null)
                 .nombreProducto(s.getProducto() != null ? s.getProducto().getNombre() : null)
+                .codigoSku(s.getProducto() != null ? s.getProducto().getCodigoSku() : null)
                 .loteProductoId(s.getLote() != null ? s.getLote().getId() : null)
                 .nombreLote(s.getLote() != null ? s.getLote().getCodigoLote() : null)
                 .cantidad(s.getCantidad())
@@ -496,6 +515,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .almacenDestinoId(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getId() : null)
                 .nombreAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : null)
                 .ordenProduccionId(s.getOrdenProduccion() != null ? s.getOrdenProduccion().getId() : null)
+                .codigoOrden(s.getOrdenProduccion() != null ? s.getOrdenProduccion().getCodigoOrden() : null)
                 .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
                 .tipoMovimientoDetalleId(s.getTipoMovimientoDetalle() != null ? s.getTipoMovimientoDetalle().getId() : null)
                 .nombreSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
