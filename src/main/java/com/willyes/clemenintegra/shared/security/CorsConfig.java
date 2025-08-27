@@ -20,7 +20,8 @@ public class CorsConfig {
     };
 
     private static final String[] ALLOWED_HEADERS = {
-            "Authorization", "Content-Type", "Accept", "X-Bypass-Auth-Redirect"
+            "Authorization", "Content-Type", "Accept", "X-Bypass-Auth-Redirect",
+            "ngrok-skip-browser-warning"
     };
 
     private static final String[] EXPOSED_HEADERS = {
