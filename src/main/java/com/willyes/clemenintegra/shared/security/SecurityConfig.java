@@ -57,6 +57,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
                     auth.requestMatchers(
+                            "/auth/login",
                             "/api/auth/**",
                             "/v3/api-docs/**",
                             "/swagger-ui.html",
@@ -181,12 +182,6 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
-    //@Bean
-    //public AuthenticationEntryPoint authenticationEntryPoint() {
-        //return (request, response, authException) ->
-                //response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autorizado");
-    //}
 
     @Bean
     public UserDetailsService userDetailsService(UsuarioRepository usuarioRepository) {

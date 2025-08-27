@@ -8,9 +8,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class CorsConfig {
 
-    private static final String[] ALLOWED_ORIGINS = {
+    private static final String[] ALLOWED_ORIGIN_PATTERNS = {
+            "https://*.ngrok-free.app",
             "http://localhost:5173",
-            "http://localhost:3000"
+            "http://localhost:3000",
+            "http://127.0.0.1:5173"
     };
 
     private static final String[] ALLOWED_METHODS = {
@@ -31,7 +33,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(ALLOWED_ORIGINS)
+                        .allowedOriginPatterns(ALLOWED_ORIGIN_PATTERNS)
                         .allowedMethods(ALLOWED_METHODS)
                         .allowedHeaders(ALLOWED_HEADERS)
                         .exposedHeaders(EXPOSED_HEADERS)
