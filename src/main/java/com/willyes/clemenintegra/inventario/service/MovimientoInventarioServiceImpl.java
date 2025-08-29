@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import jakarta.annotation.Resource;
@@ -114,46 +115,47 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
 
             final Long userActualId = usuario.getId();
-            final Long responsableId =
-                    solicitud.getUsuarioResponsable() != null
-                            ? solicitud.getUsuarioResponsable().getId()
-                            : null;
+            Usuario responsable = solicitud.getUsuarioResponsable();
+            Long responsableId = responsable != null ? responsable.getId() : null;
+            final boolean esJefeAlmacenes = usuario.getRol() == RolUsuario.ROL_JEFE_ALMACENES;
+            final boolean tieneRolPrivilegiado = esJefeAlmacenes || usuario.getRol() == RolUsuario.ROL_SUPER_ADMIN;
 
             // 1) Ya ejecutada → 409
             if (solicitud.getEstado() == EstadoSolicitudMovimiento.EJECUTADA) {
-                log.warn("SOLICITUD_RESUELTA: solId={}, estado={}, userActual={}",
-                        solicitud.getId(), solicitud.getEstado(), userActualId);
+                log.warn("SOLICITUD_RESUELTA: solId={}, estado={}, responsableId={}, userActual={}",
+                        solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "SOLICITUD_RESUELTA");
             }
 
             // 2) Estado no aprobado → 422 (whitelist explícita: AUTORIZADA)
             if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
-                log.warn("ESTADO_NO_APROBADO: solId={}, estado={}, userActual={}",
-                        solicitud.getId(), solicitud.getEstado(), userActualId);
+                log.warn("ESTADO_NO_APROBADO: solId={}, estado={}, responsableId={}, userActual={}",
+                        solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
                 throw new ResponseStatusException(
                         HttpStatus.UNPROCESSABLE_ENTITY,
                         "ESTADO_NO_APROBADO: la solicitud aún no está autorizada"
                 );
             }
 
-            // 3) Responsable requerido → 422
+            // 3) Responsable requerido → 422 o asignación automática
             if (responsableId == null) {
-                log.warn("RESPONSABLE_REQUERIDO: solId={}, estado={}, userActual={}",
-                        solicitud.getId(), solicitud.getEstado(), userActualId);
-                throw new ResponseStatusException(
-                        HttpStatus.UNPROCESSABLE_ENTITY,
-                        "RESPONSABLE_REQUERIDO: asigne un responsable antes de ejecutar"
-                );
+                if (esJefeAlmacenes) {
+                    solicitud.setUsuarioResponsable(usuario);
+                    responsableId = userActualId;
+                    log.info("RESPONSABLE_AUTOASIGNADO: solId={}, responsableId={}, userActual={}",
+                            solicitud.getId(), responsableId, userActualId);
+                } else {
+                    log.warn("RESPONSABLE_REQUERIDO: solId={}, responsableId={}, userActual={}",
+                            solicitud.getId(), null, userActualId);
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESPONSABLE_REQUERIDO");
+                }
             }
 
-            // 4) Usuario debe ser el responsable → 403
-            if (!responsableId.equals(userActualId)) {
-                log.warn("USUARIO_NO_AUTORIZADO: solId={}, estado={}, responsableId={}, userActual={}",
-                        solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
-                throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "USUARIO_NO_AUTORIZADO: el usuario actual no es el responsable de la solicitud"
-                );
+            // 4) Usuario debe ser el responsable o tener rol privilegiado → 403
+            if (!responsableId.equals(userActualId) && !tieneRolPrivilegiado) {
+                log.warn("USUARIO_NO_AUTORIZADO: solId={}, responsableId={}, userActual={}",
+                        solicitud.getId(), responsableId, userActualId);
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "USUARIO_NO_AUTORIZADO");
             }
         }
 
