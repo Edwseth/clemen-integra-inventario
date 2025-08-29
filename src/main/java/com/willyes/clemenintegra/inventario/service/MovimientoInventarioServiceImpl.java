@@ -135,8 +135,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             Long solicitudAlmacenDestinoId = solicitud.getAlmacenDestino() != null ? Long.valueOf(solicitud.getAlmacenDestino().getId()) : null;
             Long dtoAlmacenDestinoId = dto.almacenDestinoId() != null ? dto.almacenDestinoId().longValue() : null;
             if (!Objects.equals(solicitudAlmacenDestinoId, dtoAlmacenDestinoId)) {
-                log.warn("MISMATCH_ALMACEN_DESTINO_ID: esperado={}, recibido={}", solicitudAlmacenDestinoId, dto.almacenDestinoId());
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_ALMACEN_DESTINO_ID");
+                log.info("INFO_ALMACEN_DESTINO_IGNORADO: esperadoEnSolicitud={}, recibidoDTO={}, se asignará en backend",
+                        solicitudAlmacenDestinoId, dtoAlmacenDestinoId);
             }
 
             // NOTA: Lote y Cantidad NO generan error si no coinciden
@@ -165,7 +165,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
 
             // 2) Estado no aprobado → 422 (whitelist explícita: AUTORIZADA)
-            if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
+            if (solicitud.getEstado() == EstadoSolicitudMovimiento.PENDIENTE && tieneRolPrivilegiado) {
+                solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
+                log.info("SOLICITUD_AUTO_AUTORIZADA: solId={}, userActual={}",
+                        solicitud.getId(), userActualId);
+            } else if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
                 log.warn("ESTADO_NO_APROBADO: solId={}, estado={}, responsableId={}, userActual={}",
                         solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
                 throw new ResponseStatusException(
