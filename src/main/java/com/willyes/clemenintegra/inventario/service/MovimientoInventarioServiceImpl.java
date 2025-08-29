@@ -108,15 +108,52 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
 
-        SolicitudMovimiento solicitud = null; // [Codex Edit]
+        SolicitudMovimiento solicitud = null;
         if (dto.solicitudMovimientoId() != null) {
             solicitud = solicitudMovimientoRepository.findById(dto.solicitudMovimientoId())
                     .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
+
+            final Long userActualId = usuario.getId();
+            final Long responsableId =
+                    solicitud.getUsuarioResponsable() != null
+                            ? solicitud.getUsuarioResponsable().getId()
+                            : null;
+
+            // 1) Ya ejecutada → 409
             if (solicitud.getEstado() == EstadoSolicitudMovimiento.EJECUTADA) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud ya fue ejecutada");
+                log.warn("SOLICITUD_RESUELTA: solId={}, estado={}, userActual={}",
+                        solicitud.getId(), solicitud.getEstado(), userActualId);
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "SOLICITUD_RESUELTA");
             }
+
+            // 2) Estado no aprobado → 422 (whitelist explícita: AUTORIZADA)
             if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud no está autorizada");
+                log.warn("ESTADO_NO_APROBADO: solId={}, estado={}, userActual={}",
+                        solicitud.getId(), solicitud.getEstado(), userActualId);
+                throw new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "ESTADO_NO_APROBADO: la solicitud aún no está autorizada"
+                );
+            }
+
+            // 3) Responsable requerido → 422
+            if (responsableId == null) {
+                log.warn("RESPONSABLE_REQUERIDO: solId={}, estado={}, userActual={}",
+                        solicitud.getId(), solicitud.getEstado(), userActualId);
+                throw new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "RESPONSABLE_REQUERIDO: asigne un responsable antes de ejecutar"
+                );
+            }
+
+            // 4) Usuario debe ser el responsable → 403
+            if (!responsableId.equals(userActualId)) {
+                log.warn("USUARIO_NO_AUTORIZADO: solId={}, estado={}, responsableId={}, userActual={}",
+                        solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "USUARIO_NO_AUTORIZADO: el usuario actual no es el responsable de la solicitud"
+                );
             }
         }
 

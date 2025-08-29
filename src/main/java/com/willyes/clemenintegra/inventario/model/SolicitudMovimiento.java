@@ -102,4 +102,5 @@ public class SolicitudMovimiento {
             estado = EstadoSolicitudMovimiento.PENDIENTE;
         }
     }
+
 }
