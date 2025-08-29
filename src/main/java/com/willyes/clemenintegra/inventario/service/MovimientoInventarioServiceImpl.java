@@ -114,6 +114,43 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             solicitud = solicitudMovimientoRepository.findById(dto.solicitudMovimientoId())
                     .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
 
+            Long solicitudProductoId = solicitud.getProducto() != null ? Long.valueOf(solicitud.getProducto().getId()) : null;
+            if (!Objects.equals(solicitudProductoId, dto.productoId() != null ? dto.productoId().longValue() : null)) {
+                log.warn("MISMATCH_PRODUCTO_ID: esperado={}, recibido={}", solicitudProductoId, dto.productoId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_PRODUCTO_ID");
+            }
+
+            if (solicitud.getTipoMovimiento() != dto.tipoMovimiento()) {
+                log.warn("MISMATCH_TIPO_MOVIMIENTO: esperado={}, recibido={}", solicitud.getTipoMovimiento(), dto.tipoMovimiento());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_TIPO_MOVIMIENTO");
+            }
+
+            Long solicitudAlmacenOrigenId = solicitud.getAlmacenOrigen() != null ? Long.valueOf(solicitud.getAlmacenOrigen().getId()) : null;
+            Long dtoAlmacenOrigenId = dto.almacenOrigenId() != null ? dto.almacenOrigenId().longValue() : null;
+            if (!Objects.equals(solicitudAlmacenOrigenId, dtoAlmacenOrigenId)) {
+                log.warn("MISMATCH_ALMACEN_ORIGEN_ID: esperado={}, recibido={}", solicitudAlmacenOrigenId, dto.almacenOrigenId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_ALMACEN_ORIGEN_ID");
+            }
+
+            Long solicitudAlmacenDestinoId = solicitud.getAlmacenDestino() != null ? Long.valueOf(solicitud.getAlmacenDestino().getId()) : null;
+            Long dtoAlmacenDestinoId = dto.almacenDestinoId() != null ? dto.almacenDestinoId().longValue() : null;
+            if (!Objects.equals(solicitudAlmacenDestinoId, dtoAlmacenDestinoId)) {
+                log.warn("MISMATCH_ALMACEN_DESTINO_ID: esperado={}, recibido={}", solicitudAlmacenDestinoId, dto.almacenDestinoId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_ALMACEN_DESTINO_ID");
+            }
+
+            // NOTA: Lote y Cantidad NO generan error si no coinciden
+            Long solicitudLoteId = solicitud.getLote() != null ? solicitud.getLote().getId() : null;
+            if (!Objects.equals(solicitudLoteId, dto.loteProductoId())) {
+                log.info("INFO: Lote distinto al solicitado (esperado={}, recibido={})",
+                        solicitudLoteId, dto.loteProductoId());
+            }
+
+            if (dto.cantidad() != null && solicitud.getCantidad().compareTo(dto.cantidad()) != 0) {
+                log.info("INFO: Cantidad distinta a la solicitada (esperado={}, recibido={})",
+                        solicitud.getCantidad(), dto.cantidad());
+            }
+
             final Long userActualId = usuario.getId();
             Usuario responsable = solicitud.getUsuarioResponsable();
             Long responsableId = responsable != null ? responsable.getId() : null;
