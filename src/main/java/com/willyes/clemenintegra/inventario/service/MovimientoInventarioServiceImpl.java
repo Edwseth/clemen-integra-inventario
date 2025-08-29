@@ -438,15 +438,20 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     private void validarParametros(TipoMovimiento tipo, Almacen origen, Almacen destino) {
         if (tipo == TipoMovimiento.RECEPCION && destino == null) {
-            throw new IllegalArgumentException("El almacén destino es obligatorio para la recepción.");
+            log.warn("Recepción sin destino: tipo={} origenId={} destinoId={}",
+                    tipo, origen != null ? origen.getId() : null, destino != null ? destino.getId() : null);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RECEP_REQUIERE_DESTINO");
         }
 
         if (tipo == TipoMovimiento.TRANSFERENCIA) {
             if (origen == null || destino == null) {
-                throw new IllegalArgumentException("En una transferencia se requieren almacén origen y destino.");
+                log.warn("Transferencia requiere almacenes: origenId={} destinoId={}",
+                        origen != null ? origen.getId() : null, destino != null ? destino.getId() : null);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TRANSF_REQUIERE_ALMACENES");
             }
             if (Objects.equals(origen.getId(), destino.getId())) {
-                throw new IllegalArgumentException("El almacén origen y destino no pueden ser iguales.");
+                log.warn("Transferencia con origen y destino iguales: almacenId={}", origen.getId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TRANSF_ORIGEN_DESTINO_IGUALES");
             }
         }
     }
@@ -456,7 +461,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                             MotivoMovimiento motivoMovimiento) {
         if (dto.loteProductoId() != null) {
             LoteProducto existente = loteProductoRepository.findById(dto.loteProductoId())
-                    .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+                    .orElseThrow(() -> {
+                        log.warn(
+                                "crearLoteRecepcion: lote no encontrado loteId={} productoId={} destinoId={} cantidad={}",
+                                dto.loteProductoId(), producto.getId(),
+                                destino != null ? destino.getId() : null, cantidad);
+                        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
+                    });
             BigDecimal nuevo = Optional.ofNullable(existente.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
             existente.setStockLote(nuevo);
             existente.setAlmacen(destino);
@@ -465,7 +476,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (motivoMovimiento == null ||
                 motivoMovimiento.getMotivo() != ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
-            throw new IllegalArgumentException("Solo la recepción de compra puede crear un nuevo lote");
+            log.warn(
+                    "crearLoteRecepcion: motivo inválido para crear lote productoId={} destinoId={} cantidad={} motivo={}",
+                    producto.getId(), destino != null ? destino.getId() : null, cantidad,
+                    motivoMovimiento != null ? motivoMovimiento.getMotivo() : null);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_CREACION_MOTIVO_INVALIDO");
         }
 
         LoteProducto lote = LoteProducto.builder()
@@ -490,15 +505,27 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                                             BigDecimal cantidad,
                                                             boolean devolucionInterna) {
         if (dto.loteProductoId() == null) {
-            throw new IllegalArgumentException("Debe especificar el ID del lote para este tipo de movimiento.");
+            log.warn(
+                    "procesarMovimientoConLoteExistente: falta loteProductoId tipo={} productoId={} origenId={} destinoId={} cantidad={}",
+                    tipo, producto.getId(), origen != null ? origen.getId() : null,
+                    destino != null ? destino.getId() : null, cantidad);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ID_REQUERIDO");
         }
 
         LoteProducto loteOrigen = loteProductoRepository.findById(dto.loteProductoId())
-                .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+                .orElseThrow(() -> {
+                    log.warn(
+                            "procesarMovimientoConLoteExistente: lote no encontrado loteId={} productoId={}",
+                            dto.loteProductoId(), producto.getId());
+                    return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
+                });
 
         if (EnumSet.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO,
                 EstadoLote.RECHAZADO, EstadoLote.VENCIDO).contains(loteOrigen.getEstado())) {
-            throw new IllegalStateException("El lote no se puede mover por su estado actual");
+            log.warn(
+                    "procesarMovimientoConLoteExistente: estado de lote inválido loteId={} estado={} productoId={}",
+                    loteOrigen.getId(), loteOrigen.getEstado(), producto.getId());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ESTADO_INVALIDO");
         }
 
         // Declaración necesaria (si aún no está)
@@ -511,13 +538,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         // Validar almacén del lote origen
         if (!esDevolucionInterna && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
-            log.error("Validación fallida: lote está en almacén {}, pero se recibió almacenOrigenId {}",
-                    loteOrigen.getAlmacen().getId(), almacenOrigen.getId());
-            throw new IllegalStateException("El lote no pertenece al almacén origen indicado.");
+            log.warn("Almacén origen no coincide: loteId={} almacenLoteId={} almacenOrigenId={}",
+                    loteOrigen.getId(), loteOrigen.getAlmacen().getId(), almacenOrigen.getId());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
 
         if (loteOrigen.getStockLote().compareTo(cantidad) < 0) {
-            throw new IllegalStateException("Stock insuficiente en el lote para transferir.");
+            log.warn("Stock insuficiente en lote: loteId={} disponible={} solicitado={} productoId={}",
+                    loteOrigen.getId(), loteOrigen.getStockLote(), cantidad, producto.getId());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
         }
 
         if (tipo == TipoMovimiento.SALIDA) {
@@ -527,7 +556,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (tipo == TipoMovimiento.TRANSFERENCIA) {
             if (loteOrigen.getEstado() != EstadoLote.DISPONIBLE) {
-                throw new IllegalStateException("El lote no está disponible para transferir");
+                log.warn(
+                        "Transferencia con lote no disponible: loteId={} estado={} origenId={} destinoId={} productoId={} cantidad={}",
+                        loteOrigen.getId(), loteOrigen.getEstado(),
+                        origen != null ? origen.getId() : null,
+                        destino != null ? destino.getId() : null,
+                        producto.getId(), cantidad);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_DISPONIBLE_TRANSFERIR");
             }
             int cmp = loteOrigen.getStockLote().compareTo(cantidad);
             if (cmp > 0) {
@@ -599,7 +634,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         BigDecimal solicitada = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO);
         BigDecimal nuevaCantidad = recibida.add(cantidad);
         if (nuevaCantidad.compareTo(solicitada) > 0) {
-            throw new IllegalStateException("La cantidad recibida excede la solicitada en la orden.");
+            log.warn(
+                    "Cantidad recibida excede solicitada: ocDetalleId={} productoId={} solicitada={} nueva={} movCantidad={}",
+                    dto.ordenCompraDetalleId(), dto.productoId(), solicitada, nuevaCantidad, cantidad);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_CANTIDAD_EXCEDIDA");
         }
         detalle.setCantidadRecibida(nuevaCantidad);
         return entityManager.merge(detalle);
