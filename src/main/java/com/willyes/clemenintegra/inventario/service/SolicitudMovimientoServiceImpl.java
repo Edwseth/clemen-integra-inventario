@@ -277,17 +277,19 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
 
     @Override
     @Transactional(readOnly = true)
-    public Page<SolicitudesPorOrdenDTO> listGroupByOrden(EstadoSolicitudMovimiento estado,
+    public Page<SolicitudesPorOrdenDTO> listGroupByOrden(List<EstadoSolicitudMovimiento> estados,
                                                          LocalDateTime desde,
                                                          LocalDateTime hasta,
                                                          Pageable pageable) {
         if (desde != null && hasta != null && desde.isAfter(hasta)) {
             throw new IllegalArgumentException("La fecha inicial no puede ser posterior a la final");
         }
-        EstadoSolicitudMovimiento filtro = estado != null ? estado : EstadoSolicitudMovimiento.PENDIENTE;
+        List<EstadoSolicitudMovimiento> filtros = (estados != null && !estados.isEmpty())
+                ? estados
+                : List.of(EstadoSolicitudMovimiento.PENDIENTE);
         LocalDateTime inicio = desde;
         LocalDateTime fin = hasta;
-        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(null, filtro, inicio, fin);
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(null, filtros, inicio, fin);
         Map<Long, List<SolicitudMovimiento>> agrupadas = new LinkedHashMap<>();
         for (SolicitudMovimiento s : solicitudes) {
             if (s.getOrdenProduccion() == null) continue;
@@ -361,8 +363,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Override
     @Transactional(readOnly = true)
     public PicklistDTO generarPicklist(Long ordenId, boolean incluirAprobadas) {
-        EstadoSolicitudMovimiento estado = incluirAprobadas ? null : EstadoSolicitudMovimiento.PENDIENTE;
-        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(ordenId, estado, null, null);
+        List<EstadoSolicitudMovimiento> estados = incluirAprobadas ? null : List.of(EstadoSolicitudMovimiento.PENDIENTE);
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(ordenId, estados, null, null);
         if (solicitudes.isEmpty()) {
             throw new NoSuchElementException("No se encontraron solicitudes para la orden");
         }

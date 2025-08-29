@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +24,7 @@ public interface SolicitudMovimientoService {
     SolicitudMovimientoResponseDTO rechazarSolicitud(Long id, Long responsableId, String observaciones);
     SolicitudMovimientoResponseDTO revertirAutorizacion(Long id, Long responsableId);
 
-    Page<SolicitudesPorOrdenDTO> listGroupByOrden(EstadoSolicitudMovimiento estado,
+    Page<SolicitudesPorOrdenDTO> listGroupByOrden(List<EstadoSolicitudMovimiento> estados,
                                                   LocalDateTime inicio,
                                                   LocalDateTime fin,
                                                   Pageable pageable);

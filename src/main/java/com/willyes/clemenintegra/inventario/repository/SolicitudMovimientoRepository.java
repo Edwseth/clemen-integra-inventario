@@ -27,12 +27,12 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
             "left join fetch s.usuarioSolicitante us " +
             "left join fetch s.ordenProduccion op " +
             "where (:ordenId is null or op.id = :ordenId) " +
-            "and (:estado is null or s.estado = :estado) " +
+            "and (:estados is null or s.estado in :estados) " +
             "and (:desde is null or s.fechaSolicitud >= :desde) " +
             "and (:hasta is null or s.fechaSolicitud <= :hasta) " +
             "order by s.fechaSolicitud desc")
     List<SolicitudMovimiento> findWithDetalles(@Param("ordenId") Long ordenId,
-                                               @Param("estado") EstadoSolicitudMovimiento estado,
+                                               @Param("estados") List<EstadoSolicitudMovimiento> estados,
                                                @Param("desde") LocalDateTime desde,
                                                @Param("hasta") LocalDateTime hasta);
 

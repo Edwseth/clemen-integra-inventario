@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping({"/api/inventario/solicitudes", "/api/inventarios/solicitudes"})
@@ -40,7 +41,7 @@ public class SolicitudPorOrdenController {
     @Operation(summary = "Listar solicitudes agrupadas por orden de producción")
     public ResponseEntity<Page<SolicitudesPorOrdenDTO>> listarPorOrden(
             @Parameter(description = "Estado de las solicitudes. Si se omite, se usa PENDIENTE por defecto")
-            @RequestParam(required = false) EstadoSolicitudMovimiento estado,
+            @RequestParam(value = "estado", required = false) List<EstadoSolicitudMovimiento> estado,
             @Parameter(description = "Filtrar desde esta fecha (inclusive)")
             @RequestParam(required = false) String fechaDesde,
             @Parameter(description = "Filtrar hasta esta fecha (inclusive)")
