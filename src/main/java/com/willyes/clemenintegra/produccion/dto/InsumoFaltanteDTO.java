@@ -16,5 +16,6 @@ public class InsumoFaltanteDTO {
     private String nombre;
     private BigDecimal requerido;
     private BigDecimal disponible;
+    private String unidadSimbolo;
 }
 

@@ -50,10 +50,7 @@ public class OrdenProduccionController {
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<ResultadoValidacionOrdenDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {
-        Producto producto = new Producto(); producto.setId(request.getProductoId().intValue());
-        Usuario responsable = new Usuario(); responsable.setId(request.getResponsableId());
-        OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
-        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(entidad);
+        ResultadoValidacionOrdenDTO resultado = service.crearOrden(request);
         HttpStatus status = resultado.isEsValida() ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(resultado, status);
     }
