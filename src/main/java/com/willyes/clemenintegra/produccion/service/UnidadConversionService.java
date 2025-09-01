@@ -35,4 +35,17 @@ public class UnidadConversionService {
         // Sin conversión conocida
         return cantidad;
     }
+
+    /**
+     * Normaliza las unidades de ambas cantidades antes de dividirlas.
+     * Si las unidades ya coinciden, se realiza la división directamente.
+     */
+    public BigDecimal dividirNormalizado(BigDecimal numerador, String unidadNumerador,
+                                         BigDecimal divisor, String unidadDivisor) {
+        BigDecimal cantidadNormalizada = convertir(numerador, unidadNumerador, unidadDivisor);
+        if (divisor == null || divisor.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return cantidadNormalizada.divide(divisor, 6, RoundingMode.HALF_UP);
+    }
 }

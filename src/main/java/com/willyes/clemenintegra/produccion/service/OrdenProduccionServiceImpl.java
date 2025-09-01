@@ -206,14 +206,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
         BigDecimal cantidadConvertida = unidadConversionService.convertir(cantidadBase, unidadBase, unidadProducto);
 
+        BigDecimal unidadesProducidas = unidadConversionService.dividirNormalizado(
+                cantidadConvertida,
+                unidadProducto,
+                producto.getRendimientoUnidad(),
+                unidadProducto);
+
         OrdenProduccion orden = ProduccionMapper.toEntity(dto, producto, responsable);
         orden.setCantidadProgramada(cantidadConvertida);
 
         ResultadoValidacionOrdenDTO resultado = guardarConValidacionStock(orden);
+        resultado.setUnidadesProducidas(unidadesProducidas);
         if (resultado.getOrden() != null) {
             resultado.getOrden().cantidadProgramadaBase = cantidadBase;
             resultado.getOrden().unidadMedidaBaseSimbolo = unidadBase;
             resultado.getOrden().unidadMedidaSimbolo = unidadProducto;
+            resultado.getOrden().unidadesProducidas = unidadesProducidas;
         }
         return resultado;
     }
