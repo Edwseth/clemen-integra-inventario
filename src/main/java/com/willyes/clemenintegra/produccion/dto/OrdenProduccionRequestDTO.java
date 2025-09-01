@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -23,11 +24,11 @@ public class OrdenProduccionRequestDTO {
     private LocalDateTime fechaFin;
 
     @NotNull
-    @Min(1)
-    private Integer cantidadProgramada;
+    @DecimalMin(value = "0.0", inclusive = false)
+    private BigDecimal cantidadProgramada;
 
-    @Min(0)
-    private Integer cantidadProducida;
+    @DecimalMin(value = "0.0")
+    private BigDecimal cantidadProducida;
 
     @NotBlank
     private String estado;
@@ -37,4 +38,6 @@ public class OrdenProduccionRequestDTO {
 
     @NotNull
     private Long responsableId;
+
+    private String unidadMedida;
 }
