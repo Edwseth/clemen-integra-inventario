@@ -17,6 +17,8 @@ import com.willyes.clemenintegra.produccion.mapper.OrdenProduccionMapper;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
+import com.willyes.clemenintegra.produccion.service.spec.OrdenProduccionSpecifications;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
@@ -25,6 +27,9 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -166,6 +171,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return guardarConValidacionStock(orden);
     }
 
+
+    @Override
+    public Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
+                                                           EstadoProduccion estado,
+                                                           String responsable,
+                                                           LocalDateTime fechaInicio,
+                                                           LocalDateTime fechaFin,
+                                                           Pageable pageable) {
+        Specification<OrdenProduccion> spec = OrdenProduccionSpecifications.and(
+                OrdenProduccionSpecifications.byCodigo(codigo),
+                OrdenProduccionSpecifications.byEstado(estado),
+                OrdenProduccionSpecifications.byResponsable(responsable),
+                OrdenProduccionSpecifications.byFechaBetween(fechaInicio, fechaFin)
+        );
+        return repository.findAll(spec, pageable).map(ProduccionMapper::toResponse);
+    }
 
     public List<OrdenProduccion> listarTodas() {
         return repository.findAll();
