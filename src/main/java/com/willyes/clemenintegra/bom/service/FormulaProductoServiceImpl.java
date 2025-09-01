@@ -49,6 +49,9 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                         "No existe fórmula activa aprobada para este producto."));
 
         FormulaProductoResponse response = bomMapper.toResponseDTO(formula);
+        response.unidadBaseFormula = formula.getProducto() != null && formula.getProducto().getUnidadMedida() != null
+                ? formula.getProducto().getUnidadMedida().getSimbolo() : null;
+        response.cantidadBaseFormula = BigDecimal.ONE;
 
         BigDecimal cantidadProduccion = (cantidad != null && cantidad.compareTo(BigDecimal.ZERO) > 0)
                 ? cantidad
