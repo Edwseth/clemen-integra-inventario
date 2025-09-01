@@ -3,7 +3,7 @@ package com.willyes.clemenintegra.inventario.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -25,7 +25,8 @@ public class ProductoResponseDTO {
     private BigDecimal stockMinimoProveedor;
     private Boolean activo;
     private String tipoAnalisisCalidad;
-    private String unidadMedida;
+    private BigDecimal rendimiento;
+    private UnidadMedidaResponseDTO unidadMedida;
     private String categoria;
     private LocalDateTime fechaCreacion;
     // PROD-DETAIL-IDS BEGIN
@@ -48,7 +49,13 @@ public class ProductoResponseDTO {
         this.stockMinimoProveedor = producto.getStockMinimoProveedor();
         this.activo = producto.isActivo();
         this.tipoAnalisisCalidad = producto.getTipoAnalisis() != null ? producto.getTipoAnalisis().name() : null;
-        this.unidadMedida = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : null;
+        this.rendimiento = producto.getRendimientoUnidad() != null ? producto.getRendimientoUnidad() : BigDecimal.ZERO;
+        this.unidadMedida = producto.getUnidadMedida() != null
+                ? new UnidadMedidaResponseDTO(
+                        producto.getUnidadMedida().getId(),
+                        producto.getUnidadMedida().getNombre(),
+                        producto.getUnidadMedida().getSimbolo())
+                : null;
         this.categoria = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null;
         this.fechaCreacion = producto.getFechaCreacion();
         // PROD-DETAIL-IDS BEGIN
@@ -81,8 +88,10 @@ public class ProductoResponseDTO {
     public void setActivo(Boolean activo) {this.activo = activo;}
     public String getTipoAnalisisCalidad() {return tipoAnalisisCalidad;}
     public void setTipoAnalisisCalidad(String tipoAnalisisCalidad) {this.tipoAnalisisCalidad = tipoAnalisisCalidad;}
-    public String getUnidadMedida() {return unidadMedida;}
-    public void setUnidadMedida(String unidadMedida) {this.unidadMedida = unidadMedida;}
+    public BigDecimal getRendimiento() {return rendimiento;}
+    public void setRendimiento(BigDecimal rendimiento) {this.rendimiento = rendimiento;}
+    public UnidadMedidaResponseDTO getUnidadMedida() {return unidadMedida;}
+    public void setUnidadMedida(UnidadMedidaResponseDTO unidadMedida) {this.unidadMedida = unidadMedida;}
     public String getCategoria() {return categoria;}
     public void setCategoria(String categoria) {this.categoria = categoria;}
     public LocalDateTime getFechaCreacion() {return fechaCreacion;}
