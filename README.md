@@ -71,6 +71,9 @@ Los antiguos endpoints `/api/productos/reporte-stock`, `/api/lotes/reporte-venci
 
 ### Producción
 - **Órdenes de producción** `/api/produccion/ordenes` – CRUD.
+  - El campo `unidadMedidaSimbolo` indica la unidad de la `cantidadProgramada`
+    (por ejemplo, "kg" o "L"). Si no se envía, la API utilizará la unidad
+    definida para el producto asociado.
 
 ### Calidad
 - **Evaluaciones de calidad** `/api/calidad/evaluaciones` – CRUD de evaluaciones.
