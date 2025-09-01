@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
 
 public interface OrdenProduccionService {
     ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden);
@@ -19,6 +20,8 @@ public interface OrdenProduccionService {
     List<OrdenProduccion> listarTodas();
     Optional<OrdenProduccion> buscarPorId(Long id);
     void eliminar(Long id);
+
+    OrdenProduccion finalizar(Long id, BigDecimal cantidadProducida);
 
     Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
                                                     EstadoProduccion estado,

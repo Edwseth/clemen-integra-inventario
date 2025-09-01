@@ -6,6 +6,11 @@ import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import com.willyes.clemenintegra.inventario.repository.*;
+import org.springframework.http.MediaType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +20,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -29,6 +35,12 @@ class OrdenProduccionControllerTest {
     private OrdenProduccionRepository ordenRepository;
     @Autowired
     private UsuarioRepository usuarioRepository;
+    @Autowired
+    private ProductoRepository productoRepository;
+    @Autowired
+    private UnidadMedidaRepository unidadMedidaRepository;
+    @Autowired
+    private CategoriaProductoRepository categoriaProductoRepository;
 
     private Usuario responsable1;
     private Usuario responsable2;
@@ -129,6 +141,80 @@ class OrdenProduccionControllerTest {
         mockMvc.perform(get("/api/produccion/ordenes").param("sort","fechaInicio,asc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].codigoOrden").value("ORD-A1"));
+    }
+
+    private OrdenProduccion crearOrdenConProducto(int programada) {
+        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
+                .nombre("unidad")
+                .simbolo("u")
+                .build());
+
+        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
+                .nombre("cat")
+                .tipo(TipoCategoria.PRODUCTO_TERMINADO)
+                .build());
+
+        Producto producto = productoRepository.save(Producto.builder()
+                .codigoSku("SKU-1")
+                .nombre("Prod")
+                .descripcionProducto("desc")
+                .stockActual(BigDecimal.ZERO)
+                .stockMinimo(BigDecimal.ZERO)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .creadoPor(responsable1)
+                .build());
+
+        return ordenRepository.save(OrdenProduccion.builder()
+                .codigoOrden("ORD-FIN")
+                .fechaInicio(LocalDateTime.now())
+                .cantidadProgramada(programada)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .producto(producto)
+                .responsable(responsable1)
+                .build());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_JEFE_PRODUCCION"})
+    void finalizarOrden() throws Exception {
+        OrdenProduccion op = crearOrdenConProducto(10);
+        mockMvc.perform(put("/api/produccion/ordenes/" + op.getId() + "/finalizar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"cantidadProducida\":5}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("FINALIZADA"))
+                .andExpect(jsonPath("$.cantidadProducida").value(5));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_JEFE_PRODUCCION"})
+    void finalizarSinCantidad() throws Exception {
+        OrdenProduccion op = crearOrdenConProducto(10);
+        mockMvc.perform(put("/api/produccion/ordenes/" + op.getId() + "/finalizar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_JEFE_PRODUCCION"})
+    void finalizarCantidadMayorProgramada() throws Exception {
+        OrdenProduccion op = crearOrdenConProducto(10);
+        mockMvc.perform(put("/api/produccion/ordenes/" + op.getId() + "/finalizar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"cantidadProducida\":20}"))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_JEFE_PRODUCCION"})
+    void finalizarOrdenInexistente() throws Exception {
+        mockMvc.perform(put("/api/produccion/ordenes/9999/finalizar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"cantidadProducida\":1}"))
+                .andExpect(status().isNotFound());
     }
 }
 
