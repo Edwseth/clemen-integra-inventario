@@ -30,6 +30,8 @@ import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -198,5 +200,33 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     public void eliminar(Long id) {
         repository.deleteById(id);
+    }
+
+    @Transactional
+    public OrdenProduccion finalizar(Long id, BigDecimal cantidadProducida) {
+        OrdenProduccion orden = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+
+        if (orden.getEstado() == EstadoProduccion.FINALIZADA || orden.getEstado() == EstadoProduccion.CANCELADA) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_FINALIZABLE");
+        }
+
+        if (cantidadProducida == null || cantidadProducida.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+        }
+
+        if (cantidadProducida.compareTo(BigDecimal.valueOf(orden.getCantidadProgramada())) > 0) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_EXCEDE_PROGRAMADA");
+        }
+
+        if (orden.getProducto() == null || orden.getProducto().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_SIN_PRODUCTO");
+        }
+
+        orden.setCantidadProducida(cantidadProducida.intValue());
+        orden.setEstado(EstadoProduccion.FINALIZADA);
+        orden.setFechaFin(LocalDateTime.now());
+
+        return repository.save(orden);
     }
 }

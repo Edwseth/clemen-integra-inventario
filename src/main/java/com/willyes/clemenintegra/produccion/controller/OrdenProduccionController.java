@@ -81,4 +81,12 @@ public class OrdenProduccionController {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}/finalizar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<OrdenProduccionResponseDTO> finalizar(@PathVariable Long id,
+                                                               @RequestBody FinalizarOrdenRequestDTO request) {
+        OrdenProduccion orden = service.finalizar(id, request.getCantidadProducida());
+        return ResponseEntity.ok(ProduccionMapper.toResponse(orden));
+    }
 }
