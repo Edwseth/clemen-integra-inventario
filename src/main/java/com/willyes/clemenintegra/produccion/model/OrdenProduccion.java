@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -30,6 +31,12 @@ public class OrdenProduccion {
     @Column(nullable = true)
     private Integer cantidadProducida;
 
+    @Column(name = "cantidad_producida_acumulada", precision = 10, scale = 2)
+    private BigDecimal cantidadProducidaAcumulada;
+
+    @Column(name = "fecha_ultimo_cierre")
+    private LocalDateTime fechaUltimoCierre;
+
     @Enumerated(EnumType.STRING)
     private EstadoProduccion estado;
 
@@ -43,4 +50,7 @@ public class OrdenProduccion {
 
     @OneToMany(mappedBy = "ordenProduccion")
     private List<EtapaProduccion> etapas;
+
+    @Version
+    private Long version;
 }

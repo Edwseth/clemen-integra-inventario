@@ -89,4 +89,19 @@ public class OrdenProduccionController {
         OrdenProduccion orden = service.finalizar(id, request.getCantidadProducida());
         return ResponseEntity.ok(ProduccionMapper.toResponse(orden));
     }
+
+    @PostMapping("/{id}/cierres")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<OrdenProduccionResponseDTO> registrarCierre(@PathVariable Long id,
+                                                                     @RequestBody CierreProduccionRequestDTO request) {
+        OrdenProduccion orden = service.registrarCierre(id, request);
+        return ResponseEntity.ok(ProduccionMapper.toResponse(orden));
+    }
+
+    @GetMapping("/{id}/cierres")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public Page<CierreProduccionResponseDTO> listarCierres(@PathVariable Long id,
+                                                          @PageableDefault(size = 10, sort = "fechaCierre", direction = Sort.Direction.DESC) Pageable pageable) {
+        return service.listarCierres(id, pageable);
+    }
 }

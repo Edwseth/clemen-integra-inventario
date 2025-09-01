@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.produccion.dto;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 public class OrdenProduccionResponseDTO {
     public Long id;
@@ -10,6 +11,9 @@ public class OrdenProduccionResponseDTO {
     public LocalDateTime fechaFin;
     public Integer cantidadProgramada;
     public Integer cantidadProducida;
+    public BigDecimal cantidadProducidaAcumulada;
+    public BigDecimal cantidadRestante;
+    public LocalDateTime fechaUltimoCierre;
     public String estado;
     public String nombreProducto;
     public String nombreResponsable;
