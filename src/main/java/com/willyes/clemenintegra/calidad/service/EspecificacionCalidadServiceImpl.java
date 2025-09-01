@@ -43,6 +43,7 @@ public class EspecificacionCalidadServiceImpl implements EspecificacionCalidadSe
         existing.setParametro(dto.getParametro());
         existing.setValorMinimo(dto.getValorMinimo());
         existing.setValorMaximo(dto.getValorMaximo());
+        existing.setUnidad(dto.getUnidad());
         existing.setMetodoEnsayo(dto.getMetodoEnsayo());
         existing.setProducto(prod);
         return mapper.toDTO(repository.save(existing));

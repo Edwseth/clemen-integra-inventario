@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,13 +19,15 @@ public class EspecificacionCalidadDTO {
     @Size(max = 45, message = "El parámetro no puede exceder 45 caracteres")
     private String parametro;
 
-    @NotBlank(message = "El valor mínimo es obligatorio")
-    @Size(max = 45, message = "El valor mínimo no puede exceder 45 caracteres")
-    private String valorMinimo;
+    @NotNull(message = "El valor mínimo es obligatorio")
+    private BigDecimal valorMinimo;
 
-    @NotBlank(message = "El valor máximo es obligatorio")
-    @Size(max = 45, message = "El valor máximo no puede exceder 45 caracteres")
-    private String valorMaximo;
+    @NotNull(message = "El valor máximo es obligatorio")
+    private BigDecimal valorMaximo;
+
+    @NotBlank(message = "La unidad es obligatoria")
+    @Size(max = 45, message = "La unidad no puede exceder 45 caracteres")
+    private String unidad;
 
     @NotBlank(message = "El método de ensayo es obligatorio")
     @Size(max = 100, message = "El método de ensayo no puede exceder 100 caracteres")
