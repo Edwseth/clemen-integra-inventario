@@ -352,11 +352,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         TipoMovimiento.ENTRADA,
                         ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO,
                         orden.getCodigoOrden(),
-                        orden.getProducto().getId(),
+                        Math.toIntExact(orden.getProducto().getId()),
                         lote.getId(),
                         null,
-                        preBodega.getId(),
-                        null,
+                        preBodega.getId() != null ? preBodega.getId().intValue() : null,
                         null,
                         null,
                         tipoDetalleId,
@@ -364,8 +363,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         null,
                         orden.getId(),
                         null,
-                        null,
-                        null,
+                        lote.getCodigoLote(),
+                        lote.getFechaVencimiento(),
                         com.willyes.clemenintegra.inventario.model.enums.EstadoLote.DISPONIBLE
                 ));
             } catch (Exception e) {
