@@ -39,5 +39,11 @@ public class OrdenProduccionRequestDTO {
     @NotNull
     private Long responsableId;
 
+    /**
+     * Símbolo de la unidad de medida en la que se expresa la cantidad programada
+     * (por ejemplo, "kg" o "L"). Si se omite, se utilizará la unidad definida
+     * para el producto.
+     */
+    @NotBlank
     private String unidadMedidaSimbolo;
 }

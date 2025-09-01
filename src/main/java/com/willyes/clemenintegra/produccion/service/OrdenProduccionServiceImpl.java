@@ -202,6 +202,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         BigDecimal cantidadBase = dto.getCantidadProgramada();
         String unidadBase = dto.getUnidadMedidaSimbolo();
         String unidadProducto = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getSimbolo() : unidadBase;
+        if (unidadBase == null || unidadBase.isBlank()) {
+            unidadBase = unidadProducto;
+            dto.setUnidadMedidaSimbolo(unidadBase);
+        }
         BigDecimal cantidadConvertida = unidadConversionService.convertir(cantidadBase, unidadBase, unidadProducto);
 
         OrdenProduccion orden = ordenProduccionMapper.toEntity(dto, producto, responsable);
