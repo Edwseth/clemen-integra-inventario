@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -97,11 +98,19 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         BigDecimal cantidadProgramada = orden.getCantidadProgramada();
 
+        // Cargar todos los productos de los insumos en una sola consulta para evitar N+1
+        List<Long> insumoIds = formula.getDetalles().stream()
+                .map(d -> d.getInsumo().getId().longValue())
+                .toList();
+        Map<Long, Producto> productosInsumo = productoRepository.findAllById(insumoIds).stream()
+                .collect(Collectors.toMap(p -> p.getId().longValue(), p -> p));
+
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();
-            Producto productoInsumo = productoRepository.findById(insumoId)
-                    // LÍNEA CODEx: posible N+1, se consulta cada insumo individualmente
-                    .orElseThrow(() -> new IllegalArgumentException("Insumo no encontrado: ID " + insumoId));
+            Producto productoInsumo = productosInsumo.get(insumoId);
+            if (productoInsumo == null) {
+                throw new IllegalArgumentException("Insumo no encontrado: ID " + insumoId);
+            }
 
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
             cantidadesEscaladas.put(insumoId, cantidadRequerida);
