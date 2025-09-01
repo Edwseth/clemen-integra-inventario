@@ -15,7 +15,6 @@ import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionResponseDTO;
-import com.willyes.clemenintegra.produccion.mapper.OrdenProduccionMapper;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.service.UnidadConversionService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -67,7 +66,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final UsuarioRepository usuarioRepository;
     private final SolicitudMovimientoService solicitudMovimientoService;
     private final OrdenProduccionRepository repository;
-    private final OrdenProduccionMapper ordenProduccionMapper;
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     private final CierreProduccionRepository cierreProduccionRepository;
@@ -204,7 +202,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         String unidadProducto = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getSimbolo() : unidadBase;
         BigDecimal cantidadConvertida = unidadConversionService.convertir(cantidadBase, unidadBase, unidadProducto);
 
-        OrdenProduccion orden = ordenProduccionMapper.toEntity(dto, producto, responsable);
+        OrdenProduccion orden = ProduccionMapper.toEntity(dto, producto, responsable);
         orden.setCantidadProgramada(cantidadConvertida);
 
         ResultadoValidacionOrdenDTO resultado = guardarConValidacionStock(orden);
