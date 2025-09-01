@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
+import java.math.BigDecimal;
 
 public class ProduccionMapper {
 
@@ -30,9 +31,38 @@ public class ProduccionMapper {
         dto.fechaFin = entidad.getFechaFin();
         dto.cantidadProgramada = entidad.getCantidadProgramada();
         dto.cantidadProducida = entidad.getCantidadProducida();
+        dto.cantidadProducidaAcumulada = entidad.getCantidadProducidaAcumulada();
+        if (entidad.getCantidadProgramada() != null && entidad.getCantidadProducidaAcumulada() != null) {
+            dto.cantidadRestante = BigDecimal.valueOf(entidad.getCantidadProgramada())
+                    .subtract(entidad.getCantidadProducidaAcumulada());
+        }
+        dto.fechaUltimoCierre = entidad.getFechaUltimoCierre();
         dto.estado = entidad.getEstado().name();
         dto.nombreProducto = entidad.getProducto() != null ? entidad.getProducto().getNombre() : null;
         dto.nombreResponsable = entidad.getResponsable() != null ? entidad.getResponsable().getNombreCompleto() : null;
+        return dto;
+    }
+
+    public static CierreProduccion toEntity(CierreProduccionRequestDTO dto, OrdenProduccion orden) {
+        return CierreProduccion.builder()
+                .cantidad(dto.getCantidad())
+                .tipo(dto.getTipo())
+                .cerradaIncompleta(dto.getCerradaIncompleta())
+                .turno(dto.getTurno())
+                .observacion(dto.getObservacion())
+                .ordenProduccion(orden)
+                .build();
+    }
+
+    public static CierreProduccionResponseDTO toResponse(CierreProduccion entidad) {
+        CierreProduccionResponseDTO dto = new CierreProduccionResponseDTO();
+        dto.id = entidad.getId();
+        dto.fechaCierre = entidad.getFechaCierre();
+        dto.cantidad = entidad.getCantidad();
+        dto.tipo = entidad.getTipo().name();
+        dto.cerradaIncompleta = entidad.getCerradaIncompleta();
+        dto.turno = entidad.getTurno();
+        dto.observacion = entidad.getObservacion();
         return dto;
     }
 

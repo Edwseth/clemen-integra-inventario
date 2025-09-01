@@ -13,16 +13,27 @@ import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CierreProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.mapper.OrdenProduccionMapper;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepository;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import com.willyes.clemenintegra.produccion.service.spec.OrdenProduccionSpecifications;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
+import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.Almacen;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,6 +54,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import jakarta.persistence.OptimisticLockException;
 
 @Service
 @RequiredArgsConstructor
@@ -56,6 +68,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final OrdenProduccionMapper ordenProduccionMapper;
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
+    private final CierreProduccionRepository cierreProduccionRepository;
+    private final MovimientoInventarioService movimientoInventarioService;
+    private final LoteProductoRepository loteProductoRepository;
+    private final AlmacenRepository almacenRepository;
 
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -200,6 +216,112 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     public void eliminar(Long id) {
         repository.deleteById(id);
+    }
+
+    @Transactional
+    public OrdenProduccion registrarCierre(Long id, CierreProduccionRequestDTO dto) {
+        try {
+            OrdenProduccion orden = repository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+
+            if (orden.getEstado() == EstadoProduccion.FINALIZADA ||
+                    orden.getEstado() == EstadoProduccion.CANCELADA ||
+                    orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_CERRABLE");
+            }
+
+            if (dto.getCantidad() == null || dto.getCantidad().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+            }
+
+            BigDecimal programada = BigDecimal.valueOf(orden.getCantidadProgramada());
+            BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
+            BigDecimal nuevaAcumulada = acumulada.add(dto.getCantidad());
+
+            if (dto.getTipo() == TipoCierre.PARCIAL) {
+                if (nuevaAcumulada.compareTo(programada) > 0) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_EXCEDE_PROGRAMADA");
+                }
+            } else if (dto.getTipo() == TipoCierre.TOTAL) {
+                boolean incompleta = Boolean.TRUE.equals(dto.getCerradaIncompleta());
+                if (incompleta) {
+                    if (nuevaAcumulada.compareTo(programada) >= 0) {
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+                    }
+                    orden.setEstado(EstadoProduccion.CERRADA_INCOMPLETA);
+                    orden.setFechaFin(LocalDateTime.now());
+                } else {
+                    if (nuevaAcumulada.compareTo(programada) != 0) {
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+                    }
+                    orden.setEstado(EstadoProduccion.FINALIZADA);
+                    orden.setFechaFin(LocalDateTime.now());
+                }
+            }
+
+            orden.setCantidadProducidaAcumulada(nuevaAcumulada);
+            orden.setCantidadProducida(nuevaAcumulada.intValue());
+            orden.setFechaUltimoCierre(LocalDateTime.now());
+
+            CierreProduccion cierre = ProduccionMapper.toEntity(dto, orden);
+            cierreProduccionRepository.save(cierre);
+
+            // Movimiento de inventario
+            try {
+                Almacen preBodega = almacenRepository.findByNombre("Pre-Bodega")
+                        .orElseThrow(() -> new IllegalStateException("ALMACEN_PRE_BODEGA_NO_CONFIGURADO"));
+
+                LoteProducto lote = loteProductoRepository
+                        .findByCodigoLoteAndProductoIdAndAlmacenId(orden.getLoteProduccion(), orden.getProducto().getId(), preBodega.getId())
+                        .orElseGet(() -> loteProductoRepository.save(LoteProducto.builder()
+                                .codigoLote(orden.getLoteProduccion())
+                                .producto(orden.getProducto())
+                                .almacen(preBodega)
+                                .stockLote(BigDecimal.ZERO)
+                                .estado(com.willyes.clemenintegra.inventario.model.enums.EstadoLote.DISPONIBLE)
+                                .ordenProduccion(orden)
+                                .build()));
+
+                Long tipoDetalleId = tipoMovimientoDetalleRepository
+                        .findByDescripcion("ENTRADA_PARCIAL_PRODUCCION")
+                        .map(t -> t.getId())
+                        .orElse(null);
+
+                movimientoInventarioService.registrarMovimiento(new MovimientoInventarioDTO(
+                        null,
+                        dto.getCantidad(),
+                        TipoMovimiento.ENTRADA,
+                        ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO,
+                        orden.getCodigoOrden(),
+                        orden.getProducto().getId(),
+                        lote.getId(),
+                        null,
+                        preBodega.getId(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        tipoDetalleId,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        com.willyes.clemenintegra.inventario.model.enums.EstadoLote.DISPONIBLE
+                ));
+            } catch (Exception e) {
+                // En caso de error en movimiento, se registra pero no evita el cierre
+            }
+
+            return repository.save(orden);
+        } catch (OptimisticLockException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ORDEN_CONFLICTO");
+        }
+    }
+
+    public Page<CierreProduccionResponseDTO> listarCierres(Long id, Pageable pageable) {
+        return cierreProduccionRepository.findByOrdenProduccionId(id, pageable)
+                .map(ProduccionMapper::toResponse);
     }
 
     @Transactional

@@ -4,5 +4,6 @@ public enum EstadoProduccion {
     CREADA,
     EN_PROCESO,
     FINALIZADA,
-    CANCELADA
+    CANCELADA,
+    CERRADA_INCOMPLETA
 }
