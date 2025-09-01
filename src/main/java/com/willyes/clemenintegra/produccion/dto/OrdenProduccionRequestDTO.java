@@ -39,5 +39,5 @@ public class OrdenProduccionRequestDTO {
     @NotNull
     private Long responsableId;
 
-    private String unidadMedida;
+    private String unidadMedidaSimbolo;
 }

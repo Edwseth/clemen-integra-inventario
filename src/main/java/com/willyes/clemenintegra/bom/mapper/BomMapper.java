@@ -37,6 +37,7 @@ public interface BomMapper {
 
     @Mapping(target = "insumoNombre", source = "insumo", qualifiedByName = "mapProductoNombre")
     @Mapping(target = "unidad", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
+    @Mapping(target = "unidadSimbolo", source = "unidadMedida", qualifiedByName = "mapUnidadSimbolo")
     DetalleFormulaResponse toResponseDTO(DetalleFormula detalle);
 
     //@Mapping(target = "id", ignore = true)
@@ -55,6 +56,11 @@ public interface BomMapper {
     @Named("mapUnidadNombre")
     default String mapUnidadNombre(UnidadMedida unidad) {
         return (unidad != null) ? unidad.getNombre() : null;
+    }
+
+    @Named("mapUnidadSimbolo")
+    default String mapUnidadSimbolo(UnidadMedida unidad) {
+        return (unidad != null) ? unidad.getSimbolo() : null;
     }
 
     @Named("mapNombreUsuario")

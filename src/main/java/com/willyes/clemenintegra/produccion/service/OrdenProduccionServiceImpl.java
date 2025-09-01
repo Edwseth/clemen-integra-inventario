@@ -17,6 +17,7 @@ import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.mapper.OrdenProduccionMapper;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
+import com.willyes.clemenintegra.produccion.service.UnidadConversionService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
@@ -72,6 +73,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final MovimientoInventarioService movimientoInventarioService;
     private final LoteProductoRepository loteProductoRepository;
     private final AlmacenRepository almacenRepository;
+    private final UnidadConversionService unidadConversionService;
 
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -121,6 +123,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .nombre(productoInsumo.getNombre())
                         .requerido(cantidadRequerida)
                         .disponible(stockActual)
+                        .unidadSimbolo(productoInsumo.getUnidadMedida() != null
+                                ? productoInsumo.getUnidadMedida().getSimbolo()
+                                : null)
                         .build());
             }
         }
@@ -185,8 +190,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         Usuario responsable = usuarioRepository.findById(dto.getResponsableId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
+        BigDecimal cantidadBase = dto.getCantidadProgramada();
+        String unidadBase = dto.getUnidadMedidaSimbolo();
+        String unidadProducto = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getSimbolo() : unidadBase;
+        BigDecimal cantidadConvertida = unidadConversionService.convertir(cantidadBase, unidadBase, unidadProducto);
+
         OrdenProduccion orden = ordenProduccionMapper.toEntity(dto, producto, responsable);
-        return guardarConValidacionStock(orden);
+        orden.setCantidadProgramada(cantidadConvertida);
+
+        ResultadoValidacionOrdenDTO resultado = guardarConValidacionStock(orden);
+        if (resultado.getOrden() != null) {
+            resultado.getOrden().cantidadProgramadaBase = cantidadBase;
+            resultado.getOrden().unidadMedidaBaseSimbolo = unidadBase;
+            resultado.getOrden().unidadMedidaSimbolo = unidadProducto;
+        }
+        return resultado;
     }
 
 

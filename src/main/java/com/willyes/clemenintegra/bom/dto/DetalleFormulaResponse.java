@@ -8,6 +8,7 @@ public class DetalleFormulaResponse {
     public java.math.BigDecimal stockActual;
     public String estadoStock;
     public String unidad;
+    public String unidadSimbolo;
     public Boolean obligatorio;
     // LÍNEA CODEx: nuevos campos para exponer disponibilidad detallada de lotes
     public DisponibilidadInsumoDTO disponibilidad;

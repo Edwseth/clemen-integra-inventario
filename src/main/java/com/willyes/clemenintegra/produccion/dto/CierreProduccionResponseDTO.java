@@ -11,4 +11,5 @@ public class CierreProduccionResponseDTO {
     public Boolean cerradaIncompleta;
     public String turno;
     public String observacion;
+    public String unidadMedidaSimbolo;
 }

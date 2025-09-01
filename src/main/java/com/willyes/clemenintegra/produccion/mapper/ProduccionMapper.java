@@ -41,6 +41,7 @@ public class ProduccionMapper {
         dto.estado = entidad.getEstado().name();
         dto.nombreProducto = entidad.getProducto() != null ? entidad.getProducto().getNombre() : null;
         dto.unidadMedida = entidad.getUnidadMedida() != null ? entidad.getUnidadMedida().getNombre() : null;
+        dto.unidadMedidaSimbolo = entidad.getUnidadMedida() != null ? entidad.getUnidadMedida().getSimbolo() : null;
         dto.nombreResponsable = entidad.getResponsable() != null ? entidad.getResponsable().getNombreCompleto() : null;
         return dto;
     }
@@ -65,6 +66,10 @@ public class ProduccionMapper {
         dto.cerradaIncompleta = entidad.getCerradaIncompleta();
         dto.turno = entidad.getTurno();
         dto.observacion = entidad.getObservacion();
+        dto.unidadMedidaSimbolo = entidad.getOrdenProduccion() != null
+                && entidad.getOrdenProduccion().getUnidadMedida() != null
+                ? entidad.getOrdenProduccion().getUnidadMedida().getSimbolo()
+                : null;
         return dto;
     }
 
