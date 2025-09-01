@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.bom.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -10,6 +11,8 @@ public class FormulaProductoResponse {
     public String estado;
     public LocalDateTime fechaCreacion;
     public String creadoPorNombre;
+    public BigDecimal cantidadBaseFormula;
+    public String unidadBaseFormula;
     public List<DetalleFormulaResponse> detalles;
     public List<DocumentoFormulaResponseDTO> documentos;
 }
