@@ -15,6 +15,7 @@ public class OrdenProduccionResponseDTO {
     public BigDecimal cantidadProducidaAcumulada;
     public BigDecimal cantidadRestante;
     public LocalDateTime fechaUltimoCierre;
+    public BigDecimal unidadesProducidas;
     public String estado;
     public String nombreProducto;
     public String unidadMedida;

@@ -43,6 +43,13 @@ public class Producto {
     @Column(name = "stock_minimo_proveedor")
     private BigDecimal stockMinimoProveedor;
 
+    /**
+     * Rendimiento de producción expresado en la unidad del producto.
+     * Representa, por ejemplo, el volumen por unidad de empaque.
+     */
+    @Column(name = "rendimiento_unidad")
+    private BigDecimal rendimientoUnidad;
+
     @Column(name = "activo", nullable = false)
     private boolean activo = true;
 
@@ -110,6 +117,8 @@ public class Producto {
     public void setCategoriaProducto(CategoriaProducto categoriaProducto) {this.categoriaProducto = categoriaProducto;}
     public Usuario getCreadoPor() {return creadoPor;}
     public void setCreadoPor(Usuario creadoPor) {this.creadoPor = creadoPor;}
+    public BigDecimal getRendimientoUnidad() {return rendimientoUnidad;}
+    public void setRendimientoUnidad(BigDecimal rendimientoUnidad) {this.rendimientoUnidad = rendimientoUnidad;}
 
 }
 

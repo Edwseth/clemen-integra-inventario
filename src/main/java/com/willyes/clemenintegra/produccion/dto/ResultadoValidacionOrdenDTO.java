@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
@@ -17,4 +18,5 @@ public class ResultadoValidacionOrdenDTO {
     private Integer unidadesMaximasProducibles;
     private List<InsumoFaltanteDTO> insumosFaltantes;
     private OrdenProduccionResponseDTO orden;
+    private BigDecimal unidadesProducidas;
 }
