@@ -14,6 +14,7 @@ public class EspecificacionCalidadMapper {
                 .parametro(entity.getParametro())
                 .valorMinimo(entity.getValorMinimo())
                 .valorMaximo(entity.getValorMaximo())
+                .unidad(entity.getUnidad())
                 .metodoEnsayo(entity.getMetodoEnsayo())
                 .productoId(entity.getProducto().getId().longValue())
                 .build();
@@ -25,6 +26,7 @@ public class EspecificacionCalidadMapper {
                 .parametro(dto.getParametro())
                 .valorMinimo(dto.getValorMinimo())
                 .valorMaximo(dto.getValorMaximo())
+                .unidad(dto.getUnidad())
                 .metodoEnsayo(dto.getMetodoEnsayo())
                 .producto(producto)
                 .build();
