@@ -5,15 +5,20 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.*;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.service.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/produccion/ordenes")
@@ -23,10 +28,15 @@ public class OrdenProduccionController {
     private final OrdenProduccionService service;
 
     @GetMapping
-    public List<OrdenProduccionResponseDTO> listarTodas() {
-        return service.listarTodas().stream()
-                .map(ProduccionMapper::toResponse)
-                .collect(Collectors.toList());
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public Page<OrdenProduccionResponseDTO> listar(
+            @RequestParam(required = false) String codigo,
+            @RequestParam(required = false) EstadoProduccion estado,
+            @RequestParam(required = false) String responsable,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
+            @PageableDefault(size = 10, sort = "fechaInicio", direction = Sort.Direction.DESC) Pageable pageable) {
+        return service.listarPaginado(codigo, estado, responsable, fechaInicio, fechaFin, pageable);
     }
 
     @GetMapping("/{id}")
