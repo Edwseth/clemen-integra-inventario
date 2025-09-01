@@ -19,6 +19,7 @@ public class OrdenProduccionMapper {
         orden.setCantidadProducida(dto.getCantidadProducida());
         orden.setEstado(EstadoProduccion.valueOf(dto.getEstado()));
         orden.setProducto(producto);
+        orden.setUnidadMedida(producto.getUnidadMedida());
         orden.setResponsable(responsable);
         return orden;
     }

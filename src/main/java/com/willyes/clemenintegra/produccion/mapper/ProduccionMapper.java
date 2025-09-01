@@ -18,6 +18,7 @@ public class ProduccionMapper {
                 .cantidadProducida(dto.getCantidadProducida())
                 .estado(EstadoProduccion.valueOf(dto.getEstado()))
                 .producto(producto)
+                .unidadMedida(producto.getUnidadMedida())
                 .responsable(responsable)
                 .build();
     }
@@ -33,12 +34,13 @@ public class ProduccionMapper {
         dto.cantidadProducida = entidad.getCantidadProducida();
         dto.cantidadProducidaAcumulada = entidad.getCantidadProducidaAcumulada();
         if (entidad.getCantidadProgramada() != null && entidad.getCantidadProducidaAcumulada() != null) {
-            dto.cantidadRestante = BigDecimal.valueOf(entidad.getCantidadProgramada())
+            dto.cantidadRestante = entidad.getCantidadProgramada()
                     .subtract(entidad.getCantidadProducidaAcumulada());
         }
         dto.fechaUltimoCierre = entidad.getFechaUltimoCierre();
         dto.estado = entidad.getEstado().name();
         dto.nombreProducto = entidad.getProducto() != null ? entidad.getProducto().getNombre() : null;
+        dto.unidadMedida = entidad.getUnidadMedida() != null ? entidad.getUnidadMedida().getNombre() : null;
         dto.nombreResponsable = entidad.getResponsable() != null ? entidad.getResponsable().getNombreCompleto() : null;
         return dto;
     }

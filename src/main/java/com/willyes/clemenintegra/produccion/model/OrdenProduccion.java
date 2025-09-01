@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.produccion.model;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import jakarta.persistence.*;
@@ -25,11 +26,11 @@ public class OrdenProduccion {
     private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;
 
-    @Column(nullable = false)
-    private Integer cantidadProgramada;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal cantidadProgramada;
 
-    @Column(nullable = true)
-    private Integer cantidadProducida;
+    @Column(nullable = true, precision = 10, scale = 2)
+    private BigDecimal cantidadProducida;
 
     @Column(name = "cantidad_producida_acumulada", precision = 10, scale = 2)
     private BigDecimal cantidadProducidaAcumulada;
@@ -43,6 +44,10 @@ public class OrdenProduccion {
     @ManyToOne
     @JoinColumn(name = "producto_id")
     private Producto producto;
+
+    @ManyToOne
+    @JoinColumn(name = "unidad_medida_id")
+    private UnidadMedida unidadMedida;
 
     @ManyToOne
     @JoinColumn(name = "responsable_id")

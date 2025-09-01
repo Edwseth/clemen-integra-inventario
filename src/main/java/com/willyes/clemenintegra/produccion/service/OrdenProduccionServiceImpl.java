@@ -93,7 +93,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         boolean stockSuficiente = true;
         Integer maxProducible = null;
 
-        BigDecimal cantidadProgramada = BigDecimal.valueOf(orden.getCantidadProgramada());
+        BigDecimal cantidadProgramada = orden.getCantidadProgramada();
 
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();
@@ -234,7 +234,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
             }
 
-            BigDecimal programada = BigDecimal.valueOf(orden.getCantidadProgramada());
+            BigDecimal programada = orden.getCantidadProgramada();
             BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
             BigDecimal nuevaAcumulada = acumulada.add(dto.getCantidad());
 
@@ -260,7 +260,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             }
 
             orden.setCantidadProducidaAcumulada(nuevaAcumulada);
-            orden.setCantidadProducida(nuevaAcumulada.intValue());
+            orden.setCantidadProducida(nuevaAcumulada);
             orden.setFechaUltimoCierre(LocalDateTime.now());
 
             CierreProduccion cierre = ProduccionMapper.toEntity(dto, orden);
@@ -337,7 +337,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
         }
 
-        if (cantidadProducida.compareTo(BigDecimal.valueOf(orden.getCantidadProgramada())) > 0) {
+        if (cantidadProducida.compareTo(orden.getCantidadProgramada()) > 0) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_EXCEDE_PROGRAMADA");
         }
 
@@ -345,7 +345,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_SIN_PRODUCTO");
         }
 
-        orden.setCantidadProducida(cantidadProducida.intValue());
+        orden.setCantidadProducida(cantidadProducida);
         orden.setEstado(EstadoProduccion.FINALIZADA);
         orden.setFechaFin(LocalDateTime.now());
 

@@ -80,7 +80,7 @@ class OrdenProduccionControllerTest {
         ordenRepository.save(OrdenProduccion.builder()
                 .codigoOrden("ORD-A1")
                 .fechaInicio(LocalDateTime.of(2023,1,1,0,0))
-                .cantidadProgramada(10)
+                .cantidadProgramada(BigDecimal.valueOf(10))
                 .estado(EstadoProduccion.CREADA)
                 .responsable(responsable1)
                 .build());
@@ -88,7 +88,7 @@ class OrdenProduccionControllerTest {
         ordenRepository.save(OrdenProduccion.builder()
                 .codigoOrden("ORD-B2")
                 .fechaInicio(LocalDateTime.of(2023,2,1,0,0))
-                .cantidadProgramada(20)
+                .cantidadProgramada(BigDecimal.valueOf(20))
                 .estado(EstadoProduccion.EN_PROCESO)
                 .responsable(responsable2)
                 .build());
@@ -96,7 +96,7 @@ class OrdenProduccionControllerTest {
         ordenRepository.save(OrdenProduccion.builder()
                 .codigoOrden("X-ORD")
                 .fechaInicio(LocalDateTime.of(2023,3,1,0,0))
-                .cantidadProgramada(30)
+                .cantidadProgramada(BigDecimal.valueOf(30))
                 .estado(EstadoProduccion.CREADA)
                 .responsable(responsable1)
                 .build());
@@ -190,9 +190,10 @@ class OrdenProduccionControllerTest {
         return ordenRepository.save(OrdenProduccion.builder()
                 .codigoOrden("ORD-FIN")
                 .fechaInicio(LocalDateTime.now())
-                .cantidadProgramada(programada)
+                .cantidadProgramada(BigDecimal.valueOf(programada))
                 .estado(EstadoProduccion.EN_PROCESO)
                 .producto(producto)
+                .unidadMedida(producto.getUnidadMedida())
                 .responsable(responsable1)
                 .build());
     }
