@@ -24,7 +24,8 @@ public interface ProductoMapper {
     @Mapping(target = "unidadMedida", source = "unidadMedida")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
     @Mapping(target = "tipoAnalisisCalidad", expression = "java(producto.getTipoAnalisis() != null ? producto.getTipoAnalisis().name() : null)")
-    @Mapping(target = "rendimiento", expression = "java(producto.getRendimientoUnidad() != null ? producto.getRendimientoUnidad() : BigDecimal.ZERO)")
+    @Mapping(target = "rendimiento", source = "rendimientoUnidad")
+
     // PROD-DETAIL-IDS BEGIN
     @Mapping(target = "unidadMedidaId", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null)")
     @Mapping(target = "categoriaProductoId", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null)")
@@ -49,6 +50,13 @@ public interface ProductoMapper {
     @Named("mapTipoAnalisisCalidadString")
     default String mapTipoAnalisisCalidadString(TipoAnalisisCalidad valor) {
         return valor != null ? valor.name() : null;
+    }
+
+    @AfterMapping
+    default void setDefaultRendimiento(@MappingTarget ProductoResponseDTO dto) {
+        if (dto.getRendimiento() == null) {
+            dto.setRendimiento(BigDecimal.ZERO);
+        }
     }
 
 }
