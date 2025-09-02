@@ -358,6 +358,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         preBodega.getId() != null ? preBodega.getId().intValue() : null,
                         null,
                         null,
+                        null,
                         tipoDetalleId,
                         null,
                         null,
