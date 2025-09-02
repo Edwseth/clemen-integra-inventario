@@ -28,6 +28,7 @@ public record MovimientoInventarioDTO(
         Long tipoMovimientoDetalleId,
         Long solicitudMovimientoId,
         Long usuarioId,
+        Long ordenProduccionId,
         Long ordenCompraDetalleId,
         String codigoLote,
         LocalDateTime fechaVencimiento,

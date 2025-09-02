@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.model;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -80,6 +81,10 @@ public class MovimientoInventario {
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_motivos_movimiento1"))
     private MotivoMovimiento motivoMovimiento;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "orden_produccion_id")
+    private OrdenProduccion ordenProduccion;
+
     @ManyToOne
     @JoinColumn(name = "tipos_movimiento_detalle_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_mov_inv_tipo_mov_detalle"))
@@ -134,6 +139,9 @@ public class MovimientoInventario {
     public void setOrdenCompraDetalle(OrdenCompraDetalle ordenCompraDetalle) {this.ordenCompraDetalle = ordenCompraDetalle;}
     public SolicitudMovimiento getSolicitudMovimiento() {return solicitudMovimiento;}
     public void setSolicitudMovimiento(SolicitudMovimiento solicitudMovimiento) {this.solicitudMovimiento = solicitudMovimiento;}
+
+    public OrdenProduccion getOrdenProduccion() {return ordenProduccion;}
+    public void setOrdenProduccion(OrdenProduccion ordenProduccion) {this.ordenProduccion = ordenProduccion;}
 }
 
 

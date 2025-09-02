@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.service.*;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/produccion/ordenes")
@@ -100,5 +102,24 @@ public class OrdenProduccionController {
     public Page<CierreProduccionResponseDTO> listarCierres(@PathVariable Long id,
                                                           @PageableDefault(size = 10, sort = "fechaCierre", direction = Sort.Direction.DESC) Pageable pageable) {
         return service.listarCierres(id, pageable);
+    }
+
+    @GetMapping("/{id}/etapas")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public List<EtapaProduccionResponse> listarEtapas(@PathVariable Long id) {
+        return service.listarEtapas(id);
+    }
+
+    @GetMapping("/{id}/insumos")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public List<InsumoOPDTO> listarInsumos(@PathVariable Long id) {
+        return service.listarInsumos(id);
+    }
+
+    @GetMapping("/{id}/movimientos")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public Page<MovimientoInventarioResponseDTO> listarMovimientos(@PathVariable Long id,
+                                                                   Pageable pageable) {
+        return service.listarMovimientos(id, pageable);
     }
 }

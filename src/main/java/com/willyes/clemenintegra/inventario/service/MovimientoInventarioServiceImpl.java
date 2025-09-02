@@ -12,6 +12,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -106,6 +107,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Usuario usuario = dto.usuarioId() != null
                 ? entityManager.getReference(Usuario.class, dto.usuarioId())
                 : usuarioService.obtenerUsuarioAutenticado();
+
+        OrdenProduccion ordenProduccion = dto.ordenProduccionId() != null
+                ? entityManager.getReference(OrdenProduccion.class, dto.ordenProduccionId())
+                : null;
 
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
 
@@ -267,6 +272,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setLote(lote);
         movimiento.setAlmacenOrigen(almacenOrigen);
         movimiento.setAlmacenDestino(almacenDestino);
+        movimiento.setOrdenProduccion(ordenProduccion);
         movimiento.setProveedor(dto.proveedorId() != null
                 ? entityManager.getReference(Proveedor.class, dto.proveedorId()) : null);
         movimiento.setOrdenCompra(dto.ordenCompraId() != null

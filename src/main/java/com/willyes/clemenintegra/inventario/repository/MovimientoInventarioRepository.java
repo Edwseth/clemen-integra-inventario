@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
 
@@ -91,6 +92,13 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
     boolean existsByProductoId(Long productoId);
 
     boolean existsBySolicitudMovimientoId(Long solicitudMovimientoId);
+
+    Page<MovimientoInventario> findByOrdenProduccionId(Long ordenProduccionId, Pageable pageable);
+
+    @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m where m.ordenProduccion.id = :ordenId and m.producto.id = :productoId and m.tipoMovimiento = :tipo")
+    BigDecimal sumaCantidadPorOrdenYProducto(@Param("ordenId") Long ordenId,
+                                             @Param("productoId") Long productoId,
+                                             @Param("tipo") TipoMovimiento tipo);
 
 }
 

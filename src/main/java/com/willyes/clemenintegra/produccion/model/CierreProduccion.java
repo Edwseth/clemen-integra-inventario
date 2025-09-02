@@ -8,7 +8,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "cierres_produccion")
+@Table(name = "cierres_produccion",
+       indexes = @Index(name = "idx_cierres_produccion_fecha", columnList = "fecha_cierre"))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -40,6 +41,12 @@ public class CierreProduccion {
 
     @Column(name = "fecha_cierre", nullable = false)
     private LocalDateTime fechaCierre;
+
+    @Column(name = "usuario_id")
+    private Long usuarioId;
+
+    @Column(name = "usuario_nombre", length = 100)
+    private String usuarioNombre;
 
     @PrePersist
     public void prePersist() {

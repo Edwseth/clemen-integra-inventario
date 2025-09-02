@@ -5,4 +5,7 @@ public class EtapaProduccionResponse {
     public String nombre;
     public Integer secuencia;
     public Long ordenProduccionId;
+    public String estado;
+    public java.time.LocalDateTime fechaInicio;
+    public java.time.LocalDateTime fechaFin;
 }

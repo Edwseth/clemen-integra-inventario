@@ -12,4 +12,6 @@ public class CierreProduccionResponseDTO {
     public String turno;
     public String observacion;
     public String unidadMedidaSimbolo;
+    public Long usuarioId;
+    public String usuarioNombre;
 }
