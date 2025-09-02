@@ -15,6 +15,9 @@ import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.EtapaProduccionResponse;
+import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.service.UnidadConversionService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -35,6 +38,10 @@ import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
+import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
+import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
+import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
@@ -73,6 +80,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final LoteProductoRepository loteProductoRepository;
     private final AlmacenRepository almacenRepository;
     private final UnidadConversionService unidadConversionService;
+    private final EtapaProduccionRepository etapaProduccionRepository;
+    private final MovimientoInventarioRepository movimientoInventarioRepository;
+    private final MovimientoInventarioMapper movimientoInventarioMapper;
+    private final UsuarioService usuarioService;
 
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -273,6 +284,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             BigDecimal programada = orden.getCantidadProgramada();
             BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
+            BigDecimal restante = programada.subtract(acumulada);
+            if (restante.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SIN_CANTIDAD_RESTANTE");
+            }
+            if (dto.getCantidad().compareTo(restante) > 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_EXCEDE_RESTANTE");
+            }
+
             BigDecimal nuevaAcumulada = acumulada.add(dto.getCantidad());
 
             if (dto.getTipo() == TipoCierre.PARCIAL) {
@@ -300,7 +319,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             orden.setCantidadProducida(nuevaAcumulada);
             orden.setFechaUltimoCierre(LocalDateTime.now());
 
+            Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
             CierreProduccion cierre = ProduccionMapper.toEntity(dto, orden);
+            cierre.setUsuarioId(usuario.getId());
+            cierre.setUsuarioNombre(usuario.getNombreCompleto());
             cierreProduccionRepository.save(cierre);
 
             // Movimiento de inventario
@@ -337,10 +359,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         null,
                         null,
                         null,
-                        null,
                         tipoDetalleId,
                         null,
                         null,
+                        orden.getId(),
                         null,
                         null,
                         null,
@@ -357,8 +379,58 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     public Page<CierreProduccionResponseDTO> listarCierres(Long id, Pageable pageable) {
-        return cierreProduccionRepository.findByOrdenProduccionId(id, pageable)
+        if (pageable.getSort().isSorted()) {
+            pageable.getSort().forEach(order -> {
+                if (!"fechaCierre".equals(order.getProperty())) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Propiedad de ordenamiento inválida: " + order.getProperty());
+                }
+            });
+        }
+        Pageable effective = pageable.getSort().isUnsorted()
+                ? org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), org.springframework.data.domain.Sort.by("fechaCierre").descending())
+                : pageable;
+        return cierreProduccionRepository.findByOrdenProduccionId(id, effective)
                 .map(ProduccionMapper::toResponse);
+    }
+
+    public List<EtapaProduccionResponse> listarEtapas(Long id) {
+        return etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(id)
+                .stream()
+                .map(ProduccionMapper::toResponse)
+                .toList();
+    }
+
+    public List<InsumoOPDTO> listarInsumos(Long id) {
+        OrdenProduccion orden = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+        FormulaProducto formula = formulaProductoRepository
+                .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
+        List<InsumoOPDTO> lista = new ArrayList<>();
+        for (DetalleFormula det : formula.getDetalles()) {
+            BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
+            Long insumoId = det.getInsumo().getId().longValue();
+            BigDecimal consumida = movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(id, insumoId, TipoMovimiento.SALIDA);
+            BigDecimal faltante = requerida.subtract(consumida);
+            if (faltante.compareTo(BigDecimal.ZERO) < 0) {
+                faltante = BigDecimal.ZERO;
+            }
+            lista.add(new InsumoOPDTO(
+                    insumoId,
+                    det.getInsumo().getNombre(),
+                    det.getInsumo().getUnidadMedida() != null ? det.getInsumo().getUnidadMedida().getNombre() : null,
+                    requerida,
+                    consumida,
+                    faltante
+            ));
+        }
+        return lista;
+    }
+
+    public Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Pageable pageable) {
+        return movimientoInventarioRepository.findByOrdenProduccionId(id, pageable)
+                .map(movimientoInventarioMapper::safeToResponseDTO);
     }
 
     @Transactional

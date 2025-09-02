@@ -5,6 +5,9 @@ import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.EtapaProduccionResponse;
+import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import org.springframework.data.domain.Page;
@@ -28,6 +31,12 @@ public interface OrdenProduccionService {
     OrdenProduccion registrarCierre(Long id, CierreProduccionRequestDTO dto);
 
     Page<CierreProduccionResponseDTO> listarCierres(Long id, Pageable pageable);
+
+    List<EtapaProduccionResponse> listarEtapas(Long id);
+
+    List<InsumoOPDTO> listarInsumos(Long id);
+
+    Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Pageable pageable);
 
     Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
                                                     EstadoProduccion estado,

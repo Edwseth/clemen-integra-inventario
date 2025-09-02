@@ -3,7 +3,9 @@ package com.willyes.clemenintegra.produccion.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 
 @Entity
 @Getter
@@ -28,4 +30,12 @@ public class EtapaProduccion {
 
     @OneToMany(mappedBy = "etapaProduccion")
     private List<DetalleEtapa> detalles;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private EstadoEtapa estado = EstadoEtapa.PENDIENTE;
+
+    private LocalDateTime fechaInicio;
+    private LocalDateTime fechaFin;
 }

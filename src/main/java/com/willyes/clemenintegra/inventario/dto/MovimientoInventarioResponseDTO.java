@@ -31,6 +31,8 @@ public class MovimientoInventarioResponseDTO {
     private String nombreAlmacenOrigen;
     private String nombreAlmacenDestino;
     private String nombreUsuarioRegistrador;
+    private String unidad;
+    private Long ordenProduccionId;
 
 
     @JsonProperty("codigoSku")

@@ -21,6 +21,7 @@ public interface MovimientoInventarioMapper {
     //@Mapping(target = "ordenCompraDetalle", ignore = true)
     //@Mapping(target = "fechaIngreso", ignore = true)
     @Mapping(target = "solicitudMovimiento", ignore = true)
+    @Mapping(target = "ordenProduccion", ignore = true)
     @Mapping(target = "clasificacion", source = "clasificacionMovimientoInventario")
     MovimientoInventario toEntity(MovimientoInventarioDTO dto);
 
@@ -35,6 +36,7 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "tipoMovimientoDetalleId", expression = "java(movimiento.getTipoMovimientoDetalle() != null ? movimiento.getTipoMovimientoDetalle().getId() : null)")
     @Mapping(target = "ordenCompraDetalleId", expression = "java(movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null)")
     @Mapping(target = "solicitudMovimientoId", expression = "java(movimiento.getSolicitudMovimiento() != null ? movimiento.getSolicitudMovimiento().getId() : null)")
+    @Mapping(target = "ordenProduccionId", expression = "java(movimiento.getOrdenProduccion() != null ? movimiento.getOrdenProduccion().getId() : null)")
     @Mapping(target = "clasificacionMovimientoInventario", source = "clasificacion")
     MovimientoInventarioDTO toDTO(MovimientoInventario movimiento);
 
@@ -73,6 +75,10 @@ public interface MovimientoInventarioMapper {
 
         var u = m.getRegistradoPor();
         dto.setNombreUsuarioRegistrador(u != null ? u.getNombreCompleto() : null);
+        dto.setOrdenProduccionId(m.getOrdenProduccion() != null ? m.getOrdenProduccion().getId() : null);
+        dto.setUnidad(m.getProducto() != null && m.getProducto().getUnidadMedida() != null
+                ? m.getProducto().getUnidadMedida().getNombre()
+                : null);
 
         return dto;
     }
