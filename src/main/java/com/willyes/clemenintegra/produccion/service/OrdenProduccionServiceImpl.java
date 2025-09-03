@@ -411,7 +411,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         for (DetalleFormula det : formula.getDetalles()) {
             BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             Long insumoId = det.getInsumo().getId().longValue();
-            BigDecimal consumida = movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(id, insumoId, TipoMovimiento.SALIDA);
+            BigDecimal consumida = Optional.ofNullable(
+                    movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(id, insumoId, TipoMovimiento.SALIDA)
+            ).orElse(BigDecimal.ZERO);
             BigDecimal faltante = requerida.subtract(consumida);
             if (faltante.compareTo(BigDecimal.ZERO) < 0) {
                 faltante = BigDecimal.ZERO;
