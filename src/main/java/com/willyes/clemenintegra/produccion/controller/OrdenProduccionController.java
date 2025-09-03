@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.service.*;
+import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,7 @@ import java.util.List;
 public class OrdenProduccionController {
 
     private final OrdenProduccionService service;
+    private final UsuarioService usuarioService;
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
@@ -108,6 +110,27 @@ public class OrdenProduccionController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public List<EtapaProduccionResponse> listarEtapas(@PathVariable Long id) {
         return service.listarEtapas(id);
+    }
+
+    @PostMapping("/{id}/etapas/clonar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public ResponseEntity<Void> clonarEtapas(@PathVariable Long id) {
+        service.clonarEtapas(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{ordenId}/etapas/{etapaId}/iniciar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION')")
+    public ResponseEntity<EtapaProduccionResponse> iniciarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        return ResponseEntity.ok(ProduccionMapper.toResponse(service.iniciarEtapa(ordenId, etapaId, usuario.getId())));
+    }
+
+    @PatchMapping("/{ordenId}/etapas/{etapaId}/finalizar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION')")
+    public ResponseEntity<EtapaProduccionResponse> finalizarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        return ResponseEntity.ok(ProduccionMapper.toResponse(service.finalizarEtapa(ordenId, etapaId, usuario.getId())));
     }
 
     @GetMapping("/{id}/insumos")

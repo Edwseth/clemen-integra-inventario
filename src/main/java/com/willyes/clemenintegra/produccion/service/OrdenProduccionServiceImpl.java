@@ -39,6 +39,10 @@ import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
+import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -81,6 +85,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final AlmacenRepository almacenRepository;
     private final UnidadConversionService unidadConversionService;
     private final EtapaProduccionRepository etapaProduccionRepository;
+    private final EtapaPlantillaRepository etapaPlantillaRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final MovimientoInventarioMapper movimientoInventarioMapper;
     private final UsuarioService usuarioService;
@@ -168,6 +173,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
 
         OrdenProduccion guardada = repository.save(orden);
+
+        List<EtapaPlantilla> plantilla = cargarPlantillaEtapas(guardada.getProducto().getId());
+        clonarEtapasParaOrden(guardada, plantilla);
 
         Long motivoId = motivoMovimientoRepository
                 .findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION)
@@ -399,6 +407,88 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .stream()
                 .map(ProduccionMapper::toResponse)
                 .toList();
+    }
+
+    public List<EtapaPlantilla> cargarPlantillaEtapas(Integer productoId) {
+        return etapaPlantillaRepository.findByProductoIdAndActivoTrueOrderBySecuenciaAsc(productoId);
+    }
+
+    public void clonarEtapasParaOrden(OrdenProduccion op, List<EtapaPlantilla> plantilla) {
+        if (plantilla == null || plantilla.isEmpty()) return;
+        List<EtapaProduccion> etapas = plantilla.stream()
+                .map(p -> EtapaProduccion.builder()
+                        .nombre(p.getNombre())
+                        .secuencia(p.getSecuencia())
+                        .ordenProduccion(op)
+                        .estado(EstadoEtapa.PENDIENTE)
+                        .build())
+                .toList();
+        etapaProduccionRepository.saveAll(etapas);
+    }
+
+    public void clonarEtapas(Long ordenId) {
+        OrdenProduccion orden = repository.findById(ordenId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+        List<EtapaProduccion> existentes = etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenId);
+        if (existentes.isEmpty()) {
+            List<EtapaPlantilla> plantilla = cargarPlantillaEtapas(orden.getProducto().getId());
+            clonarEtapasParaOrden(orden, plantilla);
+        }
+    }
+
+    @Transactional
+    public EtapaProduccion iniciarEtapa(Long ordenId, Long etapaId, Long usuarioId) {
+        OrdenProduccion orden = repository.findById(ordenId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+        if (orden.getEstado() == EstadoProduccion.FINALIZADA || orden.getEstado() == EstadoProduccion.CANCELADA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ORDEN_NO_MODIFICABLE");
+        }
+        EtapaProduccion etapa = etapaProduccionRepository.findById(etapaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ETAPA_NO_ENCONTRADA"));
+        if (!etapa.getOrdenProduccion().getId().equals(ordenId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_PERTENECE_A_ORDEN");
+        }
+        if (etapa.getEstado() != EstadoEtapa.PENDIENTE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_INICIABLE");
+        }
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));
+        etapa.setEstado(EstadoEtapa.EN_PROCESO);
+        etapa.setFechaInicio(LocalDateTime.now());
+        etapa.setUsuarioId(usuario.getId());
+        etapa.setUsuarioNombre(usuario.getNombreCompleto());
+        return etapaProduccionRepository.save(etapa);
+    }
+
+    @Transactional
+    public EtapaProduccion finalizarEtapa(Long ordenId, Long etapaId, Long usuarioId) {
+        OrdenProduccion orden = repository.findById(ordenId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+        EtapaProduccion etapa = etapaProduccionRepository.findById(etapaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ETAPA_NO_ENCONTRADA"));
+        if (!etapa.getOrdenProduccion().getId().equals(ordenId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_PERTENECE_A_ORDEN");
+        }
+        if (etapa.getEstado() != EstadoEtapa.EN_PROCESO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_FINALIZABLE");
+        }
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));
+        etapa.setEstado(EstadoEtapa.FINALIZADA);
+        etapa.setFechaFin(LocalDateTime.now());
+        etapa.setUsuarioId(usuario.getId());
+        etapa.setUsuarioNombre(usuario.getNombreCompleto());
+        EtapaProduccion guardada = etapaProduccionRepository.save(etapa);
+
+        boolean todasFinalizadas = etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenId)
+                .stream()
+                .allMatch(e -> e.getEstado() == EstadoEtapa.FINALIZADA);
+        if (todasFinalizadas) {
+            orden.setEstado(EstadoProduccion.FINALIZADA);
+            orden.setFechaFin(LocalDateTime.now());
+            repository.save(orden);
+        }
+        return guardada;
     }
 
     public List<InsumoOPDTO> listarInsumos(Long id) {

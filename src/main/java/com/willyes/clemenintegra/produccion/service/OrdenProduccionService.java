@@ -34,6 +34,12 @@ public interface OrdenProduccionService {
 
     List<EtapaProduccionResponse> listarEtapas(Long id);
 
+    void clonarEtapas(Long ordenId);
+
+    com.willyes.clemenintegra.produccion.model.EtapaProduccion iniciarEtapa(Long ordenId, Long etapaId, Long usuarioId);
+
+    com.willyes.clemenintegra.produccion.model.EtapaProduccion finalizarEtapa(Long ordenId, Long etapaId, Long usuarioId);
+
     List<InsumoOPDTO> listarInsumos(Long id);
 
     Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Pageable pageable);

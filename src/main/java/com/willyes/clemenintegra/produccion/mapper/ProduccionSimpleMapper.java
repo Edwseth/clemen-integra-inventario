@@ -3,7 +3,7 @@ package com.willyes.clemenintegra.produccion.mapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.model.Produccion;
-import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccionSimple;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.shared.model.Usuario;
 
 public class ProduccionSimpleMapper {
@@ -13,7 +13,7 @@ public class ProduccionSimpleMapper {
                 .codigoLote(dto.codigoLote)
                 .fechaInicio(dto.fechaInicio)
                 .fechaFin(dto.fechaFin)
-                .estado(EstadoProduccionSimple.valueOf(dto.estado))
+                .estado(EstadoProduccion.valueOf(dto.estado))
                 .usuario(usuario)
                 .producto(producto)
                 .build();
