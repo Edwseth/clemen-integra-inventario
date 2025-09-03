@@ -8,4 +8,5 @@ public class EtapaProduccionResponse {
     public String estado;
     public java.time.LocalDateTime fechaInicio;
     public java.time.LocalDateTime fechaFin;
+    public String usuarioNombre;
 }

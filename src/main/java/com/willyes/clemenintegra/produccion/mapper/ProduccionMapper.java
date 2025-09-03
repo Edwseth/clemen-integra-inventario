@@ -92,6 +92,7 @@ public class ProduccionMapper {
         dto.estado = entidad.getEstado() != null ? entidad.getEstado().name() : null;
         dto.fechaInicio = entidad.getFechaInicio();
         dto.fechaFin = entidad.getFechaFin();
+        dto.usuarioNombre = entidad.getUsuarioNombre();
         return dto;
     }
 

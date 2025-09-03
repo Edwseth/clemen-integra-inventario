@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.produccion.model;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccionSimple;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -31,7 +31,7 @@ public class Produccion {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private EstadoProduccionSimple estado;
+    private EstadoProduccion estado;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "usuarios_id")

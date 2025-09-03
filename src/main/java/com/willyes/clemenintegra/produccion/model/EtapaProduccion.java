@@ -38,4 +38,10 @@ public class EtapaProduccion {
 
     private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;
+
+    @Column(name = "usuario_id")
+    private Long usuarioId;
+
+    @Column(name = "usuario_nombre", length = 100)
+    private String usuarioNombre;
 }

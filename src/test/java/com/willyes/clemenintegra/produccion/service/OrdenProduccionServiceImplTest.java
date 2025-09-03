@@ -13,10 +13,14 @@ import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -34,6 +38,7 @@ import org.springframework.http.HttpStatus;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -56,6 +61,7 @@ class OrdenProduccionServiceImplTest {
     @Mock AlmacenRepository almacenRepository;
     @Mock com.willyes.clemenintegra.produccion.service.UnidadConversionService unidadConversionService;
     @Mock EtapaProduccionRepository etapaProduccionRepository;
+    @Mock EtapaPlantillaRepository etapaPlantillaRepository;
     @Mock MovimientoInventarioRepository movimientoInventarioRepository;
     @Mock MovimientoInventarioMapper movimientoInventarioMapper;
     @Mock UsuarioService usuarioService;
@@ -78,6 +84,7 @@ class OrdenProduccionServiceImplTest {
                 almacenRepository,
                 unidadConversionService,
                 etapaProduccionRepository,
+                etapaPlantillaRepository,
                 movimientoInventarioRepository,
                 movimientoInventarioMapper,
                 usuarioService
@@ -148,5 +155,63 @@ class OrdenProduccionServiceImplTest {
         assertEquals(usuario.getId(), cierre.getUsuarioId());
         assertEquals(usuario.getNombreCompleto(), cierre.getUsuarioNombre());
         assertEquals("obs", cierre.getObservacion());
+    }
+
+    @Test
+    void clonarEtapasParaOrdenCreaEtapasDesdePlantilla() {
+        OrdenProduccion op = OrdenProduccion.builder().id(1L).build();
+        List<EtapaPlantilla> plantilla = List.of(
+                EtapaPlantilla.builder().nombre("E1").secuencia(1).build(),
+                EtapaPlantilla.builder().nombre("E2").secuencia(2).build(),
+                EtapaPlantilla.builder().nombre("E3").secuencia(3).build()
+        );
+
+        service.clonarEtapasParaOrden(op, plantilla);
+
+        ArgumentCaptor<List<EtapaProduccion>> captor = ArgumentCaptor.forClass(List.class);
+        verify(etapaProduccionRepository).saveAll(captor.capture());
+        List<EtapaProduccion> guardadas = captor.getValue();
+        assertEquals(3, guardadas.size());
+        assertEquals(EstadoEtapa.PENDIENTE, guardadas.get(0).getEstado());
+        assertEquals(op, guardadas.get(0).getOrdenProduccion());
+    }
+
+    @Test
+    void iniciarEtapaCambiaEstadoYUsuario() {
+        OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.EN_PROCESO).build();
+        EtapaProduccion etapa = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.PENDIENTE).build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
+        when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        EtapaProduccion result = service.iniciarEtapa(1L, 2L, 5L);
+
+        assertEquals(EstadoEtapa.EN_PROCESO, result.getEstado());
+        assertNotNull(result.getFechaInicio());
+        assertEquals("John Doe", result.getUsuarioNombre());
+    }
+
+    @Test
+    void finalizarEtapaMarcaOrdenFinalizadaSiTodasFinalizadas() {
+        OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.EN_PROCESO).build();
+        EtapaProduccion etapa1 = EtapaProduccion.builder().id(1L).ordenProduccion(orden).estado(EstadoEtapa.FINALIZADA).build();
+        EtapaProduccion etapa2 = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.EN_PROCESO).build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa2));
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
+        when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
+                .thenReturn(List.of(etapa1, etapa2));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        EtapaProduccion result = service.finalizarEtapa(1L, 2L, 5L);
+
+        assertEquals(EstadoEtapa.FINALIZADA, result.getEstado());
+        assertNotNull(result.getFechaFin());
+        verify(repository).save(orden);
+        assertEquals(EstadoProduccion.FINALIZADA, orden.getEstado());
     }
 }
