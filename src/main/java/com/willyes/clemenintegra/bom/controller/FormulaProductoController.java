@@ -79,7 +79,8 @@ public class FormulaProductoController {
         if (request.getInsumos() != null) {
             List<DetalleFormula> detalles = request.getInsumos().stream().map(dto -> {
                 Producto productoInsumo = productoService.findById(dto.getProductoId());
-                UnidadMedida unidad = unidadMedidaRepository.findByNombre(dto.getUnidadMedida())
+                UnidadMedida unidad = unidadMedidaRepository
+                        .findByNombreIgnoreCaseOrSimboloIgnoreCase(dto.getUnidadMedida(), dto.getUnidadMedida())
                         .orElseThrow(() -> new IllegalArgumentException("Unidad de medida no encontrada: " + dto.getUnidadMedida()));
 
                 DetalleFormula detalle = new DetalleFormula();
