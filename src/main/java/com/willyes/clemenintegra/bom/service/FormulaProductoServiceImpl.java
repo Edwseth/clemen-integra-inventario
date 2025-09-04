@@ -42,6 +42,15 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     }
 
     @Override
+    public FormulaProducto actualizarEstado(Long id, EstadoFormula estado) {
+        FormulaProducto formula = formulaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Fórmula no encontrada"));
+        formula.setEstado(estado);
+        formula.setActivo(estado == EstadoFormula.APROBADA);
+        return formulaRepository.save(formula);
+    }
+
+    @Override
     public FormulaProductoResponse obtenerFormulaActivaPorProducto(Long productoId, BigDecimal cantidad) {
         FormulaProducto formula = formulaRepository
                 .findByProductoIdAndEstadoAndActivoTrue(productoId, EstadoFormula.APROBADA)
