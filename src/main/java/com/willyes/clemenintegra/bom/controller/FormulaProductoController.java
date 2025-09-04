@@ -145,7 +145,8 @@ public class FormulaProductoController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PatchMapping("/{id}/estado")
+    //@PatchMapping("/{id}/estado")
+    @PutMapping("/{id}/estado")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> actualizarEstado(@PathVariable Long id,
                                                                     @RequestParam EstadoFormula estado) {
