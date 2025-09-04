@@ -145,6 +145,14 @@ public class FormulaProductoController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<FormulaProductoResponse> actualizarEstado(@PathVariable Long id,
+                                                                    @RequestParam EstadoFormula estado) {
+        FormulaProducto actualizado = formulaService.actualizarEstado(id, estado);
+        return ResponseEntity.ok(bomMapper.toResponseDTO(actualizado));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {

@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.bom.service;
 
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.dto.FormulaProductoResponse;
+import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -14,4 +15,6 @@ public interface FormulaProductoService {
     void eliminar(Long id);
 
     FormulaProductoResponse obtenerFormulaActivaPorProducto(Long productoId, BigDecimal cantidad);
+
+    FormulaProducto actualizarEstado(Long id, EstadoFormula estado);
 }
