@@ -26,6 +26,7 @@ public interface BomMapper {
     @Mapping(target = "productoNombre", source = "producto", qualifiedByName = "mapProductoNombre")
     @Mapping(target = "estado", source = "estado", qualifiedByName = "mapEstadoFormula")
     @Mapping(target = "creadoPorNombre", source = "creadoPor", qualifiedByName = "mapNombreUsuario")
+    @Mapping(target = "actualizadoPorNombre", source = "actualizadoPor", qualifiedByName = "mapNombreUsuario")
     FormulaProductoResponse toResponseDTO(FormulaProducto formula);
 
     @Mapping(target = "id", ignore = true)

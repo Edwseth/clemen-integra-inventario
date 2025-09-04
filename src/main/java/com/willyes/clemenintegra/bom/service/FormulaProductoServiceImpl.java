@@ -7,10 +7,15 @@ import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.*;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +26,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     private final FormulaProductoRepository formulaRepository;
     private final BomMapper bomMapper;
     private final LoteProductoRepository loteProductoRepository;
+    private final UsuarioRepository usuarioRepository;
 
     public List<FormulaProducto> listarTodas() {
         return formulaRepository.findAll();
@@ -42,12 +48,27 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     }
 
     @Override
-    public FormulaProducto actualizarEstado(Long id, EstadoFormula estado) {
+    public FormulaProductoResponse actualizarEstado(Long id, EstadoFormula nuevoEstado, String observacion, Long usuarioId) {
         FormulaProducto formula = formulaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Fórmula no encontrada"));
-        formula.setEstado(estado);
-        formula.setActivo(estado == EstadoFormula.APROBADA);
-        return formulaRepository.save(formula);
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fórmula no encontrada"));
+
+        EstadoFormula actual = formula.getEstado();
+        if (actual == EstadoFormula.APROBADA || actual == EstadoFormula.RECHAZADA
+                || nuevoEstado == EstadoFormula.BORRADOR || nuevoEstado == EstadoFormula.EN_REVISION) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "INVALID_STATE_TRANSITION");
+        }
+
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        formula.setEstado(nuevoEstado);
+        formula.setActivo(nuevoEstado == EstadoFormula.APROBADA);
+        formula.setObservacion(observacion);
+        formula.setFechaActualizacion(LocalDateTime.now());
+        formula.setActualizadoPor(usuario);
+
+        FormulaProducto guardado = formulaRepository.save(formula);
+        return bomMapper.toResponseDTO(guardado);
     }
 
     @Override

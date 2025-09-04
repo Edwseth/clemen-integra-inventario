@@ -16,5 +16,5 @@ public interface FormulaProductoService {
 
     FormulaProductoResponse obtenerFormulaActivaPorProducto(Long productoId, BigDecimal cantidad);
 
-    FormulaProducto actualizarEstado(Long id, EstadoFormula estado);
+    FormulaProductoResponse actualizarEstado(Long id, EstadoFormula nuevoEstado, String observacion, Long usuarioId);
 }

@@ -11,6 +11,9 @@ public class FormulaProductoResponse {
     public String estado;
     public LocalDateTime fechaCreacion;
     public String creadoPorNombre;
+    public String observacion;
+    public LocalDateTime fechaActualizacion;
+    public String actualizadoPorNombre;
     public BigDecimal cantidadBaseFormula;
     public String unidadBaseFormula;
     public List<DetalleFormulaResponse> detalles;

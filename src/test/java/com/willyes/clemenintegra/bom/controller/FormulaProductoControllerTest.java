@@ -27,6 +27,7 @@ import java.util.Collections;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
 @SpringBootTest
@@ -186,5 +187,42 @@ class FormulaProductoControllerTest {
                 .content(updateJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("APROBADA"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_JEFE_CALIDAD"})
+    void jefeCalidadActualizaEstadoConObservacion() throws Exception {
+        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
+                .nombre("Litro").simbolo("L").build());
+        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
+                .nombre("Jarabes").tipo(TipoCategoria.PRODUCTO_TERMINADO).build());
+        Usuario usuario = usuarioRepository.save(Usuario.builder()
+                .nombreUsuario("qc").clave("pwd").nombreCompleto("QC").correo("q@t.com")
+                .rol(RolUsuario.ROL_JEFE_CALIDAD).activo(true).bloqueado(false).build());
+        Producto producto = productoRepository.save(Producto.builder()
+                .codigoSku("PROD2").nombre("Producto2").descripcionProducto("d")
+                .stockActual(BigDecimal.ZERO).stockMinimo(BigDecimal.ZERO)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .unidadMedida(unidad).categoriaProducto(categoria).creadoPor(usuario)
+                .build());
+
+        FormulaProducto formula = formulaRepository.save(FormulaProducto.builder()
+                .producto(producto)
+                .version("1.0")
+                .estado(EstadoFormula.EN_REVISION)
+                .fechaCreacion(LocalDateTime.now())
+                .activo(false)
+                .creadoPor(usuario)
+                .detalles(Collections.emptyList())
+                .build());
+
+        String body = "{\"estado\":\"APROBADA\",\"observacion\":\"Validada por QC\"}";
+
+        mockMvc.perform(put("/api/bom/formulas/" + formula.getId() + "/estado")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("APROBADA"))
+                .andExpect(jsonPath("$.observacion").value("Validada por QC"));
     }
 }

@@ -14,6 +14,7 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/bom/formulas")
@@ -145,13 +147,15 @@ public class FormulaProductoController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    //@PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
     @PutMapping("/{id}/estado")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<FormulaProductoResponse> actualizarEstado(@PathVariable Long id,
-                                                                    @RequestParam EstadoFormula estado) {
-        FormulaProducto actualizado = formulaService.actualizarEstado(id, estado);
-        return ResponseEntity.ok(bomMapper.toResponseDTO(actualizado));
+    public ResponseEntity<FormulaProductoResponse> actualizarEstado(
+            @PathVariable Long id,
+            @RequestBody @Valid ActualizarEstadoFormulaRequest request,
+            @AuthenticationPrincipal com.willyes.clemenintegra.shared.security.service.CustomUserDetails usuario) {
+        FormulaProductoResponse dto = formulaService.actualizarEstado(
+                id, request.estado(), request.observacion(), usuario.getId());
+        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/{id}")
