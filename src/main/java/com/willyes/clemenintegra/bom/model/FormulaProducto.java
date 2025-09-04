@@ -29,6 +29,15 @@ public class FormulaProducto {
 
     private boolean activo = true;
 
+    @Column(name = "observacion", length = 500)
+    private String observacion;
+
+    private LocalDateTime fechaActualizacion;
+
+    @ManyToOne
+    @JoinColumn(name = "actualizado_por_id")
+    private Usuario actualizadoPor;
+
     @ManyToOne
     @JoinColumn(name = "creado_por_id")
     private Usuario creadoPor;
@@ -57,5 +66,11 @@ public class FormulaProducto {
     public void setDocumentos(List<DocumentoFormula> documentos) {this.documentos = documentos;}
     public boolean isActivo() {return activo;}
     public void setActivo(boolean activo) {this.activo = activo;}
+    public String getObservacion() {return observacion;}
+    public void setObservacion(String observacion) {this.observacion = observacion;}
+    public LocalDateTime getFechaActualizacion() {return fechaActualizacion;}
+    public void setFechaActualizacion(LocalDateTime fechaActualizacion) {this.fechaActualizacion = fechaActualizacion;}
+    public Usuario getActualizadoPor() {return actualizadoPor;}
+    public void setActualizadoPor(Usuario actualizadoPor) {this.actualizadoPor = actualizadoPor;}
 }
 
