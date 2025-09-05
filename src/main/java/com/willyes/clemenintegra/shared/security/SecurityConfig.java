@@ -175,7 +175,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://127.0.0.1:5173"
         ));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
