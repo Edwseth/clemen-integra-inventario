@@ -12,4 +12,6 @@ public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion
 
     Long countByCodigoOrdenStartingWith(String prefijo);
 
+    Optional<OrdenProduccion> findTopByLoteProduccionStartingWithOrderByLoteProduccionDesc(String prefix);
+
 }
