@@ -63,6 +63,7 @@ El código ha sido refactorizado mediante **Codex Workspace**, mejorando la legi
 - **Productos** `/api/productos` – CRUD.
   - El identificador de catálogo se expone ahora como `sku`. Por compatibilidad, las peticiones aún aceptan y las respuestas incluyen el alias `codigoSku`.
 - **Lotes** `/api/lotes` – CRUD.
+  - `/api/lotes/por-evaluar` lista los lotes aún pendientes de evaluación. Cada elemento incluye el arreglo `evaluaciones` con los tipos de evaluación ya realizados.
 - **Movimientos** `/api/movimientos` – registrar y consultar con filtros `productoId`, `almacenId`, `tipoMovimiento`, `clasificacion`, `fechaInicio`, `fechaFin`.
 - **Ajustes de inventario** `/api/inventario/ajustes` – listar, crear y eliminar.
 - **Reportes** `/api/reportes` – alta/baja rotación (`fechaInicio`, `fechaFin`), productos más costosos (`categoria`), trazabilidad por lote (`codigoLote`), productos en retención o liberación (`estadoLote`, `desde`, `hasta`), no conformidades (`tipo`, `area`, `desde`, `hasta`), CAPA (`estado`, `desde`, `hasta`), stock actual, productos por vencer, alertas de inventario y movimientos. Todos devuelven Excel.

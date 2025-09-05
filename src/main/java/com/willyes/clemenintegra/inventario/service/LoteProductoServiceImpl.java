@@ -110,7 +110,33 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             lotes = loteRepo.findByEstadoIn(estados);
         }
 
-        return lotes.stream().map(loteProductoMapper::toDto).collect(Collectors.toList());
+        return lotes.stream()
+                .map(lote -> {
+                    List<TipoEvaluacion> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId())
+                            .stream()
+                            .map(EvaluacionCalidad::getTipoEvaluacion)
+                            .collect(Collectors.toList());
+
+                    if (tieneEvaluacionesRequeridas(lote.getProducto().getTipoAnalisis(), evaluaciones)) {
+                        return null;
+                    }
+
+                    LoteProductoResponseDTO dto = loteProductoMapper.toDto(lote);
+                    dto.setEvaluaciones(evaluaciones);
+                    return dto;
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<TipoEvaluacion> evaluaciones) {
+        return switch (requerido) {
+            case FISICO_QUIMICO -> evaluaciones.contains(TipoEvaluacion.FISICO_QUIMICO);
+            case MICROBIOLOGICO -> evaluaciones.contains(TipoEvaluacion.MICROBIOLOGICO);
+            case AMBOS -> evaluaciones.contains(TipoEvaluacion.FISICO_QUIMICO)
+                    && evaluaciones.contains(TipoEvaluacion.MICROBIOLOGICO);
+            default -> false;
+        };
     }
 
     @Override

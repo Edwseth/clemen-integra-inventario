@@ -1,10 +1,12 @@
 package com.willyes.clemenintegra.inventario.dto;
 
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -23,6 +25,7 @@ public class LoteProductoResponseDTO {
     private String nombreAlmacen;
     private String ubicacionAlmacen;
     private String nombreUsuarioLiberador;
+    private List<TipoEvaluacion> evaluaciones;
 
     public String getNombreProducto() {
         return nombreProducto;}
