@@ -21,12 +21,14 @@ public interface LoteProductoMapper {
     @Mapping(target = "ubicacionAlmacen", expression = "java(lote.getAlmacen()!=null ? lote.getAlmacen().getUbicacion() : null)")
     @Mapping(target = "nombreProducto", expression = "java(lote.getProducto()!=null ? lote.getProducto().getNombre() : null)")
     @Mapping(target = "nombreUsuarioLiberador", expression = "java(lote.getUsuarioLiberador()!=null ? lote.getUsuarioLiberador().getNombreCompleto() : null)")
+    @Mapping(target = "evaluaciones", ignore = true)
     LoteProductoResponseDTO toResponseDTO(LoteProducto lote);
 
     @Mapping(source = "producto.nombre", target = "nombreProducto")
     @Mapping(source = "almacen.nombre", target = "nombreAlmacen")
     @Mapping(source = "almacen.ubicacion", target = "ubicacionAlmacen")
     @Mapping(source = "usuarioLiberador.nombreCompleto", target = "nombreUsuarioLiberador")
+    @Mapping(target = "evaluaciones", ignore = true)
     LoteProductoResponseDTO toDto(LoteProducto entity);
 
 }
