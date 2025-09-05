@@ -224,7 +224,6 @@ class OrdenProduccionServiceImplTest {
     @Test
     void crearOrdenInicializaCantidadesEnCero() {
         OrdenProduccionRequestDTO dto = OrdenProduccionRequestDTO.builder()
-                .loteProduccion("L1")
                 .fechaInicio(LocalDateTime.now())
                 .fechaFin(LocalDateTime.now().plusDays(1))
                 .cantidadProgramada(BigDecimal.TEN)

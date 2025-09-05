@@ -12,9 +12,6 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class OrdenProduccionRequestDTO {
-    @NotBlank
-    private String loteProduccion;
-
     @NotNull
     @PastOrPresent
     private LocalDateTime fechaInicio;
