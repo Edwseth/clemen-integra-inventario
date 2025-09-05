@@ -20,16 +20,16 @@ class OrdenProduccionRepositoryTest {
 
     @Test
     void obtieneLoteConMayorConsecutivoParaPrefijo() {
-        repository.save(crearOrden("OP-1", "20231101-001"));
-        repository.save(crearOrden("OP-2", "20231101-003"));
-        repository.save(crearOrden("OP-3", "20231101-002"));
-        repository.save(crearOrden("OP-4", "20231102-001"));
+        repository.save(crearOrden("OP-1", "2023110100-AAA"));
+        repository.save(crearOrden("OP-2", "2023110102-BBB"));
+        repository.save(crearOrden("OP-3", "2023110101-CCC"));
+        repository.save(crearOrden("OP-4", "2023110200-DDD"));
 
         Optional<OrdenProduccion> resultado = repository
                 .findTopByLoteProduccionStartingWithOrderByLoteProduccionDesc("20231101");
 
         assertThat(resultado).isPresent();
-        assertThat(resultado.get().getLoteProduccion()).isEqualTo("20231101-003");
+        assertThat(resultado.get().getLoteProduccion()).isEqualTo("2023110102-BBB");
     }
 
     private OrdenProduccion crearOrden(String codigo, String lote) {

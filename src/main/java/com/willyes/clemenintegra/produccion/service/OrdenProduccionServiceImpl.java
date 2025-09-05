@@ -37,6 +37,7 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
@@ -95,6 +96,32 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         String prefijo = "OP-CLEMEN-" + fecha;
         Long contador = repository.countByCodigoOrdenStartingWith(prefijo);
         return prefijo + "-" + String.format("%02d", contador + 1);
+    }
+
+    private String generarCodigoLote(Producto producto) {
+        if (producto.getCategoriaProducto() == null ||
+                producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "PRODUCTO_NO_TERMINADO");
+        }
+        String prefijo = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        Optional<OrdenProduccion> ultimo = repository
+                .findTopByLoteProduccionStartingWithOrderByLoteProduccionDesc(prefijo);
+        int consecutivo = 0;
+        if (ultimo.isPresent() && ultimo.get().getLoteProduccion() != null) {
+            String codigo = ultimo.get().getLoteProduccion();
+            if (codigo.length() >= 10) {
+                String seq = codigo.substring(8, 10);
+                consecutivo = Integer.parseInt(seq) + 1;
+            }
+        }
+        if (consecutivo > 99) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CONSECUTIVO_DIARIO_EXCEDIDO");
+        }
+        String iniciales = producto.getNombre() != null
+                ? producto.getNombre().replaceAll("\\s+", "").toUpperCase()
+                : "";
+        iniciales = iniciales.substring(0, Math.min(3, iniciales.length()));
+        return prefijo + String.format("%02d", consecutivo) + "-" + iniciales;
     }
 
     @Transactional
@@ -461,6 +488,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));
+        if ((etapa.getSecuencia() != null && etapa.getSecuencia() == 1) && orden.getLoteProduccion() == null) {
+            orden.setLoteProduccion(generarCodigoLote(orden.getProducto()));
+            repository.save(orden);
+        }
         etapa.setEstado(EstadoEtapa.EN_PROCESO);
         etapa.setFechaInicio(LocalDateTime.now());
         etapa.setUsuarioId(usuario.getId());
