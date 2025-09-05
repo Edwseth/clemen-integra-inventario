@@ -599,10 +599,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 BigDecimal nuevoStock = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO)
                         .add(cantidad);
                 loteDestino.setStockLote(nuevoStock);
+
+                // Si el almacén destino es de categoría OBSOLETOS, el lote queda rechazado
+                if (destino.getCategoria() == TipoCategoria.OBSOLETOS) {
+                    loteDestino.setEstado(EstadoLote.RECHAZADO);
+                }
+
                 return loteProductoRepository.save(loteDestino);
             } else {
                 // Transferencia completa: mover el lote sin dividir
                 loteOrigen.setAlmacen(destino);
+                if (destino.getCategoria() == TipoCategoria.OBSOLETOS) {
+                    loteOrigen.setEstado(EstadoLote.RECHAZADO);
+                }
                 return loteProductoRepository.save(loteOrigen);
             }
         }
