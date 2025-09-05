@@ -10,7 +10,12 @@ import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
@@ -38,6 +43,7 @@ import org.springframework.http.HttpStatus;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -213,5 +219,46 @@ class OrdenProduccionServiceImplTest {
         assertNotNull(result.getFechaFin());
         verify(repository).save(orden);
         assertEquals(EstadoProduccion.FINALIZADA, orden.getEstado());
+    }
+
+    @Test
+    void crearOrdenInicializaCantidadesEnCero() {
+        OrdenProduccionRequestDTO dto = OrdenProduccionRequestDTO.builder()
+                .loteProduccion("L1")
+                .fechaInicio(LocalDateTime.now())
+                .fechaFin(LocalDateTime.now().plusDays(1))
+                .cantidadProgramada(BigDecimal.TEN)
+                .estado("CREADA")
+                .productoId(1L)
+                .responsableId(2L)
+                .unidadMedidaSimbolo("kg")
+                .build();
+
+        Producto producto = new Producto();
+        producto.setId(1);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("kg");
+        producto.setUnidadMedida(unidad);
+        producto.setRendimientoUnidad(BigDecimal.ONE);
+
+        Usuario responsable = new Usuario();
+        responsable.setId(2L);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(responsable));
+        when(unidadConversionService.convertir(any(), any(), any())).thenAnswer(inv -> inv.getArgument(0));
+        when(unidadConversionService.dividirNormalizado(any(), any(), any(), any())).thenReturn(BigDecimal.TEN);
+
+        OrdenProduccionServiceImpl spyService = spy(service);
+
+        ArgumentCaptor<OrdenProduccion> captor = ArgumentCaptor.forClass(OrdenProduccion.class);
+        doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).orden(new OrdenProduccionResponseDTO()).build())
+                .when(spyService).guardarConValidacionStock(captor.capture());
+
+        spyService.crearOrden(dto);
+
+        OrdenProduccion capturada = captor.getValue();
+        assertEquals(BigDecimal.ZERO, capturada.getCantidadProducida());
+        assertEquals(BigDecimal.ZERO, capturada.getCantidadProducidaAcumulada());
     }
 }

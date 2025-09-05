@@ -29,10 +29,10 @@ public class OrdenProduccion {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal cantidadProgramada;
 
-    @Column(nullable = true, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 10, scale = 2, columnDefinition = "DECIMAL(10,2) DEFAULT 0")
     private BigDecimal cantidadProducida;
 
-    @Column(name = "cantidad_producida_acumulada", precision = 10, scale = 2)
+    @Column(name = "cantidad_producida_acumulada", nullable = false, precision = 10, scale = 2, columnDefinition = "DECIMAL(10,2) DEFAULT 0")
     private BigDecimal cantidadProducidaAcumulada;
 
     @Column(name = "fecha_ultimo_cierre")
