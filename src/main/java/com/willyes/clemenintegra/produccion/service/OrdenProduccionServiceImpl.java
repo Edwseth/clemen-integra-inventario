@@ -99,6 +99,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     @Transactional
     public ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden) {
+        if (orden.getCantidadProducida() == null) {
+            orden.setCantidadProducida(BigDecimal.ZERO);
+        }
+        if (orden.getCantidadProducidaAcumulada() == null) {
+            orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
+        }
         Long productoId = orden.getProducto().getId().longValue();
 
         FormulaProducto formula = formulaProductoRepository
@@ -233,6 +239,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         OrdenProduccion orden = ProduccionMapper.toEntity(dto, producto, responsable);
         orden.setCantidadProgramada(cantidadConvertida);
+        orden.setCantidadProducida(BigDecimal.ZERO);
+        orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
 
         ResultadoValidacionOrdenDTO resultado = guardarConValidacionStock(orden);
         resultado.setUnidadesProducidas(unidadesProducidas);
