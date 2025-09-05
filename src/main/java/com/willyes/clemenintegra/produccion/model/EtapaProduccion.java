@@ -8,6 +8,10 @@ import java.util.List;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 
 @Entity
+@Table(name = "etapa_produccion",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"orden_produccion_id", "nombre_etapa"})
+        })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,7 +22,7 @@ public class EtapaProduccion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nombre_etapa", nullable = false, unique = true)
+    @Column(name = "nombre_etapa", nullable = false)
     private String nombre;
 
     @Column(nullable = false)
