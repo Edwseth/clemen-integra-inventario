@@ -29,6 +29,8 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     Optional<LoteProducto> findByCodigoLoteAndProductoIdAndAlmacenId(String codigoLote, Integer productoId, Integer almacenId);
     List<LoteProducto> findByEstadoIn(List<EstadoLote> estados);
     List<LoteProducto> findByEstadoInAndProducto_TipoAnalisisIn(List<EstadoLote> estados, List<TipoAnalisisCalidad> tipos);
+    List<LoteProducto> findByFechaVencimientoBeforeAndEstadoNotIn(LocalDateTime fecha,
+                                                                  List<EstadoLote> estados);
     Optional<LoteProducto> findFirstByProductoIdAndEstadoAndStockLoteGreaterThanOrderByFechaVencimientoAsc(
             Integer productoId,
             EstadoLote estado,
