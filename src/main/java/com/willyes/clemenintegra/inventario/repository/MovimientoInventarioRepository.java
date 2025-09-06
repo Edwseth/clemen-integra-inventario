@@ -95,10 +95,10 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
 
     Page<MovimientoInventario> findByOrdenProduccionId(Long ordenProduccionId, Pageable pageable);
 
-    @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m where m.ordenProduccion.id = :ordenId and m.producto.id = :productoId and m.tipoMovimiento = :tipo")
+    @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m where m.ordenProduccion.id = :ordenId and m.producto.id = :productoId and m.tipoMovimientoDetalle.id = :detalleId")
     BigDecimal sumaCantidadPorOrdenYProducto(@Param("ordenId") Long ordenId,
                                              @Param("productoId") Long productoId,
-                                             @Param("tipo") TipoMovimiento tipo);
+                                             @Param("detalleId") Long detalleId);
 
 }
 
