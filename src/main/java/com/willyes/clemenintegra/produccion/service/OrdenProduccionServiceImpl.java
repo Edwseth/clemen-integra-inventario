@@ -472,7 +472,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
     }
 
-    @Transactional
+
     public EtapaProduccion iniciarEtapa(Long ordenId, Long etapaId, Long usuarioId) {
         OrdenProduccion orden = repository.findById(ordenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
@@ -489,8 +489,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));
+        boolean actualizarOrden = false;
+        if (orden.getEstado() == EstadoProduccion.CREADA) {
+            orden.setEstado(EstadoProduccion.EN_PROCESO);
+            actualizarOrden = true;
+        }
         if ((etapa.getSecuencia() != null && etapa.getSecuencia() == 1) && orden.getLoteProduccion() == null) {
             orden.setLoteProduccion(generarCodigoLote(orden.getProducto()));
+            actualizarOrden = true;
+        }
+        if (actualizarOrden) {
             repository.save(orden);
         }
         etapa.setEstado(EstadoEtapa.EN_PROCESO);

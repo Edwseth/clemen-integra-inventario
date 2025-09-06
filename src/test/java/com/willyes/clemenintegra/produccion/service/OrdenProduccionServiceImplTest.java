@@ -13,6 +13,9 @@ import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.Almacen;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
@@ -168,6 +171,73 @@ class OrdenProduccionServiceImplTest {
         assertEquals("obs", cierre.getObservacion());
     }
 
+
+    @Test
+    void registrarCierreTotalCompletoMarcaOrdenFinalizada() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .loteProduccion("L1")
+                .producto(Producto.builder().id(1).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findByNombre("Pre-Bodega")).thenReturn(Optional.of(Almacen.builder().id(1L).build()));
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(any(), any(), any()))
+                .thenReturn(Optional.of(LoteProducto.builder().id(1L).build()));
+        when(tipoMovimientoDetalleRepository.findByDescripcion("ENTRADA_PARCIAL_PRODUCCION"))
+                .thenReturn(Optional.empty());
+        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(BigDecimal.TEN)
+                .tipo(TipoCierre.TOTAL)
+                .cerradaIncompleta(false)
+                .build();
+
+        service.registrarCierre(1L, dto);
+
+        assertEquals(EstadoProduccion.FINALIZADA, orden.getEstado());
+        verify(repository).save(orden);
+    }
+
+    @Test
+    void registrarCierreTotalIncompletoMarcaOrdenCerradaIncompleta() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .loteProduccion("L1")
+                .producto(Producto.builder().id(1).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findByNombre("Pre-Bodega")).thenReturn(Optional.of(Almacen.builder().id(1L).build()));
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(any(), any(), any()))
+                .thenReturn(Optional.of(LoteProducto.builder().id(1L).build()));
+        when(tipoMovimientoDetalleRepository.findByDescripcion("ENTRADA_PARCIAL_PRODUCCION"))
+                .thenReturn(Optional.empty());
+        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(BigDecimal.valueOf(5))
+                .tipo(TipoCierre.TOTAL)
+                .cerradaIncompleta(true)
+                .build();
+
+        service.registrarCierre(1L, dto);
+
+        assertEquals(EstadoProduccion.CERRADA_INCOMPLETA, orden.getEstado());
+        verify(repository).save(orden);
+    }
+
     @Test
     void clonarEtapasParaOrdenCreaEtapasDesdePlantilla() {
         OrdenProduccion op = OrdenProduccion.builder().id(1L).build();
@@ -202,6 +272,24 @@ class OrdenProduccionServiceImplTest {
         assertEquals(EstadoEtapa.EN_PROCESO, result.getEstado());
         assertNotNull(result.getFechaInicio());
         assertEquals("John Doe", result.getUsuarioNombre());
+    }
+
+
+    @Test
+    void iniciarPrimerEtapaActualizaEstadoOrden() {
+        OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.CREADA).build();
+        EtapaProduccion etapa = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.PENDIENTE).secuencia(1).build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
+        when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.iniciarEtapa(1L, 2L, 5L);
+
+        assertEquals(EstadoProduccion.EN_PROCESO, orden.getEstado());
+        verify(repository).save(orden);
     }
 
     @Test
