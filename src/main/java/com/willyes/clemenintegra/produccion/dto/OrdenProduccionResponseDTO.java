@@ -18,6 +18,7 @@ public class OrdenProduccionResponseDTO {
     public BigDecimal unidadesProducidas;
     public String estado;
     public String nombreProducto;
+    public String categoriaProducto;
     public String unidadMedida;
     public String unidadMedidaSimbolo;
     public String unidadMedidaBaseSimbolo;

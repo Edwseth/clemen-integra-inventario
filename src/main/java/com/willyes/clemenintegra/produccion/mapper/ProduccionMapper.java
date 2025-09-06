@@ -39,6 +39,11 @@ public class ProduccionMapper {
         dto.fechaUltimoCierre = entidad.getFechaUltimoCierre();
         dto.estado = entidad.getEstado().name();
         dto.nombreProducto = entidad.getProducto() != null ? entidad.getProducto().getNombre() : null;
+        dto.categoriaProducto = entidad.getProducto() != null
+                && entidad.getProducto().getCategoriaProducto() != null
+                && entidad.getProducto().getCategoriaProducto().getTipo() != null
+                ? entidad.getProducto().getCategoriaProducto().getTipo().name()
+                : null;
         dto.unidadMedida = entidad.getUnidadMedida() != null ? entidad.getUnidadMedida().getNombre() : null;
         dto.unidadMedidaSimbolo = entidad.getUnidadMedida() != null ? entidad.getUnidadMedida().getSimbolo() : null;
         dto.nombreResponsable = entidad.getResponsable() != null ? entidad.getResponsable().getNombreCompleto() : null;

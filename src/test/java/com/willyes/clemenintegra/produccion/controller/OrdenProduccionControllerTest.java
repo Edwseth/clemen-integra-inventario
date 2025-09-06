@@ -200,6 +200,15 @@ class OrdenProduccionControllerTest {
 
     @Test
     @WithMockUser(authorities = {"ROL_JEFE_PRODUCCION"})
+    void obtenerOrdenIncluyeCategoriaProducto() throws Exception {
+        OrdenProduccion op = crearOrdenConProducto(10);
+        mockMvc.perform(get("/api/produccion/ordenes/" + op.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoriaProducto").value("PRODUCTO_TERMINADO"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_JEFE_PRODUCCION"})
     void finalizarOrden() throws Exception {
         OrdenProduccion op = crearOrdenConProducto(10);
         mockMvc.perform(put("/api/produccion/ordenes/" + op.getId() + "/finalizar")
