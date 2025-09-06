@@ -148,32 +148,41 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                                                                  LocalDateTime desde,
                                                                  LocalDateTime hasta,
                                                                  Pageable pageable) {
-        Specification<SolicitudMovimiento> spec = Specification.where(null);
+        Specification<SolicitudMovimiento> spec = null;
 
         if (desde != null && hasta != null && desde.isAfter(hasta)) {
             throw new IllegalArgumentException("La fecha inicial no puede ser posterior a la final");
         }
 
         if (estado != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estado));
+            Specification<SolicitudMovimiento> filtro = (root, query, cb) -> cb.equal(root.get("estado"), estado);
+            spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
         }
         if (almacenOrigenId != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenOrigen", jakarta.persistence.criteria.JoinType.LEFT).get("id"), almacenOrigenId));
+            Specification<SolicitudMovimiento> filtro = (root, query, cb) ->
+                    cb.equal(root.join("almacenOrigen", jakarta.persistence.criteria.JoinType.LEFT).get("id"), almacenOrigenId);
+            spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
         }
         if (almacenDestinoId != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.join("almacenDestino", jakarta.persistence.criteria.JoinType.LEFT).get("id"), almacenDestinoId));
+            Specification<SolicitudMovimiento> filtro = (root, query, cb) ->
+                    cb.equal(root.join("almacenDestino", jakarta.persistence.criteria.JoinType.LEFT).get("id"), almacenDestinoId);
+            spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
         }
         LocalDateTime inicio = desde;
         LocalDateTime fin = hasta;
         if (inicio != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fechaSolicitud"), inicio));
+            Specification<SolicitudMovimiento> filtro = (root, query, cb) ->
+                    cb.greaterThanOrEqualTo(root.get("fechaSolicitud"), inicio);
+            spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
         }
         if (fin != null) {
-            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("fechaSolicitud"), fin));
+            Specification<SolicitudMovimiento> filtro = (root, query, cb) ->
+                    cb.lessThanOrEqualTo(root.get("fechaSolicitud"), fin);
+            spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
         }
         if (busqueda != null && !busqueda.isBlank()) {
             String like = "%" + busqueda.toLowerCase() + "%";
-            spec = spec.and((root, query, cb) -> {
+            Specification<SolicitudMovimiento> filtro = (root, query, cb) -> {
                 var productoJoin = root.join("producto", jakarta.persistence.criteria.JoinType.LEFT);
                 var solicitanteJoin = root.join("usuarioSolicitante", jakarta.persistence.criteria.JoinType.LEFT);
                 var ordenJoin = root.join("ordenProduccion", jakarta.persistence.criteria.JoinType.LEFT);
@@ -182,10 +191,11 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                         cb.like(cb.lower(solicitanteJoin.get("nombreCompleto")), like),
                         cb.like(cb.lower(ordenJoin.get("codigoOrden")), like)
                 );
-            });
+            };
+            spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
         }
 
-        return repository.findAll(spec, pageable)
+        return repository.findAll(spec == null ? Specification.where((root, query, cb) -> cb.conjunction()) : spec, pageable)
                 .map(this::toListadoDTO);
     }
 
