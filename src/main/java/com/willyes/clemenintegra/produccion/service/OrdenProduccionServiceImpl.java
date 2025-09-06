@@ -473,6 +473,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
 
+    @Transactional
     public EtapaProduccion iniciarEtapa(Long ordenId, Long etapaId, Long usuarioId) {
         OrdenProduccion orden = repository.findById(ordenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
