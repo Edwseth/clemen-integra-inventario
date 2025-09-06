@@ -1,8 +1,11 @@
 package com.willyes.clemenintegra.produccion.controller;
 
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -18,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -37,6 +41,8 @@ class OrdenProduccionControllerTest {
     @Autowired
     private OrdenProduccionRepository ordenRepository;
     @Autowired
+    private EtapaProduccionRepository etapaProduccionRepository;
+    @Autowired
     private UsuarioRepository usuarioRepository;
     @Autowired
     private ProductoRepository productoRepository;
@@ -54,6 +60,7 @@ class OrdenProduccionControllerTest {
 
     @BeforeEach
     void setup() {
+        etapaProduccionRepository.deleteAll();
         ordenRepository.deleteAll();
         usuarioRepository.deleteAll();
 
@@ -335,6 +342,57 @@ class OrdenProduccionControllerTest {
         t1.join(); t2.join();
 
         assertEquals(1, conflicts.get());
+    }
+
+    @Test
+    @WithUserDetails("juan")
+    void iniciarPrimeraEtapaActualizaEstadoOrden() throws Exception {
+        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
+                .nombre("unidad")
+                .simbolo("u")
+                .build());
+
+        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
+                .nombre("cat")
+                .tipo(TipoCategoria.PRODUCTO_TERMINADO)
+                .build());
+
+        Producto producto = productoRepository.save(Producto.builder()
+                .codigoSku("SKU-INIT")
+                .nombre("ProdInit")
+                .descripcionProducto("desc")
+                .stockActual(BigDecimal.ZERO)
+                .stockMinimo(BigDecimal.ZERO)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .creadoPor(responsable1)
+                .build());
+
+        OrdenProduccion orden = ordenRepository.save(OrdenProduccion.builder()
+                .codigoOrden("ORD-INIT")
+                .fechaInicio(LocalDateTime.now())
+                .cantidadProgramada(BigDecimal.ONE)
+                .estado(EstadoProduccion.CREADA)
+                .producto(producto)
+                .unidadMedida(unidad)
+                .responsable(responsable1)
+                .build());
+
+        EtapaProduccion etapa = etapaProduccionRepository.save(EtapaProduccion.builder()
+                .nombre("Etapa1")
+                .secuencia(1)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .build());
+
+        mockMvc.perform(patch("/api/produccion/ordenes/" + orden.getId() + "/etapas/" + etapa.getId() + "/iniciar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("EN_PROCESO"));
+
+        mockMvc.perform(get("/api/produccion/ordenes/" + orden.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("EN_PROCESO"));
     }
 }
 
