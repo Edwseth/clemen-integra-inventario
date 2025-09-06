@@ -156,6 +156,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         solicitud.getCantidad(), dto.cantidad());
             }
 
+            // Si la solicitud está vinculada a una orden de producción y el DTO no la
+            // proporciona explícitamente, se usa la de la solicitud. Esto garantiza que los
+            // movimientos ejecutados a partir de una solicitud queden asociados a la orden
+            // correspondiente para el cálculo de insumos consumidos.
+            if (ordenProduccion == null && solicitud.getOrdenProduccion() != null) {
+                ordenProduccion = solicitud.getOrdenProduccion();
+            }
+
             final Long userActualId = usuario.getId();
             Usuario responsable = solicitud.getUsuarioResponsable();
             Long responsableId = responsable != null ? responsable.getId() : null;
