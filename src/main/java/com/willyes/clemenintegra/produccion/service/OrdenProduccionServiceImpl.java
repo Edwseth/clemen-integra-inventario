@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
+import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
@@ -536,12 +537,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         FormulaProducto formula = formulaProductoRepository
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
+        TipoMovimientoDetalle detalleSalida = tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "DETALLE_MOVIMIENTO_NO_ENCONTRADO"));
+        Long detalleId = detalleSalida.getId();
         List<InsumoOPDTO> lista = new ArrayList<>();
         for (DetalleFormula det : formula.getDetalles()) {
             BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             Long insumoId = det.getInsumo().getId().longValue();
             BigDecimal consumida = Optional.ofNullable(
-                    movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(id, insumoId, TipoMovimiento.SALIDA)
+                    movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(id, insumoId, detalleId)
             ).orElse(BigDecimal.ZERO);
             BigDecimal faltante = requerida.subtract(consumida);
             if (faltante.compareTo(BigDecimal.ZERO) < 0) {

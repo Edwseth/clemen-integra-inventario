@@ -12,10 +12,15 @@ import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.bom.model.DetalleFormula;
+import com.willyes.clemenintegra.bom.model.FormulaProducto;
+import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
 import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
@@ -197,6 +202,47 @@ class OrdenProduccionServiceImplTest {
         assertEquals(EstadoEtapa.EN_PROCESO, result.getEstado());
         assertNotNull(result.getFechaInicio());
         assertEquals("John Doe", result.getUsuarioNombre());
+    }
+
+    @Test
+    void listarInsumosConsultaDetalleSalida() {
+        Producto productoFinal = Producto.builder().id(1).build();
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .producto(productoFinal)
+                .cantidadProgramada(BigDecimal.ONE)
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto insumo = Producto.builder()
+                .id(2)
+                .nombre("Insumo")
+                .unidadMedida(UnidadMedida.builder().nombre("kg").build())
+                .build();
+        DetalleFormula det = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(BigDecimal.ONE)
+                .build();
+        FormulaProducto formula = FormulaProducto.builder()
+                .producto(productoFinal)
+                .detalles(List.of(det))
+                .build();
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(productoFinal.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        TipoMovimientoDetalle detalleSalida = new TipoMovimientoDetalle();
+        detalleSalida.setId(7L);
+        detalleSalida.setDescripcion("SALIDA_PRODUCCION");
+        when(tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION"))
+                .thenReturn(Optional.of(detalleSalida));
+
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(1L, 2L, 7L))
+                .thenReturn(new BigDecimal("0"));
+
+        List<InsumoOPDTO> resultado = service.listarInsumos(1L);
+
+        assertEquals(1, resultado.size());
+        verify(movimientoInventarioRepository).sumaCantidadPorOrdenYProducto(1L, 2L, 7L);
     }
 
     @Test
