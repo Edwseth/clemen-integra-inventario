@@ -121,9 +121,13 @@ public class OrdenProduccionController {
 
     @PatchMapping("/{ordenId}/etapas/{etapaId}/iniciar")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION')")
-    public ResponseEntity<EtapaProduccionResponse> iniciarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
+    public ResponseEntity<OrdenProduccionResponseDTO> iniciarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
-        return ResponseEntity.ok(ProduccionMapper.toResponse(service.iniciarEtapa(ordenId, etapaId, usuario.getId())));
+        service.iniciarEtapa(ordenId, etapaId, usuario.getId());
+        return service.buscarPorId(ordenId)
+                .map(ProduccionMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{ordenId}/etapas/{etapaId}/finalizar")
