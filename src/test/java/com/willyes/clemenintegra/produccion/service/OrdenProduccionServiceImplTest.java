@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepositor
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.model.Producto;
@@ -16,6 +17,9 @@ import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
+import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
@@ -79,6 +83,7 @@ class OrdenProduccionServiceImplTest {
     @Mock MovimientoInventarioRepository movimientoInventarioRepository;
     @Mock MovimientoInventarioMapper movimientoInventarioMapper;
     @Mock UsuarioService usuarioService;
+    @Mock SolicitudMovimientoRepository solicitudMovimientoRepository;
 
     OrdenProduccionServiceImpl service;
 
@@ -101,7 +106,8 @@ class OrdenProduccionServiceImplTest {
                 etapaPlantillaRepository,
                 movimientoInventarioRepository,
                 movimientoInventarioMapper,
-                usuarioService
+                usuarioService,
+                solicitudMovimientoRepository
         );
     }
 
@@ -264,10 +270,10 @@ class OrdenProduccionServiceImplTest {
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
-        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        EtapaProduccion result = service.iniciarEtapa(1L, 2L, 5L);
+        EtapaProduccion result = service.iniciarEtapa(1L, 2L);
 
         assertEquals(EstadoEtapa.EN_PROCESO, result.getEstado());
         assertNotNull(result.getFechaInicio());
@@ -282,14 +288,145 @@ class OrdenProduccionServiceImplTest {
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
-        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.iniciarEtapa(1L, 2L, 5L);
+        service.iniciarEtapa(1L, 2L);
 
         assertEquals(EstadoProduccion.EN_PROCESO, orden.getEstado());
         verify(repository).save(orden);
+    }
+
+    @Test
+    void iniciarEtapaSecuenciaUnoGeneraMovimientosPorInsumo() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.ONE)
+                .producto(Producto.builder().id(10).build())
+                .build();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(2L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+
+        Producto ins1 = Producto.builder().id(100).build();
+        Producto ins2 = Producto.builder().id(200).build();
+        DetalleFormula det1 = DetalleFormula.builder().insumo(ins1).cantidadNecesaria(BigDecimal.ONE).build();
+        DetalleFormula det2 = DetalleFormula.builder().insumo(ins2).cantidadNecesaria(BigDecimal.valueOf(2)).build();
+        FormulaProducto formula = FormulaProducto.builder().detalles(List.of(det1, det2)).build();
+
+        LoteProducto lote1 = LoteProducto.builder().id(1L).stockLote(BigDecimal.ONE)
+                .almacen(Almacen.builder().id(1L).build()).build();
+        LoteProducto lote2 = LoteProducto.builder().id(2L).stockLote(BigDecimal.valueOf(2))
+                .almacen(Almacen.builder().id(2L).build()).build();
+
+        MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(7L);
+        TipoMovimientoDetalle detalle = new TipoMovimientoDetalle(); detalle.setId(8L); detalle.setDescripcion("SALIDA_PRODUCCION");
+
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(movimientoInventarioRepository.existsByOrdenProduccionIdAndClasificacion(1L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(false);
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(Optional.of(motivo));
+        when(tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION"))
+                .thenReturn(Optional.of(detalle));
+        when(loteProductoRepository.findDisponiblesFifo(100)).thenReturn(List.of(lote1));
+        when(loteProductoRepository.findDisponiblesFifo(200)).thenReturn(List.of(lote2));
+        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
+        when(solicitudMovimientoRepository.findWithDetalles(1L, null, null, null)).thenReturn(List.of());
+        when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.iniciarEtapa(1L, 2L);
+
+        ArgumentCaptor<MovimientoInventarioDTO> movCaptor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService, times(2)).registrarMovimiento(movCaptor.capture());
+        List<MovimientoInventarioDTO> movs = movCaptor.getAllValues();
+        assertEquals(BigDecimal.ONE, movs.get(0).cantidad());
+        assertEquals(BigDecimal.valueOf(2), movs.get(1).cantidad());
+        assertTrue(movs.stream().allMatch(m -> m.ordenProduccionId().equals(1L)));
+        assertTrue(movs.stream().allMatch(m -> m.usuarioId().equals(5L)));
+    }
+
+    @Test
+    void iniciarEtapaSecuenciaMayorNoConsume() {
+        OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.EN_PROCESO).build();
+        EtapaProduccion etapa = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.PENDIENTE).secuencia(2).build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.iniciarEtapa(1L, 2L);
+
+        verify(movimientoInventarioService, never()).registrarMovimiento(any());
+    }
+
+    @Test
+    void iniciarEtapaIdempotenteNoRepiteConsumo() {
+        OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.EN_PROCESO).producto(Producto.builder().id(10).build()).build();
+        EtapaProduccion etapa = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.PENDIENTE).secuencia(1).build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(movimientoInventarioRepository.existsByOrdenProduccionIdAndClasificacion(1L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(true);
+        when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.iniciarEtapa(1L, 2L);
+
+        verify(movimientoInventarioService, never()).registrarMovimiento(any());
+    }
+
+    @Test
+    void iniciarEtapaStockInsuficienteRevierte() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .producto(Producto.builder().id(10).build())
+                .build();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(2L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+        Producto insumo = Producto.builder().id(100).build();
+        DetalleFormula det = DetalleFormula.builder().insumo(insumo).cantidadNecesaria(BigDecimal.ONE).build();
+        FormulaProducto formula = FormulaProducto.builder().detalles(List.of(det)).build();
+        LoteProducto lote = LoteProducto.builder().id(1L).stockLote(BigDecimal.valueOf(5))
+                .almacen(Almacen.builder().id(1L).build()).build();
+        MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(7L);
+        TipoMovimientoDetalle detalle = new TipoMovimientoDetalle(); detalle.setId(8L); detalle.setDescripcion("SALIDA_PRODUCCION");
+
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(movimientoInventarioRepository.existsByOrdenProduccionIdAndClasificacion(1L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(false);
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(Optional.of(motivo));
+        when(tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION"))
+                .thenReturn(Optional.of(detalle));
+        when(loteProductoRepository.findDisponiblesFifo(100)).thenReturn(List.of(lote));
+
+        assertThrows(ResponseStatusException.class, () -> service.iniciarEtapa(1L, 2L));
+        verify(movimientoInventarioService, never()).registrarMovimiento(any());
+        assertEquals(EstadoEtapa.PENDIENTE, etapa.getEstado());
     }
 
     @Test

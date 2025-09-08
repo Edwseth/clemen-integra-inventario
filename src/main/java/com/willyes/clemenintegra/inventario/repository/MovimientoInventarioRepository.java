@@ -100,5 +100,7 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                              @Param("productoId") Long productoId,
                                              @Param("detalleId") Long detalleId);
 
+    boolean existsByOrdenProduccionIdAndClasificacion(Long ordenProduccionId, ClasificacionMovimientoInventario clasificacion);
+
 }
 

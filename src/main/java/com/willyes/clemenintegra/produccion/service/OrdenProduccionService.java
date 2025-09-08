@@ -36,7 +36,7 @@ public interface OrdenProduccionService {
 
     void clonarEtapas(Long ordenId);
 
-    com.willyes.clemenintegra.produccion.model.EtapaProduccion iniciarEtapa(Long ordenId, Long etapaId, Long usuarioId);
+    com.willyes.clemenintegra.produccion.model.EtapaProduccion iniciarEtapa(Long ordenId, Long etapaId);
 
     com.willyes.clemenintegra.produccion.model.EtapaProduccion finalizarEtapa(Long ordenId, Long etapaId, Long usuarioId);
 
