@@ -56,7 +56,7 @@ import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -254,6 +254,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .build();
     }
 
+    @Transactional
     public ResultadoValidacionOrdenDTO crearOrden(OrdenProduccionRequestDTO dto) {
         Producto producto = productoRepository.findById(dto.getProductoId())
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
@@ -482,7 +483,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
     }
 
-    @Transactional(rollbackOn = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public void reservarInsumosParaOP(Long ordenId) {
         OrdenProduccion orden = repository.findById(ordenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
@@ -543,7 +544,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
 
-    @Transactional(rollbackOn = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public EtapaProduccion iniciarEtapa(Long ordenId, Long etapaId) {
         OrdenProduccion orden = repository.findById(ordenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
