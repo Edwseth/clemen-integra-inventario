@@ -601,7 +601,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                             ordenId,
                             null,
                             null,
-                            null
+                            null,
+                            res.getLote().getEstado()
                     );
                     movimientoInventarioService.registrarMovimiento(movDto);
                 }
