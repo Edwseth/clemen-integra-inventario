@@ -41,6 +41,9 @@ import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
@@ -76,6 +79,8 @@ import jakarta.persistence.OptimisticLockException;
 @Service
 @RequiredArgsConstructor
 public class OrdenProduccionServiceImpl implements OrdenProduccionService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrdenProduccionServiceImpl.class);
 
     private final FormulaProductoRepository formulaProductoRepository;
     private final ProductoRepository productoRepository;
@@ -214,6 +219,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         List<EtapaPlantilla> plantilla = cargarPlantillaEtapas(guardada.getProducto().getId());
         clonarEtapasParaOrden(guardada, plantilla);
+        reservarInsumosParaOP(guardada.getId());
 
         Long motivoId = motivoMovimientoRepository
                 .findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION)
@@ -476,6 +482,66 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
     }
 
+    @Transactional(rollbackOn = Exception.class)
+    public void reservarInsumosParaOP(Long ordenId) {
+        OrdenProduccion orden = repository.findById(ordenId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+
+        FormulaProducto formula = formulaProductoRepository
+                .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
+
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        log.debug("OP-ETAPA iniciar ordenId={}, secuencia={}, user={}", ordenId, etapa.getSecuencia(), usuario.getId());
+
+        MotivoMovimiento motivo = motivoMovimientoRepository
+                .findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
+                .orElseThrow(() -> new IllegalStateException("Motivo SALIDA_PRODUCCION no configurado"));
+        TipoMovimientoDetalle detalle = tipoMovimientoDetalleRepository
+                .findByDescripcion("SALIDA_PRODUCCION")
+                .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
+
+        for (DetalleFormula insumo : formula.getDetalles()) {
+            Long insumoId = insumo.getInsumo().getId().longValue();
+            BigDecimal requerida = insumo.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
+            BigDecimal restante = requerida;
+
+            List<LoteProducto> lotes = loteProductoRepository.findDisponiblesFifo(
+                    insumoId,
+                    List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO));
+
+            for (LoteProducto lote : lotes) {
+                if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
+                BigDecimal disponible = lote.getStockLote().subtract(lote.getStockReservado());
+                BigDecimal usar = disponible.min(restante);
+                if (usar.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+                lote.setStockReservado(lote.getStockReservado().add(usar));
+                loteProductoRepository.save(lote);
+
+                SolicitudMovimiento sol = SolicitudMovimiento.builder()
+                        .tipoMovimiento(TipoMovimiento.SALIDA)
+                        .producto(insumo.getInsumo())
+                        .lote(lote)
+                        .cantidad(usar)
+                        .almacenOrigen(lote.getAlmacen())
+                        .ordenProduccion(orden)
+                        .usuarioSolicitante(usuario)
+                        .motivoMovimiento(motivo)
+                        .tipoMovimientoDetalle(detalle)
+                        .estado(EstadoSolicitudMovimiento.RESERVADA)
+                        .build();
+                solicitudMovimientoRepository.save(sol);
+
+                restante = restante.subtract(usar);
+            }
+
+            if (restante.compareTo(BigDecimal.ZERO) > 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "STOCK_INSUFICIENTE");
+            }
+        }
+    }
+
 
     @Transactional(rollbackOn = Exception.class)
     public EtapaProduccion iniciarEtapa(Long ordenId, Long etapaId) {
@@ -508,77 +574,36 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             repository.save(orden);
         }
 
-        // AJUSTE: consumo etapa 1
+        // Consumo etapa 1 desde reservas
         if (etapa.getSecuencia() != null && etapa.getSecuencia() == 1) {
             boolean yaConsumido = movimientoInventarioRepository
                     .existsByOrdenProduccionIdAndClasificacion(ordenId, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
             if (!yaConsumido) {
-                FormulaProducto formula = formulaProductoRepository
-                        .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
-
-                MotivoMovimiento motivo = motivoMovimientoRepository
-                        .findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
-                        .orElseThrow(() -> new IllegalStateException("Motivo SALIDA_PRODUCCION no configurado"));
-                TipoMovimientoDetalle detalle = tipoMovimientoDetalleRepository
-                        .findByDescripcion("SALIDA_PRODUCCION")
-                        .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
-
-                Map<Long, List<LoteProducto>> lotesPorInsumo = new HashMap<>();
-                for (DetalleFormula insumo : formula.getDetalles()) {
-                    Long insumoId = insumo.getInsumo().getId().longValue();
-                    BigDecimal requerida = insumo.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
-                    List<LoteProducto> lotes = loteProductoRepository.findDisponiblesFifo(
-                            insumo.getInsumo().getId().longValue());
-                    BigDecimal disponible = lotes.stream()
-                            .map(LoteProducto::getStockLote)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    if (disponible.compareTo(requerida) < 0) {
-                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "STOCK_INSUFICIENTE");
-                    }
-                    lotesPorInsumo.put(insumoId, lotes);
-                }
-
-                for (DetalleFormula insumo : formula.getDetalles()) {
-                    Long insumoId = insumo.getInsumo().getId().longValue();
-                    BigDecimal requerida = insumo.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
-                    BigDecimal restante = requerida;
-                    List<LoteProducto> lotes = lotesPorInsumo.get(insumoId);
-                    for (LoteProducto lote : lotes) {
-                        if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
-                        BigDecimal usar = lote.getStockLote().min(restante);
-                        MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
-                                null,
-                                usar,
-                                TipoMovimiento.SALIDA,
-                                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                                null,
-                                insumo.getInsumo().getId(),
-                                lote.getId(),
-                                lote.getAlmacen().getId().intValue(),
-                                null,
-                                null,
-                                null,
-                                motivo.getId(),
-                                detalle.getId(),
-                                null,
-                                usuario.getId(),
-                                ordenId,
-                                null,
-                                null,
-                                null,
-                                null
-                        );
-                        movimientoInventarioService.registrarMovimiento(movDto);
-                        restante = restante.subtract(usar);
-                    }
-                }
-
-                List<SolicitudMovimiento> solicitudes = solicitudMovimientoRepository
-                        .findWithDetalles(ordenId, null, null, null);
-                if (!solicitudes.isEmpty()) {
-                    solicitudes.forEach(s -> s.setEstado(EstadoSolicitudMovimiento.EJECUTADA));
-                    solicitudMovimientoRepository.saveAll(solicitudes);
+                List<SolicitudMovimiento> reservas = solicitudMovimientoRepository
+                        .findWithDetalles(ordenId, List.of(EstadoSolicitudMovimiento.RESERVADA), null, null);
+                for (SolicitudMovimiento res : reservas) {
+                    MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
+                            null,
+                            res.getCantidad(),
+                            TipoMovimiento.SALIDA,
+                            ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                            null,
+                            res.getProducto().getId(),
+                            res.getLote().getId(),
+                            res.getAlmacenOrigen() != null ? res.getAlmacenOrigen().getId().intValue() : res.getLote().getAlmacen().getId().intValue(),
+                            null,
+                            null,
+                            null,
+                            res.getMotivoMovimiento() != null ? res.getMotivoMovimiento().getId() : null,
+                            res.getTipoMovimientoDetalle() != null ? res.getTipoMovimientoDetalle().getId() : null,
+                            res.getId(),
+                            usuario.getId(),
+                            ordenId,
+                            null,
+                            null,
+                            null
+                    );
+                    movimientoInventarioService.registrarMovimiento(movDto);
                 }
             }
         }

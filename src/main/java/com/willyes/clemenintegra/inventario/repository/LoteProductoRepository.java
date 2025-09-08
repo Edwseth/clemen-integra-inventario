@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 @Repository
 public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long>, JpaSpecificationExecutor<LoteProducto> {
@@ -43,14 +44,17 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             "GROUP BY lp.estado")
     List<Object[]> sumarStockPorEstado(@Param("productoId") Long productoId);
 
-    @Query("SELECT lp FROM LoteProducto lp " +
-            "JOIN FETCH lp.almacen a " +
-            "WHERE lp.producto.id = :productoId " +
-            "AND lp.estado = 'DISPONIBLE' " +
-            "AND lp.stockLote > 0 " +
-            "ORDER BY lp.fechaVencimiento ASC")
-    // CODEx: lógica FIFO existente solo por producto y estado DISPONIBLE
-    List<LoteProducto> findDisponiblesFifo(@Param("productoId") Long productoId);
+    @jakarta.persistence.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+    SELECT l FROM LoteProducto l
+    WHERE l.producto.id = :productoId
+      AND l.estado IN :estadosValidos
+      AND l.agotado = false
+      AND (l.stockLote - l.stockReservado) > 0
+    ORDER BY l.fechaVencimiento ASC, l.id ASC
+    """)
+    List<LoteProducto> findDisponiblesFifo(@Param("productoId") Long productoId,
+                                           @Param("estadosValidos") Collection<EstadoLote> estadosValidos);
 
     // LÍNEA CODEx: nuevas consultas para disponibilidad detallada por producto
     @Query("""

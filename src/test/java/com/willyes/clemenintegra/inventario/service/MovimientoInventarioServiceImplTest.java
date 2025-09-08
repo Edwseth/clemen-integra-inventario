@@ -10,6 +10,8 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -99,7 +101,7 @@ class MovimientoInventarioServiceImplTest {
         when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(inv -> inv.getArgument(0));
 
         LoteProducto result = ReflectionTestUtils.invokeMethod(service, "procesarMovimientoConLoteExistente",
-                dto, TipoMovimiento.TRANSFERENCIA, origen, destino, producto, new BigDecimal("5"), false);
+                dto, TipoMovimiento.TRANSFERENCIA, origen, destino, producto, new BigDecimal("5"), false, null);
 
         assertEquals(EstadoLote.RECHAZADO, result.getEstado());
         assertEquals(new BigDecimal("5"), result.getStockLote());
@@ -129,7 +131,7 @@ class MovimientoInventarioServiceImplTest {
         when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(inv -> inv.getArgument(0));
 
         LoteProducto result = ReflectionTestUtils.invokeMethod(service, "procesarMovimientoConLoteExistente",
-                dto, TipoMovimiento.TRANSFERENCIA, origen, destino, producto, new BigDecimal("10"), false);
+                dto, TipoMovimiento.TRANSFERENCIA, origen, destino, producto, new BigDecimal("10"), false, null);
 
         assertSame(loteOrigen, result);
         assertEquals(EstadoLote.RECHAZADO, result.getEstado());
@@ -211,6 +213,64 @@ class MovimientoInventarioServiceImplTest {
         assertEquals(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
         assertEquals(new BigDecimal("10"), producto.getStockActual());
         assertEquals(new BigDecimal("10"), lote.getStockLote());
+    }
+
+    @Test
+    void salidaDesdeReservaReduceReservadoYAgota() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("user", "pass"));
+
+        Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
+        Producto producto = Producto.builder().id(1).stockActual(new BigDecimal("2"))
+                .categoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto()).build();
+        LoteProducto lote = LoteProducto.builder()
+                .id(200L)
+                .producto(producto)
+                .almacen(origen)
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(new BigDecimal("2"))
+                .stockReservado(new BigDecimal("2"))
+                .build();
+        Usuario usuario = new Usuario(); usuario.setId(1L);
+        SolicitudMovimiento sol = SolicitudMovimiento.builder()
+                .id(5L)
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .producto(producto)
+                .lote(lote)
+                .cantidad(new BigDecimal("2"))
+                .almacenOrigen(origen)
+                .usuarioSolicitante(usuario)
+                .estado(EstadoSolicitudMovimiento.RESERVADA)
+                .build();
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("2"), TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
+                producto.getId(), lote.getId(), origen.getId(), null,
+                null, null, null, 1L, 1L, sol.getId(),
+                usuario.getId(), null, null, null, null);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
+        when(entityManager.getReference(Usuario.class, usuario.getId())).thenReturn(usuario);
+        when(entityManager.getReference(TipoMovimientoDetalle.class, 1L)).thenReturn(new TipoMovimientoDetalle());
+        when(entityManager.getReference(MotivoMovimiento.class, 1L)).thenReturn(new MotivoMovimiento());
+        when(motivoMovimientoRepository.findById(1L)).thenReturn(Optional.of(new MotivoMovimiento()));
+        when(loteProductoRepository.findById(lote.getId())).thenReturn(Optional.of(lote));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(movimientoInventarioMapper.toEntity(dto)).thenReturn(new MovimientoInventario());
+        when(movimientoInventarioMapper.safeToResponseDTO(any())).thenReturn(new com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO());
+        when(movimientoInventarioRepository.save(any(MovimientoInventario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productoRepository.save(any(Producto.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(solicitudMovimientoRepository.findById(sol.getId())).thenReturn(Optional.of(sol));
+        when(solicitudMovimientoRepository.save(any(SolicitudMovimiento.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.registrarMovimiento(dto);
+
+        assertTrue(lote.isAgotado());
+        assertEquals(new BigDecimal("0"), lote.getStockLote());
+        assertEquals(new BigDecimal("0"), lote.getStockReservado());
+        assertEquals(EstadoSolicitudMovimiento.ATENDIDA, sol.getEstado());
     }
 }
 

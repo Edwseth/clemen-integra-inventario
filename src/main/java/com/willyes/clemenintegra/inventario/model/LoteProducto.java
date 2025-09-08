@@ -41,6 +41,15 @@ public class LoteProducto {
     @Column(name = "stock_lote", nullable = false, precision = 10, scale = 2)
     private BigDecimal stockLote;
 
+    @Column(name = "agotado", nullable = false)
+    private boolean agotado = false;
+
+    @Column(name = "stock_reservado", nullable = false, precision = 18, scale = 6)
+    private BigDecimal stockReservado = BigDecimal.ZERO;
+
+    @Column(name = "fecha_agotado")
+    private LocalDateTime fechaAgotado;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, length = 20)
     private EstadoLote estado;
