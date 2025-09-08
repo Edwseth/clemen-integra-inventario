@@ -528,7 +528,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 for (DetalleFormula insumo : formula.getDetalles()) {
                     Long insumoId = insumo.getInsumo().getId().longValue();
                     BigDecimal requerida = insumo.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
-                    List<LoteProducto> lotes = loteProductoRepository.findDisponiblesFifo(insumo.getInsumo().getId());
+                    List<LoteProducto> lotes = loteProductoRepository.findDisponiblesFifo(
+                            insumo.getInsumo().getId().longValue());
                     BigDecimal disponible = lotes.stream()
                             .map(LoteProducto::getStockLote)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
