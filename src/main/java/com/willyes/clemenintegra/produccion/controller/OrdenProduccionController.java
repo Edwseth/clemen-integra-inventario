@@ -16,6 +16,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
@@ -94,7 +95,7 @@ public class OrdenProduccionController {
     @PostMapping("/{id}/cierres")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> registrarCierre(@PathVariable Long id,
-                                                                     @RequestBody CierreProduccionRequestDTO request) {
+                                                                     @Valid @RequestBody CierreProduccionRequestDTO request) {
         OrdenProduccion orden = service.registrarCierre(id, request);
         return ResponseEntity.ok(ProduccionMapper.toResponse(orden));
     }
