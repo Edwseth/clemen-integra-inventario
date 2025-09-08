@@ -340,8 +340,6 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(Optional.of(motivo));
         when(tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION"))
                 .thenReturn(Optional.of(detalle));
-        when(loteProductoRepository.findDisponiblesFifo(100L)).thenReturn(List.of(lote1));
-        when(loteProductoRepository.findDisponiblesFifo(200L)).thenReturn(List.of(lote2));
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
         when(solicitudMovimientoRepository.findWithDetalles(1L, null, null, null)).thenReturn(List.of());
         when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -425,7 +423,6 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(Optional.of(motivo));
         when(tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION"))
                 .thenReturn(Optional.of(detalle));
-        when(loteProductoRepository.findDisponiblesFifo(100L)).thenReturn(List.of(lote));
 
         assertThrows(ResponseStatusException.class, () -> service.iniciarEtapa(1L, 2L));
         verify(movimientoInventarioService, never()).registrarMovimiento(any());

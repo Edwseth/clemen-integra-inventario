@@ -182,46 +182,50 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             final boolean esJefeAlmacenes = usuario.getRol() == RolUsuario.ROL_JEFE_ALMACENES;
             final boolean tieneRolPrivilegiado = esJefeAlmacenes || usuario.getRol() == RolUsuario.ROL_SUPER_ADMIN;
 
-            // 1) Ya ejecutada → 409
-            if (solicitud.getEstado() == EstadoSolicitudMovimiento.EJECUTADA) {
+            // 1) Ya resuelta → 409
+            if (solicitud.getEstado() == EstadoSolicitudMovimiento.EJECUTADA
+                    || solicitud.getEstado() == EstadoSolicitudMovimiento.ATENDIDA
+                    || solicitud.getEstado() == EstadoSolicitudMovimiento.CANCELADA) {
                 log.warn("SOLICITUD_RESUELTA: solId={}, estado={}, responsableId={}, userActual={}",
                         solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "SOLICITUD_RESUELTA");
             }
 
-            // 2) Estado no aprobado → 422 (whitelist explícita: AUTORIZADA)
-            if (solicitud.getEstado() == EstadoSolicitudMovimiento.PENDIENTE && tieneRolPrivilegiado) {
-                solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
-                log.info("SOLICITUD_AUTO_AUTORIZADA: solId={}, userActual={}",
-                        solicitud.getId(), userActualId);
-            } else if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
-                log.warn("ESTADO_NO_APROBADO: solId={}, estado={}, responsableId={}, userActual={}",
-                        solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
-                throw new ResponseStatusException(
-                        HttpStatus.UNPROCESSABLE_ENTITY,
-                        "ESTADO_NO_APROBADO: la solicitud aún no está autorizada"
-                );
-            }
-
-            // 3) Responsable requerido → 422 o asignación automática
-            if (responsableId == null) {
-                if (esJefeAlmacenes) {
-                    solicitud.setUsuarioResponsable(usuario);
-                    responsableId = userActualId;
-                    log.info("RESPONSABLE_AUTOASIGNADO: solId={}, responsableId={}, userActual={}",
-                            solicitud.getId(), responsableId, userActualId);
-                } else {
-                    log.warn("RESPONSABLE_REQUERIDO: solId={}, responsableId={}, userActual={}",
-                            solicitud.getId(), null, userActualId);
-                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESPONSABLE_REQUERIDO");
+            // 2) Si es reserva, saltar validaciones de aprobación
+            if (solicitud.getEstado() != EstadoSolicitudMovimiento.RESERVADA) {
+                if (solicitud.getEstado() == EstadoSolicitudMovimiento.PENDIENTE && tieneRolPrivilegiado) {
+                    solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
+                    log.info("SOLICITUD_AUTO_AUTORIZADA: solId={}, userActual={}",
+                            solicitud.getId(), userActualId);
+                } else if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
+                    log.warn("ESTADO_NO_APROBADO: solId={}, estado={}, responsableId={}, userActual={}",
+                            solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
+                    throw new ResponseStatusException(
+                            HttpStatus.UNPROCESSABLE_ENTITY,
+                            "ESTADO_NO_APROBADO: la solicitud aún no está autorizada"
+                    );
                 }
-            }
 
-            // 4) Usuario debe ser el responsable o tener rol privilegiado → 403
-            if (!responsableId.equals(userActualId) && !tieneRolPrivilegiado) {
-                log.warn("USUARIO_NO_AUTORIZADO: solId={}, responsableId={}, userActual={}",
-                        solicitud.getId(), responsableId, userActualId);
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "USUARIO_NO_AUTORIZADO");
+                // 3) Responsable requerido → 422 o asignación automática
+                if (responsableId == null) {
+                    if (esJefeAlmacenes) {
+                        solicitud.setUsuarioResponsable(usuario);
+                        responsableId = userActualId;
+                        log.info("RESPONSABLE_AUTOASIGNADO: solId={}, responsableId={}, userActual={}",
+                                solicitud.getId(), responsableId, userActualId);
+                    } else {
+                        log.warn("RESPONSABLE_REQUERIDO: solId={}, responsableId={}, userActual={}",
+                                solicitud.getId(), null, userActualId);
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESPONSABLE_REQUERIDO");
+                    }
+                }
+
+                // 4) Usuario debe ser el responsable o tener rol privilegiado → 403
+                if (!responsableId.equals(userActualId) && !tieneRolPrivilegiado) {
+                    log.warn("USUARIO_NO_AUTORIZADO: solId={}, responsableId={}, userActual={}",
+                            solicitud.getId(), responsableId, userActualId);
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "USUARIO_NO_AUTORIZADO");
+                }
             }
         }
 
@@ -276,7 +280,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             lote = crearLoteRecepcion(dto, producto, almacenDestino, usuario, cantidad, motivoMovimiento);
         } else {
             lote = procesarMovimientoConLoteExistente(dto, tipoMovimiento, almacenOrigen,
-                    almacenDestino, producto, cantidad, devolucionInterna);
+                    almacenDestino, producto, cantidad, devolucionInterna, solicitud);
         }
 
         OrdenCompraDetalle ordenCompraDetalle = actualizarOrdenCompraDetalle(dto, cantidad);
@@ -309,7 +313,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         MovimientoInventario guardado = repository.save(movimiento);
         if (solicitud != null) {
-            solicitud.setEstado(EstadoSolicitudMovimiento.EJECUTADA);
+            if (solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA) {
+                solicitud.setEstado(EstadoSolicitudMovimiento.ATENDIDA);
+            } else {
+                solicitud.setEstado(EstadoSolicitudMovimiento.EJECUTADA);
+            }
             solicitudMovimientoRepository.save(solicitud);
         }
         return mapper.safeToResponseDTO(guardado);
@@ -533,7 +541,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                                             Almacen destino,
                                                             Producto producto,
                                                             BigDecimal cantidad,
-                                                            boolean devolucionInterna) {
+                                                            boolean devolucionInterna,
+                                                            SolicitudMovimiento solicitud) {
         if (dto.loteProductoId() == null) {
             log.warn(
                     "procesarMovimientoConLoteExistente: falta loteProductoId tipo={} productoId={} origenId={} destinoId={} cantidad={}",
@@ -573,16 +582,45 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
 
-        if (loteOrigen.getStockLote().compareTo(cantidad) < 0) {
-            log.warn("Stock insuficiente en lote: loteId={} disponible={} solicitado={} productoId={}",
-                    loteOrigen.getId(), loteOrigen.getStockLote(), cantidad, producto.getId());
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
+        BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
+        if (solicitud != null && solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA) {
+            if (reservadoActual.compareTo(cantidad) < 0) {
+                log.warn("RESERVA_INSUFICIENTE: loteId={} reservado={} solicitado={} productoId={}",
+                        loteOrigen.getId(), reservadoActual, cantidad, producto.getId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_INSUFICIENTE");
+            }
+        } else {
+            BigDecimal disponible = loteOrigen.getStockLote().subtract(reservadoActual);
+            if (disponible.compareTo(cantidad) < 0) {
+                log.warn("Stock insuficiente en lote: loteId={} disponible={} solicitado={} productoId={}",
+                        loteOrigen.getId(), disponible, cantidad, producto.getId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
+            }
         }
 
         if (tipo == TipoMovimiento.SALIDA) {
             log.debug("MOV-SALIDA descontando prod={}, qty={}, opId={}",
                     dto.productoId(), cantidad, dto.ordenProduccionId());
             loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidad));
+            if (solicitud != null && solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA) {
+                loteOrigen.setStockReservado(reservadoActual.subtract(cantidad));
+            }
+            if (loteOrigen.getStockLote().compareTo(BigDecimal.ZERO) <= 0) {
+                loteOrigen.setAgotado(true);
+                if (loteOrigen.getFechaAgotado() == null) {
+                    loteOrigen.setFechaAgotado(LocalDateTime.now());
+                }
+            }
+            return loteProductoRepository.save(loteOrigen);
+        }
+
+        if (tipo == TipoMovimiento.ENTRADA) {
+            BigDecimal nuevo = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
+            loteOrigen.setStockLote(nuevo);
+            if (loteOrigen.isAgotado() && nuevo.compareTo(BigDecimal.ZERO) > 0) {
+                loteOrigen.setAgotado(false);
+                loteOrigen.setFechaAgotado(null);
+            }
             return loteProductoRepository.save(loteOrigen);
         }
 

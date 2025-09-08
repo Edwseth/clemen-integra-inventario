@@ -4,5 +4,8 @@ public enum EstadoSolicitudMovimiento {
     PENDIENTE,
     AUTORIZADA,
     RECHAZADO,
-    EJECUTADA
+    EJECUTADA,
+    RESERVADA,
+    ATENDIDA,
+    CANCELADA
 }
