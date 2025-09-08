@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -22,6 +23,7 @@ public class InventarioConsultaServiceImpl implements InventarioConsultaService 
     private final ProductoService productoService;
 
     @Override
+    @Transactional(readOnly = true)
     public DisponibilidadProductoResponseDTO obtenerDisponibilidadPorProducto(Long productoId) {
         Producto producto = productoService.findById(productoId);
 
