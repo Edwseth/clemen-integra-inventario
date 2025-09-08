@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -44,7 +45,7 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             "GROUP BY lp.estado")
     List<Object[]> sumarStockPorEstado(@Param("productoId") Long productoId);
 
-    @jakarta.persistence.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("""
     SELECT l FROM LoteProducto l
     WHERE l.producto.id = :productoId
