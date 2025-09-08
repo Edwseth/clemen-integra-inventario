@@ -492,7 +492,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
 
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
-        log.debug("OP-ETAPA iniciar ordenId={}, secuencia={}, user={}", ordenId, etapa.getSecuencia(), usuario.getId());
+        log.debug("OP-reserva iniciar ordenId={}, user={}", ordenId, usuario.getId());
 
         MotivoMovimiento motivo = motivoMovimientoRepository
                 .findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
