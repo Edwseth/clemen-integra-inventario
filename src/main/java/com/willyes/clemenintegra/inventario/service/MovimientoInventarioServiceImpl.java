@@ -113,6 +113,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 : null;
 
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
+        ClasificacionMovimientoInventario clasificacion = dto.clasificacionMovimientoInventario();
+
+        log.debug("MOV-REQ tipo={}, clasificacion={}, prod={}, qty={}, opId={}",
+                tipoMovimiento, clasificacion, dto.productoId(), dto.cantidad(), dto.ordenProduccionId());
+
+        if (clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                && tipoMovimiento != TipoMovimiento.SALIDA) {
+            log.warn("INCONSISTENT_MOVEMENT: tipo={}, clasificacion={}, opId={}",
+                    tipoMovimiento, clasificacion, dto.ordenProduccionId());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "INCONSISTENT_MOVEMENT: SALIDA_PRODUCCION requiere tipoMovimiento=SALIDA");
+        }
 
         SolicitudMovimiento solicitud = null;
         if (dto.solicitudMovimientoId() != null) {
@@ -272,7 +284,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             ordenCompraService.evaluarYActualizarEstado(orden);
         }
 
-        actualizarStockProducto(producto, tipoMovimiento, cantidad, devolucionInterna);
+        actualizarStockProducto(producto, tipoMovimiento, cantidad, devolucionInterna, dto.ordenProduccionId());
         productoRepository.save(producto);
 
         // 6. Asociar entidades al movimiento
@@ -568,6 +580,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         if (tipo == TipoMovimiento.SALIDA) {
+            log.debug("MOV-SALIDA descontando prod={}, qty={}, opId={}",
+                    dto.productoId(), cantidad, dto.ordenProduccionId());
             loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidad));
             return loteProductoRepository.save(loteOrigen);
         }
@@ -671,7 +685,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private void actualizarStockProducto(Producto producto, TipoMovimiento tipo, BigDecimal cantidad,
-                                         boolean devolucionInterna) {
+                                         boolean devolucionInterna, Long ordenProduccionId) {
         switch (tipo) {
             case ENTRADA, RECEPCION, AJUSTE ->
                     producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
@@ -680,8 +694,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
                 }
             }
-            case SALIDA ->
+            case SALIDA -> {
+                    log.debug("MOV-SALIDA descontando prod={}, qty={}, opId={}",
+                            producto.getId(), cantidad, ordenProduccionId);
                     producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
+            }
             case TRANSFERENCIA -> {
                 // No afecta stock global
             }

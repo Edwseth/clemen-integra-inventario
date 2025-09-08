@@ -7,9 +7,14 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +22,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -126,6 +134,83 @@ class MovimientoInventarioServiceImplTest {
         assertSame(loteOrigen, result);
         assertEquals(EstadoLote.RECHAZADO, result.getEstado());
         assertEquals(destino, result.getAlmacen());
+    }
+
+    @Test
+    void salidaProduccionDescuentaStock() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("user", "pass"));
+
+        Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
+        Producto producto = Producto.builder().id(1).stockActual(new BigDecimal("10"))
+                .categoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto()).build();
+        LoteProducto lote = LoteProducto.builder()
+                .id(100L)
+                .producto(producto)
+                .almacen(origen)
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(new BigDecimal("10"))
+                .build();
+        Usuario usuario = new Usuario(); usuario.setId(1L);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("3"), TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
+                producto.getId(), lote.getId(), origen.getId(), null,
+                null, null, null, 1L, 1L, null,
+                usuario.getId(), null, null, null, null);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
+        when(entityManager.getReference(Usuario.class, usuario.getId())).thenReturn(usuario);
+        when(entityManager.getReference(TipoMovimientoDetalle.class, 1L)).thenReturn(new TipoMovimientoDetalle());
+        when(entityManager.getReference(MotivoMovimiento.class, 1L)).thenReturn(new MotivoMovimiento());
+        when(motivoMovimientoRepository.findById(1L)).thenReturn(Optional.of(new MotivoMovimiento()));
+        when(loteProductoRepository.findById(lote.getId())).thenReturn(Optional.of(lote));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(movimientoInventarioMapper.toEntity(dto)).thenReturn(new MovimientoInventario());
+        when(movimientoInventarioMapper.safeToResponseDTO(any())).thenReturn(new com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO());
+        when(movimientoInventarioRepository.save(any(MovimientoInventario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productoRepository.save(any(Producto.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.registrarMovimiento(dto);
+
+        assertEquals(new BigDecimal("7"), producto.getStockActual());
+        assertEquals(new BigDecimal("7"), lote.getStockLote());
+    }
+
+    @Test
+    void clasificacionSalidaProduccionConTipoInvalidoLanza422() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("user", "pass"));
+
+        Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
+        Producto producto = Producto.builder().id(1).stockActual(new BigDecimal("10"))
+                .categoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto()).build();
+        LoteProducto lote = LoteProducto.builder()
+                .id(100L)
+                .producto(producto)
+                .almacen(origen)
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(new BigDecimal("10"))
+                .build();
+        Usuario usuario = new Usuario(); usuario.setId(1L);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("3"), TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
+                producto.getId(), lote.getId(), origen.getId(), null,
+                null, null, null, 1L, 1L, null,
+                usuario.getId(), null, null, null, null);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
+        when(entityManager.getReference(Usuario.class, usuario.getId())).thenReturn(usuario);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarMovimiento(dto));
+        assertEquals(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(new BigDecimal("10"), producto.getStockActual());
+        assertEquals(new BigDecimal("10"), lote.getStockLote());
     }
 }
 

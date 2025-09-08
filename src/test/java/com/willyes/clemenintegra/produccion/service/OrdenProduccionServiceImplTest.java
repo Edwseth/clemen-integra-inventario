@@ -20,6 +20,7 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
@@ -354,6 +355,8 @@ class OrdenProduccionServiceImplTest {
         assertEquals(BigDecimal.valueOf(2), movs.get(1).cantidad());
         assertTrue(movs.stream().allMatch(m -> m.ordenProduccionId().equals(1L)));
         assertTrue(movs.stream().allMatch(m -> m.usuarioId().equals(5L)));
+        assertTrue(movs.stream().allMatch(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA));
+        assertTrue(movs.stream().allMatch(m -> m.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.SALIDA_PRODUCCION));
     }
 
     @Test
