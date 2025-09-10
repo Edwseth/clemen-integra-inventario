@@ -58,30 +58,13 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
-
-    @Value("${inventory.almacen.pt.id}")
-    private Long almacenPtId;
-
-    @Value("${inventory.almacen.cuarentena.id}")
-    private Long almacenCuarentenaId;
-
-    @Value("${inventory.motivo.transferenciaCalidad}")
-    private String motivoTransferenciaCalidad;
-
-    @Value("${inventory.tipoDetalle.transferenciaId}")
-    private Long tipoDetalleTransferenciaId;
+    private final InventoryCatalogResolver catalogResolver;
 
     @Value("${inventory.lote.estadoLiberado}")
     private String estadoLiberadoConf;
 
     @Value("${inventory.mov.clasificacion.liberacionCalidad}")
     private String clasificacionLiberacionConf;
-
-    @Value("${inventory.almacen.obsoletos.id}")
-    private Long almacenObsoletosId;
-
-    @Value("${inventory.motivo.rechazoCalidad}")
-    private String motivoRechazoCalidad;
 
     @Value("${inventory.mov.clasificacion.rechazoCalidad}")
     private String clasificacionRechazoCalidad;
@@ -338,15 +321,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_RECHAZO_INVALIDA");
         }
 
-        ClasificacionMovimientoInventario motivoClasif;
-        try {
-            motivoClasif = ClasificacionMovimientoInventario.valueOf(motivoRechazoCalidad);
-        } catch (IllegalArgumentException ex) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE");
-        }
-
-        MotivoMovimiento motivo = motivoMovimientoRepository.findByMotivo(motivoClasif)
+        Long motivoId = catalogResolver.getMotivoIdTransferenciaCalidad();
+        MotivoMovimiento motivo = motivoMovimientoRepository.findById(motivoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE"));
+        Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
         TipoMovimientoDetalle tipoDetalle = tipoMovimientoDetalleRepository.findById(tipoDetalleTransferenciaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_TRANSFERENCIA_INEXISTENTE"));
 
@@ -354,6 +332,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lote no encontrado"));
         validarEvaluacionesExistentes(id);
 
+        Long almacenObsoletosId = catalogResolver.getAlmacenObsoletosId();
+        Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
         if (lote.getAlmacen().getId().equals(almacenObsoletosId) && lote.getEstado() == EstadoLote.RECHAZADO) {
             boolean movExistente = movimientoInventarioRepository
                     .existsByTipoMovimientoAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoIdAndClasificacion(
@@ -438,21 +418,18 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_LIBERACION_INVALIDA");
         }
 
-        ClasificacionMovimientoInventario motivoClasif;
-        try {
-            motivoClasif = ClasificacionMovimientoInventario.valueOf(motivoTransferenciaCalidad);
-        } catch (IllegalArgumentException ex) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE");
-        }
-
-        MotivoMovimiento motivo = motivoMovimientoRepository.findByMotivo(motivoClasif)
+        Long motivoId = catalogResolver.getMotivoIdTransferenciaCalidad();
+        MotivoMovimiento motivo = motivoMovimientoRepository.findById(motivoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE"));
+        Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
         TipoMovimientoDetalle tipoDetalle = tipoMovimientoDetalleRepository.findById(tipoDetalleTransferenciaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_TRANSFERENCIA_INEXISTENTE"));
 
         LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lote no encontrado"));
 
+        Long almacenPtId = catalogResolver.getAlmacenPtId();
+        Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
         if (lote.getAlmacen().getId().equals(almacenPtId)
                 && lote.getEstado() == estadoLiberado
                 && lote.getFechaLiberacion() != null
