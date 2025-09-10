@@ -513,6 +513,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findById(motivoEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
 
+            ClasificacionMovimientoInventario clasifEntrada = motivoEntrada.getMotivo();
+
             Long tipoDetalleEntradaId = catalogResolver.getTipoDetalleEntradaId();
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
