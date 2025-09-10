@@ -70,6 +70,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Arrays;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -115,6 +116,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Value("${inventory.tipoDetalle.entradaId}")
     private Long tipoDetalleEntradaId;
 
+    @Value("${inventory.solicitud.estados.pendientes}")
+    private String estadosSolicitudPendientesConf;
+
+    @Value("${inventory.solicitud.estados.concluyentes}")
+    private String estadosSolicitudConcluyentesConf;
+
+    @Value("${inventory.motivo.devolucionDesdeProduccion}")
+    private String motivoDevolucionDesdeProduccion;
+
+    @Value("${inventory.tipoDetalle.salidaId}")
+    private Long tipoDetalleSalidaId;
+
+    @Value("${inventory.tipoDetalle.transferenciaId:#{null}}")
+    private Long tipoDetalleTransferenciaId;
+
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefijo = "OP-CLEMEN-" + fecha;
@@ -158,6 +174,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 : "";
         iniciales = iniciales.substring(0, Math.min(3, iniciales.length()));
         return prefijo + String.format("%02d", consecutivo) + "-" + iniciales;
+    }
+
+    private List<EstadoSolicitudMovimiento> parseEstados(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ESTADOS_SOLICITUD_NO_CONFIGURADOS");
+        }
+        try {
+            return Arrays.stream(raw.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(EstadoSolicitudMovimiento::valueOf)
+                    .toList();
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ESTADOS_SOLICITUD_NO_CONFIGURADOS");
+        }
     }
 
     @Transactional
@@ -372,6 +403,78 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             if (orden.getId() == null) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_PRODUCCION_OBLIGATORIA");
+            }
+
+            List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
+            parseEstados(estadosSolicitudConcluyentesConf);
+
+            ClasificacionMovimientoInventario clasifDev;
+            try {
+                clasifDev = ClasificacionMovimientoInventario.valueOf(motivoDevolucionDesdeProduccion);
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_DEVOLUCION_DESDE_PRODUCCION_INEXISTENTE");
+            }
+
+            MotivoMovimiento motivoDevolucion = motivoMovimientoRepository.findByMotivo(clasifDev)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_DEVOLUCION_DESDE_PRODUCCION_INEXISTENTE"));
+
+            List<SolicitudMovimiento> solicitudesPend = Optional.ofNullable(
+                    solicitudMovimientoRepository.findWithDetalles(orden.getId(), estadosPendientes, null, null)
+            ).orElse(List.of());
+
+            List<Map<String, Object>> pendientes = new ArrayList<>();
+
+            for (SolicitudMovimiento sol : solicitudesPend) {
+                for (SolicitudMovimientoDetalle det : sol.getDetalles()) {
+                    if (det.getLote() == null || det.getLote().getProducto() == null) {
+                        continue;
+                    }
+                    Long prodId = det.getLote().getProducto().getId().longValue();
+                    Long loteId = det.getLote().getId();
+
+                    BigDecimal salida = movimientoInventarioRepository.sumaPorSolicitudYTipo(
+                            sol.getId(), prodId, loteId, TipoMovimiento.SALIDA, tipoDetalleSalidaId, null);
+                    if (tipoDetalleTransferenciaId != null) {
+                        salida = salida.add(movimientoInventarioRepository.sumaPorSolicitudYTipo(
+                                sol.getId(), prodId, loteId, TipoMovimiento.TRANSFERENCIA, tipoDetalleTransferenciaId, null));
+                    }
+                    BigDecimal devolucion = movimientoInventarioRepository.sumaPorSolicitudYTipo(
+                            sol.getId(), prodId, loteId, TipoMovimiento.DEVOLUCION, null, motivoDevolucion.getId());
+
+                    BigDecimal movido = salida.add(devolucion);
+                    BigDecimal faltante = det.getCantidad().subtract(movido);
+                    if (faltante.compareTo(BigDecimal.ZERO) > 0) {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("solicitudId", sol.getId());
+                        item.put("detalleId", det.getId());
+                        item.put("productoId", prodId);
+                        item.put("loteId", loteId);
+                        item.put("solicitado", det.getCantidad());
+                        item.put("movido", movido);
+                        item.put("faltante", faltante);
+                        pendientes.add(item);
+                    }
+                }
+            }
+
+            if (!pendientes.isEmpty()) {
+                Map<String, Object> body = Map.of("detalles", pendientes.stream().limit(20).toList());
+                log.warn("OP-cierre reservas pendientes op={}, detallesPendientes={}", orden.getId(), pendientes.size());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVAS_PENDIENTES_OP", null, body);
+            }
+
+            if (solicitudesPend.isEmpty()) {
+                List<SolicitudMovimiento> todas = Optional.ofNullable(
+                        solicitudMovimientoRepository.findWithDetalles(orden.getId(), null, null, null)
+                ).orElse(List.of());
+                long lotesConReserva = todas.stream()
+                        .flatMap(s -> s.getDetalles().stream())
+                        .map(SolicitudMovimientoDetalle::getLote)
+                        .filter(l -> l != null && l.getStockReservado() != null && l.getStockReservado().compareTo(BigDecimal.ZERO) > 0)
+                        .count();
+                if (lotesConReserva > 0) {
+                    log.warn("OP-cierre stock_reservado sin solicitud pendiente op={}, lotes={}", orden.getId(), lotesConReserva);
+                }
             }
 
             ClasificacionMovimientoInventario clasifEntrada;
