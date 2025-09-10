@@ -11,6 +11,8 @@ import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepo
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
+import com.willyes.clemenintegra.inventario.service.StockQueryService;
+import com.willyes.clemenintegra.inventario.service.UmValidator;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
@@ -61,7 +63,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.mock.env.MockEnvironment;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -98,20 +99,17 @@ class OrdenProduccionServiceImplTest {
     @Mock UsuarioService usuarioService;
     @Mock SolicitudMovimientoRepository solicitudMovimientoRepository;
     @Mock InventoryCatalogResolver catalogResolver;
+    @Mock StockQueryService stockQueryService;
+    @Mock UmValidator umValidator;
 
     OrdenProduccionServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        MockEnvironment env = new MockEnvironment();
-        env.setProperty("inventory.quantities.roundingPolicy", "REJECT");
-        env.setProperty("inventory.um.decimales.G", "2");
-        env.setProperty("inventory.um.decimales.KG", "3");
-        env.setProperty("inventory.um.decimales.UND", "0");
-
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
                 productoRepository,
+                stockQueryService,
                 usuarioRepository,
                 solicitudMovimientoService,
                 repository,
@@ -128,9 +126,12 @@ class OrdenProduccionServiceImplTest {
                 movimientoInventarioMapper,
                 usuarioService,
                 solicitudMovimientoRepository,
-                env,
-                catalogResolver
+                catalogResolver,
+                umValidator
         );
+
+        when(umValidator.ajustar(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(umValidator.getRoundingMode()).thenReturn(java.math.RoundingMode.HALF_UP);
 
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA,RESERVADA");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDA,EJECUTADA,CANCELADA,RECHAZADO");
