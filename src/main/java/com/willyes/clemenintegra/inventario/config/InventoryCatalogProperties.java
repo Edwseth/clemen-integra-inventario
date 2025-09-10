@@ -13,6 +13,8 @@ public class InventoryCatalogProperties {
     private final Motivo motivo = new Motivo();
     private final TipoDetalle tipoDetalle = new TipoDetalle();
     private final Produccion produccion = new Produccion();
+    private final Mov mov = new Mov();
+    private final Um um = new Um();
 
     @Data
     public static class Almacen {
@@ -47,7 +49,6 @@ public class InventoryCatalogProperties {
         private String entradaPt;
         private String transferenciaCalidad;
         private String devolucionDesdeProduccion;
-        private String ajusteRechazo;
     }
 
     @Data
@@ -55,5 +56,27 @@ public class InventoryCatalogProperties {
         private Long entradaId;
         private Long transferenciaId;
         private Long salidaId;
+    }
+
+    @Data
+    public static class Mov {
+        private final MotivoMov motivo = new MotivoMov();
+
+        @Data
+        public static class MotivoMov {
+            private Long ajusteRechazo;
+        }
+    }
+
+    @Data
+    public static class Um {
+        private final Decimales decimales = new Decimales();
+        private String redondeo;
+    }
+
+    @Data
+    public static class Decimales {
+        private int min;
+        private int max;
     }
 }

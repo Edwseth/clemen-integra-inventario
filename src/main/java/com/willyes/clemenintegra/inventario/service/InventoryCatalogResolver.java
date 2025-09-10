@@ -46,9 +46,9 @@ public class InventoryCatalogResolver {
         motivoEntradaPtId = resolveMotivo(properties.getMotivo().getEntradaPt());
         motivoTransferenciaCalidadId = resolveMotivo(properties.getMotivo().getTransferenciaCalidad());
         motivoDevolucionDesdeProduccionId = resolveMotivo(properties.getMotivo().getDevolucionDesdeProduccion());
-        String ajuste = properties.getMotivo().getAjusteRechazo();
-        if (ajuste != null && !ajuste.isBlank()) {
-            motivoAjusteRechazoId = resolveMotivo(ajuste);
+        Long ajusteId = properties.getMov().getMotivo().getAjusteRechazo();
+        if (ajusteId != null) {
+            motivoAjusteRechazoId = validateMotivo(ajusteId);
         }
 
         tipoDetalleEntradaId = validateTipoDetalle(properties.getTipoDetalle().getEntradaId());
@@ -71,6 +71,13 @@ public class InventoryCatalogResolver {
     private Long validateTipoDetalle(Long id) {
         if (id == null || !tipoDetalleRepository.existsById(id)) {
             throw new IllegalStateException("CONFIG_TIPO_DETALLE_INEXISTENTE (id=" + id + ")");
+        }
+        return id;
+    }
+
+    private Long validateMotivo(Long id) {
+        if (id == null || !motivoRepository.existsById(id)) {
+            throw new IllegalStateException("CONFIG_MOTIVO_INEXISTENTE (id=" + id + ")");
         }
         return id;
     }

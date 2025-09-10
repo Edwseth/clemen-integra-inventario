@@ -21,6 +21,7 @@ import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.service.UnidadConversionService;
+import com.willyes.clemenintegra.inventario.service.UmValidator;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
@@ -65,7 +66,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.http.ProblemDetail;
-import org.springframework.core.env.Environment;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -107,8 +107,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final MovimientoInventarioMapper movimientoInventarioMapper;
     private final UsuarioService usuarioService;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
-    private final Environment environment;
     private final InventoryCatalogResolver catalogResolver;
+    private final UmValidator umValidator;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -177,36 +177,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
         }
 
-        String policy = environment.getProperty("inventory.quantities.roundingPolicy", "REJECT");
-        boolean floor = "FLOOR".equalsIgnoreCase(policy);
-
         String umCodigo = Optional.ofNullable(producto.getUnidadMedida().getSimbolo())
                 .orElse(producto.getUnidadMedida().getNombre());
         if (umCodigo == null) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
         }
-        Integer umDec = environment.getProperty("inventory.um.decimales." + umCodigo.toUpperCase(), Integer.class);
-        if (umDec == null) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
-        }
 
-        BigDecimal cantidad = cantidadOriginal;
-        if (cantidad.scale() > umDec) {
-            if (floor) {
-                cantidad = cantidad.setScale(umDec, RoundingMode.DOWN);
-            } else {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "UM_DECIMALES_EXCEDIDOS");
-            }
-        }
+        BigDecimal cantidad = umValidator.ajustar(cantidadOriginal);
+        RoundingMode redondeo = umValidator.getRoundingMode();
 
-        BigDecimal cantidadLote = cantidad;
-        if (cantidadLote.scale() > 2) {
-            if (floor) {
-                cantidadLote = cantidadLote.setScale(2, RoundingMode.DOWN);
-            } else {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ESCALA_LOTE_EXCEDIDA");
-            }
-        }
+        BigDecimal cantidadLote = cantidad.setScale(2, redondeo);
         int enterosLote = cantidadLote.precision() - cantidadLote.scale();
         if (enterosLote > 8) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRECISION_LOTE_EXCEDIDA");
@@ -218,8 +198,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRECISION_MOV_EXCEDIDA");
         }
 
-        log.info("OP-cierre validarCantidad prod={}, um={}, decPermitidos={}, recibida={}, final={}, policy={}",
-                producto.getId(), umCodigo, umDec, cantidadOriginal, cantidadLote, policy);
+        log.info("OP-cierre validarCantidad prod={}, um={}, recibida={}, final={}, modo={}"
+                , producto.getId(), umCodigo, cantidadOriginal, cantidadLote, redondeo);
 
         return cantidadLote;
     }
