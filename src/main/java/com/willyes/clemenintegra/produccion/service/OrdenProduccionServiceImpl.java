@@ -346,6 +346,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     @Transactional
+    @Transactional
     public OrdenProduccion registrarCierre(Long id, CierreProduccionRequestDTO dto) {
         try {
             OrdenProduccion orden = repository.findById(id)
@@ -357,9 +358,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_CERRABLE");
             }
 
-            if (dto.getCantidad() == null || dto.getCantidad().compareTo(BigDecimal.ZERO) <= 0) {
+            if (dto.getCantidad() == null) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
             }
+
+            BigDecimal cantidad = dto.getCantidad().setScale(2, RoundingMode.DOWN);
+            if (cantidad.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+            }
+            dto.setCantidad(cantidad);
 
             BigDecimal programada = orden.getCantidadProgramada();
             BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
@@ -367,11 +374,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             if (restante.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SIN_CANTIDAD_RESTANTE");
             }
-            if (dto.getCantidad().compareTo(restante) > 0) {
+            if (cantidad.compareTo(restante) > 0) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_EXCEDE_RESTANTE");
             }
 
-            BigDecimal nuevaAcumulada = acumulada.add(dto.getCantidad());
+            BigDecimal nuevaAcumulada = acumulada.add(cantidad);
 
             if (dto.getTipo() == TipoCierre.PARCIAL) {
                 if (nuevaAcumulada.compareTo(programada) > 0) {
@@ -432,29 +439,72 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
             }
 
+            LocalDateTime fechaFabricacion = dto.getFechaFabricacion();
+            if (fechaFabricacion == null || fechaFabricacion.isAfter(LocalDateTime.now())) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
+            }
+            LocalDateTime fechaVencimiento = dto.getFechaVencimiento();
+            if (fechaVencimiento != null && fechaVencimiento.isBefore(fechaFabricacion)) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
+            }
+
             LoteProducto lote = loteProductoRepository
-                    .findByCodigoLoteAndProductoId(orden.getLoteProduccion(), orden.getProducto().getId().longValue())
+                    .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
                     .orElse(null);
 
-            if (lote != null) {
-                if (!lote.getAlmacen().getId().equals(destino.getId()) || lote.getEstado() != estadoLote) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_PT_YA_EXISTE");
+            String codigoLote = dto.getCodigoLote();
+            if (lote == null) {
+                if (codigoLote != null && !codigoLote.isBlank()) {
+                    Optional<LoteProducto> existente = loteProductoRepository.findByCodigoLote(codigoLote);
+                    if (existente.isPresent()) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
+                    }
+                    orden.setLoteProduccion(codigoLote);
+                } else {
+                    codigoLote = Optional.ofNullable(orden.getLoteProduccion())
+                            .orElseGet(() -> {
+                                String gen = generarCodigoLote(orden.getProducto());
+                                orden.setLoteProduccion(gen);
+                                return gen;
+                            });
                 }
-                lote.setStockLote(lote.getStockLote().add(dto.getCantidad()));
-            } else {
+
                 lote = LoteProducto.builder()
-                        .codigoLote(orden.getLoteProduccion())
+                        .codigoLote(codigoLote)
                         .producto(orden.getProducto())
                         .almacen(destino)
                         .estado(estadoLote)
-                        .stockLote(dto.getCantidad())
-                        .stockReservado(BigDecimal.ZERO)
-                        .agotado(false)
-                        .fechaFabricacion(LocalDateTime.now())
+                        .stockLote(cantidad)
+                        .fechaFabricacion(fechaFabricacion)
+                        .fechaVencimiento(fechaVencimiento)
                         .ordenProduccion(orden)
                         .build();
+            } else {
+                if (!lote.getAlmacen().getId().equals(destino.getId()) || lote.getEstado() != estadoLote) {
+                    log.warn("Lote PT incompatible op={}, producto={}, loteId={}, almacenId={}, estadoLote={}, destino={}, estadoDestino={}",
+                            orden.getId(), orden.getProducto().getId(), lote.getId(), lote.getAlmacen().getId(), lote.getEstado(), destino.getId(), estadoLote);
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_PT_INCOMPATIBLE");
+                }
+                if (codigoLote != null && lote.getCodigoLote() != null && !lote.getCodigoLote().equals(codigoLote)) {
+                    Optional<LoteProducto> existente = loteProductoRepository.findByCodigoLote(codigoLote);
+                    if (existente.isPresent() && !existente.get().getId().equals(lote.getId())) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
+                    }
+                } else if (lote.getCodigoLote() == null && codigoLote != null) {
+                    lote.setCodigoLote(codigoLote);
+                }
+                lote.setStockLote(lote.getStockLote().add(cantidad).setScale(2, RoundingMode.DOWN));
+                if (lote.getFechaFabricacion() == null) {
+                    lote.setFechaFabricacion(fechaFabricacion);
+                }
+                if (fechaVencimiento != null) {
+                    lote.setFechaVencimiento(fechaVencimiento);
+                }
+                codigoLote = lote.getCodigoLote();
             }
             loteProductoRepository.save(lote);
+            log.info("OP-cierre lote op={}, producto={}, loteId={}, codigoLote={}, cantidad={}, fechaFabricacion={}, fechaVencimiento={}, almacenId={}, estado={}, usuario={}",
+                    orden.getId(), orden.getProducto().getId(), lote.getId(), codigoLote, cantidad, fechaFabricacion, fechaVencimiento, destino.getId(), estadoLote, usuario.getId());
 
             ClasificacionMovimientoInventario clasifEntrada;
             try {
@@ -482,7 +532,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
                     null,
-                    dto.getCantidad(),
+                    cantidad,
                     TipoMovimiento.ENTRADA,
                     clasifEntrada,
                     orden.getCodigoOrden(),
@@ -504,7 +554,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             );
             movimientoInventarioService.registrarMovimiento(movDto);
             log.info("OP-cierre entrada PT op={}, producto={}, lote={}, cantidad={}, usuario={}, destino={}, motivoId={}, tipoDetalleId={}",
-                    orden.getId(), orden.getProducto().getId(), lote.getId(), dto.getCantidad(), usuario.getId(), destino.getId(), motivoEntrada.getId(), tipoDetalleEntrada.getId());
+                    orden.getId(), orden.getProducto().getId(), lote.getId(), cantidad, usuario.getId(), destino.getId(), motivoEntrada.getId(), tipoDetalleEntrada.getId());
 
             return repository.save(orden);
         } catch (OptimisticLockException e) {
