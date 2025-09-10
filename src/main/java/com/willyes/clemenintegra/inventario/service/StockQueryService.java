@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,8 +22,12 @@ public class StockQueryService {
         if (ids == null || ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<StockDisponibleProjection> rows = productoRepository.calcularStockDisponiblePorProducto(ids);
+        List<StockDisponibleProjection> rows = Optional
+                .ofNullable(productoRepository.calcularStockDisponiblePorProducto(ids))
+                .orElse(Collections.emptyList());
         return rows.stream()
+                .filter(Objects::nonNull)
+                .filter(row -> row.getProductoId() != null && row.getStockDisponible() != null)
                 .collect(Collectors.toMap(StockDisponibleProjection::getProductoId,
                                           StockDisponibleProjection::getStockDisponible));
     }
