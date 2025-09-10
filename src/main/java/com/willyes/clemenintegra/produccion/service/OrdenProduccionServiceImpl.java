@@ -107,6 +107,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Value("${inventory.almacen.cuarentena.id}")
     private Long almacenCuarentenaId;
 
+    @Value("${inventory.motivo.entradaPt}")
+    private String motivoEntradaPt;
+
+    @Value("${inventory.tipoDetalle.entradaId}")
+    private Long tipoDetalleEntradaId;
+
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefijo = "OP-CLEMEN-" + fecha;
@@ -449,6 +455,56 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .build();
             }
             loteProductoRepository.save(lote);
+
+            ClasificacionMovimientoInventario clasifEntrada;
+            try {
+                clasifEntrada = ClasificacionMovimientoInventario.valueOf(motivoEntradaPt);
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE");
+            }
+
+            MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findByMotivo(clasifEntrada)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
+
+            TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
+
+            boolean yaExiste = movimientoInventarioRepository
+                    .existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
+                            TipoMovimiento.ENTRADA,
+                            orden.getProducto().getId().longValue(),
+                            lote.getId(),
+                            orden.getId()
+                    );
+            if (yaExiste) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "ENTRADA_PT_YA_REGISTRADA");
+            }
+
+            MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
+                    null,
+                    dto.getCantidad(),
+                    TipoMovimiento.ENTRADA,
+                    clasifEntrada,
+                    orden.getCodigoOrden(),
+                    orden.getProducto().getId(),
+                    lote.getId(),
+                    null,
+                    destino.getId().intValue(),
+                    null,
+                    null,
+                    motivoEntrada.getId(),
+                    tipoDetalleEntrada.getId(),
+                    null,
+                    usuario.getId(),
+                    orden.getId(),
+                    null,
+                    null,
+                    null,
+                    lote.getEstado()
+            );
+            movimientoInventarioService.registrarMovimiento(movDto);
+            log.info("OP-cierre entrada PT op={}, producto={}, lote={}, cantidad={}, usuario={}, destino={}, motivoId={}, tipoDetalleId={}",
+                    orden.getId(), orden.getProducto().getId(), lote.getId(), dto.getCantidad(), usuario.getId(), destino.getId(), motivoEntrada.getId(), tipoDetalleEntrada.getId());
 
             return repository.save(orden);
         } catch (OptimisticLockException e) {
