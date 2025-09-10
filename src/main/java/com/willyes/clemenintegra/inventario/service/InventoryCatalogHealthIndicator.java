@@ -29,7 +29,7 @@ public class InventoryCatalogHealthIndicator implements HealthIndicator {
         details.put("almacenBodegaPrincipal", checkAlmacen(resolver.getAlmacenBodegaPrincipalId()));
         details.put("almacenPreBodegaProduccion", checkAlmacen(resolver.getAlmacenPreBodegaProduccionId()));
 
-        details.put("motivoEntradaPt", checkMotivo(resolver.getMotivoIdEntradaPt()));
+        details.put("motivoEntradaPt", checkMotivo(resolver.getMotivoIdEntradaProductoTerminado()));
         details.put("motivoTransferenciaCalidad", checkMotivo(resolver.getMotivoIdTransferenciaCalidad()));
         details.put("motivoDevolucionDesdeProduccion", checkMotivo(resolver.getMotivoIdDevolucionDesdeProduccion()));
         Long ajuste = resolver.getMotivoIdAjusteRechazo();

@@ -484,7 +484,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 }
             }
 
-            Long motivoEntradaId = catalogResolver.getMotivoIdEntradaPt();
+            Long motivoEntradaId = catalogResolver.getMotivoIdEntradaProductoTerminado();
             MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findById(motivoEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
 

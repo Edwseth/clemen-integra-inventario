@@ -99,7 +99,7 @@ public class InventoryCatalogResolver {
     public Long getAlmacenBodegaPrincipalId() { return almacenBodegaPrincipalId; }
     public Long getAlmacenPreBodegaProduccionId() { return almacenPreBodegaProduccionId; }
 
-    public Long getMotivoIdEntradaPt() { return motivoEntradaPtId; }
+    public Long getMotivoIdEntradaProductoTerminado() { return motivoEntradaPtId; }
     public Long getMotivoIdTransferenciaCalidad() { return motivoTransferenciaCalidadId; }
     public Long getMotivoIdDevolucionDesdeProduccion() { return motivoDevolucionDesdeProduccionId; }
     public Long getMotivoIdAjusteRechazo() { return motivoAjusteRechazoId; }
