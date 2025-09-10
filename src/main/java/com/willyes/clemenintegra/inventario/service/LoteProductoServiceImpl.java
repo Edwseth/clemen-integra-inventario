@@ -321,9 +321,9 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_RECHAZO_INVALIDA");
         }
 
-        Long motivoId = catalogResolver.getMotivoIdTransferenciaCalidad();
+        Long motivoId = catalogResolver.getMotivoIdAjusteRechazo();
         MotivoMovimiento motivo = motivoMovimientoRepository.findById(motivoId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_AJUSTE_RECHAZO_INEXISTENTE"));
         Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
         TipoMovimientoDetalle tipoDetalle = tipoMovimientoDetalleRepository.findById(tipoDetalleTransferenciaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_TRANSFERENCIA_INEXISTENTE"));

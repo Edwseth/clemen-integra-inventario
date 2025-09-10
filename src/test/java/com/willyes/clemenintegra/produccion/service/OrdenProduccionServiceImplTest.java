@@ -144,6 +144,8 @@ class OrdenProduccionServiceImplTest {
         when(catalogResolver.getTipoDetalleTransferenciaId()).thenReturn(null);
         when(catalogResolver.getAlmacenObsoletosId()).thenReturn(3L);
         when(catalogResolver.getMotivoIdTransferenciaCalidad()).thenReturn(12L);
+        when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(5L);
 
         MotivoMovimiento motivoDev = new MotivoMovimiento();
         motivoDev.setId(30L);

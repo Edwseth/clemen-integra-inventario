@@ -74,6 +74,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final MovimientoInventarioMapper mapper;
     private final UsuarioService usuarioService;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
+    private final InventoryCatalogResolver catalogResolver;
 
     @Resource
     private final EntityManager entityManager;
@@ -90,6 +91,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (dto.tipoMovimientoDetalleId() == null) {
             throw new IllegalArgumentException("tipo_movimiento_detalle_id es obligatorio"); // [Codex Edit]
+        }
+
+        if (dto.tipoMovimiento() == TipoMovimiento.ENTRADA
+                && Objects.equals(dto.motivoMovimientoId(), catalogResolver.getMotivoIdEntradaPt())
+                && dto.ordenProduccionId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "ENTRADA_PT_REQUIERE_ORDEN_PRODUCCION_ID");
         }
 
         MovimientoInventario movimiento = mapper.toEntity(dto);

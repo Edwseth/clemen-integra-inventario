@@ -27,6 +27,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -52,6 +53,7 @@ class MovimientoInventarioServiceImplTest {
     @Mock private UsuarioService usuarioService;
     @Mock private SolicitudMovimientoRepository solicitudMovimientoRepository;
     @Mock private EntityManager entityManager;
+    @Mock private InventoryCatalogResolver catalogResolver;
 
     private MovimientoInventarioServiceImpl service;
 
@@ -71,6 +73,7 @@ class MovimientoInventarioServiceImplTest {
                 movimientoInventarioMapper,
                 usuarioService,
                 solicitudMovimientoRepository,
+                catalogResolver,
                 entityManager
         );
     }
@@ -271,6 +274,26 @@ class MovimientoInventarioServiceImplTest {
         assertEquals(new BigDecimal("0"), lote.getStockLote());
         assertEquals(new BigDecimal("0"), lote.getStockReservado());
         assertEquals(EstadoSolicitudMovimiento.ATENDIDA, sol.getEstado());
+    }
+
+    @Test
+    void entradaPtSinOrdenProduccionLanza422() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("user", "pass"));
+
+        when(catalogResolver.getMotivoIdEntradaPt()).thenReturn(11L);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("1"), TipoMovimiento.ENTRADA,
+                null, null,
+                1, null, null, null,
+                null, null, null, 11L, 1L, null,
+                1L, null, null, null, null);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.registrarMovimiento(dto));
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals("ENTRADA_PT_REQUIERE_ORDEN_PRODUCCION_ID", ex.getReason());
     }
 }
 

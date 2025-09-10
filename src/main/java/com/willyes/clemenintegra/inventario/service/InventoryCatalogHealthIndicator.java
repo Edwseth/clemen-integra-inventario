@@ -26,6 +26,8 @@ public class InventoryCatalogHealthIndicator implements HealthIndicator {
         details.put("almacenPt", checkAlmacen(resolver.getAlmacenPtId()));
         details.put("almacenCuarentena", checkAlmacen(resolver.getAlmacenCuarentenaId()));
         details.put("almacenObsoletos", checkAlmacen(resolver.getAlmacenObsoletosId()));
+        details.put("almacenBodegaPrincipal", checkAlmacen(resolver.getAlmacenBodegaPrincipalId()));
+        details.put("almacenPreBodegaProduccion", checkAlmacen(resolver.getAlmacenPreBodegaProduccionId()));
 
         details.put("motivoEntradaPt", checkMotivo(resolver.getMotivoIdEntradaPt()));
         details.put("motivoTransferenciaCalidad", checkMotivo(resolver.getMotivoIdTransferenciaCalidad()));

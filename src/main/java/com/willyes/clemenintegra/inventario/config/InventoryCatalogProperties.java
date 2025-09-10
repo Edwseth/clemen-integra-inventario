@@ -12,12 +12,29 @@ public class InventoryCatalogProperties {
     private final Almacen almacen = new Almacen();
     private final Motivo motivo = new Motivo();
     private final TipoDetalle tipoDetalle = new TipoDetalle();
+    private final Produccion produccion = new Produccion();
 
     @Data
     public static class Almacen {
         private final IdHolder pt = new IdHolder();
         private final IdHolder cuarentena = new IdHolder();
         private final IdHolder obsoletos = new IdHolder();
+    }
+
+    @Data
+    public static class Produccion {
+        private final AlmacenProduccion almacen = new AlmacenProduccion();
+    }
+
+    @Data
+    public static class AlmacenProduccion {
+        private final Origen origen = new Origen();
+    }
+
+    @Data
+    public static class Origen {
+        private Long bodegaPrincipal;
+        private Long preBodegaProduccion;
     }
 
     @Data
