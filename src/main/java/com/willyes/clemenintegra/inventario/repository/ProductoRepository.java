@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import com.willyes.clemenintegra.inventario.dto.StockDisponibleProjection;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,10 +38,21 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     @Query("""
     select p
     from Producto p
-    where (:q is null or :q = '' 
+    where (:q is null or :q = ''
            or lower(p.nombre) like lower(concat('%', :q, '%'))
            or lower(p.codigoSku) like lower(concat('%', :q, '%')))
     """)
     Page<Producto> buscarPorTexto(@Param("q") String q, Pageable pageable);
+
+    @Query(value = """
+            SELECT p.id AS producto_id,
+                   COALESCE(SUM(CASE WHEN lp.estado='DISPONIBLE' AND lp.agotado=0
+                                     THEN (lp.stock_lote - lp.stock_reservado) ELSE 0 END), 0) AS stock_disponible
+            FROM productos p
+            LEFT JOIN lotes_productos lp ON lp.productos_id = p.id
+            WHERE p.id IN (:ids)
+            GROUP BY p.id
+            """, nativeQuery = true)
+    List<StockDisponibleProjection> calcularStockDisponiblePorProducto(@Param("ids") List<Long> ids);
 }
 

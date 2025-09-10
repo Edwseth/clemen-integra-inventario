@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.inventario.service.StockQueryService;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -49,6 +51,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final UsuarioService usuarioService;
     private final LoteProductoRepository loteProductoRepository;
     private final EvaluacionCalidadRepository evaluacionRepository;
+    private final StockQueryService stockQueryService;
 
     @Transactional
     public LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto) {
@@ -223,8 +226,12 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         header.createCell(4).setCellValue("Fecha");
 
         // Productos con stock bajo
-        List<Producto> productosConAlerta = productoRepo.findAll().stream()
-                .filter(p -> p.getStockActual().compareTo(p.getStockMinimo()) < 0)
+        List<Producto> todos = productoRepo.findAll();
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                todos.stream().map(p -> p.getId().longValue()).toList());
+        List<Producto> productosConAlerta = todos.stream()
+                .filter(p -> stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)
+                        .compareTo(p.getStockMinimo()) < 0)
                 .toList();
 
         for (Producto p : productosConAlerta) {
@@ -232,7 +239,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             row.createCell(0).setCellValue("Stock Bajo");
             row.createCell(1).setCellValue(p.getCodigoSku());
             row.createCell(2).setCellValue(p.getNombre());
-            row.createCell(3).setCellValue(p.getStockActual().toPlainString());
+            BigDecimal stock = stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO);
+            row.createCell(3).setCellValue(stock.toPlainString());
             row.createCell(4).setCellValue(""); // Sin fecha
         }
 

@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
+import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
@@ -80,6 +81,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     private final FormulaProductoRepository formulaProductoRepository;
     private final ProductoRepository productoRepository;
+    private final StockQueryService stockQueryService;
     private final UsuarioRepository usuarioRepository;
     private final SolicitudMovimientoService solicitudMovimientoService;
     private final OrdenProduccionRepository repository;
@@ -168,7 +170,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
             cantidadesEscaladas.put(insumoId, cantidadRequerida);
 
-            BigDecimal stockActual = productoInsumo.getStockActual(); // LÍNEA CODEx: stock sin discriminar estado de lotes
+            BigDecimal stockActual = stockQueryService.obtenerStockDisponible(insumoId); // LÍNEA CODEx corregida: stock desde lotes
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {

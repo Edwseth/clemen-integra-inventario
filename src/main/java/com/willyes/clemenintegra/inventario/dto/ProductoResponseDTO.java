@@ -20,7 +20,7 @@ public class ProductoResponseDTO {
     private String sku;
     private String nombre;
     private String descripcionProducto;
-    private BigDecimal stockActual;
+    private BigDecimal stockDisponible;
     private BigDecimal stockMinimo;
     private BigDecimal stockMinimoProveedor;
     private Boolean activo;
@@ -44,7 +44,6 @@ public class ProductoResponseDTO {
         this.sku = producto.getCodigoSku();
         this.nombre = producto.getNombre();
         this.descripcionProducto = producto.getDescripcionProducto();
-        this.stockActual = producto.getStockActual();
         this.stockMinimo = producto.getStockMinimo();
         this.stockMinimoProveedor = producto.getStockMinimoProveedor();
         this.activo = producto.isActivo();
@@ -78,8 +77,8 @@ public class ProductoResponseDTO {
     public void setNombre(String nombre) {this.nombre = nombre;}
     public String getDescripcionProducto() {return descripcionProducto;}
     public void setDescripcionProducto(String descripcionProducto) {this.descripcionProducto = descripcionProducto;}
-    public BigDecimal getStockActual() {return stockActual;}
-    public void setStockActual(BigDecimal stockActual) {this.stockActual = stockActual;}
+    public BigDecimal getStockDisponible() {return stockDisponible;}
+    public void setStockDisponible(BigDecimal stockDisponible) {this.stockDisponible = stockDisponible;}
     public BigDecimal getStockMinimo() {return stockMinimo;}
     public void setStockMinimo(BigDecimal stockMinimo) {this.stockMinimo = stockMinimo;}
     public BigDecimal getStockMinimoProveedor() {return stockMinimoProveedor;}

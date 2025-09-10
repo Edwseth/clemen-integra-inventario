@@ -34,6 +34,10 @@ class ProductoControllerTest {
     private CategoriaProductoRepository categoriaProductoRepository;
     @Autowired
     private UsuarioRepository usuarioRepository;
+    @Autowired
+    private LoteProductoRepository loteProductoRepository;
+    @Autowired
+    private AlmacenRepository almacenRepository;
 
     @BeforeEach
     void setup() {
@@ -71,5 +75,46 @@ class ProductoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rendimiento").value(4))
                 .andExpect(jsonPath("$.unidadMedida.simbolo").value("L"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_JEFE_ALMACENES"})
+    void getProductoRetornaStockDisponibleCalculado() throws Exception {
+        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
+                .nombre("Kg").simbolo("kg").build());
+        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
+                .nombre("Insumo").tipo(TipoCategoria.MATERIA_PRIMA).build());
+        Usuario usuario = usuarioRepository.save(Usuario.builder()
+                .nombreUsuario("user2").clave("pwd").nombreCompleto("User Test")
+                .correo("u2@t.com").rol(RolUsuario.ROL_JEFE_ALMACENES).activo(true).bloqueado(false).build());
+
+        Producto producto = productoRepository.save(Producto.builder()
+                .codigoSku("SKU2")
+                .nombre("Producto2")
+                .descripcionProducto("desc")
+                .stockActual(new BigDecimal("70"))
+                .stockMinimo(BigDecimal.ZERO)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .creadoPor(usuario)
+                .build());
+
+        Almacen almacen = almacenRepository.save(Almacen.builder()
+                .nombre("Principal").categoria(TipoCategoria.MATERIA_PRIMA).build());
+
+        loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote("L1")
+                .producto(producto)
+                .almacen(almacen)
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(new BigDecimal("100"))
+                .stockReservado(new BigDecimal("10"))
+                .agotado(false)
+                .build());
+
+        mockMvc.perform(get("/api/productos/" + producto.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.stockDisponible").value(90));
     }
 }

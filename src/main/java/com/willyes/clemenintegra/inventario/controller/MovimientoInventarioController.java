@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -42,6 +43,7 @@ public class MovimientoInventarioController {
     private final MovimientoInventarioService service;
     private final ProductoRepository productoRepo;
     private final LoteProductoRepository loteRepo;
+    private final StockQueryService stockQueryService;
 
     @Operation(summary = "Registrar un movimiento de inventario")
     @ApiResponse(responseCode = "201", description = "Movimiento registrado correctamente")
@@ -64,8 +66,9 @@ public class MovimientoInventarioController {
                         .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
                 BigDecimal cant = dto.cantidad();
-                BigDecimal stockProd = prod.getStockActual();
-                BigDecimal stockLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+                BigDecimal stockProd = stockQueryService.obtenerStockDisponible(prod.getId().longValue());
+                BigDecimal stockLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO)
+                        .subtract(Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO));
 
                 if (stockProd.compareTo(cant) < 0 || stockLote.compareTo(cant) < 0) {
                     return ResponseEntity

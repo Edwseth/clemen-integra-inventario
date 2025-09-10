@@ -9,7 +9,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.mapstruct.*;
 import java.math.BigDecimal;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProductoMapper {
 
     default ProductoResponseDTO safeToDto(Producto producto) {

@@ -15,7 +15,7 @@ public class AlertaInventarioResponseDTO {
     private String nombreAlmacen;
     private String codigoLote;
     private LocalDateTime fechaVencimiento;
-    private BigDecimal stockActual;
+    private BigDecimal stockDisponible;
     private BigDecimal stockMinimo;
     private String estado;
     private String criticidad;

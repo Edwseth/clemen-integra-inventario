@@ -4,13 +4,16 @@ import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,23 +22,24 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
 
     private final ProductoRepository productoRepository;
     private final LoteProductoRepository loteProductoRepository;
+    private final StockQueryService stockQueryService;
 
     public List<ProductoAlertaResponseDTO> obtenerProductosConStockBajo() {
-        return productoRepository.findAll().stream()
-                .filter(this::tieneStockPorDebajoDelMinimo)
-                .map(this::mapToResponse)
+        List<Producto> productos = productoRepository.findAll();
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                productos.stream().map(p -> p.getId().longValue()).toList());
+        return productos.stream()
+                .filter(p -> stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)
+                        .compareTo(p.getStockMinimo()) < 0)
+                .map(p -> mapToResponse(p, stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)))
                 .collect(Collectors.toList());
     }
 
-    private boolean tieneStockPorDebajoDelMinimo(Producto producto) {
-        return producto.getStockActual().compareTo(producto.getStockMinimo()) < 0;
-    }
-
-    private ProductoAlertaResponseDTO mapToResponse(Producto producto) {
+    private ProductoAlertaResponseDTO mapToResponse(Producto producto, BigDecimal stockDisponible) {
         return ProductoAlertaResponseDTO.builder()
                 .productoId(producto.getId().longValue())
                 .nombreProducto(producto.getNombre())
-                .stockActual(producto.getStockActual())
+                .stockDisponible(stockDisponible)
                 .stockMinimo(producto.getStockMinimo())
                 .build();
     }
@@ -79,22 +83,25 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
         List<AlertaInventarioResponseDTO> alertas = new java.util.ArrayList<>();
 
         // Productos con stock bajo
-        productoRepository.findAll().stream()
-                .filter(this::tieneStockPorDebajoDelMinimo)
+        List<Producto> productos = productoRepository.findAll();
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                productos.stream().map(p -> p.getId().longValue()).toList());
+        productos.stream()
+                .filter(p -> stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)
+                        .compareTo(p.getStockMinimo()) < 0)
                 .forEach(producto -> {
-                    if (producto != null) {
-                        alertas.add(AlertaInventarioResponseDTO.builder()
-                                .tipo("Stock bajo")
-                                .nombreProducto(producto.getNombre())
-                                .nombreAlmacen("")
-                                .codigoLote("")
-                                .fechaVencimiento(null)
-                                .stockActual(producto.getStockActual())
-                                .stockMinimo(producto.getStockMinimo())
-                                .estado("")
-                                .criticidad("stock")
-                                .build());
-                    }
+                    BigDecimal stock = stockMap.getOrDefault(producto.getId().longValue(), BigDecimal.ZERO);
+                    alertas.add(AlertaInventarioResponseDTO.builder()
+                            .tipo("Stock bajo")
+                            .nombreProducto(producto.getNombre())
+                            .nombreAlmacen("")
+                            .codigoLote("")
+                            .fechaVencimiento(null)
+                            .stockDisponible(stock)
+                            .stockMinimo(producto.getStockMinimo())
+                            .estado("")
+                            .criticidad("stock")
+                            .build());
                 });
 
         // Lotes vencidos
@@ -110,7 +117,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                             .nombreAlmacen(nombreAlmacen)
                             .codigoLote(lote.getCodigoLote())
                             .fechaVencimiento(lote.getFechaVencimiento())
-                            .stockActual(lote.getStockLote())
+                            .stockDisponible(lote.getStockLote().subtract(lote.getStockReservado()))
                             .stockMinimo(null)
                             .estado("")
                             .criticidad("critica")
@@ -133,7 +140,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                             .nombreAlmacen(nombreAlmacen)
                             .codigoLote(lote.getCodigoLote())
                             .fechaVencimiento(lote.getFechaVencimiento())
-                            .stockActual(lote.getStockLote())
+                            .stockDisponible(lote.getStockLote().subtract(lote.getStockReservado()))
                             .stockMinimo(null)
                             .estado(lote.getEstado().name())
                             .criticidad("advertencia")
