@@ -51,9 +51,9 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
                                      THEN (lp.stock_lote - lp.stock_reservado) ELSE 0 END), 0) AS stock_disponible
             FROM productos p
             LEFT JOIN lotes_productos lp ON lp.productos_id = p.id
-            WHERE p.id IN (:ids)
+            WHERE p.id IN (?1)
             GROUP BY p.id
             """, nativeQuery = true)
-    List<StockDisponibleProjection> calcularStockDisponiblePorProducto(@Param("ids") List<Long> ids);
+    List<StockDisponibleProjection> calcularStockDisponiblePorProducto(List<Long> ids);
 }
 
