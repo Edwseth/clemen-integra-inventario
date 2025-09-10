@@ -21,6 +21,8 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
@@ -54,6 +56,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -62,6 +65,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -110,6 +115,9 @@ class OrdenProduccionServiceImplTest {
                 usuarioService,
                 solicitudMovimientoRepository
         );
+
+        ReflectionTestUtils.setField(service, "almacenPtId", 2L);
+        ReflectionTestUtils.setField(service, "almacenCuarentenaId", 7L);
     }
 
     @Test
@@ -153,6 +161,8 @@ class OrdenProduccionServiceImplTest {
                 .estado(EstadoProduccion.EN_PROCESO)
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .loteProduccion("L1")
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario();
@@ -161,6 +171,16 @@ class OrdenProduccionServiceImplTest {
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(repository.save(any())).thenReturn(orden);
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        when(loteProductoRepository.findByCodigoLoteAndProductoId(anyString(), anyLong()))
+                .thenReturn(Optional.of(LoteProducto.builder()
+                        .id(1L)
+                        .almacen(Almacen.builder().id(2L).build())
+                        .estado(EstadoLote.DISPONIBLE)
+                        .stockLote(BigDecimal.ZERO)
+                        .build()));
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
@@ -186,19 +206,22 @@ class OrdenProduccionServiceImplTest {
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
                 .loteProduccion("L1")
-                .producto(Producto.builder().id(1).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(almacenRepository.findByNombre("Pre-Bodega")).thenReturn(Optional.of(Almacen.builder().id(1L).build()));
-        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(any(), any(), any()))
-                .thenReturn(Optional.of(LoteProducto.builder().id(1L).build()));
-        when(tipoMovimientoDetalleRepository.findByDescripcion("ENTRADA_PARCIAL_PRODUCCION"))
-                .thenReturn(Optional.empty());
-        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        when(loteProductoRepository.findByCodigoLoteAndProductoId(anyString(), anyLong()))
+                .thenReturn(Optional.of(LoteProducto.builder()
+                        .id(1L)
+                        .almacen(Almacen.builder().id(2L).build())
+                        .estado(EstadoLote.DISPONIBLE)
+                        .stockLote(BigDecimal.ZERO)
+                        .build()));
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.TEN)
@@ -219,19 +242,22 @@ class OrdenProduccionServiceImplTest {
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
                 .loteProduccion("L1")
-                .producto(Producto.builder().id(1).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(almacenRepository.findByNombre("Pre-Bodega")).thenReturn(Optional.of(Almacen.builder().id(1L).build()));
-        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(any(), any(), any()))
-                .thenReturn(Optional.of(LoteProducto.builder().id(1L).build()));
-        when(tipoMovimientoDetalleRepository.findByDescripcion("ENTRADA_PARCIAL_PRODUCCION"))
-                .thenReturn(Optional.empty());
-        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        when(loteProductoRepository.findByCodigoLoteAndProductoId(anyString(), anyLong()))
+                .thenReturn(Optional.of(LoteProducto.builder()
+                        .id(1L)
+                        .almacen(Almacen.builder().id(2L).build())
+                        .estado(EstadoLote.DISPONIBLE)
+                        .stockLote(BigDecimal.ZERO)
+                        .build()));
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.valueOf(5))
