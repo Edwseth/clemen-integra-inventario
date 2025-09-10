@@ -39,6 +39,7 @@ import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -52,6 +53,7 @@ import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -98,6 +100,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final MovimientoInventarioMapper movimientoInventarioMapper;
     private final UsuarioService usuarioService;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
+
+    @Value("${inventory.almacen.pt.id}")
+    private Long almacenPtId;
+
+    @Value("${inventory.almacen.cuarentena.id}")
+    private Long almacenCuarentenaId;
 
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -390,52 +398,57 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             cierre.setUsuarioNombre(usuario.getNombreCompleto());
             cierreProduccionRepository.save(cierre);
 
-            // Movimiento de inventario
-            try {
-                Almacen preBodega = almacenRepository.findByNombre("Pre-Bodega")
-                        .orElseThrow(() -> new IllegalStateException("ALMACEN_PRE_BODEGA_NO_CONFIGURADO"));
-
-                LoteProducto lote = loteProductoRepository
-                        .findByCodigoLoteAndProductoIdAndAlmacenId(orden.getLoteProduccion(), orden.getProducto().getId(), preBodega.getId())
-                        .orElseGet(() -> loteProductoRepository.save(LoteProducto.builder()
-                                .codigoLote(orden.getLoteProduccion())
-                                .producto(orden.getProducto())
-                                .almacen(preBodega)
-                                .stockLote(BigDecimal.ZERO)
-                                .estado(com.willyes.clemenintegra.inventario.model.enums.EstadoLote.DISPONIBLE)
-                                .ordenProduccion(orden)
-                                .build()));
-
-                Long tipoDetalleId = tipoMovimientoDetalleRepository
-                        .findByDescripcion("ENTRADA_PARCIAL_PRODUCCION")
-                        .map(t -> t.getId())
-                        .orElse(null);
-
-                movimientoInventarioService.registrarMovimiento(new MovimientoInventarioDTO(
-                        null,
-                        dto.getCantidad(),
-                        TipoMovimiento.ENTRADA,
-                        ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO,
-                        orden.getCodigoOrden(),
-                        Math.toIntExact(orden.getProducto().getId()),
-                        lote.getId(),
-                        null,
-                        preBodega.getId() != null ? preBodega.getId().intValue() : null,
-                        null,
-                        null,
-                        null,
-                        tipoDetalleId,
-                        null,
-                        null,
-                        orden.getId(),
-                        null,
-                        lote.getCodigoLote(),
-                        lote.getFechaVencimiento(),
-                        com.willyes.clemenintegra.inventario.model.enums.EstadoLote.DISPONIBLE
-                ));
-            } catch (Exception e) {
-                // En caso de error en movimiento, se registra pero no evita el cierre
+            if (orden.getProducto() == null || orden.getProducto().getTipoAnalisis() == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
             }
+
+            if (almacenPtId == null || almacenCuarentenaId == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_NO_CONFIGURADO");
+            }
+
+            Almacen almacenPt = almacenRepository.findById(almacenPtId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
+            Almacen almacenCuarentena = almacenRepository.findById(almacenCuarentenaId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
+
+            Almacen destino;
+            EstadoLote estadoLote;
+            TipoAnalisisCalidad tipoAnalisis = orden.getProducto().getTipoAnalisis();
+            switch (tipoAnalisis) {
+                case NINGUNO -> {
+                    destino = almacenPt;
+                    estadoLote = EstadoLote.DISPONIBLE;
+                }
+                case FISICO_QUIMICO, MICROBIOLOGICO, AMBOS -> {
+                    destino = almacenCuarentena;
+                    estadoLote = EstadoLote.EN_CUARENTENA;
+                }
+                default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
+            }
+
+            LoteProducto lote = loteProductoRepository
+                    .findByCodigoLoteAndProductoId(orden.getLoteProduccion(), orden.getProducto().getId().longValue())
+                    .orElse(null);
+
+            if (lote != null) {
+                if (!lote.getAlmacen().getId().equals(destino.getId()) || lote.getEstado() != estadoLote) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_PT_YA_EXISTE");
+                }
+                lote.setStockLote(lote.getStockLote().add(dto.getCantidad()));
+            } else {
+                lote = LoteProducto.builder()
+                        .codigoLote(orden.getLoteProduccion())
+                        .producto(orden.getProducto())
+                        .almacen(destino)
+                        .estado(estadoLote)
+                        .stockLote(dto.getCantidad())
+                        .stockReservado(BigDecimal.ZERO)
+                        .agotado(false)
+                        .fechaFabricacion(LocalDateTime.now())
+                        .ordenProduccion(orden)
+                        .build();
+            }
+            loteProductoRepository.save(lote);
 
             return repository.save(orden);
         } catch (OptimisticLockException e) {
