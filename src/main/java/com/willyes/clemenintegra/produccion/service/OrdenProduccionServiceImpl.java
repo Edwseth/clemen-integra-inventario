@@ -235,6 +235,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         Map<Long, Producto> productosInsumo = productoRepository.findAllById(insumoIds).stream()
                 .collect(Collectors.toMap(p -> p.getId().longValue(), p -> p));
 
+        Map<Long, BigDecimal> stockPorInsumo = stockQueryService.obtenerStockDisponible(insumoIds);
+
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();
             Producto productoInsumo = productosInsumo.get(insumoId);
@@ -245,7 +247,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
             cantidadesEscaladas.put(insumoId, cantidadRequerida);
 
-            BigDecimal stockDisponible = stockQueryService.obtenerStockDisponible(insumoId); // LÍNEA CODEx corregida: stock desde lotes
+            BigDecimal stockDisponible = stockPorInsumo.getOrDefault(insumoId, BigDecimal.ZERO);
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
