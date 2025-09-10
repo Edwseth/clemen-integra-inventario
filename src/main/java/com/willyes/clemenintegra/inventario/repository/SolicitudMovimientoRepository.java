@@ -26,6 +26,10 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
             "left join fetch s.almacenDestino ad " +
             "left join fetch s.usuarioSolicitante us " +
             "left join fetch s.ordenProduccion op " +
+            "left join fetch s.detalles det " +
+            "left join fetch det.lote detLote " +
+            "left join fetch det.almacenOrigen detAo " +
+            "left join fetch det.almacenDestino detAd " +
             "where (:ordenId is null or op.id = :ordenId) " +
             "and (:estados is null or s.estado in :estados) " +
             "and (:desde is null or s.fechaSolicitud >= :desde) " +
@@ -46,6 +50,10 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
             "left join fetch s.ordenProduccion op " +
             "left join fetch s.motivoMovimiento mm " +
             "left join fetch s.tipoMovimientoDetalle tmd " +
+            "left join fetch s.detalles det " +
+            "left join fetch det.lote detLote " +
+            "left join fetch det.almacenOrigen detAo " +
+            "left join fetch det.almacenDestino detAd " +
             "where s.id = :id")
     java.util.Optional<SolicitudMovimiento> findWithDetalles(@Param("id") Long id);
 

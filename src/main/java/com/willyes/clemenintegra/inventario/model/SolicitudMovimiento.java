@@ -9,6 +9,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "solicitudes_movimiento")
@@ -92,6 +94,10 @@ public class SolicitudMovimiento {
     private LocalDateTime fechaResolucion;
 
     private String observaciones;
+
+    @OneToMany(mappedBy = "solicitudMovimiento", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<SolicitudMovimientoDetalle> detalles = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

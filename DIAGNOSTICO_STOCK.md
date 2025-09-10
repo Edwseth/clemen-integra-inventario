@@ -41,5 +41,17 @@ GROUP BY p.id;
 - Índices sugeridos:
   - `lotes_productos(productos_id, estado, agotado)`
   - `lotes_productos(productos_id, estado, agotado, fecha_vencimiento)` para consultas por vencimiento
+  - `lotes_productos(productos_id, estado, agotado, fecha_vencimiento, fecha_fabricacion, id)` para selección FEFO
   - `lotes_productos(productos_id, almacenes_id)` para cortes por almacén
+
+## Índice FEFO y escala
+
+Para optimizar la asignación multi-lote se recomienda mantener un índice compuesto que respete el orden FEFO:
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_lotes_productos_fefo
+ON lotes_productos (productos_id, estado, agotado, fecha_vencimiento, fecha_fabricacion, id);
+```
+
+Las reservas consumen cantidades con la misma escala definida en `stock_lote` y `stock_reservado` (DECIMAL), sin redondeos adicionales.
 
