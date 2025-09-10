@@ -94,7 +94,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         if (dto.tipoMovimiento() == TipoMovimiento.ENTRADA
-                && Objects.equals(dto.motivoMovimientoId(), catalogResolver.getMotivoIdEntradaPt())
+                && Objects.equals(dto.motivoMovimientoId(), catalogResolver.getMotivoIdEntradaProductoTerminado())
                 && dto.ordenProduccionId() == null) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "ENTRADA_PT_REQUIERE_ORDEN_PRODUCCION_ID");

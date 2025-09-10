@@ -279,7 +279,7 @@ class MovimientoInventarioServiceImplTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("user", "pass"));
 
-        when(catalogResolver.getMotivoIdEntradaPt()).thenReturn(11L);
+        when(catalogResolver.getMotivoIdEntradaProductoTerminado()).thenReturn(11L);
 
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null, new BigDecimal("1"), TipoMovimiento.ENTRADA,

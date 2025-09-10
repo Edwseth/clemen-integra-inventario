@@ -138,7 +138,7 @@ class OrdenProduccionServiceImplTest {
 
         when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
-        when(catalogResolver.getMotivoIdEntradaPt()).thenReturn(11L);
+        when(catalogResolver.getMotivoIdEntradaProductoTerminado()).thenReturn(11L);
         when(catalogResolver.getTipoDetalleEntradaId()).thenReturn(9L);
         when(catalogResolver.getMotivoIdDevolucionDesdeProduccion()).thenReturn(30L);
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(8L);
