@@ -11,6 +11,6 @@ import java.math.BigDecimal;
 public class ProductoAlertaResponseDTO {
     private Long productoId;
     private String nombreProducto;
-    private BigDecimal stockActual;
+    private BigDecimal stockDisponible;
     private BigDecimal stockMinimo;
 }

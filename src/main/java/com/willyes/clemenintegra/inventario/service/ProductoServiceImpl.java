@@ -49,6 +49,7 @@ public class ProductoServiceImpl implements ProductoService {
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final ProductoMapper productoMapper;
     private final JwtTokenService jwtTokenService;
+    private final StockQueryService stockQueryService;
 
     private Long obtenerUsuarioIdDesdeToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -78,6 +79,11 @@ public class ProductoServiceImpl implements ProductoService {
         Page<Producto> productos = productoRepository.findAll(spec, pageable);
         System.out.println("▶️ Total productos devueltos: " + productos.getTotalElements());
 
+        List<Long> ids = productos.getContent().stream()
+                .map(p -> p.getId().longValue())
+                .toList();
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(ids);
+
         productos.forEach(p -> {
             if (p == null) {
                 System.out.println("⚠️ Producto nulo detectado");
@@ -86,22 +92,26 @@ public class ProductoServiceImpl implements ProductoService {
             }
         });
 
-        return productos.map(this::buildDto);
+        return productos.map(p -> buildDto(p, stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)));
     }
 
     public List<ProductoResponseDTO> buscarPorCategoria(String categoria) {
         TipoCategoria tipo = TipoCategoria.valueOf(categoria.toUpperCase());
-        return productoRepository.findByCategoriaProducto_Tipo(tipo)
-                .stream()
-                .map(this::buildDto)
+        List<Producto> lista = productoRepository.findByCategoriaProducto_Tipo(tipo);
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                lista.stream().map(p -> p.getId().longValue()).toList());
+        return lista.stream()
+                .map(p -> buildDto(p, stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)))
                 .collect(Collectors.toList());
     }
 
     public List<ProductoResponseDTO> findByCategoriaTipo(String tipo) {
         TipoCategoria tipoEnum = TipoCategoria.valueOf(tipo); // conversión aquí
-        return productoRepository.findByCategoriaProducto_Tipo(tipoEnum)
-                .stream()
-                .map(this::buildDto)
+        List<Producto> lista = productoRepository.findByCategoriaProducto_Tipo(tipoEnum);
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                lista.stream().map(p -> p.getId().longValue()).toList());
+        return lista.stream()
+                .map(p -> buildDto(p, stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)))
                 .toList();
     }
 
@@ -109,9 +119,11 @@ public class ProductoServiceImpl implements ProductoService {
         List<TipoCategoria> tiposEnum = tipos.stream()
                 .map(TipoCategoria::valueOf)
                 .toList();
-        return productoRepository.findByCategoriaProducto_TipoIn(tiposEnum)
-                .stream()
-                .map(this::buildDto)
+        List<Producto> lista = productoRepository.findByCategoriaProducto_TipoIn(tiposEnum);
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                lista.stream().map(p -> p.getId().longValue()).toList());
+        return lista.stream()
+                .map(p -> buildDto(p, stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)))
                 .toList();
     }
 
@@ -172,7 +184,8 @@ public class ProductoServiceImpl implements ProductoService {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
-        return buildDto(producto);
+        BigDecimal stock = stockQueryService.obtenerStockDisponible(id);
+        return buildDto(producto, stock);
     }
 
     public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto) {
@@ -204,7 +217,8 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setCreadoPor(usuario);
 
         productoRepository.save(producto);
-        return buildDto(producto);
+        BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
+        return buildDto(producto, stock);
     }
 
     @Transactional
@@ -243,19 +257,26 @@ public class ProductoServiceImpl implements ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
         producto.setActivo(Boolean.TRUE.equals(activo));
         productoRepository.save(producto);
-        return buildDto(producto);
+        BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
+        return buildDto(producto, stock);
     }
     // PROD-INACTIVAR END
 
     // PROD-FLAGS BEGIN
-    private ProductoResponseDTO buildDto(Producto producto) {
+    private ProductoResponseDTO buildDto(Producto producto, BigDecimal stockDisponible) {
         ProductoResponseDTO dto = productoMapper.toDto(producto);
         dto.setEditable(producto.isActivo());
         boolean hasLotes = loteProductoRepository.existsByProducto(producto);
         boolean hasMovimientos = movimientoInventarioRepository.existsByProductoId(producto.getId().longValue());
         dto.setEliminable(!hasLotes && !hasMovimientos);
         dto.setInactivable(true);
+        dto.setStockDisponible(stockDisponible);
         return dto;
+    }
+
+    private ProductoResponseDTO buildDto(Producto producto) {
+        BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
+        return buildDto(producto, stock);
     }
     // PROD-FLAGS END
 
@@ -317,13 +338,15 @@ public class ProductoServiceImpl implements ProductoService {
 
     public Workbook generarReporteStockActualExcel() {
         List<Producto> productos = productoRepository.findAll();
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                productos.stream().map(p -> p.getId().longValue()).toList());
 
         Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Stock Actual");
+        Sheet sheet = workbook.createSheet("Stock Disponible");
 
         Row header = sheet.createRow(0);
         String[] columnas = {
-                "ID", "Código SKU", "Nombre", "Stock Actual",
+                "ID", "Código SKU", "Nombre", "Stock Disponible",
                 "Unidad de Medida", "Stock Mínimo", "Activo", "Categoría"
         };
         for (int i = 0; i < columnas.length; i++) {
@@ -336,7 +359,8 @@ public class ProductoServiceImpl implements ProductoService {
             row.createCell(0).setCellValue(producto.getId());
             row.createCell(1).setCellValue(producto.getCodigoSku());
             row.createCell(2).setCellValue(producto.getNombre());
-            row.createCell(3).setCellValue((RichTextString) (producto.getStockActual() != null ? producto.getStockActual() : BigDecimal.ZERO));
+            BigDecimal stock = stockMap.getOrDefault(producto.getId().longValue(), BigDecimal.ZERO);
+            row.createCell(3).setCellValue((RichTextString) stock);
             row.createCell(4).setCellValue(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : "");
             row.createCell(5).setCellValue((RichTextString) (producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO));
             row.createCell(6).setCellValue(producto.isActivo());
