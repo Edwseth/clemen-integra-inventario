@@ -62,6 +62,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.core.env.Environment;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -103,6 +104,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final MovimientoInventarioMapper movimientoInventarioMapper;
     private final UsuarioService usuarioService;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
+    private final Environment environment;
 
     @Value("${inventory.almacen.pt.id}")
     private Long almacenPtId;
@@ -189,6 +191,59 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ESTADOS_SOLICITUD_NO_CONFIGURADOS");
         }
+    }
+
+    private BigDecimal validarCantidad(BigDecimal cantidadOriginal, Producto producto) {
+        if (cantidadOriginal == null || producto == null || producto.getUnidadMedida() == null
+                || cantidadOriginal.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+        }
+
+        String policy = environment.getProperty("inventory.quantities.roundingPolicy", "REJECT");
+        boolean floor = "FLOOR".equalsIgnoreCase(policy);
+
+        String umCodigo = Optional.ofNullable(producto.getUnidadMedida().getSimbolo())
+                .orElse(producto.getUnidadMedida().getNombre());
+        if (umCodigo == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+        }
+        Integer umDec = environment.getProperty("inventory.um.decimales." + umCodigo.toUpperCase(), Integer.class);
+        if (umDec == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+        }
+
+        BigDecimal cantidad = cantidadOriginal;
+        if (cantidad.scale() > umDec) {
+            if (floor) {
+                cantidad = cantidad.setScale(umDec, RoundingMode.DOWN);
+            } else {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "UM_DECIMALES_EXCEDIDOS");
+            }
+        }
+
+        BigDecimal cantidadLote = cantidad;
+        if (cantidadLote.scale() > 2) {
+            if (floor) {
+                cantidadLote = cantidadLote.setScale(2, RoundingMode.DOWN);
+            } else {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ESCALA_LOTE_EXCEDIDA");
+            }
+        }
+        int enterosLote = cantidadLote.precision() - cantidadLote.scale();
+        if (enterosLote > 8) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRECISION_LOTE_EXCEDIDA");
+        }
+
+        BigDecimal cantidadMov = cantidadLote;
+        int enterosMov = cantidadMov.precision() - cantidadMov.scale();
+        if (enterosMov > 7) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRECISION_MOV_EXCEDIDA");
+        }
+
+        log.info("OP-cierre validarCantidad prod={}, um={}, decPermitidos={}, recibida={}, final={}, policy={}",
+                producto.getId(), umCodigo, umDec, cantidadOriginal, cantidadLote, policy);
+
+        return cantidadLote;
     }
 
     @Transactional
@@ -379,7 +434,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     @Transactional
-    @Transactional
     public OrdenProduccion registrarCierre(Long id, CierreProduccionRequestDTO dto) {
         try {
             OrdenProduccion orden = repository.findById(id)
@@ -395,10 +449,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
             }
 
-            BigDecimal cantidad = dto.getCantidad().setScale(2, RoundingMode.DOWN);
-            if (cantidad.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
-            }
+            BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
             dto.setCantidad(cantidad);
 
             if (orden.getId() == null) {
