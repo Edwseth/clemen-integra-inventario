@@ -14,10 +14,9 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Collection;
-import java.math.BigDecimal;
 
 @Repository
 public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long>, JpaSpecificationExecutor<LoteProducto> {
@@ -47,6 +46,10 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             "WHERE lp.producto.id = :productoId AND lp.stockLote > 0 " +
             "GROUP BY lp.estado")
     List<Object[]> sumarStockPorEstado(@Param("productoId") Long productoId);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from LoteProducto l where l.id = :id")
+    Optional<LoteProducto> findByIdForUpdate(@Param("id") Long id);
 
     @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("""
