@@ -124,15 +124,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     private List<Long> obtenerAlmacenesOrigen(Producto insumo) {
-        if (insumo == null || insumo.getCategoriaProducto() == null
-                || insumo.getCategoriaProducto().getTipo() == null) {
-            return List.of();
-        }
-        return switch (insumo.getCategoriaProducto().getTipo()) {
-            case MATERIA_PRIMA -> List.of(1L);
-            case MATERIAL_EMPAQUE -> List.of(5L);
-            default -> List.of();
-        };
+        return List.of(
+                catalogResolver.getAlmacenBodegaPrincipalId(),
+                catalogResolver.getAlmacenPreBodegaProduccionId()
+        );
     }
 
     private String generarCodigoLote(Producto producto) {
