@@ -50,6 +50,7 @@ import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
+import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import lombok.RequiredArgsConstructor;
@@ -74,6 +75,7 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import jakarta.persistence.OptimisticLockException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 @RequiredArgsConstructor
@@ -368,6 +370,50 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             }
             dto.setCantidad(cantidad);
 
+            if (orden.getId() == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_PRODUCCION_OBLIGATORIA");
+            }
+
+            ClasificacionMovimientoInventario clasifEntrada;
+            try {
+                clasifEntrada = ClasificacionMovimientoInventario.valueOf(motivoEntradaPt);
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE");
+            }
+
+            MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findByMotivo(clasifEntrada)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
+
+            TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
+
+            LoteProducto lote = loteProductoRepository
+                    .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
+                    .orElse(null);
+
+            if (lote != null) {
+                Optional<MovimientoInventario> existente = movimientoInventarioRepository
+                        .findByTipoMovimientoAndMotivoMovimientoIdAndOrdenProduccionIdAndProductoIdAndLoteId(
+                                TipoMovimiento.ENTRADA,
+                                motivoEntrada.getId(),
+                                orden.getId(),
+                                orden.getProducto().getId().longValue(),
+                                lote.getId()
+                        );
+                if (existente.isPresent()) {
+                    MovimientoInventario mov = existente.get();
+                    if (mov.getCantidad().compareTo(cantidad) == 0) {
+                        log.info("OP-cierre entrada PT idempotente op={}, producto={}, lote={}, movId={}, cantidad={}",
+                                orden.getId(), orden.getProducto().getId(), lote.getId(), mov.getId(), cantidad);
+                        return orden;
+                    } else {
+                        log.warn("OP-cierre entrada PT duplicada op={}, producto={}, lote={}, movId={}, cantExistente={}, cantNueva={}",
+                                orden.getId(), orden.getProducto().getId(), lote.getId(), mov.getId(), mov.getCantidad(), cantidad);
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "ENTRADA_PT_YA_REGISTRADA");
+                    }
+                }
+            }
+
             BigDecimal programada = orden.getCantidadProgramada();
             BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
             BigDecimal restante = programada.subtract(acumulada);
@@ -448,10 +494,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
             }
 
-            LoteProducto lote = loteProductoRepository
-                    .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
-                    .orElse(null);
-
             String codigoLote = dto.getCodigoLote();
             if (lote == null) {
                 if (codigoLote != null && !codigoLote.isBlank()) {
@@ -506,30 +548,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             log.info("OP-cierre lote op={}, producto={}, loteId={}, codigoLote={}, cantidad={}, fechaFabricacion={}, fechaVencimiento={}, almacenId={}, estado={}, usuario={}",
                     orden.getId(), orden.getProducto().getId(), lote.getId(), codigoLote, cantidad, fechaFabricacion, fechaVencimiento, destino.getId(), estadoLote, usuario.getId());
 
-            ClasificacionMovimientoInventario clasifEntrada;
-            try {
-                clasifEntrada = ClasificacionMovimientoInventario.valueOf(motivoEntradaPt);
-            } catch (IllegalArgumentException ex) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE");
-            }
-
-            MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findByMotivo(clasifEntrada)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
-
-            TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
-
-            boolean yaExiste = movimientoInventarioRepository
-                    .existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
-                            TipoMovimiento.ENTRADA,
-                            orden.getProducto().getId().longValue(),
-                            lote.getId(),
-                            orden.getId()
-                    );
-            if (yaExiste) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "ENTRADA_PT_YA_REGISTRADA");
-            }
-
             MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
                     null,
                     cantidad,
@@ -552,7 +570,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     null,
                     lote.getEstado()
             );
-            movimientoInventarioService.registrarMovimiento(movDto);
+            try {
+                movimientoInventarioService.registrarMovimiento(movDto);
+            } catch (DataIntegrityViolationException ex) {
+                log.warn("OP-cierre entrada PT colisión UNIQUE op={}, producto={}, lote={}, motivoId={}, resultado=CONFLICTO", orden.getId(), orden.getProducto().getId(), lote.getId(), motivoEntrada.getId());
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "ENTRADA_PT_YA_REGISTRADA");
+            }
             log.info("OP-cierre entrada PT op={}, producto={}, lote={}, cantidad={}, usuario={}, destino={}, motivoId={}, tipoDetalleId={}",
                     orden.getId(), orden.getProducto().getId(), lote.getId(), cantidad, usuario.getId(), destino.getId(), motivoEntrada.getId(), tipoDetalleEntrada.getId());
 
