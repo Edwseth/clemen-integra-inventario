@@ -77,6 +77,15 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     @Value("${inventory.mov.clasificacion.liberacionCalidad}")
     private String clasificacionLiberacionConf;
 
+    @Value("${inventory.almacen.obsoletos.id}")
+    private Long almacenObsoletosId;
+
+    @Value("${inventory.motivo.rechazoCalidad}")
+    private String motivoRechazoCalidad;
+
+    @Value("${inventory.mov.clasificacion.rechazoCalidad}")
+    private String clasificacionRechazoCalidad;
+
     @Transactional
     public LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto) {
         Producto producto = productoRepo.findById(dto.getProductoId())
@@ -320,11 +329,76 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     @Transactional
     @Override
     public LoteProductoResponseDTO rechazarLote(Long id) {
-        LoteProducto lote = loteRepo.findById(id)
-                .orElseThrow(() -> new java.util.NoSuchElementException("Lote no encontrado"));
+        Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();
+
+        ClasificacionMovimientoInventario clasificacion;
+        try {
+            clasificacion = ClasificacionMovimientoInventario.valueOf(clasificacionRechazoCalidad);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_RECHAZO_INVALIDA");
+        }
+
+        ClasificacionMovimientoInventario motivoClasif;
+        try {
+            motivoClasif = ClasificacionMovimientoInventario.valueOf(motivoRechazoCalidad);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE");
+        }
+
+        MotivoMovimiento motivo = motivoMovimientoRepository.findByMotivo(motivoClasif)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE"));
+        TipoMovimientoDetalle tipoDetalle = tipoMovimientoDetalleRepository.findById(tipoDetalleTransferenciaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_TRANSFERENCIA_INEXISTENTE"));
+
+        LoteProducto lote = loteProductoRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lote no encontrado"));
         validarEvaluacionesExistentes(id);
+
+        if (lote.getAlmacen().getId().equals(almacenObsoletosId) && lote.getEstado() == EstadoLote.RECHAZADO) {
+            boolean movExistente = movimientoInventarioRepository
+                    .existsByTipoMovimientoAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoIdAndClasificacion(
+                            TipoMovimiento.TRANSFERENCIA, lote.getId(), almacenCuarentenaId, almacenObsoletosId, clasificacion);
+            if (movExistente) {
+                return loteProductoMapper.toResponseDTO(lote);
+            }
+        }
+
+        if (!lote.getAlmacen().getId().equals(almacenCuarentenaId)
+                || (lote.getEstado() != EstadoLote.EN_CUARENTENA && lote.getEstado() != EstadoLote.RETENIDO)) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO");
+        }
+        if (lote.getStockReservado() != null && lote.getStockReservado().compareTo(BigDecimal.ZERO) > 0) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_CON_RESERVAS");
+        }
+        if (lote.getStockLote() == null || lote.getStockLote().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_SIN_STOCK");
+        }
+
+        Almacen origen = lote.getAlmacen();
+        Almacen destino = almacenRepo.findById(almacenObsoletosId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_OBSOLETOS_INEXISTENTE"));
+        BigDecimal cantidad = lote.getStockLote();
+        Producto producto = lote.getProducto();
+
         lote.setEstado(EstadoLote.RECHAZADO);
+        lote.setAlmacen(destino);
         loteRepo.save(lote);
+
+        MovimientoInventario mov = MovimientoInventario.builder()
+                .cantidad(cantidad)
+                .tipoMovimiento(TipoMovimiento.TRANSFERENCIA)
+                .clasificacion(clasificacion)
+                .registradoPor(usuarioActual)
+                .producto(producto)
+                .lote(lote)
+                .almacenOrigen(origen)
+                .almacenDestino(destino)
+                .motivoMovimiento(motivo)
+                .tipoMovimientoDetalle(tipoDetalle)
+                .ordenProduccion(lote.getOrdenProduccion())
+                .build();
+        movimientoInventarioRepository.save(mov);
+
         return loteProductoMapper.toResponseDTO(lote);
     }
 
