@@ -19,6 +19,7 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
+import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
@@ -329,8 +330,8 @@ class OrdenProduccionServiceImplTest {
         when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
                 .thenReturn(Optional.of(lote));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(movimientoInventarioRepository.existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
-                any(), anyLong(), anyLong(), anyLong())).thenReturn(false);
+        when(movimientoInventarioRepository.findByTipoMovimientoAndMotivoMovimientoIdAndOrdenProduccionIdAndProductoIdAndLoteId(
+                any(), anyLong(), anyLong(), anyLong(), anyLong())).thenReturn(Optional.empty());
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
         when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
                 .thenReturn(Optional.of(motivo));
@@ -385,13 +386,65 @@ class OrdenProduccionServiceImplTest {
         when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
                 .thenReturn(Optional.of(lote));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(movimientoInventarioRepository.existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
-                any(), anyLong(), anyLong(), anyLong())).thenReturn(true);
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
         when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
                 .thenReturn(Optional.of(motivo));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
+        MovimientoInventario existente = MovimientoInventario.builder()
+                .id(33L)
+                .cantidad(BigDecimal.ONE)
+                .build();
+        when(movimientoInventarioRepository.findByTipoMovimientoAndMotivoMovimientoIdAndOrdenProduccionIdAndProductoIdAndLoteId(
+                any(), anyLong(), anyLong(), anyLong(), anyLong())).thenReturn(Optional.of(existente));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(BigDecimal.ONE)
+                .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .build();
+
+        OrdenProduccion result = service.registrarCierre(1L, dto);
+        assertEquals(BigDecimal.ZERO, result.getCantidadProducidaAcumulada());
+        verify(movimientoInventarioService, never()).registrarMovimiento(any());
+    }
+
+    @Test
+    void registrarCierreEntradaDuplicadaCantidadDiferente() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .loteProduccion("L1")
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        LoteProducto lote = LoteProducto.builder()
+                .id(1L)
+                .almacen(Almacen.builder().id(2L).build())
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(BigDecimal.ZERO)
+                .build();
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(lote));
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
+                .thenReturn(Optional.of(motivo));
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
+        when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
+        MovimientoInventario existente = MovimientoInventario.builder()
+                .id(33L)
+                .cantidad(new BigDecimal("2"))
+                .build();
+        when(movimientoInventarioRepository.findByTipoMovimientoAndMotivoMovimientoIdAndOrdenProduccionIdAndProductoIdAndLoteId(
+                any(), anyLong(), anyLong(), anyLong(), anyLong())).thenReturn(Optional.of(existente));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
