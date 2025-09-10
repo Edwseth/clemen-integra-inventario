@@ -397,7 +397,6 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return loteProductoMapper.toResponseDTO(lote);
     }
 
-    @Transactional
     @Override
     @Transactional(rollbackFor = Exception.class)
     public LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, Usuario usuarioActual) {
