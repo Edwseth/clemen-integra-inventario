@@ -63,6 +63,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.ErrorResponseException;
+import org.springframework.http.ProblemDetail;
 import org.springframework.core.env.Environment;
 
 import java.math.BigDecimal;
@@ -486,9 +488,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             }
 
             if (!pendientes.isEmpty()) {
-                Map<String, Object> body = Map.of("detalles", pendientes.stream().limit(20).toList());
                 log.warn("OP-cierre reservas pendientes op={}, detallesPendientes={}", orden.getId(), pendientes.size());
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVAS_PENDIENTES_OP", null, body);
+                ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "RESERVAS_PENDIENTES_OP");
+                problem.setProperty("detalles", pendientes.stream().limit(20).toList());
+                throw new ErrorResponseException(HttpStatus.UNPROCESSABLE_ENTITY, problem, null);
             }
 
             if (solicitudesPend.isEmpty()) {
@@ -508,6 +512,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             Long motivoEntradaId = catalogResolver.getMotivoIdEntradaPt();
             MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findById(motivoEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
+
+            ClasificacionMovimientoInventario clasifEntrada = motivoEntrada.getMotivo();
 
             Long tipoDetalleEntradaId = catalogResolver.getTipoDetalleEntradaId();
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
