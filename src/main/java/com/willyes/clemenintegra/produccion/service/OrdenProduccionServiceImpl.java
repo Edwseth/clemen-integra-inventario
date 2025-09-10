@@ -28,6 +28,7 @@ import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepositor
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import com.willyes.clemenintegra.produccion.service.spec.OrdenProduccionSpecifications;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
@@ -105,33 +106,13 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final UsuarioService usuarioService;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
     private final Environment environment;
-
-    @Value("${inventory.almacen.pt.id}")
-    private Long almacenPtId;
-
-    @Value("${inventory.almacen.cuarentena.id}")
-    private Long almacenCuarentenaId;
-
-    @Value("${inventory.motivo.entradaPt}")
-    private String motivoEntradaPt;
-
-    @Value("${inventory.tipoDetalle.entradaId}")
-    private Long tipoDetalleEntradaId;
+    private final InventoryCatalogResolver catalogResolver;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
 
     @Value("${inventory.solicitud.estados.concluyentes}")
     private String estadosSolicitudConcluyentesConf;
-
-    @Value("${inventory.motivo.devolucionDesdeProduccion}")
-    private String motivoDevolucionDesdeProduccion;
-
-    @Value("${inventory.tipoDetalle.salidaId}")
-    private Long tipoDetalleSalidaId;
-
-    @Value("${inventory.tipoDetalle.transferenciaId:#{null}}")
-    private Long tipoDetalleTransferenciaId;
 
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -338,8 +319,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .map(m -> m.getId())
                 .orElseThrow(() -> new IllegalStateException("Motivo TRANSFERENCIA_INTERNA_PRODUCCION no configurado"));
         Long tipoDetalleId = tipoMovimientoDetalleRepository
-                .findByDescripcion("SALIDA_PRODUCCION")
-                .map(t -> t.getId())
+                .findById(catalogResolver.getTipoDetalleSalidaId())
+                .map(TipoMovimientoDetalle::getId)
                 .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
 
         for (DetalleFormula insumo : formula.getDetalles()) {
@@ -459,14 +440,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
             parseEstados(estadosSolicitudConcluyentesConf);
 
-            ClasificacionMovimientoInventario clasifDev;
-            try {
-                clasifDev = ClasificacionMovimientoInventario.valueOf(motivoDevolucionDesdeProduccion);
-            } catch (IllegalArgumentException ex) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_DEVOLUCION_DESDE_PRODUCCION_INEXISTENTE");
-            }
-
-            MotivoMovimiento motivoDevolucion = motivoMovimientoRepository.findByMotivo(clasifDev)
+            Long motivoDevId = catalogResolver.getMotivoIdDevolucionDesdeProduccion();
+            MotivoMovimiento motivoDevolucion = motivoMovimientoRepository.findById(motivoDevId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_DEVOLUCION_DESDE_PRODUCCION_INEXISTENTE"));
 
             List<SolicitudMovimiento> solicitudesPend = Optional.ofNullable(
@@ -483,6 +458,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     Long prodId = det.getLote().getProducto().getId().longValue();
                     Long loteId = det.getLote().getId();
 
+                    Long tipoDetalleSalidaId = catalogResolver.getTipoDetalleSalidaId();
+                    Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
                     BigDecimal salida = movimientoInventarioRepository.sumaPorSolicitudYTipo(
                             sol.getId(), prodId, loteId, TipoMovimiento.SALIDA, tipoDetalleSalidaId, null);
                     if (tipoDetalleTransferenciaId != null) {
@@ -528,16 +505,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 }
             }
 
-            ClasificacionMovimientoInventario clasifEntrada;
-            try {
-                clasifEntrada = ClasificacionMovimientoInventario.valueOf(motivoEntradaPt);
-            } catch (IllegalArgumentException ex) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE");
-            }
-
-            MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findByMotivo(clasifEntrada)
+            Long motivoEntradaId = catalogResolver.getMotivoIdEntradaPt();
+            MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findById(motivoEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
 
+            Long tipoDetalleEntradaId = catalogResolver.getTipoDetalleEntradaId();
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
 
@@ -615,9 +587,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
             }
 
-            if (almacenPtId == null || almacenCuarentenaId == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_NO_CONFIGURADO");
-            }
+            Long almacenPtId = catalogResolver.getAlmacenPtId();
+            Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
 
             Almacen almacenPt = almacenRepository.findById(almacenPtId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
@@ -805,7 +776,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
                 .orElseThrow(() -> new IllegalStateException("Motivo SALIDA_PRODUCCION no configurado"));
         TipoMovimientoDetalle detalle = tipoMovimientoDetalleRepository
-                .findByDescripcion("SALIDA_PRODUCCION")
+                .findById(catalogResolver.getTipoDetalleSalidaId())
                 .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
 
         for (DetalleFormula insumo : formula.getDetalles()) {
@@ -974,7 +945,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         FormulaProducto formula = formulaProductoRepository
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
-        TipoMovimientoDetalle detalleSalida = tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION")
+        TipoMovimientoDetalle detalleSalida = tipoMovimientoDetalleRepository.findById(catalogResolver.getTipoDetalleSalidaId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "DETALLE_MOVIMIENTO_NO_ENCONTRADO"));
         Long detalleId = detalleSalida.getId();
         List<InsumoOPDTO> lista = new ArrayList<>();

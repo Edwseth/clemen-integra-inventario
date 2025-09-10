@@ -48,6 +48,7 @@ import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -96,6 +97,7 @@ class OrdenProduccionServiceImplTest {
     @Mock MovimientoInventarioMapper movimientoInventarioMapper;
     @Mock UsuarioService usuarioService;
     @Mock SolicitudMovimientoRepository solicitudMovimientoRepository;
+    @Mock InventoryCatalogResolver catalogResolver;
 
     OrdenProduccionServiceImpl service;
 
@@ -126,23 +128,26 @@ class OrdenProduccionServiceImplTest {
                 movimientoInventarioMapper,
                 usuarioService,
                 solicitudMovimientoRepository,
-                env
+                env,
+                catalogResolver
         );
 
-        ReflectionTestUtils.setField(service, "almacenPtId", 2L);
-        ReflectionTestUtils.setField(service, "almacenCuarentenaId", 7L);
-        ReflectionTestUtils.setField(service, "motivoEntradaPt", "ENTRADA_PRODUCTO_TERMINADO");
-        ReflectionTestUtils.setField(service, "tipoDetalleEntradaId", 9L);
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA,RESERVADA");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDA,EJECUTADA,CANCELADA,RECHAZADO");
-        ReflectionTestUtils.setField(service, "motivoDevolucionDesdeProduccion", "DEVOLUCION_DESDE_PRODUCCION");
-        ReflectionTestUtils.setField(service, "tipoDetalleSalidaId", 4L);
-        ReflectionTestUtils.setField(service, "tipoDetalleTransferenciaId", null);
+
+        when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
+        when(catalogResolver.getMotivoIdEntradaPt()).thenReturn(11L);
+        when(catalogResolver.getTipoDetalleEntradaId()).thenReturn(9L);
+        when(catalogResolver.getMotivoIdDevolucionDesdeProduccion()).thenReturn(30L);
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(8L);
+        when(catalogResolver.getTipoDetalleTransferenciaId()).thenReturn(null);
+        when(catalogResolver.getAlmacenObsoletosId()).thenReturn(3L);
+        when(catalogResolver.getMotivoIdTransferenciaCalidad()).thenReturn(12L);
 
         MotivoMovimiento motivoDev = new MotivoMovimiento();
         motivoDev.setId(30L);
-        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION))
-                .thenReturn(Optional.of(motivoDev));
+        when(motivoMovimientoRepository.findById(30L)).thenReturn(Optional.of(motivoDev));
         when(solicitudMovimientoRepository.findWithDetalles(anyLong(), any(), any(), any()))
                 .thenReturn(List.of());
         when(movimientoInventarioRepository.sumaPorSolicitudYTipo(anyLong(), anyLong(), anyLong(), any(), any(), any()))
@@ -216,7 +221,7 @@ class OrdenProduccionServiceImplTest {
         when(solicitudMovimientoRepository.findWithDetalles(eq(1L), any(), any(), any()))
                 .thenReturn(List.of(solicitud));
         when(movimientoInventarioRepository.sumaPorSolicitudYTipo(eq(10L), eq(2L), eq(5L),
-                eq(TipoMovimiento.SALIDA), eq(4L), isNull()))
+                eq(TipoMovimiento.SALIDA), eq(8L), isNull()))
                 .thenReturn(new BigDecimal("3"));
         when(movimientoInventarioRepository.sumaPorSolicitudYTipo(eq(10L), eq(2L), eq(5L),
                 eq(TipoMovimiento.DEVOLUCION), isNull(), eq(30L)))
@@ -265,7 +270,7 @@ class OrdenProduccionServiceImplTest {
         when(movimientoInventarioRepository.existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
                 any(), anyLong(), anyLong(), anyLong())).thenReturn(false);
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
-        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
+        when(motivoMovimientoRepository.findById(11L))
                 .thenReturn(Optional.of(motivo));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
@@ -274,7 +279,7 @@ class OrdenProduccionServiceImplTest {
         when(movimientoInventarioRepository.existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
                 any(), anyLong(), anyLong(), anyLong())).thenReturn(false);
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
-        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
+        when(motivoMovimientoRepository.findById(11L))
                 .thenReturn(Optional.of(motivo));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
@@ -283,7 +288,7 @@ class OrdenProduccionServiceImplTest {
         when(movimientoInventarioRepository.existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
                 any(), anyLong(), anyLong(), anyLong())).thenReturn(false);
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
-        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
+        when(motivoMovimientoRepository.findById(11L))
                 .thenReturn(Optional.of(motivo));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
@@ -411,7 +416,7 @@ class OrdenProduccionServiceImplTest {
         when(movimientoInventarioRepository.findByTipoMovimientoAndMotivoMovimientoIdAndOrdenProduccionIdAndProductoIdAndLoteId(
                 any(), anyLong(), anyLong(), anyLong(), anyLong())).thenReturn(Optional.empty());
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
-        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
+        when(motivoMovimientoRepository.findById(11L))
                 .thenReturn(Optional.of(motivo));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
@@ -466,7 +471,7 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(Optional.of(lote));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
-        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
+        when(motivoMovimientoRepository.findById(11L))
                 .thenReturn(Optional.of(motivo));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
@@ -515,7 +520,7 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(Optional.of(lote));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
-        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO))
+        when(motivoMovimientoRepository.findById(11L))
                 .thenReturn(Optional.of(motivo));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
@@ -707,7 +712,7 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(Optional.of(formula));
         when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
                 .thenReturn(Optional.of(motivo));
-        when(tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION"))
+        when(tipoMovimientoDetalleRepository.findById(8L))
                 .thenReturn(Optional.of(detalle));
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
         when(solicitudMovimientoRepository.findWithDetalles(1L, null, null, null)).thenReturn(List.of());
@@ -790,7 +795,7 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(Optional.of(formula));
         when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
                 .thenReturn(Optional.of(motivo));
-        when(tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION"))
+        when(tipoMovimientoDetalleRepository.findById(8L))
                 .thenReturn(Optional.of(detalle));
 
         assertThrows(ResponseStatusException.class, () -> service.iniciarEtapa(1L, 2L));
@@ -825,18 +830,18 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(Optional.of(formula));
 
         TipoMovimientoDetalle detalleSalida = new TipoMovimientoDetalle();
-        detalleSalida.setId(7L);
+        detalleSalida.setId(8L);
         detalleSalida.setDescripcion("SALIDA_PRODUCCION");
-        when(tipoMovimientoDetalleRepository.findByDescripcion("SALIDA_PRODUCCION"))
+        when(tipoMovimientoDetalleRepository.findById(8L))
                 .thenReturn(Optional.of(detalleSalida));
 
-        when(movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(1L, 2L, 7L))
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(1L, 2L, 8L))
                 .thenReturn(new BigDecimal("0"));
 
         List<InsumoOPDTO> resultado = service.listarInsumos(1L);
 
         assertEquals(1, resultado.size());
-        verify(movimientoInventarioRepository).sumaCantidadPorOrdenYProducto(1L, 2L, 7L);
+        verify(movimientoInventarioRepository).sumaCantidadPorOrdenYProducto(1L, 2L, 8L);
     }
 
     @Test
