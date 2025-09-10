@@ -60,6 +60,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.mock.env.MockEnvironment;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -100,6 +101,12 @@ class OrdenProduccionServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        MockEnvironment env = new MockEnvironment();
+        env.setProperty("inventory.quantities.roundingPolicy", "REJECT");
+        env.setProperty("inventory.um.decimales.G", "2");
+        env.setProperty("inventory.um.decimales.KG", "3");
+        env.setProperty("inventory.um.decimales.UND", "0");
+
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
                 productoRepository,
@@ -118,7 +125,8 @@ class OrdenProduccionServiceImplTest {
                 movimientoInventarioRepository,
                 movimientoInventarioMapper,
                 usuarioService,
-                solicitudMovimientoRepository
+                solicitudMovimientoRepository,
+                env
         );
 
         ReflectionTestUtils.setField(service, "almacenPtId", 2L);
@@ -185,7 +193,8 @@ class OrdenProduccionServiceImplTest {
                 .estado(EstadoProduccion.EN_PROCESO)
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
-                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
 
@@ -232,7 +241,8 @@ class OrdenProduccionServiceImplTest {
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
                 .loteProduccion("L1")
-                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario();
@@ -304,7 +314,8 @@ class OrdenProduccionServiceImplTest {
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
                 .loteProduccion("L1")
-                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
@@ -340,7 +351,8 @@ class OrdenProduccionServiceImplTest {
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
                 .loteProduccion("L1")
-                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
@@ -378,7 +390,8 @@ class OrdenProduccionServiceImplTest {
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
                 .loteProduccion("L1")
-                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
@@ -434,7 +447,8 @@ class OrdenProduccionServiceImplTest {
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
                 .loteProduccion("L1")
-                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
@@ -482,7 +496,8 @@ class OrdenProduccionServiceImplTest {
                 .cantidadProgramada(BigDecimal.TEN)
                 .cantidadProducidaAcumulada(BigDecimal.ZERO)
                 .loteProduccion("L1")
-                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
@@ -520,6 +535,83 @@ class OrdenProduccionServiceImplTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(movimientoInventarioService, never()).registrarMovimiento(any());
+    }
+
+    @Test
+    void registrarCierreUmDecimalesExcedidos() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("1000.123"))
+                .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .build();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals("UM_DECIMALES_EXCEDIDOS", ex.getReason());
+    }
+
+    @Test
+    void registrarCierreEscalaLoteExcedida() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("KG").build()).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("100.129"))
+                .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .build();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
+        assertEquals("ESCALA_LOTE_EXCEDIDA", ex.getReason());
+    }
+
+    @Test
+    void registrarCierrePrecisionLoteExcedida() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(new BigDecimal("100"))
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("123456789.12"))
+                .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .build();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
+        assertEquals("PRECISION_LOTE_EXCEDIDA", ex.getReason());
+    }
+
+    @Test
+    void registrarCierrePrecisionMovExcedida() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(new BigDecimal("100"))
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("12345678.12"))
+                .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .build();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
+        assertEquals("PRECISION_MOV_EXCEDIDA", ex.getReason());
     }
 
     @Test
