@@ -122,5 +122,19 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             Long almacenDestinoId,
             ClasificacionMovimientoInventario clasificacion);
 
+    @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m " +
+            "where m.solicitudMovimiento.id = :solicitudId " +
+            "and m.producto.id = :productoId " +
+            "and m.lote.id = :loteId " +
+            "and m.tipoMovimiento = :tipoMov " +
+            "and (:tipoDetalleId is null or m.tipoMovimientoDetalle.id = :tipoDetalleId) " +
+            "and (:motivoId is null or m.motivoMovimiento.id = :motivoId)")
+    BigDecimal sumaPorSolicitudYTipo(@Param("solicitudId") Long solicitudId,
+                                     @Param("productoId") Long productoId,
+                                     @Param("loteId") Long loteId,
+                                     @Param("tipoMov") TipoMovimiento tipoMov,
+                                     @Param("tipoDetalleId") Long tipoDetalleId,
+                                     @Param("motivoId") Long motivoId);
+
 }
 

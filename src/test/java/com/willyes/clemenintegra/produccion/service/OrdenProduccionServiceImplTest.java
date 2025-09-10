@@ -24,6 +24,8 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
@@ -68,6 +70,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -121,6 +125,20 @@ class OrdenProduccionServiceImplTest {
         ReflectionTestUtils.setField(service, "almacenCuarentenaId", 7L);
         ReflectionTestUtils.setField(service, "motivoEntradaPt", "ENTRADA_PRODUCTO_TERMINADO");
         ReflectionTestUtils.setField(service, "tipoDetalleEntradaId", 9L);
+        ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA,RESERVADA");
+        ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDA,EJECUTADA,CANCELADA,RECHAZADO");
+        ReflectionTestUtils.setField(service, "motivoDevolucionDesdeProduccion", "DEVOLUCION_DESDE_PRODUCCION");
+        ReflectionTestUtils.setField(service, "tipoDetalleSalidaId", 4L);
+        ReflectionTestUtils.setField(service, "tipoDetalleTransferenciaId", null);
+
+        MotivoMovimiento motivoDev = new MotivoMovimiento();
+        motivoDev.setId(30L);
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION))
+                .thenReturn(Optional.of(motivoDev));
+        when(solicitudMovimientoRepository.findWithDetalles(anyLong(), any(), any(), any()))
+                .thenReturn(List.of());
+        when(movimientoInventarioRepository.sumaPorSolicitudYTipo(anyLong(), anyLong(), anyLong(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
     }
 
     @Test
@@ -158,6 +176,53 @@ class OrdenProduccionServiceImplTest {
                 .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
         assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
+    }
+
+    @Test
+    void registrarCierreConReservasPendientes() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(5L)
+                .producto(Producto.builder().id(2).build())
+                .build();
+        SolicitudMovimientoDetalle detalle = SolicitudMovimientoDetalle.builder()
+                .id(20L)
+                .lote(lote)
+                .cantidad(new BigDecimal("5"))
+                .build();
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(10L)
+                .detalles(List.of(detalle))
+                .build();
+        detalle.setSolicitudMovimiento(solicitud);
+
+        when(solicitudMovimientoRepository.findWithDetalles(eq(1L), any(), any(), any()))
+                .thenReturn(List.of(solicitud));
+        when(movimientoInventarioRepository.sumaPorSolicitudYTipo(eq(10L), eq(2L), eq(5L),
+                eq(TipoMovimiento.SALIDA), eq(4L), isNull()))
+                .thenReturn(new BigDecimal("3"));
+        when(movimientoInventarioRepository.sumaPorSolicitudYTipo(eq(10L), eq(2L), eq(5L),
+                eq(TipoMovimiento.DEVOLUCION), isNull(), eq(30L)))
+                .thenReturn(BigDecimal.ZERO);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(BigDecimal.ONE)
+                .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .build();
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.registrarCierre(1L, dto));
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals("RESERVAS_PENDIENTES_OP", ex.getReason());
     }
 
     @Test
