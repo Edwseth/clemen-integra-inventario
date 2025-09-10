@@ -147,7 +147,7 @@ class MovimientoInventarioServiceImplTest {
                 new UsernamePasswordAuthenticationToken("user", "pass"));
 
         Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
-        Producto producto = Producto.builder().id(1).stockActual(new BigDecimal("10"))
+        Producto producto = Producto.builder().id(1)
                 .categoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto()).build();
         LoteProducto lote = LoteProducto.builder()
                 .id(100L)
@@ -180,7 +180,6 @@ class MovimientoInventarioServiceImplTest {
 
         service.registrarMovimiento(dto);
 
-        assertEquals(new BigDecimal("7"), producto.getStockActual());
         assertEquals(new BigDecimal("7"), lote.getStockLote());
     }
 
@@ -190,7 +189,7 @@ class MovimientoInventarioServiceImplTest {
                 new UsernamePasswordAuthenticationToken("user", "pass"));
 
         Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
-        Producto producto = Producto.builder().id(1).stockActual(new BigDecimal("10"))
+        Producto producto = Producto.builder().id(1)
                 .categoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto()).build();
         LoteProducto lote = LoteProducto.builder()
                 .id(100L)
@@ -214,7 +213,6 @@ class MovimientoInventarioServiceImplTest {
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarMovimiento(dto));
         assertEquals(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
-        assertEquals(new BigDecimal("10"), producto.getStockActual());
         assertEquals(new BigDecimal("10"), lote.getStockLote());
     }
 
@@ -224,7 +222,7 @@ class MovimientoInventarioServiceImplTest {
                 new UsernamePasswordAuthenticationToken("user", "pass"));
 
         Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
-        Producto producto = Producto.builder().id(1).stockActual(new BigDecimal("2"))
+        Producto producto = Producto.builder().id(1)
                 .categoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto()).build();
         LoteProducto lote = LoteProducto.builder()
                 .id(200L)

@@ -46,7 +46,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
 
     @Query(value = """
             SELECT p.id AS producto_id,
-                   COALESCE(SUM(CASE WHEN lp.estado='DISPONIBLE' AND lp.agotado=0
+                   COALESCE(SUM(CASE WHEN lp.estado IN ('DISPONIBLE','LIBERADO')
+                                     AND (lp.stock_lote - lp.stock_reservado) > 0
                                      THEN (lp.stock_lote - lp.stock_reservado) ELSE 0 END), 0) AS stock_disponible
             FROM productos p
             LEFT JOIN lotes_productos lp ON lp.productos_id = p.id

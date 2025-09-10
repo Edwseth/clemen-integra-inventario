@@ -146,7 +146,6 @@ public class ProductoServiceImpl implements ProductoService {
                 .codigoSku(dto.getSku())
                 .nombre(dto.getNombre())
                 .descripcionProducto(dto.getDescripcionProducto())
-                .stockActual(BigDecimal.ZERO)
                 .stockMinimo(dto.getStockMinimo())
                 .stockMinimoProveedor(dto.getStockMinimoProveedor())
                 .activo(true)
@@ -336,7 +335,7 @@ public class ProductoServiceImpl implements ProductoService {
                 }).toList();
     }
 
-    public Workbook generarReporteStockActualExcel() {
+    public Workbook generarReporteStockDisponibleExcel() {
         List<Producto> productos = productoRepository.findAll();
         Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
                 productos.stream().map(p -> p.getId().longValue()).toList());

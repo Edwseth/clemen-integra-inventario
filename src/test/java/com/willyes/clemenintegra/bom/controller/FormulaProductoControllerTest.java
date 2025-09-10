@@ -68,7 +68,7 @@ class FormulaProductoControllerTest {
                 .rol(RolUsuario.ROL_JEFE_PRODUCCION).activo(true).bloqueado(false).build());
         Producto producto = productoRepository.save(Producto.builder()
                 .codigoSku("SKU1").nombre("Prod").descripcionProducto("d")
-                .stockActual(BigDecimal.ZERO).stockMinimo(BigDecimal.ZERO)
+                .stockMinimo(BigDecimal.ZERO)
                 .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                 .unidadMedida(unidad).categoriaProducto(categoria).creadoPor(usuario)
                 .build());
@@ -103,13 +103,13 @@ class FormulaProductoControllerTest {
                 .rol(RolUsuario.ROL_SUPER_ADMIN).activo(true).bloqueado(false).build());
         Producto insumo = productoRepository.save(Producto.builder()
                 .codigoSku("INS1").nombre("Insumo1").descripcionProducto("d")
-                .stockActual(BigDecimal.ZERO).stockMinimo(BigDecimal.ZERO)
+                .stockMinimo(BigDecimal.ZERO)
                 .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                 .unidadMedida(unidadInsumo).categoriaProducto(categoria).creadoPor(usuario)
                 .build());
         Producto producto = productoRepository.save(Producto.builder()
                 .codigoSku("PROD1").nombre("Producto1").descripcionProducto("d")
-                .stockActual(BigDecimal.ZERO).stockMinimo(BigDecimal.ZERO)
+                .stockMinimo(BigDecimal.ZERO)
                 .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                 .unidadMedida(unidadProducto).categoriaProducto(categoria).creadoPor(usuario)
                 .build());
@@ -148,13 +148,13 @@ class FormulaProductoControllerTest {
                 .rol(RolUsuario.ROL_JEFE_PRODUCCION).activo(true).bloqueado(false).build());
         Producto insumo = productoRepository.save(Producto.builder()
                 .codigoSku("INS1").nombre("Insumo1").descripcionProducto("d")
-                .stockActual(BigDecimal.ZERO).stockMinimo(BigDecimal.ZERO)
+                .stockMinimo(BigDecimal.ZERO)
                 .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                 .unidadMedida(unidadInsumo).categoriaProducto(categoria).creadoPor(usuario)
                 .build());
         Producto producto = productoRepository.save(Producto.builder()
                 .codigoSku("PROD1").nombre("Producto1").descripcionProducto("d")
-                .stockActual(BigDecimal.ZERO).stockMinimo(BigDecimal.ZERO)
+                .stockMinimo(BigDecimal.ZERO)
                 .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                 .unidadMedida(unidadProducto).categoriaProducto(categoria).creadoPor(usuario)
                 .build());
@@ -201,7 +201,7 @@ class FormulaProductoControllerTest {
                 .rol(RolUsuario.ROL_JEFE_CALIDAD).activo(true).bloqueado(false).build());
         Producto producto = productoRepository.save(Producto.builder()
                 .codigoSku("PROD2").nombre("Producto2").descripcionProducto("d")
-                .stockActual(BigDecimal.ZERO).stockMinimo(BigDecimal.ZERO)
+                .stockMinimo(BigDecimal.ZERO)
                 .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                 .unidadMedida(unidad).categoriaProducto(categoria).creadoPor(usuario)
                 .build());

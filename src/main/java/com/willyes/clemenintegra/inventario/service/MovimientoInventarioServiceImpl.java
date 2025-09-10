@@ -296,8 +296,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             ordenCompraService.evaluarYActualizarEstado(orden);
         }
 
-        actualizarStockProducto(producto, tipoMovimiento, cantidad, devolucionInterna, dto.ordenProduccionId());
-        productoRepository.save(producto);
+        // El stock disponible se deriva de los lotes, por lo que no se actualiza el producto directamente
 
         // 6. Asociar entidades al movimiento
         movimiento.setProducto(producto);
@@ -728,28 +727,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
         detalle.setCantidadRecibida(nuevaCantidad);
         return entityManager.merge(detalle);
-    }
-
-    private void actualizarStockProducto(Producto producto, TipoMovimiento tipo, BigDecimal cantidad,
-                                         boolean devolucionInterna, Long ordenProduccionId) {
-        switch (tipo) {
-            case ENTRADA, RECEPCION, AJUSTE ->
-                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
-            case DEVOLUCION -> {
-                if (!devolucionInterna) {
-                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).add(cantidad));
-                }
-            }
-            case SALIDA -> {
-                    log.debug("MOV-SALIDA descontando prod={}, qty={}, opId={}",
-                            producto.getId(), cantidad, ordenProduccionId);
-                    producto.setStockActual(Optional.ofNullable(producto.getStockActual()).orElse(BigDecimal.ZERO).subtract(cantidad));
-            }
-            case TRANSFERENCIA -> {
-                // No afecta stock global
-            }
-            default -> throw new IllegalArgumentException("Tipo de movimiento no soportado: " + tipo);
-        }
     }
 
     private EstadoLote obtenerEstadoInicial(Producto producto) {

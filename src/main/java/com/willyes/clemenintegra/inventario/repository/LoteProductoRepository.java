@@ -14,7 +14,6 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,9 +40,9 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             BigDecimal stockLote
     );
 
-    @Query("SELECT lp.estado, COALESCE(SUM(lp.stockLote), 0) " +
+    @Query("SELECT lp.estado, COALESCE(SUM(lp.stockLote - lp.stockReservado), 0) " +
             "FROM LoteProducto lp " +
-            "WHERE lp.producto.id = :productoId AND lp.stockLote > 0 " +
+            "WHERE lp.producto.id = :productoId AND (lp.stockLote - lp.stockReservado) > 0 " +
             "GROUP BY lp.estado")
     List<Object[]> sumarStockPorEstado(@Param("productoId") Long productoId);
 
@@ -51,23 +50,15 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     @Query("select l from LoteProducto l where l.id = :id")
     Optional<LoteProducto> findByIdForUpdate(@Param("id") Long id);
 
-    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-    SELECT l FROM LoteProducto l
-    WHERE l.producto.id = :productoId
-      AND l.estado IN :estadosValidos
-      AND l.agotado = false
-      AND (l.stockLote - l.stockReservado) > 0
-      AND (:almacenesIds IS NULL OR l.almacen.id IN :almacenesIds)
-    ORDER BY
-      CASE WHEN l.fechaVencimiento IS NULL THEN 1 ELSE 0 END,
-      l.fechaVencimiento ASC,
-      l.fechaFabricacion ASC,
-      l.id ASC
-    """)
-    List<LoteProducto> findDisponiblesFefo(@Param("productoId") Long productoId,
-                                           @Param("estadosValidos") Collection<EstadoLote> estadosValidos,
-                                           @Param("almacenesIds") Collection<Long> almacenesIds);
+    @Query(value = """
+       SELECT * FROM v_lotes_stock_disponible
+       WHERE productos_id = :productoId
+         AND estado IN ('DISPONIBLE','LIBERADO')
+         AND stock_disponible > 0
+       ORDER BY fecha_vencimiento ASC
+       LIMIT :limit
+     """, nativeQuery = true)
+    List<LoteProducto> findFefoDisponibles(@Param("productoId") Long productoId, @Param("limit") int limit);
 
     @Modifying
     @Query(value = """
@@ -81,9 +72,9 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
 
     // LÍNEA CODEx: nuevas consultas para disponibilidad detallada por producto
     @Query("""
-      select lp.estado as estado, coalesce(sum(lp.stockLote),0)
+      select lp.estado as estado, coalesce(sum(lp.stockLote - lp.stockReservado),0)
       from LoteProducto lp
-      where lp.producto.id = :productoId and lp.stockLote > 0
+      where lp.producto.id = :productoId and (lp.stockLote - lp.stockReservado) > 0
       group by lp.estado
     """)
     List<Object[]> sumarPorEstado(@Param("productoId") Long productoId);
