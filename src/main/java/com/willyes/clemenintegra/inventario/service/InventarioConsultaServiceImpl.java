@@ -43,7 +43,7 @@ public class InventarioConsultaServiceImpl implements InventarioConsultaService 
 
         // CODEx: uso actual de la consulta FIFO disponible
         List<LoteDisponibleDTO> lotesDisponibles = loteProductoRepository
-                .findDisponiblesFifo(productoId, List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO))
+                .findDisponiblesFefo(productoId, List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO), null)
                 .stream()
                 .map(lp -> LoteDisponibleDTO.builder()
                         .loteProductoId(lp.getId())

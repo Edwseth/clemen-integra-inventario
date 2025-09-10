@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Collection;
+import java.math.BigDecimal;
 
 @Repository
 public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long>, JpaSpecificationExecutor<LoteProducto> {
@@ -52,10 +54,26 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
       AND l.estado IN :estadosValidos
       AND l.agotado = false
       AND (l.stockLote - l.stockReservado) > 0
-    ORDER BY l.fechaVencimiento ASC, l.id ASC
+      AND (:almacenesIds IS NULL OR l.almacen.id IN :almacenesIds)
+    ORDER BY
+      CASE WHEN l.fechaVencimiento IS NULL THEN 1 ELSE 0 END,
+      l.fechaVencimiento ASC,
+      l.fechaFabricacion ASC,
+      l.id ASC
     """)
-    List<LoteProducto> findDisponiblesFifo(@Param("productoId") Long productoId,
-                                           @Param("estadosValidos") Collection<EstadoLote> estadosValidos);
+    List<LoteProducto> findDisponiblesFefo(@Param("productoId") Long productoId,
+                                           @Param("estadosValidos") Collection<EstadoLote> estadosValidos,
+                                           @Param("almacenesIds") Collection<Long> almacenesIds);
+
+    @Modifying
+    @Query(value = """
+      UPDATE lotes_productos
+      SET stock_reservado = stock_reservado + :cantidad,
+          agotado = CASE WHEN stock_lote - stock_reservado - :cantidad <= 0 THEN true ELSE agotado END,
+          fecha_agotado = CASE WHEN stock_lote - stock_reservado - :cantidad <= 0 THEN NOW() ELSE fecha_agotado END
+      WHERE id = :loteId AND agotado = false AND (stock_lote - stock_reservado) >= :cantidad
+    """, nativeQuery = true)
+    int reservarStock(@Param("loteId") Long loteId, @Param("cantidad") BigDecimal cantidad);
 
     // LÍNEA CODEx: nuevas consultas para disponibilidad detallada por producto
     @Query("""

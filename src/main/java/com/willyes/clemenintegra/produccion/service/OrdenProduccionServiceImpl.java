@@ -106,6 +106,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return prefijo + "-" + String.format("%02d", contador + 1);
     }
 
+    private List<Long> obtenerAlmacenesOrigen(Producto insumo) {
+        if (insumo == null || insumo.getCategoriaProducto() == null
+                || insumo.getCategoriaProducto().getTipo() == null) {
+            return List.of();
+        }
+        return switch (insumo.getCategoriaProducto().getTipo()) {
+            case MATERIA_PRIMA -> List.of(1L);
+            case MATERIAL_EMPAQUE -> List.of(5L);
+            default -> List.of();
+        };
+    }
+
     private String generarCodigoLote(Producto producto) {
         if (producto.getCategoriaProducto() == null ||
                 producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO) {
@@ -505,9 +517,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal requerida = insumo.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             BigDecimal restante = requerida;
 
-            List<LoteProducto> lotes = loteProductoRepository.findDisponiblesFifo(
+            List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
+            List<LoteProducto> lotes = loteProductoRepository.findDisponiblesFefo(
                     insumoId,
-                    List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO));
+                    List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO),
+                    almacenesValidos.isEmpty() ? null : almacenesValidos);
+
+            SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                    .tipoMovimiento(TipoMovimiento.SALIDA)
+                    .producto(insumo.getInsumo())
+                    .cantidad(requerida)
+                    .ordenProduccion(orden)
+                    .usuarioSolicitante(usuario)
+                    .motivoMovimiento(motivo)
+                    .tipoMovimientoDetalle(detalle)
+                    .estado(EstadoSolicitudMovimiento.RESERVADA)
+                    .build();
 
             for (LoteProducto lote : lotes) {
                 if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
@@ -515,29 +540,28 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 BigDecimal usar = disponible.min(restante);
                 if (usar.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-                lote.setStockReservado(lote.getStockReservado().add(usar));
-                loteProductoRepository.save(lote);
+                int updated = loteProductoRepository.reservarStock(lote.getId(), usar);
+                if (updated == 0) {
+                    continue;
+                }
 
-                SolicitudMovimiento sol = SolicitudMovimiento.builder()
-                        .tipoMovimiento(TipoMovimiento.SALIDA)
-                        .producto(insumo.getInsumo())
+                SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
+                        .solicitudMovimiento(solicitud)
                         .lote(lote)
                         .cantidad(usar)
                         .almacenOrigen(lote.getAlmacen())
-                        .ordenProduccion(orden)
-                        .usuarioSolicitante(usuario)
-                        .motivoMovimiento(motivo)
-                        .tipoMovimientoDetalle(detalle)
-                        .estado(EstadoSolicitudMovimiento.RESERVADA)
                         .build();
-                solicitudMovimientoRepository.save(sol);
+                solicitud.getDetalles().add(detSolicitud);
 
                 restante = restante.subtract(usar);
             }
 
             if (restante.compareTo(BigDecimal.ZERO) > 0) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "STOCK_INSUFICIENTE");
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "STOCK_INSUFICIENTE: faltan " + restante);
             }
+
+            solicitudMovimientoRepository.save(solicitud);
         }
     }
 
@@ -581,29 +605,31 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 List<SolicitudMovimiento> reservas = solicitudMovimientoRepository
                         .findWithDetalles(ordenId, List.of(EstadoSolicitudMovimiento.RESERVADA), null, null);
                 for (SolicitudMovimiento res : reservas) {
-                    MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
-                            null,
-                            res.getCantidad(),
-                            TipoMovimiento.SALIDA,
-                            ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                            null,
-                            res.getProducto().getId(),
-                            res.getLote().getId(),
-                            res.getAlmacenOrigen() != null ? res.getAlmacenOrigen().getId().intValue() : res.getLote().getAlmacen().getId().intValue(),
-                            null,
-                            null,
-                            null,
-                            res.getMotivoMovimiento() != null ? res.getMotivoMovimiento().getId() : null,
-                            res.getTipoMovimientoDetalle() != null ? res.getTipoMovimientoDetalle().getId() : null,
-                            res.getId(),
-                            usuario.getId(),
-                            ordenId,
-                            null,
-                            null,
-                            null,
-                            res.getLote().getEstado()
-                    );
-                    movimientoInventarioService.registrarMovimiento(movDto);
+                    for (SolicitudMovimientoDetalle detRes : res.getDetalles()) {
+                        MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
+                                null,
+                                detRes.getCantidad(),
+                                TipoMovimiento.SALIDA,
+                                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                                null,
+                                res.getProducto().getId(),
+                                detRes.getLote().getId(),
+                                detRes.getAlmacenOrigen() != null ? detRes.getAlmacenOrigen().getId().intValue() : detRes.getLote().getAlmacen().getId().intValue(),
+                                detRes.getAlmacenDestino() != null ? detRes.getAlmacenDestino().getId().intValue() : null,
+                                null,
+                                null,
+                                res.getMotivoMovimiento() != null ? res.getMotivoMovimiento().getId() : null,
+                                res.getTipoMovimientoDetalle() != null ? res.getTipoMovimientoDetalle().getId() : null,
+                                res.getId(),
+                                usuario.getId(),
+                                ordenId,
+                                null,
+                                null,
+                                null,
+                                detRes.getLote().getEstado()
+                        );
+                        movimientoInventarioService.registrarMovimiento(movDto);
+                    }
                 }
             }
         }
