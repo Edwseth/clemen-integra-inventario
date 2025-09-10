@@ -5,7 +5,7 @@ public class DetalleFormulaResponse {
     public String insumoNombre;
     public java.math.BigDecimal cantidadNecesaria;
     public java.math.BigDecimal cantidadTotalNecesaria;
-    public java.math.BigDecimal stockActual;
+    public java.math.BigDecimal stockDisponible;
     public String estadoStock;
     public String unidad;
     public String unidadSimbolo;

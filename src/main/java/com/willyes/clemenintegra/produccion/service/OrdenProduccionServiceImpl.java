@@ -262,23 +262,23 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
             cantidadesEscaladas.put(insumoId, cantidadRequerida);
 
-            BigDecimal stockActual = stockQueryService.obtenerStockDisponible(insumoId); // LÍNEA CODEx corregida: stock desde lotes
+            BigDecimal stockDisponible = stockQueryService.obtenerStockDisponible(insumoId); // LÍNEA CODEx corregida: stock desde lotes
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
-                producibleConEste = stockActual.divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
+                producibleConEste = stockDisponible.divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
             }
             if (maxProducible == null || producibleConEste < maxProducible) {
                 maxProducible = producibleConEste;
             }
 
-            if (stockActual.compareTo(cantidadRequerida) < 0) {
+            if (stockDisponible.compareTo(cantidadRequerida) < 0) {
                 stockSuficiente = false;
                 faltantes.add(InsumoFaltanteDTO.builder()
                         .productoId(insumoId)
                         .nombre(productoInsumo.getNombre())
                         .requerido(cantidadRequerida)
-                        .disponible(stockActual)
+                        .disponible(stockDisponible)
                         .unidadSimbolo(productoInsumo.getUnidadMedida() != null
                                 ? productoInsumo.getUnidadMedida().getSimbolo()
                                 : null)
@@ -786,10 +786,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal restante = requerida;
 
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
-            List<LoteProducto> lotes = loteProductoRepository.findDisponiblesFefo(
-                    insumoId,
-                    List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO),
-                    almacenesValidos.isEmpty() ? null : almacenesValidos);
+            List<LoteProducto> lotes = loteProductoRepository.findFefoDisponibles(insumoId, Integer.MAX_VALUE)
+                    .stream()
+                    .filter(l -> almacenesValidos.isEmpty() || (l.getAlmacen() != null && almacenesValidos.contains(l.getAlmacen().getId())))
+                    .toList();
 
             SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
                     .tipoMovimiento(TipoMovimiento.SALIDA)

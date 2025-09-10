@@ -41,9 +41,9 @@ public class InventarioConsultaServiceImpl implements InventarioConsultaService 
             }
         }
 
-        // CODEx: uso actual de la consulta FIFO disponible
+        // Consulta FEFO basada en vista v_lotes_stock_disponible
         List<LoteDisponibleDTO> lotesDisponibles = loteProductoRepository
-                .findDisponiblesFefo(productoId, List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO), null)
+                .findFefoDisponibles(productoId, Integer.MAX_VALUE)
                 .stream()
                 .map(lp -> LoteDisponibleDTO.builder()
                         .loteProductoId(lp.getId())

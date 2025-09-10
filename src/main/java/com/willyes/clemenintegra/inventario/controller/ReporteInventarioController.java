@@ -142,15 +142,15 @@ public class ReporteInventarioController {
                 .body(bos.toByteArray());
     }
 
-    @GetMapping("/stock-actual")
+    @GetMapping("/stock-disponible")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportarStockActual() throws IOException {
-        Workbook workbook = productoService.generarReporteStockActualExcel();
+    public ResponseEntity<byte[]> exportarStockDisponible() throws IOException {
+        Workbook workbook = productoService.generarReporteStockDisponibleExcel();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         workbook.write(bos);
         workbook.close();
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=stock_actual.xlsx")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=stock_disponible.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(bos.toByteArray());
     }

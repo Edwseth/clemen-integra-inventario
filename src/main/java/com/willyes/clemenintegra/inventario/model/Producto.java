@@ -34,9 +34,6 @@ public class Producto {
     @Column(name = "descripcion_producto", length = 255)
     private String descripcionProducto;
 
-    @Column(name = "stock_actual", nullable = false)
-    private BigDecimal stockActual = BigDecimal.ZERO;
-
     @Column(name = "stock_minimo", nullable = false)
     private BigDecimal stockMinimo = BigDecimal.ZERO;
 
@@ -101,8 +98,6 @@ public class Producto {
     public void setNombre(String nombre) {this.nombre = nombre;}
     public String getDescripcionProducto() {return descripcionProducto;}
     public void setDescripcionProducto(String descripcionProducto) {this.descripcionProducto = descripcionProducto;}
-    public BigDecimal getStockActual() {return stockActual;}
-    public void setStockActual(BigDecimal stockActual) {this.stockActual = stockActual;}
     public BigDecimal getStockMinimo() {return stockMinimo;}
     public void setStockMinimo(BigDecimal stockMinimo) {this.stockMinimo = stockMinimo;}
     public BigDecimal getStockMinimoProveedor() {return stockMinimoProveedor;}

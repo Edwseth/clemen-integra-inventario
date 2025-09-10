@@ -23,7 +23,7 @@ public interface ProductoService {
     void eliminarProducto(Long id);
     List<ProductoConEstadoLoteDTO> buscarProductosConLotesPorEstado(String estado);
     List<ProductoConLotesDTO> buscarProductosConLotesAgrupadosPorEstado(String estado);
-    Workbook generarReporteStockActualExcel();
+    Workbook generarReporteStockDisponibleExcel();
 
     /**
      * Obtiene el producto como entidad para uso interno de otros módulos.

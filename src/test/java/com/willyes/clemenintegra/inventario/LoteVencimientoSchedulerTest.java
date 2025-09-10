@@ -71,7 +71,6 @@ class LoteVencimientoSchedulerTest {
                 .codigoSku("SKU1")
                 .nombre("Prod1")
                 .descripcionProducto("desc")
-                .stockActual(BigDecimal.ONE)
                 .stockMinimo(BigDecimal.ZERO)
                 .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                 .unidadMedida(unidad)

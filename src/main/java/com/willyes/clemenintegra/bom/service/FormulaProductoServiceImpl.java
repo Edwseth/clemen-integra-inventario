@@ -96,7 +96,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                 BigDecimal totalNecesaria = entidad.getCantidadNecesaria().multiply(cantidadProduccion);
                 dto.cantidadTotalNecesaria = totalNecesaria;
 
-                // LÍNEA CODEx: antes se tomaba stockActual directo del producto sin discriminar lotes
+                // LÍNEA CODEx: antes se tomaba el stock del producto sin discriminar lotes
                 Long insumoId = entidad.getInsumo().getId().longValue();
                 DisponibilidadInsumoDTO disponibilidad = new DisponibilidadInsumoDTO();
 
@@ -154,7 +154,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                     }
                 }
 
-                dto.stockActual = disponibilidad.getTotalProducto();
+                dto.stockDisponible = disponibilidad.getDisponible();
                 dto.estadoStock = disponibilidad.getDisponible().compareTo(totalNecesaria) >= 0 ? "SUFICIENTE" : "INSUFICIENTE";
                 dto.disponibilidad = disponibilidad;
                 dto.bloqueante = new BloqueanteDTO(insuficiente, motivo);
