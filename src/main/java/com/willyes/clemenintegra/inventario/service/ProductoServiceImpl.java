@@ -32,9 +32,11 @@ import static com.willyes.clemenintegra.inventario.service.spec.ProductoSpecific
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -107,7 +109,8 @@ public class ProductoServiceImpl implements ProductoService {
 
     public List<ProductoResponseDTO> findByCategoriaTipo(String tipo) {
         TipoCategoria tipoEnum = TipoCategoria.valueOf(tipo); // conversión aquí
-        List<Producto> lista = productoRepository.findByCategoriaProducto_Tipo(tipoEnum);
+        List<Producto> lista = Optional.ofNullable(productoRepository.findByCategoriaProducto_Tipo(tipoEnum))
+                .orElse(Collections.emptyList());
         Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
                 lista.stream().map(p -> p.getId().longValue()).toList());
         return lista.stream()
