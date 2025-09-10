@@ -116,6 +116,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Value("${inventory.solicitud.estados.concluyentes}")
     private String estadosSolicitudConcluyentesConf;
 
+    @Value("${inventory.mov.clasificacion.entradaPt}")
+    private String clasificacionEntradaPtConf;
+
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefijo = "OP-CLEMEN-" + fecha;
@@ -484,11 +487,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 }
             }
 
-            Long motivoEntradaId = catalogResolver.getMotivoIdEntradaPt();
+            Long motivoEntradaId = catalogResolver.getMotivoIdEntradaProductoTerminado();
             MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findById(motivoEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
 
-            ClasificacionMovimientoInventario clasifEntrada = motivoEntrada.getMotivo();
+            ClasificacionMovimientoInventario clasifEntrada;
+            try {
+                clasifEntrada = ClasificacionMovimientoInventario.valueOf(clasificacionEntradaPtConf);
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_ENTRADA_PT_INVALIDA");
+            }
 
             Long tipoDetalleEntradaId = catalogResolver.getTipoDetalleEntradaId();
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
