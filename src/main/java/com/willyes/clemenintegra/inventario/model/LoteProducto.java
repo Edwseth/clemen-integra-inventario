@@ -41,9 +41,11 @@ public class LoteProducto {
     @Column(name = "stock_lote", nullable = false, precision = 10, scale = 2)
     private BigDecimal stockLote;
 
+    @Builder.Default
     @Column(name = "agotado", nullable = false)
     private boolean agotado = false;
 
+    @Builder.Default
     @Column(name = "stock_reservado", nullable = false, precision = 18, scale = 6)
     private BigDecimal stockReservado = BigDecimal.ZERO;
 

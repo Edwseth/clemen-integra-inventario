@@ -138,6 +138,7 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
         assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
     }
@@ -153,6 +154,7 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
         assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
     }
@@ -175,7 +177,7 @@ class OrdenProduccionServiceImplTest {
         when(repository.save(any())).thenReturn(orden);
         when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
         when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
-        when(loteProductoRepository.findByCodigoLoteAndProductoId(anyString(), anyLong()))
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
                 .thenReturn(Optional.of(LoteProducto.builder()
                         .id(1L)
                         .almacen(Almacen.builder().id(2L).build())
@@ -214,6 +216,7 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .observacion("obs")
                 .build();
 
@@ -243,7 +246,7 @@ class OrdenProduccionServiceImplTest {
         when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
         when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
-        when(loteProductoRepository.findByCodigoLoteAndProductoId(anyString(), anyLong()))
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
                 .thenReturn(Optional.of(LoteProducto.builder()
                         .id(1L)
                         .almacen(Almacen.builder().id(2L).build())
@@ -279,7 +282,7 @@ class OrdenProduccionServiceImplTest {
         when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
         when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
-        when(loteProductoRepository.findByCodigoLoteAndProductoId(anyString(), anyLong()))
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
                 .thenReturn(Optional.of(LoteProducto.builder()
                         .id(1L)
                         .almacen(Almacen.builder().id(2L).build())
@@ -291,6 +294,7 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.valueOf(5))
                 .tipo(TipoCierre.TOTAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .cerradaIncompleta(true)
                 .build();
 
@@ -322,7 +326,7 @@ class OrdenProduccionServiceImplTest {
                 .estado(EstadoLote.DISPONIBLE)
                 .stockLote(BigDecimal.ZERO)
                 .build();
-        when(loteProductoRepository.findByCodigoLoteAndProductoId(anyString(), anyLong()))
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
                 .thenReturn(Optional.of(lote));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(movimientoInventarioRepository.existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
@@ -337,6 +341,7 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
 
         service.registrarCierre(1L, dto);
@@ -377,7 +382,7 @@ class OrdenProduccionServiceImplTest {
                 .estado(EstadoLote.DISPONIBLE)
                 .stockLote(BigDecimal.ZERO)
                 .build();
-        when(loteProductoRepository.findByCodigoLoteAndProductoId(anyString(), anyLong()))
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
                 .thenReturn(Optional.of(lote));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(movimientoInventarioRepository.existsByTipoMovimientoAndProductoIdAndLoteIdAndOrdenProduccionId(
@@ -391,6 +396,7 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
