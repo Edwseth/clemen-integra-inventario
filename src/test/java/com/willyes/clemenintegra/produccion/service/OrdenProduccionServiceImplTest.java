@@ -135,6 +135,7 @@ class OrdenProduccionServiceImplTest {
 
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA,RESERVADA");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDA,EJECUTADA,CANCELADA,RECHAZADO");
+        ReflectionTestUtils.setField(service, "clasificacionEntradaPtConf", "ENTRADA_PRODUCTO_TERMINADO");
 
         when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
