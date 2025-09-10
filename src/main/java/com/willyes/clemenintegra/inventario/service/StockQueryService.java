@@ -22,8 +22,12 @@ public class StockQueryService {
         if (ids == null || ids.isEmpty()) {
             return Collections.emptyMap();
         }
+        List<Long> uniques = ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
         List<StockDisponibleProjection> rows = Optional
-                .ofNullable(productoRepository.calcularStockDisponiblePorProducto(ids))
+                .ofNullable(productoRepository.calcularStockDisponiblePorProducto(uniques))
                 .orElse(Collections.emptyList());
         return rows.stream()
                 .filter(Objects::nonNull)
