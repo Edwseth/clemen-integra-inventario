@@ -68,6 +68,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -1054,5 +1055,66 @@ class OrdenProduccionServiceImplTest {
         OrdenProduccion capturada = captor.getValue();
         assertEquals(BigDecimal.ZERO, capturada.getCantidadProducida());
         assertEquals(BigDecimal.ZERO, capturada.getCantidadProducidaAcumulada());
+    }
+
+    @Test
+    void guardarConValidacionStockConStockSuficiente() {
+        Producto producto = new Producto();
+        producto.setId(1);
+
+        Usuario responsable = new Usuario();
+        responsable.setId(2L);
+
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .producto(producto)
+                .cantidadProgramada(BigDecimal.valueOf(5))
+                .responsable(responsable)
+                .build();
+
+        Producto insumo = new Producto();
+        insumo.setId(100);
+        insumo.setNombre("Insumo A");
+        UnidadMedida um = new UnidadMedida();
+        um.setSimbolo("kg");
+        insumo.setUnidadMedida(um);
+
+        DetalleFormula detalle = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(BigDecimal.valueOf(2))
+                .build();
+
+        FormulaProducto formula = FormulaProducto.builder()
+                .detalles(List.of(detalle))
+                .build();
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(1L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(List.of(100L))).thenReturn(List.of(insumo));
+        when(stockQueryService.obtenerStockDisponible(eq(List.of(100L))))
+                .thenReturn(Map.of(100L, BigDecimal.valueOf(15)));
+        when(repository.save(any())).thenAnswer(inv -> {
+            OrdenProduccion o = inv.getArgument(0);
+            o.setId(10L);
+            return o;
+        });
+        when(repository.countByCodigoOrdenStartingWith(anyString())).thenReturn(0L);
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(1L);
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION))
+                .thenReturn(Optional.of(motivo));
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(2L);
+        when(tipoMovimientoDetalleRepository.findById(anyLong())).thenReturn(Optional.of(tipoDetalle));
+        doNothing().when(solicitudMovimientoService).registrarSolicitud(any());
+
+        OrdenProduccionServiceImpl spyService = spy(service);
+        doReturn(List.of()).when(spyService).cargarPlantillaEtapas(any());
+        doNothing().when(spyService).reservarInsumosParaOP(anyLong());
+
+        ResultadoValidacionOrdenDTO resultado = spyService.guardarConValidacionStock(orden);
+
+        assertTrue(resultado.isEsValida());
+        verify(stockQueryService, times(1)).obtenerStockDisponible(eq(List.of(100L)));
+        verify(stockQueryService, never()).obtenerStockDisponible(anyLong());
     }
 }
