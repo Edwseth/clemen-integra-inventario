@@ -5,9 +5,11 @@ import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.Produccion;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 @Entity
@@ -46,8 +48,9 @@ public class LoteProducto {
     private boolean agotado = false;
 
     @Builder.Default
+    @NotNull
     @Column(name = "stock_reservado", nullable = false, precision = 18, scale = 6)
-    private BigDecimal stockReservado = BigDecimal.ZERO;
+    private BigDecimal stockReservado = BigDecimal.ZERO.setScale(6);
 
     @Column(name = "fecha_agotado")
     private LocalDateTime fechaAgotado;
@@ -87,6 +90,20 @@ public class LoteProducto {
 
     public LoteProducto(Long id) {
         this.id = id;
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void normalizeDefaults() {
+        if (stockReservado == null) {
+            stockReservado = BigDecimal.ZERO.setScale(6);
+        } else {
+            stockReservado = stockReservado.setScale(6, RoundingMode.DOWN);
+        }
+
+        if (stockLote != null) {
+            stockLote = stockLote.setScale(2, RoundingMode.DOWN);
+        }
     }
 }
 
