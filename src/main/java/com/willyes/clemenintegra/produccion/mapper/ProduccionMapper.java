@@ -27,6 +27,7 @@ public class ProduccionMapper {
         dto.id = entidad.getId();
         dto.codigoOrden = entidad.getCodigoOrden();
         dto.loteProduccion = entidad.getLoteProduccion();
+        dto.loteId = entidad.getLoteId();
         dto.fechaInicio = entidad.getFechaInicio();
         dto.fechaFin = entidad.getFechaFin();
         dto.cantidadProgramada = entidad.getCantidadProgramada();

@@ -849,7 +849,47 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             actualizarOrden = true;
         }
         if ((etapa.getSecuencia() != null && etapa.getSecuencia() == 1) && orden.getLoteProduccion() == null) {
-            orden.setLoteProduccion(generarCodigoLote(orden.getProducto()));
+            String codigoLote = generarCodigoLote(orden.getProducto());
+            orden.setLoteProduccion(codigoLote);
+
+            if (orden.getProducto() == null || orden.getProducto().getTipoAnalisis() == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
+            }
+
+            Long almacenPtId = catalogResolver.getAlmacenPtId();
+            Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+
+            Almacen almacenPt = almacenRepository.findById(almacenPtId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
+            Almacen almacenCuarentena = almacenRepository.findById(almacenCuarentenaId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
+
+            Almacen destino;
+            EstadoLote estadoLote;
+            TipoAnalisisCalidad tipoAnalisis = orden.getProducto().getTipoAnalisis();
+            switch (tipoAnalisis) {
+                case NINGUNO -> {
+                    destino = almacenPt;
+                    estadoLote = EstadoLote.DISPONIBLE;
+                }
+                case FISICO_QUIMICO, MICROBIOLOGICO, AMBOS -> {
+                    destino = almacenCuarentena;
+                    estadoLote = EstadoLote.EN_CUARENTENA;
+                }
+                default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
+            }
+
+            LoteProducto lote = LoteProducto.builder()
+                    .codigoLote(codigoLote)
+                    .producto(orden.getProducto())
+                    .almacen(destino)
+                    .estado(estadoLote)
+                    .stockLote(BigDecimal.ZERO)
+                    .ordenProduccion(orden)
+                    .build();
+
+            lote = loteProductoRepository.save(lote);
+            orden.setLoteId(lote.getId());
             actualizarOrden = true;
         }
         if (actualizarOrden) {

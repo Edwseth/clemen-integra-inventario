@@ -7,6 +7,7 @@ public class OrdenProduccionResponseDTO {
     public Long id;
     public String codigoOrden;
     public String loteProduccion;
+    public Long loteId;
     public LocalDateTime fechaInicio;
     public LocalDateTime fechaFin;
     public BigDecimal cantidadProgramada;

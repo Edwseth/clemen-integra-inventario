@@ -22,6 +22,9 @@ public class OrdenProduccion {
 
     private String loteProduccion;
 
+    @Column(name = "lote_producto_id")
+    private Long loteId;
+
     @Column(nullable = false)
     private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;
