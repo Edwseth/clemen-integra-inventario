@@ -611,11 +611,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
             }
 
-            LocalDateTime fechaFabricacion = dto.getFechaFabricacion();
             if (fechaFabricacion == null || fechaFabricacion.isAfter(LocalDateTime.now())) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
             }
-            LocalDateTime fechaVencimiento = dto.getFechaVencimiento();
             if (fechaVencimiento != null && fechaVencimiento.isBefore(fechaFabricacion)) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
             }
