@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.EtapaProduccionResponse;
 import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
+import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
@@ -41,6 +42,8 @@ public interface OrdenProduccionService {
     com.willyes.clemenintegra.produccion.model.EtapaProduccion finalizarEtapa(Long ordenId, Long etapaId, Long usuarioId);
 
     List<InsumoOPDTO> listarInsumos(Long id);
+
+    LoteProductoResponse obtenerLote(Long ordenId);
 
     Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Pageable pageable);
 

@@ -26,6 +26,8 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAlmacen;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
@@ -36,6 +38,7 @@ import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
+import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
@@ -1132,5 +1135,38 @@ class OrdenProduccionServiceImplTest {
         assertTrue(resultado.isEsValida());
         verify(stockQueryService, times(1)).obtenerStockDisponible(eq(List.of(100L)));
         verify(stockQueryService, never()).obtenerStockDisponible(anyLong());
+    }
+
+    @Test
+    void obtenerLote_ok() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(5L)
+                .producto(Producto.builder().id(10).build())
+                .build();
+        when(repository.findById(5L)).thenReturn(Optional.of(orden));
+
+        Almacen almacen = Almacen.builder()
+                .id(1)
+                .nombre("A1")
+                .ubicacion("U")
+                .categoria(TipoCategoria.PRODUCTO_TERMINADO)
+                .tipo(TipoAlmacen.PRINCIPAL)
+                .build();
+        LoteProducto lote = LoteProducto.builder()
+                .id(7L)
+                .codigoLote("L1")
+                .estado(EstadoLote.DISPONIBLE)
+                .almacen(almacen)
+                .build();
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(5L, 10L))
+                .thenReturn(Optional.of(lote));
+
+        LoteProductoResponse dto = service.obtenerLote(5L);
+
+        assertNotNull(dto);
+        assertEquals(7L, dto.getId());
+        assertEquals("L1", dto.getCodigoLote());
+        assertEquals(EstadoLote.DISPONIBLE, dto.getEstado());
+        assertEquals(1, dto.getAlmacen().getId());
     }
 }

@@ -149,4 +149,11 @@ public class OrdenProduccionController {
                                                                    Pageable pageable) {
         return service.listarMovimientos(id, pageable);
     }
+
+    @GetMapping("/{id}/lote")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<LoteProductoResponse> obtenerLote(@PathVariable Long id) {
+        LoteProductoResponse lote = service.obtenerLote(id);
+        return lote != null ? ResponseEntity.ok(lote) : ResponseEntity.notFound().build();
+    }
 }
