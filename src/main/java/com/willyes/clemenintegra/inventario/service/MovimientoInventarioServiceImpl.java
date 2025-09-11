@@ -566,8 +566,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
                 });
 
-        if (EnumSet.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO,
-                EstadoLote.RECHAZADO, EstadoLote.VENCIDO).contains(loteOrigen.getEstado())) {
+        boolean estadoBloqueado = EnumSet.of(EstadoLote.RETENIDO,
+                        EstadoLote.RECHAZADO, EstadoLote.VENCIDO)
+                .contains(loteOrigen.getEstado())
+                || (loteOrigen.getEstado() == EstadoLote.EN_CUARENTENA
+                && producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO);
+
+        if (estadoBloqueado) {
             log.warn(
                     "procesarMovimientoConLoteExistente: estado de lote inválido loteId={} estado={} productoId={}",
                     loteOrigen.getId(), loteOrigen.getEstado(), producto.getId());

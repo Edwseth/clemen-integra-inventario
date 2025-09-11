@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.Almacen;
+import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
@@ -139,6 +140,100 @@ class MovimientoInventarioServiceImplTest {
         assertSame(loteOrigen, result);
         assertEquals(EstadoLote.RECHAZADO, result.getEstado());
         assertEquals(destino, result.getAlmacen());
+    }
+
+    @Test
+    void loteEnCuarentenaConProductoTerminadoPermiteMovimiento() {
+        Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
+        Producto producto = Producto.builder()
+                .id(1)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.PRODUCTO_TERMINADO).build())
+                .build();
+        LoteProducto loteOrigen = LoteProducto.builder()
+                .id(100L)
+                .codigoLote("L1")
+                .producto(producto)
+                .almacen(origen)
+                .estado(EstadoLote.EN_CUARENTENA)
+                .stockLote(new BigDecimal("10"))
+                .build();
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("1"), TipoMovimiento.SALIDA, null, null,
+                producto.getId(), loteOrigen.getId(), origen.getId(), null,
+                null, null, null, null, null, null, null, null, null, null, null);
+
+        when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
+        when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertDoesNotThrow(() -> ReflectionTestUtils.invokeMethod(service,
+                "procesarMovimientoConLoteExistente", dto, TipoMovimiento.SALIDA,
+                origen, null, producto, new BigDecimal("1"), false, null));
+    }
+
+    @Test
+    void loteEnCuarentenaConProductoNoTerminadoLanza422() {
+        Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
+        Producto producto = Producto.builder()
+                .id(1)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
+                .build();
+        LoteProducto loteOrigen = LoteProducto.builder()
+                .id(100L)
+                .codigoLote("L1")
+                .producto(producto)
+                .almacen(origen)
+                .estado(EstadoLote.EN_CUARENTENA)
+                .stockLote(new BigDecimal("10"))
+                .build();
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("1"), TipoMovimiento.SALIDA, null, null,
+                producto.getId(), loteOrigen.getId(), origen.getId(), null,
+                null, null, null, null, null, null, null, null, null, null, null);
+
+        when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
+        when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                ReflectionTestUtils.invokeMethod(service,
+                        "procesarMovimientoConLoteExistente", dto, TipoMovimiento.SALIDA,
+                        origen, null, producto, new BigDecimal("1"), false, null));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+    }
+
+    @Test
+    void loteConEstadoRetenidoLanza422() {
+        Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
+        Producto producto = Producto.builder()
+                .id(1)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.PRODUCTO_TERMINADO).build())
+                .build();
+        LoteProducto loteOrigen = LoteProducto.builder()
+                .id(100L)
+                .codigoLote("L1")
+                .producto(producto)
+                .almacen(origen)
+                .estado(EstadoLote.RETENIDO)
+                .stockLote(new BigDecimal("10"))
+                .build();
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("1"), TipoMovimiento.SALIDA, null, null,
+                producto.getId(), loteOrigen.getId(), origen.getId(), null,
+                null, null, null, null, null, null, null, null, null, null, null);
+
+        when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
+        when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                ReflectionTestUtils.invokeMethod(service,
+                        "procesarMovimientoConLoteExistente", dto, TipoMovimiento.SALIDA,
+                        origen, null, producto, new BigDecimal("1"), false, null));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
     }
 
     @Test
