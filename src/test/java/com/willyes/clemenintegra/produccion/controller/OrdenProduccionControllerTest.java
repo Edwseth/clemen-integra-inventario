@@ -4,6 +4,9 @@ import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
+import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -81,6 +85,24 @@ class OrdenProduccionControllerTest {
                 .content(json))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.errors[0].field").value("tipo"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void obtenerLote_ok() throws Exception {
+        AlmacenResponseDTO almacen = AlmacenResponseDTO.builder().id(1).nombre("A1").build();
+        LoteProductoResponse lote = LoteProductoResponse.builder()
+                .id(7L)
+                .codigoLote("L1")
+                .estado(EstadoLote.DISPONIBLE)
+                .almacen(almacen)
+                .build();
+        when(service.obtenerLote(5L)).thenReturn(lote);
+
+        mockMvc.perform(get("/api/produccion/ordenes/{id}/lote", 5))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.codigoLote").value("L1"));
     }
 }
 

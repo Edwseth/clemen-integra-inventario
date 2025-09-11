@@ -38,6 +38,8 @@ import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
+import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
+import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
@@ -1001,6 +1003,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             ));
         }
         return lista;
+    }
+
+    @Override
+    public LoteProductoResponse obtenerLote(Long ordenId) {
+        return repository.findById(ordenId)
+                .filter(op -> op.getProducto() != null && op.getProducto().getId() != null)
+                .flatMap(op -> loteProductoRepository.findByOrdenProduccionIdAndProductoId(
+                        ordenId, op.getProducto().getId().longValue()))
+                .map(lote -> LoteProductoResponse.builder()
+                        .id(lote.getId())
+                        .codigoLote(lote.getCodigoLote())
+                        .estado(lote.getEstado())
+                        .almacen(new AlmacenResponseDTO(lote.getAlmacen()))
+                        .build())
+                .orElse(null);
     }
 
     public Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Pageable pageable) {
