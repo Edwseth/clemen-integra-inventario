@@ -61,6 +61,10 @@ import java.util.Optional;
 public class MovimientoInventarioServiceImpl implements MovimientoInventarioService {
 
     private static final Logger log = LoggerFactory.getLogger(MovimientoInventarioServiceImpl.class);
+    /** Nombre normalizado del almacén Pre-Bodega Producción */
+    private static final String PRE_BODEGA_PRODUCCION_NORMALIZADO =
+            java.text.Normalizer.normalize("Pre-Bodega Producción", java.text.Normalizer.Form.NFD)
+                    .replaceAll("\\p{M}", "").toLowerCase();
     private final AlmacenRepository almacenRepository;
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
@@ -757,8 +761,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         String nombreOrigen = normalizar(almacenOrigen.getNombre());
         String nombreDestino = normalizar(almacenDestino.getNombre());
 
-        boolean origenPreBodega = "pre-bodega produccion".equals(nombreOrigen);
-        boolean destinoDiferente = !"pre-bodega produccion".equals(nombreDestino);
+        boolean origenPreBodega = PRE_BODEGA_PRODUCCION_NORMALIZADO.equals(nombreOrigen);
+        boolean destinoDiferente = !PRE_BODEGA_PRODUCCION_NORMALIZADO.equals(nombreDestino);
 
         return categoriaPermitida && origenPreBodega && destinoDiferente;
     }

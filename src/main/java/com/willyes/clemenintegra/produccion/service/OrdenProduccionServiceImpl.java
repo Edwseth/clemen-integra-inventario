@@ -47,6 +47,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
@@ -413,6 +414,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             if (dto.getCantidad() == null) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+            }
+
+            LocalDateTime fechaFabricacion = dto.getFechaFabricacion();
+            LocalDateTime fechaVencimiento = dto.getFechaVencimiento();
+            if (fechaFabricacion != null && fechaVencimiento != null && fechaFabricacion.isAfter(fechaVencimiento)) {
+                throw new CustomBusinessException("La fecha de fabricación no puede ser posterior a la fecha de vencimiento");
             }
 
             BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
