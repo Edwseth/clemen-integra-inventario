@@ -45,10 +45,10 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     Page<Producto> buscarPorTexto(@Param("q") String q, Pageable pageable);
 
     @Query(value = """
-            SELECT p.id AS producto_id,
+            SELECT p.id AS productoId,
                    COALESCE(SUM(CASE WHEN lp.estado IN ('DISPONIBLE','LIBERADO')
                                      AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
-                                     THEN (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) ELSE 0 END), 0) AS stock_disponible
+                                     THEN (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) ELSE 0 END), 0) AS stockDisponible
             FROM productos p
             LEFT JOIN lotes_productos lp ON lp.productos_id = p.id
             WHERE p.id IN (?1)
