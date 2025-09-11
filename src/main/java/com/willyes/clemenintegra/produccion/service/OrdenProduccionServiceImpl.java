@@ -37,6 +37,7 @@ import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
@@ -776,9 +777,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal restante = requerida;
 
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
-            List<LoteProducto> lotes = loteProductoRepository.findFefoDisponibles(insumoId, Integer.MAX_VALUE)
+            List<LoteFefoDisponibleProjection> lotes = loteProductoRepository.findFefoDisponibles(insumoId, Integer.MAX_VALUE)
                     .stream()
-                    .filter(l -> almacenesValidos.isEmpty() || (l.getAlmacen() != null && almacenesValidos.contains(l.getAlmacen().getId())))
+                    .filter(l -> almacenesValidos.isEmpty() || (l.getAlmacenId() != null && almacenesValidos.contains(l.getAlmacenId().longValue())))
                     .toList();
 
             SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
@@ -792,22 +793,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .estado(EstadoSolicitudMovimiento.RESERVADA)
                     .build();
 
-            for (LoteProducto lote : lotes) {
+            for (LoteFefoDisponibleProjection lote : lotes) {
                 if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
-                BigDecimal disponible = lote.getStockLote().subtract(lote.getStockReservado());
+                BigDecimal disponible = lote.getStockLote();
                 BigDecimal usar = disponible.min(restante);
                 if (usar.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-                int updated = loteProductoRepository.reservarStock(lote.getId(), usar);
+                int updated = loteProductoRepository.reservarStock(lote.getLoteProductoId(), usar);
                 if (updated == 0) {
                     continue;
                 }
 
                 SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
                         .solicitudMovimiento(solicitud)
-                        .lote(lote)
+                        .lote(new LoteProducto(lote.getLoteProductoId()))
                         .cantidad(usar)
-                        .almacenOrigen(lote.getAlmacen())
+                        .almacenOrigen(lote.getAlmacenId() != null ? new Almacen(lote.getAlmacenId()) : null)
                         .build();
                 solicitud.getDetalles().add(detSolicitud);
 

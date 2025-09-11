@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.DisponibilidadProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteDisponibleDTO;
+import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
@@ -46,12 +47,12 @@ public class InventarioConsultaServiceImpl implements InventarioConsultaService 
                 .findFefoDisponibles(productoId, Integer.MAX_VALUE)
                 .stream()
                 .map(lp -> LoteDisponibleDTO.builder()
-                        .loteProductoId(lp.getId())
+                        .loteProductoId(lp.getLoteProductoId())
                         .codigoLote(lp.getCodigoLote())
                         .stockLote(lp.getStockLote())
                         .fechaVencimiento(lp.getFechaVencimiento())
-                        .almacenId(lp.getAlmacen() != null ? lp.getAlmacen().getId() : null)
-                        .nombreAlmacen(lp.getAlmacen() != null ? lp.getAlmacen().getNombre() : null)
+                        .almacenId(lp.getAlmacenId())
+                        .nombreAlmacen(lp.getNombreAlmacen())
                         .build())
                 .collect(Collectors.toList());
 
