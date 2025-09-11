@@ -84,7 +84,6 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import jakarta.persistence.OptimisticLockException;
-import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 @RequiredArgsConstructor
@@ -518,60 +517,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
                     .orElse(null);
 
-            if (lote != null) {
-                Optional<MovimientoInventario> existente = movimientoInventarioRepository
-                        .findByTipoMovimientoAndMotivoMovimientoIdAndOrdenProduccionIdAndProductoIdAndLoteId(
-                                TipoMovimiento.ENTRADA,
-                                motivoEntrada.getId(),
-                                orden.getId(),
-                                orden.getProducto().getId().longValue(),
-                                lote.getId()
-                        );
-                if (existente.isPresent()) {
-                    MovimientoInventario mov = existente.get();
-                    if (mov.getCantidad().compareTo(cantidad) == 0) {
-                        log.info("OP-cierre entrada PT idempotente op={}, producto={}, lote={}, movId={}, cantidad={}",
-                                orden.getId(), orden.getProducto().getId(), lote.getId(), mov.getId(), cantidad);
-                        return orden;
-                    } else {
-                        log.warn("OP-cierre entrada PT duplicada op={}, producto={}, lote={}, movId={}, cantExistente={}, cantNueva={}",
-                                orden.getId(), orden.getProducto().getId(), lote.getId(), mov.getId(), mov.getCantidad(), cantidad);
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "ENTRADA_PT_YA_REGISTRADA");
-                    }
-                }
-            }
-
-            BigDecimal programada = orden.getCantidadProgramada();
             BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
-            BigDecimal restante = programada.subtract(acumulada);
-            if (restante.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SIN_CANTIDAD_RESTANTE");
-            }
-            if (cantidad.compareTo(restante) > 0) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_EXCEDE_RESTANTE");
-            }
-
             BigDecimal nuevaAcumulada = acumulada.add(cantidad);
 
-            if (dto.getTipo() == TipoCierre.PARCIAL) {
-                if (nuevaAcumulada.compareTo(programada) > 0) {
-                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_EXCEDE_PROGRAMADA");
-                }
-            } else if (dto.getTipo() == TipoCierre.TOTAL) {
-                boolean incompleta = Boolean.TRUE.equals(dto.getCerradaIncompleta());
-                if (incompleta) {
-                    if (nuevaAcumulada.compareTo(programada) >= 0) {
-                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
-                    }
-                    orden.setEstado(EstadoProduccion.CERRADA_INCOMPLETA);
-                    orden.setFechaFin(LocalDateTime.now());
-                } else {
-                    if (nuevaAcumulada.compareTo(programada) != 0) {
-                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
-                    }
-                    orden.setEstado(EstadoProduccion.FINALIZADA);
-                    orden.setFechaFin(LocalDateTime.now());
-                }
+            if (dto.getTipo() == TipoCierre.TOTAL) {
+                orden.setEstado(EstadoProduccion.FINALIZADA);
+                orden.setFechaFin(LocalDateTime.now());
             }
 
             orden.setCantidadProducidaAcumulada(nuevaAcumulada);
@@ -694,12 +645,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     null,
                     lote.getEstado()
             );
-            try {
-                movimientoInventarioService.registrarMovimiento(movDto);
-            } catch (DataIntegrityViolationException ex) {
-                log.warn("OP-cierre entrada PT colisión UNIQUE op={}, producto={}, lote={}, motivoId={}, resultado=CONFLICTO", orden.getId(), orden.getProducto().getId(), lote.getId(), motivoEntrada.getId());
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "ENTRADA_PT_YA_REGISTRADA");
-            }
+            movimientoInventarioService.registrarMovimiento(movDto);
             log.info("OP-cierre entrada PT op={}, producto={}, lote={}, cantidad={}, usuario={}, destino={}, motivoId={}, tipoDetalleId={}",
                     orden.getId(), orden.getProducto().getId(), lote.getId(), cantidad, usuario.getId(), destino.getId(), motivoEntrada.getId(), tipoDetalleEntrada.getId());
 
