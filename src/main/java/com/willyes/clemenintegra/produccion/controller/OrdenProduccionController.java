@@ -20,6 +20,8 @@ import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +29,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/produccion/ordenes")
 @RequiredArgsConstructor
+@Validated
+@Slf4j
 public class OrdenProduccionController {
 
     private final OrdenProduccionService service;
@@ -96,6 +100,7 @@ public class OrdenProduccionController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> registrarCierre(@PathVariable Long id,
                                                                      @Valid @RequestBody CierreProduccionRequestDTO request) {
+        log.debug("Registrar cierre recibido: ordenId={}, payload={}", id, request);
         OrdenProduccion orden = service.registrarCierre(id, request);
         return ResponseEntity.ok(ProduccionMapper.toResponse(orden));
     }

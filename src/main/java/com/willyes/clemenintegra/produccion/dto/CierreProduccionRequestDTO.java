@@ -20,6 +20,7 @@ public class CierreProduccionRequestDTO {
     private String codigoLote;
     @NotNull
     private LocalDateTime fechaFabricacion;
+    @NotNull
     private LocalDateTime fechaVencimiento;
     private Boolean cerradaIncompleta;
     private String turno;
