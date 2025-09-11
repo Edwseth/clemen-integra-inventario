@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -86,6 +87,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleAccessDenied(AccessDeniedException ex,
                                                                HttpServletRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN, ex, "Acceso denegado", request.getRequestURI());
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponseDTO> handleResponseStatus(ResponseStatusException ex,
+                                                                HttpServletRequest request) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        return buildResponse(status, ex, ex.getReason(), request.getRequestURI());
     }
 
     @ExceptionHandler(RuntimeException.class)
