@@ -99,6 +99,16 @@ LoteProducto toEntity(LoteProductoRequestDTO dto, Producto producto, Almacen alm
 
 Al trabajar con `LocalDateTime` se evita la pérdida de información al registrar movimientos o cambios de estado. **No se debe volver a utilizar `LocalDate`** en estos contextos, ya que comprometería la precisión temporal que requiere el sistema.
 
+### Formato de fechas desde el frontend
+Si el usuario ingresa la fecha mediante un control que sólo muestra `dd/mm/aaaa`, el frontend puede construir el `LocalDateTime` antes de enviarlo:
+
+```javascript
+const fecha = document.getElementById('fecha').value; // "2025-09-10" u "10/09/2025"
+const fechaCompleta = `${fecha}T00:00:00`;           // "2025-09-10T00:00:00"
+```
+
+El utilitario `DateParser` acepta tanto `yyyy-MM-dd` como `dd/MM/yyyy` y convierte cualquiera de ellos a `LocalDateTime`, usando `00:00:00` o `23:59:59` según se invoque `parseStart` o `parseEnd`.
+
 ## Requisitos de Compilación y Despliegue
 - JDK 21
 - Maven 3.8+

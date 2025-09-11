@@ -8,6 +8,7 @@ import java.time.format.DateTimeParseException;
 public final class DateParser {
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter DATE_SLASH = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private DateParser() {
@@ -43,7 +44,12 @@ public final class DateParser {
                 LocalDate d = LocalDate.parse(s, DATE);
                 return start ? d.atStartOfDay() : d.atTime(23, 59, 59);
             } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException("Formato de fecha inválido");
+                try {
+                    LocalDate d = LocalDate.parse(s, DATE_SLASH);
+                    return start ? d.atStartOfDay() : d.atTime(23, 59, 59);
+                } catch (DateTimeParseException ex) {
+                    throw new IllegalArgumentException("Formato de fecha inválido");
+                }
             }
         }
     }
