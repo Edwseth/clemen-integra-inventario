@@ -150,6 +150,14 @@ class OrdenProduccionServiceImplTest {
         when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(1L);
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(5L);
 
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> {
+            LoteProducto l = inv.getArgument(0);
+            if (l.getId() == null) l.setId(1L);
+            return l;
+        });
+
         MotivoMovimiento motivoDev = new MotivoMovimiento();
         motivoDev.setId(30L);
         when(motivoMovimientoRepository.findById(30L)).thenReturn(Optional.of(motivoDev));
@@ -809,7 +817,11 @@ class OrdenProduccionServiceImplTest {
 
     @Test
     void iniciarPrimerEtapaActualizaEstadoOrden() {
-        OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.CREADA).build();
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.CREADA)
+                .producto(Producto.builder().id(10).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .build();
         EtapaProduccion etapa = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.PENDIENTE).secuencia(1).build();
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
@@ -830,7 +842,7 @@ class OrdenProduccionServiceImplTest {
                 .id(1L)
                 .estado(EstadoProduccion.EN_PROCESO)
                 .cantidadProgramada(BigDecimal.ONE)
-                .producto(Producto.builder().id(10).build())
+                .producto(Producto.builder().id(10).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
                 .build();
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(2L)
@@ -899,7 +911,11 @@ class OrdenProduccionServiceImplTest {
 
     @Test
     void iniciarEtapaIdempotenteNoRepiteConsumo() {
-        OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.EN_PROCESO).producto(Producto.builder().id(10).build()).build();
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .producto(Producto.builder().id(10).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
+                .build();
         EtapaProduccion etapa = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.PENDIENTE).secuencia(1).build();
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
@@ -920,7 +936,7 @@ class OrdenProduccionServiceImplTest {
                 .id(1L)
                 .estado(EstadoProduccion.EN_PROCESO)
                 .cantidadProgramada(BigDecimal.TEN)
-                .producto(Producto.builder().id(10).build())
+                .producto(Producto.builder().id(10).tipoAnalisis(TipoAnalisisCalidad.NINGUNO).build())
                 .build();
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(2L)
