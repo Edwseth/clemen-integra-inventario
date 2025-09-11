@@ -580,7 +580,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         // Declaración necesaria (si aún no está)
-        Almacen almacenOrigen = entityManager.getReference(Almacen.class, dto.almacenOrigenId());
+        Almacen almacenOrigen = origen != null
+                ? origen
+                : (dto.almacenOrigenId() != null
+                        ? entityManager.getReference(Almacen.class, dto.almacenOrigenId())
+                        : null);
 
         // Determinar si es una devolución interna
         boolean esDevolucionInterna =
@@ -588,7 +592,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION;
 
         // Validar almacén del lote origen
-        if (!esDevolucionInterna && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
+        if (!esDevolucionInterna
+                && almacenOrigen != null
+                && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
             log.warn("Almacén origen no coincide: loteId={} almacenLoteId={} almacenOrigenId={}",
                     loteOrigen.getId(), loteOrigen.getAlmacen().getId(), almacenOrigen.getId());
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
