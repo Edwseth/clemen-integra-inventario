@@ -51,14 +51,22 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     Optional<LoteProducto> findByIdForUpdate(@Param("id") Long id);
 
     @Query(value = """
-       SELECT * FROM v_lotes_stock_disponible
-       WHERE productos_id = :productoId
-         AND estado IN ('DISPONIBLE','LIBERADO')
-         AND stock_disponible > 0
-       ORDER BY fecha_vencimiento ASC
-       LIMIT :limit
-     """, nativeQuery = true)
-    List<LoteProducto> findFefoDisponibles(@Param("productoId") Long productoId, @Param("limit") int limit);
+        SELECT lp.id AS lote_producto_id,
+               lp.codigo_lote AS codigo_lote,
+               (lp.stock_lote - lp.stock_reservado) AS stock_lote,
+               lp.fecha_vencimiento AS fecha_vencimiento,
+               lp.almacenes_id AS almacen_id,
+               a.nombre AS nombre_almacen
+        FROM lotes_productos lp
+        LEFT JOIN almacenes a ON lp.almacenes_id = a.id
+        WHERE lp.productos_id = :productoId
+          AND lp.estado IN ('DISPONIBLE','LIBERADO')
+          AND (lp.stock_lote - lp.stock_reservado) > 0
+        ORDER BY lp.fecha_vencimiento ASC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection> findFefoDisponibles(
+            @Param("productoId") Long productoId, @Param("limit") int limit);
 
     @Modifying
     @Query(value = """
