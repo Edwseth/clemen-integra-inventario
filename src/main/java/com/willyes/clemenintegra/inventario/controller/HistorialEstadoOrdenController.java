@@ -26,6 +26,13 @@ public class HistorialEstadoOrdenController {
                 .collect(Collectors.toList());
     }
 
+    @GetMapping("/orden/{ordenId}")
+    public List<HistorialEstadoOrdenResponse> listarPorOrden(@PathVariable Long ordenId) {
+        return service.listarPorOrden(ordenId).stream()
+                .map(HistorialEstadoOrdenMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
     @PostMapping
     public ResponseEntity<HistorialEstadoOrdenResponse> crear(@RequestBody HistorialEstadoOrdenRequest request) {
         OrdenCompra orden = new OrdenCompra(); orden.setId(request.ordenCompraId != null ? request.ordenCompraId.intValue() : null);
