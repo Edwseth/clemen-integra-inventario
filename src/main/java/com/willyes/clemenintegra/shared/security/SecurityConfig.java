@@ -71,7 +71,7 @@ public class SecurityConfig {
                     ).permitAll();
 
                     auth.requestMatchers(
-                            "/api/productos/**", "/api/ordenes-compra/**",
+                            "/api/productos/**",
                             "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**",
                             "/api/proveedores/**", "/api/unidades/**",
                             "/api/inventario/bitacora/**",
@@ -86,6 +86,12 @@ public class SecurityConfig {
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                             RolUsuario.ROL_MICROBIOLOGO.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/ordenes-compra/**").hasAnyAuthority(
+                            RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
