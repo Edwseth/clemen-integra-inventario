@@ -90,7 +90,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
-                    auth.requestMatchers("/api/ordenes-compra/**").hasAnyAuthority(
+                    auth.requestMatchers("/api/inventario/ordenes/**").hasAnyAuthority(
                             RolUsuario.ROL_COMPRADOR.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
