@@ -10,6 +10,7 @@ public enum RolUsuario {
     ROL_LIDER_HOMEOPATICOS,
     ROL_LIDER_ALIMENTOS,
     ROL_CONTADOR,
+    ROL_COMPRADOR,
     ROL_SUPER_ADMIN
 }
 
