@@ -433,7 +433,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         Long almacenPtId = catalogResolver.getAlmacenPtId();
         Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
-        if (lote.getAlmacen().getId().equals(almacenPtId)
+        if (almacenPtId.equals(lote.getAlmacen().getId().longValue())
                 && lote.getEstado() == estadoLiberado
                 && lote.getFechaLiberacion() != null
                 && lote.getUsuarioLiberador() != null) {
@@ -445,8 +445,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             }
         }
 
-        if (!lote.getAlmacen().getId().equals(almacenCuarentenaId) || lote.getEstado() != EstadoLote.EN_CUARENTENA) {
-            Long almacenId = lote.getAlmacen().getId();
+        if (!almacenCuarentenaId.equals(lote.getAlmacen().getId().longValue()) || lote.getEstado() != EstadoLote.EN_CUARENTENA) {
+            Long almacenId = Long.valueOf(lote.getAlmacen().getId());
             EstadoLote estadoLote = lote.getEstado();
             log.warn("Intento de liberar lote {} fuera de cuarentena: almacenId={} estado={}", loteId, almacenId, estadoLote);
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
