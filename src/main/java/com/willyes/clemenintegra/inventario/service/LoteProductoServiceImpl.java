@@ -42,10 +42,14 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import static com.willyes.clemenintegra.inventario.service.spec.LoteProductoSpecifications.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
 public class LoteProductoServiceImpl implements LoteProductoService {
+
+    private static final Logger log = LoggerFactory.getLogger(LoteProductoServiceImpl.class);
 
     private final LoteProductoRepository loteRepo;
     private final ProductoRepository productoRepo;
@@ -442,7 +446,11 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         }
 
         if (!lote.getAlmacen().getId().equals(almacenCuarentenaId) || lote.getEstado() != EstadoLote.EN_CUARENTENA) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_EN_CUARENTENA");
+            Long almacenId = lote.getAlmacen().getId();
+            EstadoLote estadoLote = lote.getEstado();
+            log.warn("Intento de liberar lote {} fuera de cuarentena: almacenId={} estado={}", loteId, almacenId, estadoLote);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "LOTE_NO_EN_CUARENTENA (almacenId=" + almacenId + ", estado=" + estadoLote + ")");
         }
         if (lote.getStockReservado() != null && lote.getStockReservado().compareTo(BigDecimal.ZERO) > 0) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_CON_RESERVAS");
