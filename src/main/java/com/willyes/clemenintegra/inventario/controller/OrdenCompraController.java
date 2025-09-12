@@ -44,6 +44,10 @@ public class OrdenCompraController {
         // 1. Validar proveedor
         Proveedor proveedor = proveedorRepository.findById(dto.getProveedorId())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Proveedor no encontrado"));
+
+        if (dto.getDetalles() == null || dto.getDetalles().isEmpty()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Debe registrar al menos un detalle");
+        }
         
         // 2. Crear orden y detalles dentro de la misma transacción
         OrdenCompra orden = OrdenCompra.builder()
