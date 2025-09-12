@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface HistorialEstadoOrdenService {
     List<HistorialEstadoOrden> listarTodos();
+    List<HistorialEstadoOrden> listarPorOrden(Long ordenId);
     HistorialEstadoOrden guardar(HistorialEstadoOrden historial);
 }

@@ -17,6 +17,10 @@ public class HistorialEstadoOrdenServiceImpl implements HistorialEstadoOrdenServ
         return repository.findAll();
     }
 
+    public List<HistorialEstadoOrden> listarPorOrden(Long ordenId) {
+        return repository.findByOrdenCompra_Id(ordenId);
+    }
+
     public HistorialEstadoOrden guardar(HistorialEstadoOrden historial) {
         return repository.save(historial);
     }
