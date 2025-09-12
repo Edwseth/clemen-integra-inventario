@@ -156,6 +156,7 @@ public class SecurityConfig {
                     );
 
                     // Mantener esta regla genérica al final
+                    auth.requestMatchers("/error").permitAll();
                     auth.requestMatchers("/api/**").authenticated();
                     auth.anyRequest().authenticated();
                 })
