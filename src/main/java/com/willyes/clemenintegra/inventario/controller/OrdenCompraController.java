@@ -27,7 +27,7 @@ import java.util.List;
 import static org.springframework.http.HttpStatus.*;
 
 @RestController
-@RequestMapping("/api/inventario/ordenes")
+@RequestMapping({"/api/inventario/ordenes", "/api/ordenes-compra"})
 @RequiredArgsConstructor
 public class OrdenCompraController {
 
