@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
+import com.willyes.clemenintegra.inventario.mapper.HistorialEstadoOrdenMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -150,6 +151,18 @@ public class OrdenCompraController {
                 .map(mapper::toOrdenCompraConDetallesResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/estado")
+    public ResponseEntity<HistorialEstadoOrdenResponse> cambiarEstado(
+            @PathVariable Long id,
+            @RequestBody CambioEstadoOrdenRequest request) {
+        var historial = ordenCompraService.cambiarEstado(
+                id,
+                request.estado,
+                request.usuarioId,
+                request.observaciones);
+        return ResponseEntity.ok(HistorialEstadoOrdenMapper.toResponse(historial));
     }
 }
 
