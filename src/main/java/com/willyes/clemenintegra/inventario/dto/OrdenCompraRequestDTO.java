@@ -13,15 +13,10 @@ import java.util.List;
 public class OrdenCompraRequestDTO {
 
     @NotNull
-    public String codigoOrden;
-
-    @NotNull
     private Long proveedorId;
 
     private String observaciones;
 
     @NotNull
     private List<OrdenCompraDetalleRequestDTO> detalles;
-
-    public String getCodigoOrden() {return codigoOrden;}
 }
