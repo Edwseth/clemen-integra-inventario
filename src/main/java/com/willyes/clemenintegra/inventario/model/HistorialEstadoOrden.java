@@ -8,6 +8,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "historial_estado_orden")
 @Getter
 @Setter
 @NoArgsConstructor
