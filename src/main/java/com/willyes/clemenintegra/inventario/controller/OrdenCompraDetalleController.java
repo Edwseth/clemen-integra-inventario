@@ -33,9 +33,10 @@ public class OrdenCompraDetalleController {
                 .collect(Collectors.toList());
     }
 
-    @PostMapping
-    public ResponseEntity<OrdenCompraDetalleResponse> crear(@RequestBody OrdenCompraDetalleRequestDTO request) {
-        OrdenCompra orden = ordenCompraRepository.findById(request.getOrdenCompraId())
+    @PostMapping("/{ordenCompraId}")
+    public ResponseEntity<OrdenCompraDetalleResponse> crear(@PathVariable Long ordenCompraId,
+                                                            @RequestBody OrdenCompraDetalleRequestDTO request) {
+        OrdenCompra orden = ordenCompraRepository.findById(ordenCompraId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Orden de compra no encontrada"));
 
         Producto producto = productoRepository.findById(request.getProductoId())
