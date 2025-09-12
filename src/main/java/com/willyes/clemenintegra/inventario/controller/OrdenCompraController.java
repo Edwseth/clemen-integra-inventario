@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -50,6 +49,8 @@ public class OrdenCompraController {
                 .fechaOrden(LocalDateTime.now())
                 .observaciones(dto.getObservaciones())
                 .build();
+
+        orden.setCodigoOrden(ordenCompraService.generarCodigoOrdenCompra());
 
         ordenCompraRepository.save(orden); // Necesario para generar el ID
 

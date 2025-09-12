@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +38,13 @@ public class OrdenCompraService {
     public Page<OrdenCompraResponseDTO> listarPorEstado(EstadoOrdenCompra estado, Pageable pageable) {
         return ordenCompraRepository.findByEstado(estado, pageable)
                 .map(mapper::toDTO);
+    }
+
+    public String generarCodigoOrdenCompra() {
+        String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefijo = "OC-CLEMEN-" + fecha;
+        Long contador = ordenCompraRepository.countByCodigoOrdenStartingWith(prefijo);
+        return prefijo + "-" + String.format("%02d", contador + 1);
     }
 
     /**

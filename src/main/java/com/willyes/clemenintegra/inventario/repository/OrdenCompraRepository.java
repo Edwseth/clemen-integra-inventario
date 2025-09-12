@@ -23,4 +23,6 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
 
     Page<OrdenCompra> findByEstado(EstadoOrdenCompra estado, Pageable pageable);
 
+    Long countByCodigoOrdenStartingWith(String prefijo);
+
 }

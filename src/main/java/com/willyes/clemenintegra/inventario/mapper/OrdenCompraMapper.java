@@ -21,7 +21,6 @@ public interface OrdenCompraMapper {
         entity.setEstado(estado);
         entity.setFechaOrden(java.time.LocalDateTime.now());
         entity.setObservaciones(dto.getObservaciones());
-        entity.setCodigoOrden(dto.getCodigoOrden());
         return entity;
     }
 
