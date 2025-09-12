@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataAccessException;
 
 import java.math.BigDecimal;
 import org.springframework.data.domain.Page;
@@ -37,12 +39,13 @@ public class OrdenCompraController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROL_COMPRADOR')")
+    @Transactional
     public ResponseEntity<OrdenCompra> crear(@RequestBody OrdenCompraRequestDTO dto) {
         // 1. Validar proveedor
         Proveedor proveedor = proveedorRepository.findById(dto.getProveedorId())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Proveedor no encontrado"));
-
-        // 2. Crear orden sin detalles primero
+        
+        // 2. Crear orden y detalles dentro de la misma transacción
         OrdenCompra orden = OrdenCompra.builder()
                 .proveedor(proveedor)
                 .estado(EstadoOrdenCompra.CREADA)
@@ -52,9 +55,6 @@ public class OrdenCompraController {
 
         orden.setCodigoOrden(ordenCompraService.generarCodigoOrdenCompra());
 
-        ordenCompraRepository.save(orden); // Necesario para generar el ID
-
-        // 3. Crear y asociar detalles
         List<OrdenCompraDetalle> detalles = dto.getDetalles().stream().map(d -> {
             Producto producto = productoRepository.findById(d.getProductoId())
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado"));
@@ -72,9 +72,14 @@ public class OrdenCompraController {
                     .build();
         }).toList();
 
-        detalleRepository.saveAll(detalles);
+        orden.setDetalles(detalles);
 
-        return ResponseEntity.status(CREATED).body(orden);
+        try {
+            OrdenCompra guardada = ordenCompraRepository.save(orden);
+            return ResponseEntity.status(CREATED).body(guardada);
+        } catch (DataAccessException e) {
+            throw new ResponseStatusException(INTERNAL_SERVER_ERROR, "Error al guardar la orden de compra");
+        }
     }
 
     @PutMapping("/{id}")
