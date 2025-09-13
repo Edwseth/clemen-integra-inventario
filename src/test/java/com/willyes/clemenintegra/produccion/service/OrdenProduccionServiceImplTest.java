@@ -337,6 +337,8 @@ class OrdenProduccionServiceImplTest {
                         .stockLote(BigDecimal.ZERO)
                         .build()));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
+                .thenReturn(List.of(EtapaProduccion.builder().estado(EstadoEtapa.FINALIZADA).build()));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.TEN)
@@ -374,6 +376,8 @@ class OrdenProduccionServiceImplTest {
                         .stockLote(BigDecimal.ZERO)
                         .build()));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
+                .thenReturn(List.of(EtapaProduccion.builder().estado(EstadoEtapa.FINALIZADA).build()));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.valueOf(5))
@@ -1106,7 +1110,7 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
-    void finalizarEtapaMarcaOrdenFinalizadaSiTodasFinalizadas() {
+    void finalizarUltimaEtapaNoFinalizaOrden() {
         OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.EN_PROCESO).build();
         EtapaProduccion etapa1 = EtapaProduccion.builder().id(1L).ordenProduccion(orden).estado(EstadoEtapa.FINALIZADA).build();
         EtapaProduccion etapa2 = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.EN_PROCESO).build();
@@ -1117,14 +1121,62 @@ class OrdenProduccionServiceImplTest {
         when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
                 .thenReturn(List.of(etapa1, etapa2));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         EtapaProduccion result = service.finalizarEtapa(1L, 2L, 5L);
 
         assertEquals(EstadoEtapa.FINALIZADA, result.getEstado());
         assertNotNull(result.getFechaFin());
-        verify(repository).save(orden);
+        verify(repository, never()).save(any());
+        assertEquals(EstadoProduccion.EN_PROCESO, orden.getEstado());
+    }
+
+    @Test
+    void finalizarEtapasYRegistrarCierreTotalFinalizaOrden() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .loteProduccion("L1")
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
+                .build();
+        EtapaProduccion etapa1 = EtapaProduccion.builder().id(1L).ordenProduccion(orden).estado(EstadoEtapa.FINALIZADA).build();
+        EtapaProduccion etapa2 = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.EN_PROCESO).build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa2));
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
+        when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
+                .thenReturn(List.of(etapa1, etapa2));
+
+        service.finalizarEtapa(1L, 2L, 5L);
+
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(LoteProducto.builder()
+                        .id(1L)
+                        .almacen(Almacen.builder().id(2L).build())
+                        .estado(EstadoLote.DISPONIBLE)
+                        .stockLote(BigDecimal.ZERO)
+                        .build()));
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
+                .thenReturn(List.of(etapa1, etapa2));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(BigDecimal.TEN)
+                .tipo(TipoCierre.TOTAL)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .build();
+
+        service.registrarCierre(1L, dto);
+
         assertEquals(EstadoProduccion.FINALIZADA, orden.getEstado());
+        verify(repository).save(orden);
     }
 
     @Test
