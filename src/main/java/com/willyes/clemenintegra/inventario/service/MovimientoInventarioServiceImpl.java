@@ -605,18 +605,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
-        if (solicitud != null && solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA) {
-            if (reservadoActual.compareTo(cantidad) < 0) {
-                log.warn("RESERVA_INSUFICIENTE: loteId={} reservado={} solicitado={} productoId={}",
-                        loteOrigen.getId(), reservadoActual, cantidad, producto.getId());
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_INSUFICIENTE");
-            }
-        } else {
-            BigDecimal disponible = loteOrigen.getStockLote().subtract(reservadoActual);
-            if (disponible.compareTo(cantidad) < 0) {
-                log.warn("Stock insuficiente en lote: loteId={} disponible={} solicitado={} productoId={}",
-                        loteOrigen.getId(), disponible, cantidad, producto.getId());
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
+        if (EnumSet.of(TipoMovimiento.SALIDA, TipoMovimiento.TRANSFERENCIA,
+                TipoMovimiento.DEVOLUCION, TipoMovimiento.AJUSTE).contains(tipo)) {
+            if (solicitud != null && solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA) {
+                if (reservadoActual.compareTo(cantidad) < 0) {
+                    log.warn("RESERVA_INSUFICIENTE: loteId={} reservado={} solicitado={} productoId={}",
+                            loteOrigen.getId(), reservadoActual, cantidad, producto.getId());
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_INSUFICIENTE");
+                }
+            } else {
+                BigDecimal disponible = loteOrigen.getStockLote().subtract(reservadoActual);
+                if (disponible.compareTo(cantidad) < 0) {
+                    log.warn("Stock insuficiente en lote: loteId={} disponible={} solicitado={} productoId={}",
+                            loteOrigen.getId(), disponible, cantidad, producto.getId());
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
+                }
             }
         }
 

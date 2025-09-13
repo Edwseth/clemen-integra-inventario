@@ -388,5 +388,36 @@ class MovimientoInventarioServiceImplTest {
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
         assertEquals("ENTRADA_PT_REQUIERE_ORDEN_PRODUCCION_ID", ex.getReason());
     }
+
+    @Test
+    void entradaConLoteExistenteIncrementaStockSinValidarDisponibilidad() {
+        Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
+        Producto producto = Producto.builder().id(1).build();
+        LoteProducto loteOrigen = LoteProducto.builder()
+                .id(100L)
+                .codigoLote("L1")
+                .producto(producto)
+                .almacen(origen)
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(new BigDecimal("5"))
+                .stockReservado(new BigDecimal("3"))
+                .build();
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("10"), TipoMovimiento.ENTRADA,
+                null, null,
+                producto.getId(), loteOrigen.getId(), origen.getId(), null,
+                null, null, null, null, null, null, null, null, null, null, null);
+
+        when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
+        when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LoteProducto result = ReflectionTestUtils.invokeMethod(service,
+                "procesarMovimientoConLoteExistente", dto, TipoMovimiento.ENTRADA,
+                origen, null, producto, new BigDecimal("10"), false, null);
+
+        assertEquals(new BigDecimal("15"), result.getStockLote());
+    }
 }
 
