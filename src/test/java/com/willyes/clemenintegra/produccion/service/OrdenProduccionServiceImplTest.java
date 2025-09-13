@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepos
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
+import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
@@ -30,6 +31,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoAlmacen;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
@@ -106,6 +108,7 @@ class OrdenProduccionServiceImplTest {
     @Mock InventoryCatalogResolver catalogResolver;
     @Mock StockQueryService stockQueryService;
     @Mock UmValidator umValidator;
+    @Mock VidaUtilProductoRepository vidaUtilProductoRepository;
 
     OrdenProduccionServiceImpl service;
 
@@ -132,7 +135,8 @@ class OrdenProduccionServiceImplTest {
                 usuarioService,
                 solicitudMovimientoRepository,
                 catalogResolver,
-                umValidator
+                umValidator,
+                vidaUtilProductoRepository
         );
 
         when(umValidator.ajustar(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -169,6 +173,15 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(List.of());
         when(movimientoInventarioRepository.sumaPorSolicitudYTipo(anyLong(), anyLong(), anyLong(), any(), any(), any()))
                 .thenReturn(BigDecimal.ZERO);
+
+        LocalDateTime defaultFab = LocalDateTime.now().minusDays(1);
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(anyLong()))
+                .thenReturn(List.of(EtapaProduccion.builder()
+                        .secuencia(1)
+                        .estado(EstadoEtapa.FINALIZADA)
+                        .fechaInicio(defaultFab)
+                        .build()));
+        when(vidaUtilProductoRepository.findById(anyInt())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -187,7 +200,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
         assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
     }
@@ -231,7 +243,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -298,7 +309,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .observacion("obs")
                 .build();
 
@@ -337,8 +347,6 @@ class OrdenProduccionServiceImplTest {
                         .stockLote(BigDecimal.ZERO)
                         .build()));
         when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
-                .thenReturn(List.of(EtapaProduccion.builder().estado(EstadoEtapa.FINALIZADA).build()));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.TEN)
@@ -382,7 +390,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.valueOf(5))
                 .tipo(TipoCierre.TOTAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .cerradaIncompleta(true)
                 .build();
 
@@ -430,7 +437,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
 
         service.registrarCierre(1L, dto);
@@ -496,7 +502,6 @@ class OrdenProduccionServiceImplTest {
                 .cantidad(new BigDecimal("3"))
                 .tipo(TipoCierre.PARCIAL)
                 .codigoLote("LOTE1")
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
 
         service.registrarCierre(1L, dto);
@@ -543,7 +548,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
@@ -588,7 +592,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
 
         service.registrarCierre(1L, dto);
@@ -631,13 +634,10 @@ class OrdenProduccionServiceImplTest {
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
 
-        LocalDateTime fab = LocalDateTime.now().minusDays(1);
         for (BigDecimal qty : List.of(new BigDecimal("400"), new BigDecimal("300"), new BigDecimal("200"), new BigDecimal("100"))) {
             CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                     .cantidad(qty)
                     .tipo(TipoCierre.PARCIAL)
-                    .fechaFabricacion(fab)
-                    .fechaVencimiento(fab.plusDays(30))
                     .build();
             service.registrarCierre(1L, dto);
         }
@@ -679,12 +679,9 @@ class OrdenProduccionServiceImplTest {
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
 
-        LocalDateTime fab = LocalDateTime.now().minusDays(1);
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("1100"))
                 .tipo(TipoCierre.TOTAL)
-                .fechaFabricacion(fab)
-                .fechaVencimiento(fab.plusDays(30))
                 .build();
 
         service.registrarCierre(1L, dto);
@@ -726,12 +723,9 @@ class OrdenProduccionServiceImplTest {
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
 
-        LocalDateTime fab = LocalDateTime.now().minusDays(1);
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("800"))
                 .tipo(TipoCierre.TOTAL)
-                .fechaFabricacion(fab)
-                .fechaVencimiento(fab.plusDays(30))
                 .build();
 
         service.registrarCierre(1L, dto);
@@ -739,6 +733,96 @@ class OrdenProduccionServiceImplTest {
         assertEquals(new BigDecimal("800"), orden.getCantidadProducidaAcumulada());
         assertEquals(EstadoProduccion.FINALIZADA, orden.getEstado());
         assertEquals(new BigDecimal("800"), lote.getStockLote());
+    }
+
+    @Test
+    void registrarCierreUsaFechaDePrimeraEtapa() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .loteProduccion("L1")
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
+                .thenReturn(Optional.empty());
+        when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(new MotivoMovimiento()));
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
+        when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
+        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
+
+        LocalDateTime fechaEtapa1 = LocalDateTime.now().minusDays(3);
+        EtapaProduccion etapa1 = EtapaProduccion.builder()
+                .secuencia(1).estado(EstadoEtapa.FINALIZADA).fechaInicio(fechaEtapa1).build();
+        EtapaProduccion etapa2 = EtapaProduccion.builder()
+                .secuencia(2).estado(EstadoEtapa.FINALIZADA).fechaInicio(fechaEtapa1.plusDays(1)).build();
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
+                .thenReturn(List.of(etapa1, etapa2));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(BigDecimal.ONE)
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        service.registrarCierre(1L, dto);
+
+        ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository).save(loteCaptor.capture());
+        assertEquals(fechaEtapa1, loteCaptor.getValue().getFechaFabricacion());
+    }
+
+    @Test
+    void registrarCierreCalculaVencimientoSegunVidaUtil() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .loteProduccion("L1")
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
+                .thenReturn(Optional.empty());
+        when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(new MotivoMovimiento()));
+        TipoMovimientoDetalle tipoDetalle2 = new TipoMovimientoDetalle(); tipoDetalle2.setId(9L);
+        when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle2));
+        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
+
+        LocalDateTime fechaEtapa1 = LocalDateTime.now().minusDays(5);
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
+                .thenReturn(List.of(EtapaProduccion.builder()
+                        .secuencia(1)
+                        .estado(EstadoEtapa.FINALIZADA)
+                        .fechaInicio(fechaEtapa1)
+                        .build()));
+        VidaUtilProducto vida = VidaUtilProducto.builder().productoId(1).semanasVigencia(4).build();
+        when(vidaUtilProductoRepository.findById(1)).thenReturn(Optional.of(vida));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(BigDecimal.ONE)
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        service.registrarCierre(1L, dto);
+
+        ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository).save(loteCaptor.capture());
+        assertEquals(fechaEtapa1.plusWeeks(4), loteCaptor.getValue().getFechaVencimiento());
     }
 
     @Test
@@ -773,18 +857,13 @@ class OrdenProduccionServiceImplTest {
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
 
-        LocalDateTime fab = LocalDateTime.now().minusDays(1);
         CierreProduccionRequestDTO d1 = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("600"))
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(fab)
-                .fechaVencimiento(fab.plusDays(30))
                 .build();
         CierreProduccionRequestDTO d2 = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("400"))
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(fab)
-                .fechaVencimiento(fab.plusDays(30))
                 .build();
 
         ArgumentCaptor<MovimientoInventarioDTO> movCaptor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
@@ -812,7 +891,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("1000.123"))
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
@@ -832,7 +910,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("100.129"))
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
         assertEquals("ESCALA_LOTE_EXCEDIDA", ex.getReason());
@@ -851,7 +928,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("123456789.12"))
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
         assertEquals("PRECISION_LOTE_EXCEDIDA", ex.getReason());
@@ -870,7 +946,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("12345678.12"))
                 .tipo(TipoCierre.PARCIAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarCierre(1L, dto));
         assertEquals("PRECISION_MOV_EXCEDIDA", ex.getReason());
@@ -1112,8 +1187,16 @@ class OrdenProduccionServiceImplTest {
     @Test
     void finalizarUltimaEtapaNoFinalizaOrden() {
         OrdenProduccion orden = OrdenProduccion.builder().id(1L).estado(EstadoProduccion.EN_PROCESO).build();
-        EtapaProduccion etapa1 = EtapaProduccion.builder().id(1L).ordenProduccion(orden).estado(EstadoEtapa.FINALIZADA).build();
-        EtapaProduccion etapa2 = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.EN_PROCESO).build();
+        EtapaProduccion etapa1 = EtapaProduccion.builder()
+                .id(1L).ordenProduccion(orden)
+                .estado(EstadoEtapa.FINALIZADA)
+                .fechaInicio(LocalDateTime.now().minusDays(2))
+                .build();
+        EtapaProduccion etapa2 = EtapaProduccion.builder()
+                .id(2L).ordenProduccion(orden)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .fechaInicio(LocalDateTime.now().minusDays(1))
+                .build();
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa2));
@@ -1140,8 +1223,16 @@ class OrdenProduccionServiceImplTest {
                 .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                         .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
                 .build();
-        EtapaProduccion etapa1 = EtapaProduccion.builder().id(1L).ordenProduccion(orden).estado(EstadoEtapa.FINALIZADA).build();
-        EtapaProduccion etapa2 = EtapaProduccion.builder().id(2L).ordenProduccion(orden).estado(EstadoEtapa.EN_PROCESO).build();
+        EtapaProduccion etapa1 = EtapaProduccion.builder()
+                .id(1L).ordenProduccion(orden)
+                .estado(EstadoEtapa.FINALIZADA)
+                .fechaInicio(LocalDateTime.now().minusDays(2))
+                .build();
+        EtapaProduccion etapa2 = EtapaProduccion.builder()
+                .id(2L).ordenProduccion(orden)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .fechaInicio(LocalDateTime.now().minusDays(1))
+                .build();
         Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
         when(repository.findById(1L)).thenReturn(Optional.of(orden));
         when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa2));
@@ -1170,7 +1261,6 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.TEN)
                 .tipo(TipoCierre.TOTAL)
-                .fechaFabricacion(LocalDateTime.now().minusDays(1))
                 .build();
 
         service.registrarCierre(1L, dto);
