@@ -237,8 +237,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .toList();
         Map<Long, Producto> productosInsumo = productoRepository.findAllById(insumoIds).stream()
                 .collect(Collectors.toMap(p -> p.getId().longValue(), p -> p));
-
-        Map<Long, BigDecimal> stockPorInsumo = stockQueryService.obtenerStockDisponible(insumoIds);
+        List<Long> almacenesValidos = obtenerAlmacenesOrigen(orden.getProducto());
+        Map<Long, BigDecimal> stockPorInsumo = stockQueryService.obtenerStockDisponible(insumoIds, almacenesValidos);
 
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();

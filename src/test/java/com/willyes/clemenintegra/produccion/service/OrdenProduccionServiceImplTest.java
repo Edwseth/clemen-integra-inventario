@@ -72,6 +72,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -1143,7 +1144,9 @@ class OrdenProduccionServiceImplTest {
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(1L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formula));
         when(productoRepository.findAllById(List.of(100L))).thenReturn(List.of(insumo));
-        when(stockQueryService.obtenerStockDisponible(eq(List.of(100L))))
+        when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(2L);
+        when(stockQueryService.obtenerStockDisponible(eq(List.of(100L)), eq(List.of(1L, 2L))))
                 .thenReturn(Map.of(100L, BigDecimal.valueOf(15)));
         when(repository.save(any())).thenAnswer(inv -> {
             OrdenProduccion o = inv.getArgument(0);
@@ -1167,8 +1170,52 @@ class OrdenProduccionServiceImplTest {
         ResultadoValidacionOrdenDTO resultado = spyService.guardarConValidacionStock(orden);
 
         assertTrue(resultado.isEsValida());
-        verify(stockQueryService, times(1)).obtenerStockDisponible(eq(List.of(100L)));
+        verify(stockQueryService, times(1)).obtenerStockDisponible(eq(List.of(100L)), eq(List.of(1L, 2L)));
         verify(stockQueryService, never()).obtenerStockDisponible(anyLong());
+    }
+
+    @Test
+    void guardarConValidacionStockSinStockEnAlmacenesPermitidos() {
+        Producto producto = new Producto();
+        producto.setId(1);
+
+        Usuario responsable = new Usuario();
+        responsable.setId(2L);
+
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .producto(producto)
+                .cantidadProgramada(BigDecimal.valueOf(5))
+                .responsable(responsable)
+                .build();
+
+        Producto insumo = new Producto();
+        insumo.setId(100);
+        insumo.setNombre("Insumo A");
+        UnidadMedida um = new UnidadMedida();
+        um.setSimbolo("kg");
+        insumo.setUnidadMedida(um);
+
+        DetalleFormula detalle = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(BigDecimal.valueOf(2))
+                .build();
+
+        FormulaProducto formula = FormulaProducto.builder()
+                .detalles(List.of(detalle))
+                .build();
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(1L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(List.of(100L))).thenReturn(List.of(insumo));
+        when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(2L);
+        when(stockQueryService.obtenerStockDisponible(eq(List.of(100L)), eq(List.of(1L, 2L))))
+                .thenReturn(Collections.emptyMap());
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertFalse(resultado.isEsValida());
+        assertEquals("Stock insuficiente para algunos insumos", resultado.getMensaje());
     }
 
     @Test
