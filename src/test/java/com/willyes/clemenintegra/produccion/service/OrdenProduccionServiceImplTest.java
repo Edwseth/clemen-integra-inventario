@@ -19,6 +19,7 @@ import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
@@ -780,7 +781,7 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
-    void registrarCierreCalculaVencimientoSegunVidaUtil() {
+    void registrarCierreUsaFechasExistentesDelLote() {
         OrdenProduccion orden = OrdenProduccion.builder()
                 .id(1L)
                 .estado(EstadoProduccion.EN_PROCESO)
@@ -796,22 +797,28 @@ class OrdenProduccionServiceImplTest {
         when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
         when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+
+        LocalDateTime fechaFabricacion = LocalDateTime.now().minusDays(5);
+        LocalDateTime fechaVencimiento = fechaFabricacion.plusWeeks(4);
+        LoteProducto loteExistente = LoteProducto.builder()
+                .id(3L)
+                .producto(orden.getProducto())
+                .almacen(Almacen.builder().id(2L).build())
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(BigDecimal.ZERO)
+                .fechaFabricacion(fechaFabricacion)
+                .fechaVencimiento(fechaVencimiento)
+                .build();
         when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
-                .thenReturn(Optional.empty());
+                .thenReturn(Optional.of(loteExistente));
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
         when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(new MotivoMovimiento()));
         TipoMovimientoDetalle tipoDetalle2 = new TipoMovimientoDetalle(); tipoDetalle2.setId(9L);
         when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle2));
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
-
-        LocalDateTime fechaEtapa1 = LocalDateTime.now().minusDays(5);
         when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
-                .thenReturn(List.of(EtapaProduccion.builder()
-                        .secuencia(1)
-                        .estado(EstadoEtapa.FINALIZADA)
-                        .fechaInicio(fechaEtapa1)
-                        .build()));
-        VidaUtilProducto vida = VidaUtilProducto.builder().productoId(1).semanasVigencia(4).build();
-        when(vidaUtilProductoRepository.findById(1)).thenReturn(Optional.of(vida));
+                .thenReturn(List.of(EtapaProduccion.builder().estado(EstadoEtapa.FINALIZADA).build()));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(BigDecimal.ONE)
@@ -822,7 +829,8 @@ class OrdenProduccionServiceImplTest {
 
         ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
         verify(loteProductoRepository).save(loteCaptor.capture());
-        assertEquals(fechaEtapa1.plusWeeks(4), loteCaptor.getValue().getFechaVencimiento());
+        assertEquals(fechaFabricacion, loteCaptor.getValue().getFechaFabricacion());
+        assertEquals(fechaVencimiento, loteCaptor.getValue().getFechaVencimiento());
     }
 
     @Test
@@ -1007,6 +1015,50 @@ class OrdenProduccionServiceImplTest {
 
         assertEquals(EstadoProduccion.EN_PROCESO, orden.getEstado());
         verify(repository).save(orden);
+    }
+
+    @Test
+    void iniciarEtapaSecuenciaUnoAsignaFechasALote() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .producto(Producto.builder()
+                        .id(10)
+                        .nombre("Prod")
+                        .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.PRODUCTO_TERMINADO).build())
+                        .build())
+                .build();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(2L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("John Doe");
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(2L)).thenReturn(Optional.of(etapa));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(etapaProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+        when(movimientoInventarioRepository.existsByOrdenProduccionIdAndClasificacion(anyLong(), any()))
+                .thenReturn(true);
+        VidaUtilProducto vida = VidaUtilProducto.builder().productoId(10).semanasVigencia(4).build();
+        when(vidaUtilProductoRepository.findById(10)).thenReturn(Optional.of(vida));
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.iniciarEtapa(1L, 2L);
+
+        ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository).save(captor.capture());
+        LocalDateTime fabricacion = captor.getValue().getFechaFabricacion();
+        LocalDateTime vencimiento = captor.getValue().getFechaVencimiento();
+        assertNotNull(fabricacion);
+        assertEquals(fabricacion.plusWeeks(4), vencimiento);
     }
 
     @Test
