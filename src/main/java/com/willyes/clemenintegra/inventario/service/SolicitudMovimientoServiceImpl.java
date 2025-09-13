@@ -310,7 +310,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .map(list -> {
                     OrdenProduccion op = list.get(0).getOrdenProduccion();
                     List<SolicitudMovimientoItemDTO> items = list.stream()
-                            .map(this::toItemDTO)
+                            .flatMap(s -> s.getDetalles().stream().map(det -> toItemDTO(s, det)))
                             .collect(Collectors.toList());
                     String estadoAgregado = calcularEstadoAgregado(items);
                     return SolicitudesPorOrdenDTO.builder()
@@ -356,7 +356,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         }
         OrdenProduccion op = solicitudes.get(0).getOrdenProduccion();
         List<SolicitudMovimientoItemDTO> items = solicitudes.stream()
-                .map(this::toItemDTO)
+                .flatMap(s -> s.getDetalles().stream().map(det -> toItemDTO(s, det)))
                 .collect(Collectors.toList());
         String estadoAgregado = calcularEstadoAgregado(items);
         return SolicitudesPorOrdenDTO.builder()
@@ -474,20 +474,21 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         }
     }
 
-    private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s) {
+    private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s, SolicitudMovimientoDetalle det) {
         return SolicitudMovimientoItemDTO.builder()
                 .solicitudId(s.getId())
                 .productoId(s.getProducto() != null ? s.getProducto().getId().longValue() : null)
                 .nombreProducto(s.getProducto() != null ? s.getProducto().getNombre() : null)
-                .codigoLote(s.getLote() != null ? s.getLote().getCodigoLote() : null)
-                .cantidadSolicitada(s.getCantidad())
+                .loteId(det.getLote() != null ? det.getLote().getId() : null)
+                .codigoLote(det.getLote() != null ? det.getLote().getCodigoLote() : null)
+                .cantidadSolicitada(det.getCantidad())
                 .unidadMedida(s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : null)
-                .almacenOrigenId(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getId().longValue() : null)
-                .nombreAlmacenOrigen(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : null)
-                .ubicacionAlmacenOrigen(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getUbicacion() : "-")
-                .almacenDestinoId(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getId().longValue() : null)
-                .nombreAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : null)
-                .ubicacionAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getUbicacion() : "-")
+                .almacenOrigenId(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getId().longValue() : null)
+                .nombreAlmacenOrigen(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getNombre() : null)
+                .ubicacionAlmacenOrigen(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getUbicacion() : "-")
+                .almacenDestinoId(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getId().longValue() : null)
+                .nombreAlmacenDestino(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getNombre() : null)
+                .ubicacionAlmacenDestino(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getUbicacion() : "-")
                 .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
                 .tipoMovimientoDetalleId(s.getTipoMovimientoDetalle() != null ? s.getTipoMovimientoDetalle().getId() : null)
                 .estado(s.getEstado() != null ? s.getEstado().name() : null)
@@ -536,6 +537,17 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .fechaSolicitud(s.getFechaSolicitud())
                 .fechaResolucion(s.getFechaResolucion())
                 .observaciones(s.getObservaciones())
+                .detalles(s.getDetalles() != null ? s.getDetalles().stream()
+                        .map(det -> SolicitudMovimientoDetalleDTO.builder()
+                                .loteId(det.getLote() != null ? det.getLote().getId() : null)
+                                .codigoLote(det.getLote() != null ? det.getLote().getCodigoLote() : null)
+                                .cantidad(det.getCantidad())
+                                .almacenOrigenId(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getId() : null)
+                                .nombreAlmacenOrigen(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getNombre() : null)
+                                .almacenDestinoId(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getId() : null)
+                                .nombreAlmacenDestino(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getNombre() : null)
+                                .build())
+                        .collect(Collectors.toList()) : null)
                 .build();
     }
 
@@ -552,7 +564,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .id(s.getId())
                 .op(op)
                 .fechaSolicitud(s.getFechaSolicitud())
-                .items(1)
+                .items(s.getDetalles() != null ? s.getDetalles().size() : 0)
                 .estado(s.getEstado() != null ? s.getEstado().name() : "")
                 .solicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : "")
                 .build();
