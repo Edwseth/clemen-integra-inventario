@@ -446,6 +446,62 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    void registrarCierreIncrementaStockLoteUnaVez() {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(1L)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .producto(Producto.builder().id(1).tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .unidadMedida(UnidadMedida.builder().simbolo("G").build()).build())
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Usuario usuario = new Usuario(); usuario.setId(5L); usuario.setNombreCompleto("Jane Doe");
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        when(cierreProduccionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(Almacen.builder().id(2L).build()));
+        when(almacenRepository.findById(7L)).thenReturn(Optional.of(Almacen.builder().id(7L).build()));
+
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(anyLong(), anyLong()))
+                .thenReturn(Optional.empty());
+        when(loteProductoRepository.findByCodigoLote("LOTE1")).thenReturn(Optional.empty());
+
+        java.util.concurrent.atomic.AtomicReference<LoteProducto> loteRef = new java.util.concurrent.atomic.AtomicReference<>();
+        when(loteProductoRepository.save(any())).thenAnswer(inv -> {
+            LoteProducto l = inv.getArgument(0);
+            if (l.getId() == null) l.setId(1L);
+            loteRef.set(l);
+            return l;
+        });
+
+        MotivoMovimiento motivo = new MotivoMovimiento(); motivo.setId(11L);
+        when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(motivo));
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle(); tipoDetalle.setId(9L);
+        when(tipoMovimientoDetalleRepository.findById(9L)).thenReturn(Optional.of(tipoDetalle));
+
+        doAnswer(inv -> {
+            MovimientoInventarioDTO mov = inv.getArgument(0);
+            LoteProducto l = loteRef.get();
+            l.setStockLote(l.getStockLote().add(mov.cantidad()));
+            return new MovimientoInventarioResponseDTO();
+        }).when(movimientoInventarioService).registrarMovimiento(any());
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("3"))
+                .tipo(TipoCierre.PARCIAL)
+                .codigoLote("LOTE1")
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .build();
+
+        service.registrarCierre(1L, dto);
+
+        assertNotNull(loteRef.get());
+        assertEquals(new BigDecimal("3.00"), loteRef.get().getStockLote());
+    }
+
+    @Test
     void entradaPtSinOrdenDevuelve422() {
         OrdenProduccion orden = OrdenProduccion.builder()
                 .id(1L)
