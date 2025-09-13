@@ -417,22 +417,38 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
             }
 
-            LocalDateTime fechaFabricacion = etapaProduccionRepository
-                    .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId())
-                    .stream()
-                    .findFirst()
-                    .map(EtapaProduccion::getFechaInicio)
-                    .orElse(null);
-
-            Integer semanasVigencia = vidaUtilProductoRepository.findById(orden.getProducto().getId())
-                    .map(VidaUtilProducto::getSemanasVigencia)
-                    .orElse(null);
-            LocalDateTime fechaVencimiento = (fechaFabricacion != null && semanasVigencia != null)
-                    ? fechaFabricacion.plusWeeks(semanasVigencia)
-                    : null;
-
             BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
             dto.setCantidad(cantidad);
+
+            LoteProducto lote = loteProductoRepository
+                    .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
+                    .orElse(null);
+            LocalDateTime fechaFabricacion = lote != null ? lote.getFechaFabricacion() : null;
+            LocalDateTime fechaVencimiento = lote != null ? lote.getFechaVencimiento() : null;
+
+            if (fechaFabricacion == null) {
+                fechaFabricacion = etapaProduccionRepository
+                        .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId())
+                        .stream()
+                        .findFirst()
+                        .map(EtapaProduccion::getFechaInicio)
+                        .orElse(null);
+            }
+            if (fechaVencimiento == null) {
+                Integer semanasVigencia = vidaUtilProductoRepository.findById(orden.getProducto().getId())
+                        .map(VidaUtilProducto::getSemanasVigencia)
+                        .orElse(null);
+                fechaVencimiento = (fechaFabricacion != null && semanasVigencia != null)
+                        ? fechaFabricacion.plusWeeks(semanasVigencia)
+                        : null;
+            }
+
+            if (fechaFabricacion == null || fechaFabricacion.isAfter(LocalDateTime.now())) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
+            }
+            if (fechaVencimiento != null && fechaVencimiento.isBefore(fechaFabricacion)) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
+            }
 
             if (orden.getId() == null) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_PRODUCCION_OBLIGATORIA");
@@ -523,10 +539,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
 
-            LoteProducto lote = loteProductoRepository
-                    .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
-                    .orElse(null);
-
             BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
             BigDecimal nuevaAcumulada = acumulada.add(cantidad);
 
@@ -576,13 +588,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     estadoLote = EstadoLote.EN_CUARENTENA;
                 }
                 default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
-            }
-
-            if (fechaFabricacion == null || fechaFabricacion.isAfter(LocalDateTime.now())) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
-            }
-            if (fechaVencimiento != null && fechaVencimiento.isBefore(fechaFabricacion)) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_INVALIDA");
             }
 
             String codigoLote = dto.getCodigoLote();
@@ -847,12 +852,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
             }
 
+            LocalDateTime fechaFabricacion = LocalDateTime.now();
+            Integer semanasVigencia = vidaUtilProductoRepository.findById(orden.getProducto().getId())
+                    .map(VidaUtilProducto::getSemanasVigencia)
+                    .orElse(null);
+            LocalDateTime fechaVencimiento = semanasVigencia != null
+                    ? fechaFabricacion.plusWeeks(semanasVigencia)
+                    : null;
+
             LoteProducto lote = LoteProducto.builder()
                     .codigoLote(codigoLote)
                     .producto(orden.getProducto())
                     .almacen(destino)
                     .estado(estadoLote)
                     .stockLote(BigDecimal.ZERO)
+                    .fechaFabricacion(fechaFabricacion)
+                    .fechaVencimiento(fechaVencimiento)
                     .ordenProduccion(orden)
                     .build();
 
