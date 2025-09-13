@@ -521,8 +521,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal nuevaAcumulada = acumulada.add(cantidad);
 
             if (dto.getTipo() == TipoCierre.TOTAL) {
-                orden.setEstado(EstadoProduccion.FINALIZADA);
-                orden.setFechaFin(LocalDateTime.now());
+                boolean etapasFinalizadas = etapaProduccionRepository
+                        .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId())
+                        .stream()
+                        .allMatch(e -> e.getEstado() == EstadoEtapa.FINALIZADA);
+                if (etapasFinalizadas) {
+                    orden.setEstado(EstadoProduccion.FINALIZADA);
+                    orden.setFechaFin(LocalDateTime.now());
+                }
             }
 
             orden.setCantidadProducidaAcumulada(nuevaAcumulada);
@@ -910,17 +916,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         etapa.setFechaFin(LocalDateTime.now());
         etapa.setUsuarioId(usuario.getId());
         etapa.setUsuarioNombre(usuario.getNombreCompleto());
-        EtapaProduccion guardada = etapaProduccionRepository.save(etapa);
-
-        boolean todasFinalizadas = etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenId)
-                .stream()
-                .allMatch(e -> e.getEstado() == EstadoEtapa.FINALIZADA);
-        if (todasFinalizadas) {
-            orden.setEstado(EstadoProduccion.FINALIZADA);
-            orden.setFechaFin(LocalDateTime.now());
-            repository.save(orden);
-        }
-        return guardada;
+        return etapaProduccionRepository.save(etapa);
     }
 
     public List<InsumoOPDTO> listarInsumos(Long id) {
