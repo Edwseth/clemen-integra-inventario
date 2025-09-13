@@ -41,13 +41,14 @@ import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
+import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
+import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
@@ -112,6 +113,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
     private final InventoryCatalogResolver catalogResolver;
     private final UmValidator umValidator;
+    private final VidaUtilProductoRepository vidaUtilProductoRepository;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -415,11 +417,19 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
             }
 
-            LocalDateTime fechaFabricacion = dto.getFechaFabricacion();
-            LocalDateTime fechaVencimiento = dto.getFechaVencimiento();
-            if (fechaFabricacion != null && fechaVencimiento != null && fechaFabricacion.isAfter(fechaVencimiento)) {
-                throw new CustomBusinessException("La fecha de fabricación no puede ser posterior a la fecha de vencimiento");
-            }
+            LocalDateTime fechaFabricacion = etapaProduccionRepository
+                    .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId())
+                    .stream()
+                    .findFirst()
+                    .map(EtapaProduccion::getFechaInicio)
+                    .orElse(null);
+
+            Integer semanasVigencia = vidaUtilProductoRepository.findById(orden.getProducto().getId())
+                    .map(VidaUtilProducto::getSemanasVigencia)
+                    .orElse(null);
+            LocalDateTime fechaVencimiento = (fechaFabricacion != null && semanasVigencia != null)
+                    ? fechaFabricacion.plusWeeks(semanasVigencia)
+                    : null;
 
             BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
             dto.setCantidad(cantidad);
