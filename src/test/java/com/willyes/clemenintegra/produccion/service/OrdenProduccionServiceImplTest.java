@@ -1434,6 +1434,8 @@ class OrdenProduccionServiceImplTest {
         LoteProducto lote = LoteProducto.builder()
                 .id(7L)
                 .codigoLote("L1")
+                .fechaFabricacion(LocalDateTime.of(2024, 1, 1, 10, 0))
+                .fechaVencimiento(LocalDateTime.of(2024, 6, 1, 10, 0))
                 .estado(EstadoLote.DISPONIBLE)
                 .almacen(almacen)
                 .build();
@@ -1445,6 +1447,8 @@ class OrdenProduccionServiceImplTest {
         assertNotNull(dto);
         assertEquals(7L, dto.getId());
         assertEquals("L1", dto.getCodigoLote());
+        assertEquals(LocalDateTime.of(2024, 1, 1, 10, 0), dto.getFechaFabricacion());
+        assertEquals(LocalDateTime.of(2024, 6, 1, 10, 0), dto.getFechaVencimiento());
         assertEquals(EstadoLote.DISPONIBLE, dto.getEstado());
         assertEquals(1, dto.getAlmacen().getId());
     }
