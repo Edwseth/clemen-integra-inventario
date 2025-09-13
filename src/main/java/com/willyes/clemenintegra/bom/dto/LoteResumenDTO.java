@@ -13,7 +13,7 @@ public class LoteResumenDTO {
     private String codigoLote;
     private EstadoLote estado;
     private String almacenNombre;
-    private BigDecimal stockLote;
+    private BigDecimal stockDisponible;
     private LocalDateTime fechaVencimiento;
     private LocalDateTime fechaLiberacion;
     private String nombreUsuarioLiberador;

@@ -83,20 +83,20 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     @Query("""
       select lp.estado as estado, coalesce(sum(lp.stockLote - lp.stockReservado),0)
       from LoteProducto lp
-      where lp.producto.id = :productoId and (lp.stockLote - lp.stockReservado) > 0
+      where lp.producto.id = :productoId and (lp.stockLote - lp.stockReservado) > 0 and lp.agotado = false
       group by lp.estado
     """)
     List<Object[]> sumarPorEstado(@Param("productoId") Long productoId);
 
     @Query("""
      select new com.willyes.clemenintegra.bom.dto.LoteResumenDTO(
-        lp.id, lp.codigoLote, lp.estado, a.nombre, lp.stockLote,
+        lp.id, lp.codigoLote, lp.estado, a.nombre, (lp.stockLote - lp.stockReservado),
         lp.fechaVencimiento, lp.fechaLiberacion, u.nombreCompleto
      )
      from LoteProducto lp
      left join lp.almacen a
      left join lp.usuarioLiberador u
-     where lp.producto.id = :productoId and lp.stockLote > 0
+     where lp.producto.id = :productoId and (lp.stockLote - lp.stockReservado) > 0 and lp.agotado = false
      order by lp.estado asc, lp.fechaVencimiento asc
     """)
     List<com.willyes.clemenintegra.bom.dto.LoteResumenDTO> listarLotesPorProducto(@Param("productoId") Long productoId);

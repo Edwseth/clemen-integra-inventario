@@ -119,7 +119,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                 java.time.LocalDateTime ahora = java.time.LocalDateTime.now();
                 for (LoteResumenDTO lote : lotes) {
                     if (lote.getFechaVencimiento() != null && lote.getFechaVencimiento().isBefore(ahora)) {
-                        BigDecimal st = lote.getStockLote();
+                        BigDecimal st = lote.getStockDisponible();
                         vencidoExtra = vencidoExtra.add(st);
                         totales.put(lote.getEstado(), totales.get(lote.getEstado()).subtract(st));
                     }
