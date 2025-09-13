@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -34,4 +35,5 @@ public class SolicitudMovimientoResponseDTO {
     private LocalDateTime fechaSolicitud;
     private LocalDateTime fechaResolucion;
     private String observaciones;
+    private List<SolicitudMovimientoDetalleDTO> detalles;
 }
