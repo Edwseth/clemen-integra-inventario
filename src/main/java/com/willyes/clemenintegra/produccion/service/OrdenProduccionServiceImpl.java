@@ -591,7 +591,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .producto(orden.getProducto())
                         .almacen(destino)
                         .estado(estadoLote)
-                        .stockLote(cantidad)
+                        .stockLote(BigDecimal.ZERO)
                         .fechaFabricacion(fechaFabricacion)
                         .fechaVencimiento(fechaVencimiento)
                         .ordenProduccion(orden)
@@ -610,7 +610,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 } else if (lote.getCodigoLote() == null && codigoLote != null) {
                     lote.setCodigoLote(codigoLote);
                 }
-                lote.setStockLote(lote.getStockLote().add(cantidad).setScale(2, RoundingMode.DOWN));
                 if (lote.getFechaFabricacion() == null) {
                     lote.setFechaFabricacion(fechaFabricacion);
                 }
