@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -14,6 +15,8 @@ import lombok.NoArgsConstructor;
 public class LoteProductoResponse {
     private Long id;
     private String codigoLote;
+    private LocalDateTime fechaFabricacion;
+    private LocalDateTime fechaVencimiento;
     private EstadoLote estado;
     private AlmacenResponseDTO almacen;
 }

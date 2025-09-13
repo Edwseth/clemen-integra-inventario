@@ -970,6 +970,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .map(lote -> LoteProductoResponse.builder()
                         .id(lote.getId())
                         .codigoLote(lote.getCodigoLote())
+                        .fechaFabricacion(lote.getFechaFabricacion())
+                        .fechaVencimiento(lote.getFechaVencimiento())
                         .estado(lote.getEstado())
                         .almacen(new AlmacenResponseDTO(lote.getAlmacen()))
                         .build())

@@ -15,6 +15,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -91,9 +92,13 @@ class OrdenProduccionControllerTest {
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     void obtenerLote_ok() throws Exception {
         AlmacenResponseDTO almacen = AlmacenResponseDTO.builder().id(1).nombre("A1").build();
+        LocalDateTime fabricacion = LocalDateTime.of(2024, 1, 1, 10, 0);
+        LocalDateTime vencimiento = LocalDateTime.of(2024, 6, 1, 10, 0);
         LoteProductoResponse lote = LoteProductoResponse.builder()
                 .id(7L)
                 .codigoLote("L1")
+                .fechaFabricacion(fabricacion)
+                .fechaVencimiento(vencimiento)
                 .estado(EstadoLote.DISPONIBLE)
                 .almacen(almacen)
                 .build();
@@ -102,7 +107,9 @@ class OrdenProduccionControllerTest {
         mockMvc.perform(get("/api/produccion/ordenes/{id}/lote", 5))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(7))
-                .andExpect(jsonPath("$.codigoLote").value("L1"));
+                .andExpect(jsonPath("$.codigoLote").value("L1"))
+                .andExpect(jsonPath("$.fechaFabricacion").value(fabricacion.toString()))
+                .andExpect(jsonPath("$.fechaVencimiento").value(vencimiento.toString()));
     }
 }
 
