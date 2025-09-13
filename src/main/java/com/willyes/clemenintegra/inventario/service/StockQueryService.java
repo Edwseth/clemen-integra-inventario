@@ -36,6 +36,25 @@ public class StockQueryService {
                                           StockDisponibleProjection::getStockDisponible));
     }
 
+    public Map<Long, BigDecimal> obtenerStockDisponible(List<Long> ids, List<Long> almacenes) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        if (almacenes == null || almacenes.isEmpty()) {
+            return obtenerStockDisponible(ids);
+        }
+        List<Long> uniqueIds = ids.stream().filter(Objects::nonNull).distinct().toList();
+        List<Long> uniqueAlmacenes = almacenes.stream().filter(Objects::nonNull).distinct().toList();
+        List<StockDisponibleProjection> rows = Optional
+                .ofNullable(productoRepository.calcularStockDisponiblePorProductoEnAlmacenes(uniqueIds, uniqueAlmacenes))
+                .orElse(Collections.emptyList());
+        return rows.stream()
+                .filter(Objects::nonNull)
+                .filter(row -> row.getProductoId() != null && row.getStockDisponible() != null)
+                .collect(Collectors.toMap(StockDisponibleProjection::getProductoId,
+                                          StockDisponibleProjection::getStockDisponible));
+    }
+
     public BigDecimal obtenerStockDisponible(Long id) {
         return obtenerStockDisponible(List.of(id)).getOrDefault(id, BigDecimal.ZERO);
     }
