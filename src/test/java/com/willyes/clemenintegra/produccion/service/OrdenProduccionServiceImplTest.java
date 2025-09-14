@@ -1219,6 +1219,54 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    void guardarConValidacionStockStockSoloEnBodegasNoAutorizadas() {
+        Producto producto = new Producto();
+        producto.setId(1);
+
+        Usuario responsable = new Usuario();
+        responsable.setId(2L);
+
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .producto(producto)
+                .cantidadProgramada(BigDecimal.valueOf(5))
+                .responsable(responsable)
+                .build();
+
+        Producto insumo = new Producto();
+        insumo.setId(100);
+        insumo.setNombre("Insumo A");
+        UnidadMedida um = new UnidadMedida();
+        um.setSimbolo("kg");
+        insumo.setUnidadMedida(um);
+
+        DetalleFormula detalle = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(BigDecimal.valueOf(2))
+                .build();
+
+        FormulaProducto formula = FormulaProducto.builder()
+                .detalles(List.of(detalle))
+                .build();
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(1L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(List.of(100L))).thenReturn(List.of(insumo));
+        when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(2L);
+        when(stockQueryService.obtenerStockDisponible(eq(List.of(100L)), eq(List.of(1L, 2L))))
+                .thenReturn(Collections.emptyMap());
+        when(stockQueryService.obtenerStockDisponible(eq(List.of(100L))))
+                .thenReturn(Map.of(100L, BigDecimal.valueOf(10)));
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertFalse(resultado.isEsValida());
+        verify(stockQueryService).obtenerStockDisponible(eq(List.of(100L)), eq(List.of(1L, 2L)));
+        verify(stockQueryService, never()).obtenerStockDisponible(eq(List.of(100L)));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void obtenerLote_ok() {
         OrdenProduccion orden = OrdenProduccion.builder()
                 .id(5L)

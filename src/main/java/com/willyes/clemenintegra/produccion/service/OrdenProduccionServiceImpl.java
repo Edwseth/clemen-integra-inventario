@@ -237,8 +237,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .toList();
         Map<Long, Producto> productosInsumo = productoRepository.findAllById(insumoIds).stream()
                 .collect(Collectors.toMap(p -> p.getId().longValue(), p -> p));
-        List<Long> almacenesValidos = obtenerAlmacenesOrigen(orden.getProducto());
-        Map<Long, BigDecimal> stockPorInsumo = stockQueryService.obtenerStockDisponible(insumoIds, almacenesValidos);
 
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();
@@ -250,7 +248,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
             cantidadesEscaladas.put(insumoId, cantidadRequerida);
 
-            BigDecimal stockDisponible = stockPorInsumo.getOrDefault(insumoId, BigDecimal.ZERO);
+            List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
+            BigDecimal stockDisponible = stockQueryService
+                    .obtenerStockDisponible(List.of(insumoId), almacenesValidos)
+                    .getOrDefault(insumoId, BigDecimal.ZERO);
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
