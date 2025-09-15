@@ -322,6 +322,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .usuarioSolicitanteId(guardada.getResponsable().getId())
                     .motivoMovimientoId(motivoId)
                     .tipoMovimientoDetalleId(tipoDetalleId)
+                    .almacenDestinoId(catalogResolver.getAlmacenPreBodegaProduccionId())
                     .build();
             solicitudMovimientoService.registrarSolicitud(req);
         }
