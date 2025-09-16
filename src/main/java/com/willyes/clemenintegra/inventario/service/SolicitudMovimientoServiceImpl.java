@@ -22,6 +22,7 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.TextAlignment;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +45,8 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 import jakarta.persistence.EntityNotFoundException;
 
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+
 @Service
 @RequiredArgsConstructor
 public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoService {
@@ -58,6 +61,9 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
+
+    @Value("${app.inventario.prebodega.id:6}")
+    private Integer preBodegaProduccionId;
 
     @Override
     @Transactional
@@ -134,6 +140,31 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .usuarioResponsable(responsable)
                 .observaciones(dto.getObservaciones())
                 .build();
+
+        final boolean esParaOP = solicitud.getOrdenProduccion() != null || dto.getOrdenProduccionId() != null;
+        final String mensajePreBodegaInexistente = "No existe Pre-Bodega Producción";
+        if (esParaOP && solicitud.getAlmacenDestino() == null) {
+            if (preBodegaProduccionId == null) {
+                throw new CustomBusinessException(mensajePreBodegaInexistente);
+            }
+            Long preBodegaId = preBodegaProduccionId.longValue();
+            Almacen preBodega = almacenRepository.findById(preBodegaId)
+                    .orElseThrow(() -> new CustomBusinessException(
+                            mensajePreBodegaInexistente + " id=" + preBodegaProduccionId));
+            solicitud.setAlmacenDestino(preBodega);
+        }
+
+        if (esParaOP && solicitud.getAlmacenDestino() == null) {
+            throw new CustomBusinessException(mensajePreBodegaInexistente);
+        }
+
+        if (solicitud.getDetalles() != null && solicitud.getAlmacenDestino() != null) {
+            for (SolicitudMovimientoDetalle detalle : solicitud.getDetalles()) {
+                if (detalle.getAlmacenDestino() == null) {
+                    detalle.setAlmacenDestino(solicitud.getAlmacenDestino());
+                }
+            }
+        }
 
         SolicitudMovimiento guardada = repository.save(solicitud);
         return toResponse(guardada);
