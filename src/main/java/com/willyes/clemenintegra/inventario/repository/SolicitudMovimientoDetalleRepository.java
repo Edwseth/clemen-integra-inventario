@@ -17,6 +17,12 @@ public interface SolicitudMovimientoDetalleRepository extends JpaRepository<Soli
         Long getCnt();
     }
 
+    interface OpDetalleCount {
+        Long getOpId();
+
+        Long getCnt();
+    }
+
     @Query("""
             select d.solicitudMovimiento.id as solicitudId, count(d.id) as cnt
             from SolicitudMovimientoDetalle d
@@ -24,5 +30,13 @@ public interface SolicitudMovimientoDetalleRepository extends JpaRepository<Soli
             group by d.solicitudMovimiento.id
             """)
     List<SolicitudDetalleCount> countBySolicitudIds(@Param("ids") List<Long> ids);
+
+    @Query("""
+            select d.solicitudMovimiento.ordenProduccion.id as opId, count(d.id) as cnt
+            from SolicitudMovimientoDetalle d
+            where d.solicitudMovimiento.ordenProduccion.id in :opIds
+            group by d.solicitudMovimiento.ordenProduccion.id
+            """)
+    List<OpDetalleCount> countByOpIds(@Param("opIds") List<Long> opIds);
 }
 

@@ -5,7 +5,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoDetalleRepository.SolicitudDetalleCount;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoDetalleRepository.OpDetalleCount;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -203,17 +203,21 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         );
 
         List<SolicitudMovimiento> solicitudes = page.getContent();
-        List<Long> ids = solicitudes.stream()
-                .map(SolicitudMovimiento::getId)
+
+        List<Long> opIds = solicitudes.stream()
+                .map(SolicitudMovimiento::getOrdenProduccion)
                 .filter(Objects::nonNull)
+                .map(OrdenProduccion::getId)
+                .filter(Objects::nonNull)
+                .distinct()
                 .toList();
 
-        Map<Long, Integer> countsBySolicitud = ids.isEmpty()
+        Map<Long, Integer> countsByOp = opIds.isEmpty()
                 ? Collections.emptyMap()
-                : solicitudMovimientoDetalleRepository.countBySolicitudIds(ids)
+                : solicitudMovimientoDetalleRepository.countByOpIds(opIds)
                 .stream()
                 .collect(Collectors.toMap(
-                        SolicitudDetalleCount::getSolicitudId,
+                        OpDetalleCount::getOpId,
                         c -> {
                             Long value = c.getCnt();
                             return value == null ? 0 : Math.toIntExact(value);
@@ -221,12 +225,16 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 ));
 
         List<SolicitudMovimientoListadoDTO> dtos = solicitudes.stream()
-                .map(s -> {
-                    SolicitudMovimientoListadoDTO dto = toListadoDTO(s);
-                    Long id = s.getId();
-                    int cnt = id != null ? countsBySolicitud.getOrDefault(id, 0) : 0;
-                    dto.setItems(cnt);
+                .map(solicitud -> {
+                    SolicitudMovimientoListadoDTO dto = toListadoDTO(solicitud);
+                    OrdenProduccion orden = solicitud.getOrdenProduccion();
+                    Long opId = orden != null ? orden.getId() : null;
+                    int cnt = opId != null ? countsByOp.getOrDefault(opId, 0) : 0;
                     dto.setItemsCount(cnt);
+                    try {
+                        dto.getClass().getMethod("setItems", Integer.class).invoke(dto, cnt);
+                    } catch (Exception ignored) {
+                    }
                     return dto;
                 })
                 .toList();
