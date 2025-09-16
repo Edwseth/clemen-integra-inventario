@@ -104,6 +104,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         MovimientoInventario movimiento = mapper.toEntity(dto);
 
+        TipoMovimientoDetalle tipoMovimientoDetalle = null;
+        if (dto.tipoMovimientoDetalleId() != null) {
+            tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(dto.tipoMovimientoDetalleId())
+                    .orElseThrow(() -> new NoSuchElementException("Tipo de detalle de movimiento no encontrado"));
+            if (requiereSolicitudMovimientoId(tipoMovimientoDetalle) && dto.solicitudMovimientoId() == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
+            }
+        }
+
         // 1. Cargar entidades principales
         Producto producto = productoRepository.findById(dto.productoId().longValue())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
@@ -315,8 +325,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setOrdenCompraDetalle(ordenCompraDetalle);
         movimiento.setMotivoMovimiento(dto.motivoMovimientoId() != null
                 ? entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId()) : null);
-        movimiento.setTipoMovimientoDetalle(dto.tipoMovimientoDetalleId() != null
-                ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId()) : null);
+        movimiento.setTipoMovimientoDetalle(tipoMovimientoDetalle != null
+                ? tipoMovimientoDetalle
+                : dto.tipoMovimientoDetalleId() != null
+                ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId())
+                : null);
         movimiento.setRegistradoPor(usuario);
         if (solicitud != null) {
             movimiento.setSolicitudMovimiento(solicitud);
@@ -790,6 +803,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
         String nfd = java.text.Normalizer.normalize(nombre, java.text.Normalizer.Form.NFD);
         return nfd.replaceAll("\\p{M}", "").toLowerCase();
+    }
+
+    private boolean requiereSolicitudMovimientoId(TipoMovimientoDetalle tipoMovimientoDetalle) {
+        if (tipoMovimientoDetalle == null) {
+            return false;
+        }
+        String descripcion = tipoMovimientoDetalle.getDescripcion();
+        if (descripcion == null || descripcion.isBlank()) {
+            return false;
+        }
+        String normalized = java.text.Normalizer.normalize(descripcion, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").toUpperCase();
+        return normalized.contains("SOLICITUD") || normalized.contains("RESERVA");
     }
 
 }
