@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoDetalleRepository.SolicitudDetalleCount;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -48,6 +49,7 @@ import jakarta.persistence.EntityNotFoundException;
 public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoService {
 
     private final SolicitudMovimientoRepository repository;
+    private final SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
     private final ProductoRepository productoRepository;
     private final LoteProductoRepository loteRepository;
     private final AlmacenRepository almacenRepository;
@@ -195,8 +197,41 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
         }
 
-        return repository.findAll(spec == null ? Specification.where((root, query, cb) -> cb.conjunction()) : spec, pageable)
-                .map(this::toListadoDTO);
+        Page<SolicitudMovimiento> page = repository.findAll(
+                spec == null ? Specification.where((root, query, cb) -> cb.conjunction()) : spec,
+                pageable
+        );
+
+        List<SolicitudMovimiento> solicitudes = page.getContent();
+        List<Long> ids = solicitudes.stream()
+                .map(SolicitudMovimiento::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        Map<Long, Integer> countsBySolicitud = ids.isEmpty()
+                ? Collections.emptyMap()
+                : solicitudMovimientoDetalleRepository.countBySolicitudIds(ids)
+                .stream()
+                .collect(Collectors.toMap(
+                        SolicitudDetalleCount::getSolicitudId,
+                        c -> {
+                            Long value = c.getCnt();
+                            return value == null ? 0 : Math.toIntExact(value);
+                        }
+                ));
+
+        List<SolicitudMovimientoListadoDTO> dtos = solicitudes.stream()
+                .map(s -> {
+                    SolicitudMovimientoListadoDTO dto = toListadoDTO(s);
+                    Long id = s.getId();
+                    int cnt = id != null ? countsBySolicitud.getOrDefault(id, 0) : 0;
+                    dto.setItems(cnt);
+                    dto.setItemsCount(cnt);
+                    return dto;
+                })
+                .toList();
+
+        return new PageImpl<>(dtos, pageable, page.getTotalElements());
     }
 
     @Override
@@ -564,7 +599,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .id(s.getId())
                 .op(op)
                 .fechaSolicitud(s.getFechaSolicitud())
-                .items(s.getDetalles() != null ? s.getDetalles().size() : 0)
+                .items(0)
+                .itemsCount(0)
                 .estado(s.getEstado() != null ? s.getEstado().name() : "")
                 .solicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : "")
                 .build();
