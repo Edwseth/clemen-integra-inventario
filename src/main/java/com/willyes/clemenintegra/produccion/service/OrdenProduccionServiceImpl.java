@@ -31,6 +31,7 @@ import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import com.willyes.clemenintegra.produccion.service.spec.OrdenProduccionSpecifications;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
@@ -757,22 +758,57 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .filter(l -> almacenesValidos.isEmpty() || (l.getAlmacenId() != null && almacenesValidos.contains(l.getAlmacenId().longValue())))
                     .toList();
 
-            SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+            if (lotes.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "STOCK_INSUFICIENTE: faltan " + restante);
+            }
+
+            Long primerLoteId = lotes.get(0).getLoteProductoId();
+            if (primerLoteId == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "STOCK_INSUFICIENTE: faltan " + restante);
+            }
+
+            SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()
                     .tipoMovimiento(TipoMovimiento.SALIDA)
-                    .producto(insumo.getInsumo())
+                    .productoId(insumoId)
+                    .loteId(primerLoteId)
                     .cantidad(requerida)
-                    .ordenProduccion(orden)
-                    .usuarioSolicitante(usuario)
-                    .motivoMovimiento(motivo)
-                    .tipoMovimientoDetalle(detalle)
-                    .estado(EstadoSolicitudMovimiento.RESERVADA)
+                    .ordenProduccionId(orden.getId())
+                    .usuarioSolicitanteId(usuario.getId())
+                    .motivoMovimientoId(motivo.getId())
+                    .tipoMovimientoDetalleId(detalle.getId())
                     .build();
 
+            SolicitudMovimientoResponseDTO solicitudCreada = solicitudMovimientoService.registrarSolicitud(solicitudReq);
+            Long solicitudId = solicitudCreada.getId();
+            if (solicitudId == null) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA");
+            }
+
+            SolicitudMovimiento solicitud = solicitudMovimientoRepository.findById(solicitudId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA"));
+
+            solicitud.setLote(null);
+            solicitud.setAlmacenOrigen(null);
+
+            List<SolicitudMovimientoDetalle> detallesSolicitud = solicitud.getDetalles();
+            if (detallesSolicitud == null) {
+                detallesSolicitud = new ArrayList<>();
+                solicitud.setDetalles(detallesSolicitud);
+            } else {
+                detallesSolicitud.clear();
+            }
+
             for (LoteFefoDisponibleProjection lote : lotes) {
-                if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
+                if (restante.compareTo(BigDecimal.ZERO) <= 0) {
+                    break;
+                }
                 BigDecimal disponible = lote.getStockLote();
                 BigDecimal usar = disponible.min(restante);
-                if (usar.compareTo(BigDecimal.ZERO) <= 0) continue;
+                if (usar.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
 
                 int updated = loteProductoRepository.reservarStock(lote.getLoteProductoId(), usar);
                 if (updated == 0) {
@@ -785,7 +821,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .cantidad(usar)
                         .almacenOrigen(lote.getAlmacenId() != null ? new Almacen(lote.getAlmacenId()) : null)
                         .build();
-                solicitud.getDetalles().add(detSolicitud);
+                detallesSolicitud.add(detSolicitud);
 
                 restante = restante.subtract(usar);
             }
