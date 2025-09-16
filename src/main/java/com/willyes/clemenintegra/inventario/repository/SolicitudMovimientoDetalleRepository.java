@@ -18,10 +18,10 @@ public interface SolicitudMovimientoDetalleRepository extends JpaRepository<Soli
     }
 
     @Query("""
-            select d.solicitud.id as solicitudId, count(d.id) as cnt
+            select d.solicitudMovimiento.id as solicitudId, count(d.id) as cnt
             from SolicitudMovimientoDetalle d
-            where d.solicitud.id in :ids
-            group by d.solicitud.id
+            where d.solicitudMovimiento.id in :ids
+            group by d.solicitudMovimiento.id
             """)
     List<SolicitudDetalleCount> countBySolicitudIds(@Param("ids") List<Long> ids);
 }
