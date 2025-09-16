@@ -133,7 +133,6 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .usuarioSolicitante(solicitante)
                 .usuarioResponsable(responsable)
                 .observaciones(dto.getObservaciones())
-                .estado(EstadoSolicitudMovimiento.PENDIENTE)
                 .build();
 
         SolicitudMovimiento guardada = repository.save(solicitud);
