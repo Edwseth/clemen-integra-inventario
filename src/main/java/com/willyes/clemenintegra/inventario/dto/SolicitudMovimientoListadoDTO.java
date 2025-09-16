@@ -16,6 +16,7 @@ public class SolicitudMovimientoListadoDTO {
     private String op;
     private LocalDateTime fechaSolicitud;
     private Integer items;
+    private Integer itemsCount;
     private String estado;
     private String solicitante;
 }
