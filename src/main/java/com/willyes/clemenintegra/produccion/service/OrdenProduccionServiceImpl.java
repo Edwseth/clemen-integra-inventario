@@ -820,6 +820,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .lote(new LoteProducto(lote.getLoteProductoId()))
                         .cantidad(usar)
                         .almacenOrigen(lote.getAlmacenId() != null ? new Almacen(lote.getAlmacenId()) : null)
+                        .almacenDestino(solicitud.getAlmacenDestino())
                         .build();
                 detallesSolicitud.add(detSolicitud);
 

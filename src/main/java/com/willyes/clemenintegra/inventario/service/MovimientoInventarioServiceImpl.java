@@ -237,6 +237,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
         }
 
+        if (dto.almacenDestinoId() == null && solicitud != null && solicitud.getAlmacenDestino() != null) {
+            almacenDestino = solicitud.getAlmacenDestino();
+        }
+
         // Detección automática de devolución interna
         boolean devolucionInterna = false;
         if (tipoMovimiento == TipoMovimiento.TRANSFERENCIA && almacenOrigen != null && almacenDestino != null) {
