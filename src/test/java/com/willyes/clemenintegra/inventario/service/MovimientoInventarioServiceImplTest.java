@@ -14,9 +14,9 @@ import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
+import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +41,6 @@ import static org.mockito.Mockito.when;
 class MovimientoInventarioServiceImplTest {
 
     @Mock private AlmacenRepository almacenRepository;
-    @Mock private UsuarioRepository usuarioRepository;
     @Mock private ProductoRepository productoRepository;
     @Mock private ProveedorRepository proveedorRepository;
     @Mock private OrdenCompraRepository ordenCompraRepository;
@@ -57,12 +56,12 @@ class MovimientoInventarioServiceImplTest {
     @Mock private InventoryCatalogResolver catalogResolver;
 
     private MovimientoInventarioServiceImpl service;
+    private Usuario usuarioAutenticado;
 
     @BeforeEach
     void setUp() {
         service = new MovimientoInventarioServiceImpl(
                 almacenRepository,
-                usuarioRepository,
                 productoRepository,
                 proveedorRepository,
                 ordenCompraRepository,
@@ -77,6 +76,10 @@ class MovimientoInventarioServiceImplTest {
                 catalogResolver,
                 entityManager
         );
+        usuarioAutenticado = new Usuario();
+        usuarioAutenticado.setId(1L);
+        usuarioAutenticado.setRol(RolUsuario.ROL_SUPER_ADMIN);
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
     }
 
     @Test
@@ -262,7 +265,6 @@ class MovimientoInventarioServiceImplTest {
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
-        when(entityManager.getReference(Usuario.class, usuario.getId())).thenReturn(usuario);
         when(entityManager.getReference(TipoMovimientoDetalle.class, 1L)).thenReturn(new TipoMovimientoDetalle());
         when(entityManager.getReference(MotivoMovimiento.class, 1L)).thenReturn(new MotivoMovimiento());
         when(motivoMovimientoRepository.findById(1L)).thenReturn(Optional.of(new MotivoMovimiento()));
@@ -273,9 +275,64 @@ class MovimientoInventarioServiceImplTest {
         when(movimientoInventarioRepository.save(any(MovimientoInventario.class))).thenAnswer(inv -> inv.getArgument(0));
         when(productoRepository.save(any(Producto.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         service.registrarMovimiento(dto);
 
         assertEquals(new BigDecimal("7"), lote.getStockLote());
+    }
+
+    @Test
+    void registrarMovimientoIgnoraUsuarioIdDelDto() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("user", "pass"));
+
+        Almacen origen = Almacen.builder().id(1).categoria(TipoCategoria.MATERIA_PRIMA).build();
+        Producto producto = Producto.builder().id(1)
+                .categoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto()).build();
+        LoteProducto lote = LoteProducto.builder()
+                .id(300L)
+                .producto(producto)
+                .almacen(origen)
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(new BigDecimal("5"))
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(5L);
+        usuario.setRol(RolUsuario.ROL_JEFE_ALMACENES);
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, new BigDecimal("2"), TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
+                producto.getId(), lote.getId(), origen.getId(), null,
+                null, null, null, 1L, 1L, null,
+                99L, null, null, null, null);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
+        when(entityManager.getReference(TipoMovimientoDetalle.class, 1L)).thenReturn(new TipoMovimientoDetalle());
+        when(entityManager.getReference(MotivoMovimiento.class, 1L)).thenReturn(new MotivoMovimiento());
+        when(motivoMovimientoRepository.findById(1L)).thenReturn(Optional.of(new MotivoMovimiento()));
+        when(loteProductoRepository.findById(lote.getId())).thenReturn(Optional.of(lote));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(movimientoInventarioMapper.toEntity(any(MovimientoInventarioDTO.class))).thenReturn(movimientoEntidad);
+        when(movimientoInventarioMapper.safeToResponseDTO(any())).thenReturn(new com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO());
+
+        final MovimientoInventario[] guardado = new MovimientoInventario[1];
+        when(movimientoInventarioRepository.save(any(MovimientoInventario.class))).thenAnswer(inv -> {
+            MovimientoInventario mov = inv.getArgument(0);
+            guardado[0] = mov;
+            return mov;
+        });
+        when(productoRepository.save(any(Producto.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.registrarMovimiento(dto);
+
+        assertNotNull(guardado[0]);
+        assertNotNull(guardado[0].getRegistradoPor());
+        assertEquals(usuario.getId(), guardado[0].getRegistradoPor().getId());
     }
 
     @Test
@@ -304,7 +361,7 @@ class MovimientoInventarioServiceImplTest {
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
-        when(entityManager.getReference(Usuario.class, usuario.getId())).thenReturn(usuario);
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.registrarMovimiento(dto));
         assertEquals(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
@@ -348,7 +405,6 @@ class MovimientoInventarioServiceImplTest {
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
-        when(entityManager.getReference(Usuario.class, usuario.getId())).thenReturn(usuario);
         when(entityManager.getReference(TipoMovimientoDetalle.class, 1L)).thenReturn(new TipoMovimientoDetalle());
         when(entityManager.getReference(MotivoMovimiento.class, 1L)).thenReturn(new MotivoMovimiento());
         when(motivoMovimientoRepository.findById(1L)).thenReturn(Optional.of(new MotivoMovimiento()));
@@ -360,6 +416,7 @@ class MovimientoInventarioServiceImplTest {
         when(productoRepository.save(any(Producto.class))).thenAnswer(inv -> inv.getArgument(0));
         when(solicitudMovimientoRepository.findById(sol.getId())).thenReturn(Optional.of(sol));
         when(solicitudMovimientoRepository.save(any(SolicitudMovimiento.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
 
         service.registrarMovimiento(dto);
 

@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.dto;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ public record MovimientoInventarioDTO(
         Long motivoMovimientoId,
         Long tipoMovimientoDetalleId,
         Long solicitudMovimientoId,
+        @JsonProperty(access = JsonProperty.Access.READ_ONLY)
         Long usuarioId,
         Long ordenProduccionId,
         Long ordenCompraDetalleId,
