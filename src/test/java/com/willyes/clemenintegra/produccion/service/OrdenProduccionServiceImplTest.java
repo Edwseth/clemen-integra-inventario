@@ -452,7 +452,7 @@ class OrdenProduccionServiceImplTest {
         assertEquals(2, mov.almacenDestinoId());
         assertEquals(motivo.getId(), mov.motivoMovimientoId());
         assertEquals(tipoDetalle.getId(), mov.tipoMovimientoDetalleId());
-        assertEquals(usuario.getId(), mov.usuarioId());
+        assertNull(mov.usuarioId());
         assertEquals(orden.getId(), mov.ordenProduccionId());
     }
 
@@ -1114,7 +1114,7 @@ class OrdenProduccionServiceImplTest {
         assertEquals(BigDecimal.ONE, movs.get(0).cantidad());
         assertEquals(BigDecimal.valueOf(2), movs.get(1).cantidad());
         assertTrue(movs.stream().allMatch(m -> m.ordenProduccionId().equals(1L)));
-        assertTrue(movs.stream().allMatch(m -> m.usuarioId().equals(5L)));
+        assertTrue(movs.stream().allMatch(m -> m.usuarioId() == null));
         assertTrue(movs.stream().allMatch(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA));
         assertTrue(movs.stream().allMatch(m -> m.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.SALIDA_PRODUCCION));
     }

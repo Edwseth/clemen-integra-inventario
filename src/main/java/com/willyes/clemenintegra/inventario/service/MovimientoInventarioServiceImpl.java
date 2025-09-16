@@ -19,7 +19,6 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
-import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
@@ -66,7 +65,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             java.text.Normalizer.normalize("Pre-Bodega Producción", java.text.Normalizer.Form.NFD)
                     .replaceAll("\\p{M}", "").toLowerCase();
     private final AlmacenRepository almacenRepository;
-    private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
     private final ProveedorRepository proveedorRepository;
     private final OrdenCompraRepository ordenCompraRepository;
@@ -116,9 +114,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Almacen almacenDestino = dto.almacenDestinoId() != null
                 ? entityManager.getReference(Almacen.class, dto.almacenDestinoId()) : null;
 
-        Usuario usuario = dto.usuarioId() != null
-                ? entityManager.getReference(Usuario.class, dto.usuarioId())
-                : usuarioService.obtenerUsuarioAutenticado();
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
         OrdenProduccion ordenProduccion = dto.ordenProduccionId() != null
                 ? entityManager.getReference(OrdenProduccion.class, dto.ordenProduccionId())
