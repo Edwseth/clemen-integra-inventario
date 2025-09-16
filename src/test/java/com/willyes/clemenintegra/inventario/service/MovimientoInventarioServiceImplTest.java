@@ -35,6 +35,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -80,6 +81,13 @@ class MovimientoInventarioServiceImplTest {
         usuarioAutenticado.setId(1L);
         usuarioAutenticado.setRol(RolUsuario.ROL_SUPER_ADMIN);
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
+        when(tipoMovimientoDetalleRepository.findById(anyLong())).thenAnswer(invocation -> {
+            Long id = invocation.getArgument(0, Long.class);
+            return Optional.of(TipoMovimientoDetalle.builder()
+                    .id(id)
+                    .descripcion("General")
+                    .build());
+        });
     }
 
     @Test
@@ -369,6 +377,31 @@ class MovimientoInventarioServiceImplTest {
     }
 
     @Test
+    void movimientoDesdeSolicitudSinIdLanza422() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("user", "pass"));
+
+        when(tipoMovimientoDetalleRepository.findById(1L)).thenReturn(Optional.of(
+                TipoMovimientoDetalle.builder()
+                        .id(1L)
+                        .descripcion("Atención Solicitud")
+                        .build()));
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null, BigDecimal.ONE, TipoMovimiento.SALIDA,
+                null, null,
+                1, null, 1, null,
+                null, null, null, 1L, null,
+                null, null, null, null, null);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.registrarMovimiento(dto));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals("SOLICITUD_MOVIMIENTO_ID_REQUERIDO", ex.getReason());
+    }
+
+    @Test
     void salidaDesdeReservaReduceReservadoYAgota() {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("user", "pass"));
@@ -402,6 +435,12 @@ class MovimientoInventarioServiceImplTest {
                 producto.getId(), lote.getId(), origen.getId(), null,
                 null, null, null, 1L, 1L, sol.getId(),
                 usuario.getId(), null, null, null, null);
+
+        when(tipoMovimientoDetalleRepository.findById(1L)).thenReturn(Optional.of(
+                TipoMovimientoDetalle.builder()
+                        .id(1L)
+                        .descripcion("Atención Solicitud")
+                        .build()));
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
