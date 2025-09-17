@@ -38,7 +38,9 @@ public record MovimientoInventarioDTO(
          * Estado inicial sugerido por el cliente. Este valor se ignora en el
          * proceso de registro del movimiento.
          */
-        EstadoLote estadoLote
+        EstadoLote estadoLote,
+
+        Boolean autoSplit
 
 
 
