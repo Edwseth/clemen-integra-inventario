@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.model;
 
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,6 +34,10 @@ public class SolicitudMovimientoDetalle {
     @Column(name = "cantidad_atendida", precision = 18, scale = 6)
     private BigDecimal cantidadAtendida;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false, length = 20)
+    private EstadoSolicitudMovimientoDetalle estado;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "almacen_origen_id")
     private Almacen almacenOrigen;
@@ -40,5 +45,16 @@ public class SolicitudMovimientoDetalle {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "almacen_destino_id")
     private Almacen almacenDestino;
+
+    @PrePersist
+    @PreUpdate
+    private void prePersist() {
+        if (cantidadAtendida == null) {
+            cantidadAtendida = BigDecimal.ZERO;
+        }
+        if (estado == null) {
+            estado = EstadoSolicitudMovimientoDetalle.PENDIENTE;
+        }
+    }
 }
 

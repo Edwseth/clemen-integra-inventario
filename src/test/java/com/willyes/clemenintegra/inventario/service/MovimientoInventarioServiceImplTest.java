@@ -112,7 +112,7 @@ class MovimientoInventarioServiceImplTest {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null, new BigDecimal("5"), TipoMovimiento.TRANSFERENCIA, null, null,
                 producto.getId(), loteOrigen.getId(), origen.getId(), destino.getId(),
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
         when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
@@ -148,7 +148,7 @@ class MovimientoInventarioServiceImplTest {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null, new BigDecimal("10"), TipoMovimiento.TRANSFERENCIA, null, null,
                 producto.getId(), loteOrigen.getId(), origen.getId(), destino.getId(),
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
         when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
@@ -186,7 +186,7 @@ class MovimientoInventarioServiceImplTest {
                 null, new BigDecimal("4"), TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION, null,
                 producto.getId(), loteOrigen.getId(), origen.getId(), destino.getId(),
-                null, null, null, null, null, null, null, null, null, null, null, Boolean.TRUE);
+                null, null, null, null, null, null, null, null, null, null, null, Boolean.TRUE, null);
 
         when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
         when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
@@ -223,7 +223,7 @@ class MovimientoInventarioServiceImplTest {
                 null, new BigDecimal("6"), TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION, null,
                 producto.getId(), loteOrigen.getId(), origen.getId(), destino.getId(),
-                null, null, null, null, null, null, null, null, null, null, null, Boolean.FALSE);
+                null, null, null, null, null, null, null, null, null, null, null, Boolean.FALSE, null);
 
         when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
 
@@ -254,7 +254,7 @@ class MovimientoInventarioServiceImplTest {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null, new BigDecimal("1"), TipoMovimiento.SALIDA, null, null,
                 producto.getId(), loteOrigen.getId(), origen.getId(), null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
         when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
@@ -286,7 +286,7 @@ class MovimientoInventarioServiceImplTest {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null, new BigDecimal("1"), TipoMovimiento.SALIDA, null, null,
                 producto.getId(), loteOrigen.getId(), origen.getId(), null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
         when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
@@ -318,7 +318,7 @@ class MovimientoInventarioServiceImplTest {
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null, new BigDecimal("1"), TipoMovimiento.SALIDA, null, null,
                 producto.getId(), loteOrigen.getId(), origen.getId(), null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
         when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
@@ -353,7 +353,7 @@ class MovimientoInventarioServiceImplTest {
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
                 producto.getId(), lote.getId(), origen.getId(), null,
                 null, null, null, 1L, 1L, null,
-                usuario.getId(), null, null, null, null, null);
+                usuario.getId(), null, null, null, null, null, null);
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
@@ -400,7 +400,7 @@ class MovimientoInventarioServiceImplTest {
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
                 producto.getId(), lote.getId(), origen.getId(), null,
                 null, null, null, 1L, 1L, null,
-                99L, null, null, null, null, null);
+                99L, null, null, null, null, null, null);
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
@@ -449,7 +449,7 @@ class MovimientoInventarioServiceImplTest {
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
                 producto.getId(), lote.getId(), origen.getId(), null,
                 null, null, null, 1L, 1L, null,
-                usuario.getId(), null, null, null, null, null);
+                usuario.getId(), null, null, null, null, null, null);
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
@@ -476,7 +476,7 @@ class MovimientoInventarioServiceImplTest {
                 null, null,
                 1, null, 1, null,
                 null, null, null, 1L, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.registrarMovimiento(dto));
@@ -523,7 +523,7 @@ class MovimientoInventarioServiceImplTest {
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
                 producto.getId(), lote.getId(), origen.getId(), null,
                 null, null, 1L, 1L, solicitud.getId(),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         when(tipoMovimientoDetalleRepository.findById(1L)).thenReturn(Optional.of(
                 TipoMovimientoDetalle.builder()
@@ -590,7 +590,7 @@ class MovimientoInventarioServiceImplTest {
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
                 producto.getId(), lote.getId(), origen.getId(), null,
                 null, null, 1L, 1L, solicitud.getId(),
-                usuario.getId(), null, null, null, null, null);
+                usuario.getId(), null, null, null, null, null, null);
 
         when(tipoMovimientoDetalleRepository.findById(1L)).thenReturn(Optional.of(
                 TipoMovimientoDetalle.builder()
@@ -652,7 +652,7 @@ class MovimientoInventarioServiceImplTest {
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION, null,
                 producto.getId(), lote.getId(), origen.getId(), null,
                 null, null, null, 1L, 1L, sol.getId(),
-                usuario.getId(), null, null, null, null, null);
+                usuario.getId(), null, null, null, null, null, null);
 
         when(tipoMovimientoDetalleRepository.findById(1L)).thenReturn(Optional.of(
                 TipoMovimientoDetalle.builder()
@@ -697,7 +697,7 @@ class MovimientoInventarioServiceImplTest {
                 null, null,
                 1, null, null, null,
                 null, null, null, 11L, 1L, null,
-                1L, null, null, null, null, null);
+                1L, null, null, null, null, null, null);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.registrarMovimiento(dto));
@@ -723,7 +723,7 @@ class MovimientoInventarioServiceImplTest {
                 null, new BigDecimal("10"), TipoMovimiento.ENTRADA,
                 null, null,
                 producto.getId(), loteOrigen.getId(), origen.getId(), null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(entityManager.getReference(Almacen.class, dto.almacenOrigenId())).thenReturn(origen);
         when(loteProductoRepository.findById(dto.loteProductoId())).thenReturn(Optional.of(loteOrigen));
@@ -775,7 +775,7 @@ class MovimientoInventarioServiceImplTest {
                 null, new BigDecimal("8"), TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION, null,
                 producto.getId(), loteInicial.getId(), origen.getId(), destino.getId(),
-                null, null, null, null, null, 1L, null, null, null, null, null, Boolean.TRUE);
+                null, null, null, null, null, 1L, null, null, null, null, null, Boolean.TRUE, null);
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
@@ -847,7 +847,7 @@ class MovimientoInventarioServiceImplTest {
                 null, new BigDecimal("5"), TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION, null,
                 producto.getId(), loteInicial.getId(), origen.getId(), destino.getId(),
-                null, null, null, null, null, 1L, null, null, null, null, null, Boolean.TRUE);
+                null, null, null, null, null, 1L, null, null, null, null, null, Boolean.TRUE, null);
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(entityManager.getReference(Almacen.class, origen.getId())).thenReturn(origen);
