@@ -617,6 +617,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                                 .codigoLote(det.getLote() != null ? det.getLote().getCodigoLote() : null)
                                 .cantidad(det.getCantidad())
                                 .cantidadAtendida(det.getCantidadAtendida())
+                                .estado(det.getEstado())
                                 .almacenOrigenId(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getId() : null)
                                 .nombreAlmacenOrigen(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getNombre() : null)
                                 .almacenDestinoId(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getId() : null)

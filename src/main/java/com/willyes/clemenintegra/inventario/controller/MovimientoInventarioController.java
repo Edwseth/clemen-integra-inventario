@@ -55,6 +55,11 @@ public class MovimientoInventarioController {
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
         try {
+            int atenciones = dto.atenciones() != null ? dto.atenciones().size() : 0;
+            log.debug("MOV-CONTROLLER registrar solicitudId={} atenciones={} tipo={} clasificacion={} producto={} lote={}",
+                    dto.solicitudMovimientoId(), atenciones, dto.tipoMovimiento(),
+                    dto.clasificacionMovimientoInventario(), dto.productoId(), dto.loteProductoId());
+
             // 1) Validación de stock para salidas
             var tipo = dto.tipoMovimiento();
             boolean isSalida = tipo == TipoMovimiento.SALIDA || tipo == TipoMovimiento.AJUSTE;

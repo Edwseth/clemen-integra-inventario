@@ -2,6 +2,8 @@ package com.willyes.clemenintegra.inventario.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -33,9 +36,24 @@ public class MovimientoInventarioResponseDTO {
     private String nombreUsuarioRegistrador;
     private String unidad;
     private Long ordenProduccionId;
+    private Long solicitudId;
+    private EstadoSolicitudMovimiento estadoSolicitud;
+    private List<SolicitudDetalleAtencionDTO> detallesSolicitud;
 
 
     @JsonProperty("codigoSku")
     public String getCodigoSku() {return sku;}
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SolicitudDetalleAtencionDTO {
+        private Long detalleId;
+        private boolean atendida;
+        private BigDecimal cantidadAtendida;
+        private BigDecimal cantidadSolicitada;
+        private EstadoSolicitudMovimientoDetalle estadoDetalle;
+    }
 }
 

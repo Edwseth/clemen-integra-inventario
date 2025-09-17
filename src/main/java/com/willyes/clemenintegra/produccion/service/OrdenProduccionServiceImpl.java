@@ -667,6 +667,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     null,
                     null,
                     lote.getEstado(),
+                    null,
                     null);
             movimientoInventarioService.registrarMovimiento(movDto);
             log.info("OP-cierre entrada PT op={}, producto={}, lote={}, cantidad={}, usuario={}, destino={}, motivoId={}, tipoDetalleId={}",
@@ -948,6 +949,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                                 null,
                                 null,
                                 detRes.getLote().getEstado(),
+                                null,
                                 null);
                         movimientoInventarioService.registrarMovimiento(movDto);
                     }

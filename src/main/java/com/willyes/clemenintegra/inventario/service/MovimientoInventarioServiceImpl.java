@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
@@ -12,6 +13,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -51,11 +53,13 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -117,6 +121,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         MovimientoInventario movimiento = mapper.toEntity(dto);
 
+        List<MovimientoInventarioDTO.AtencionDTO> atenciones = dto.atenciones() != null
+                ? dto.atenciones().stream().filter(Objects::nonNull).collect(Collectors.toList())
+                : List.of();
+        if (!atenciones.isEmpty()) {
+            log.debug("MOV-SERVICE atenciones recibidas: {}", atenciones.size());
+        }
+
+        List<SolicitudDetalleAtencionDTO> detalleRespuesta = new ArrayList<>();
+        boolean solicitudFueActualizada = false;
+
         TipoMovimientoDetalle tipoMovimientoDetalle = null;
         if (dto.tipoMovimientoDetalleId() != null) {
             tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(dto.tipoMovimientoDetalleId())
@@ -159,8 +173,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         SolicitudMovimiento solicitud = null;
         if (dto.solicitudMovimientoId() != null) {
-            solicitud = solicitudMovimientoRepository.findById(dto.solicitudMovimientoId())
-                    .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
+            solicitud = solicitudMovimientoRepository.findWithDetalles(dto.solicitudMovimientoId())
+                    .orElseGet(() -> solicitudMovimientoRepository.findById(dto.solicitudMovimientoId())
+                            .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada")));
 
             Long solicitudProductoId = solicitud.getProducto() != null ? Long.valueOf(solicitud.getProducto().getId()) : null;
             if (!Objects.equals(solicitudProductoId, dto.productoId() != null ? dto.productoId().longValue() : null)) {
@@ -251,7 +266,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
                     log.info("SOLICITUD_AUTO_AUTORIZADA: solId={}, userActual={}",
                             solicitud.getId(), userActualId);
-                } else if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA) {
+                } else if (solicitud.getEstado() != EstadoSolicitudMovimiento.AUTORIZADA
+                        && solicitud.getEstado() != EstadoSolicitudMovimiento.PARCIAL) {
                     log.warn("ESTADO_NO_APROBADO: solId={}, estado={}, responsableId={}, userActual={}",
                             solicitud.getId(), solicitud.getEstado(), responsableId, userActualId);
                     throw new ResponseStatusException(
@@ -294,6 +310,167 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (dto.almacenDestinoId() == null && solicitud != null && solicitud.getAlmacenDestino() != null) {
             almacenDestino = solicitud.getAlmacenDestino();
+        }
+
+        boolean solicitudReservada = solicitud != null && solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA;
+        if (solicitud != null && !atenciones.isEmpty()) {
+            Map<Long, BigDecimal> consumoPorDetalle = new HashMap<>();
+            Map<Long, BigDecimal> consumoPorLote = new HashMap<>();
+            Map<Long, SolicitudMovimientoDetalle> detallesCache = new HashMap<>();
+            Map<Long, LoteProducto> lotesCache = new HashMap<>();
+
+            for (MovimientoInventarioDTO.AtencionDTO atencion : atenciones) {
+                BigDecimal cantidadAtendida = atencion.getCantidad();
+                if (cantidadAtendida == null || cantidadAtendida.compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_CANTIDAD_INVALIDA");
+                }
+                Long loteAtencionId = atencion.getLoteId();
+                if (loteAtencionId == null) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_LOTE_REQUERIDO");
+                }
+
+                LoteProducto loteAtencion = lotesCache.computeIfAbsent(loteAtencionId, id ->
+                        loteProductoRepository.findByIdForUpdate(id)
+                                .orElseGet(() -> loteProductoRepository.findById(id)
+                                        .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"))));
+
+                SolicitudMovimientoDetalle detalle = null;
+                if (atencion.getDetalleId() != null) {
+                    detalle = detallesCache.computeIfAbsent(atencion.getDetalleId(), id ->
+                            solicitudMovimientoDetalleRepository.findById(id)
+                                    .orElseThrow(() -> new NoSuchElementException("Detalle de solicitud no encontrado")));
+                    if (!Objects.equals(detalle.getSolicitudMovimiento().getId(), solicitud.getId())) {
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_NO_PERTENECE_SOLICITUD");
+                    }
+                } else if (solicitud.getDetalles() != null) {
+                    detalle = solicitud.getDetalles().stream()
+                            .filter(Objects::nonNull)
+                            .filter(det -> det.getId() != null)
+                            .filter(det -> det.getLote() != null && Objects.equals(det.getLote().getId(), loteAtencionId))
+                            .filter(det -> {
+                                BigDecimal solicitado = Optional.ofNullable(det.getCantidad()).orElse(BigDecimal.ZERO);
+                                BigDecimal atendido = Optional.ofNullable(det.getCantidadAtendida()).orElse(BigDecimal.ZERO);
+                                BigDecimal asignado = consumoPorDetalle.getOrDefault(det.getId(), BigDecimal.ZERO);
+                                return solicitado.subtract(atendido).subtract(asignado).compareTo(BigDecimal.ZERO) > 0;
+                            })
+                            .findFirst()
+                            .orElse(null);
+                    if (detalle != null) {
+                        detallesCache.put(detalle.getId(), detalle);
+                    }
+                }
+
+                BigDecimal reservadoDisponible = BigDecimal.ZERO;
+                if (detalle != null) {
+                    BigDecimal solicitado = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO);
+                    BigDecimal atendidoPrevio = Optional.ofNullable(detalle.getCantidadAtendida()).orElse(BigDecimal.ZERO);
+                    BigDecimal asignado = consumoPorDetalle.getOrDefault(detalle.getId(), BigDecimal.ZERO);
+                    BigDecimal nuevoAtendido = atendidoPrevio.add(asignado).add(cantidadAtendida);
+                    if (solicitado.compareTo(BigDecimal.ZERO) > 0 && nuevoAtendido.compareTo(solicitado) > 0) {
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_SUPERA_SOLICITADO");
+                    }
+                    reservadoDisponible = solicitado.subtract(atendidoPrevio).subtract(asignado);
+                    if (reservadoDisponible.compareTo(BigDecimal.ZERO) < 0) {
+                        reservadoDisponible = BigDecimal.ZERO;
+                    }
+                    consumoPorDetalle.merge(detalle.getId(), cantidadAtendida, BigDecimal::add);
+                }
+
+                BigDecimal stockActual = Optional.ofNullable(loteAtencion.getStockLote()).orElse(BigDecimal.ZERO);
+                BigDecimal reservadoActual = Optional.ofNullable(loteAtencion.getStockReservado()).orElse(BigDecimal.ZERO);
+                BigDecimal disponibleLote = stockActual.subtract(reservadoActual).add(reservadoDisponible);
+                if (disponibleLote.compareTo(cantidadAtendida) < 0) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_STOCK_INSUFICIENTE");
+                }
+                if (!solicitudReservada) {
+                    consumoPorLote.merge(loteAtencionId, cantidadAtendida, BigDecimal::add);
+                }
+            }
+
+            List<SolicitudMovimientoDetalle> detallesActualizar = new ArrayList<>();
+            for (Map.Entry<Long, BigDecimal> entry : consumoPorDetalle.entrySet()) {
+                SolicitudMovimientoDetalle detalle = detallesCache.get(entry.getKey());
+                if (detalle == null) {
+                    continue;
+                }
+                BigDecimal incremento = entry.getValue();
+                if (incremento == null || incremento.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                BigDecimal atendidoPrevio = Optional.ofNullable(detalle.getCantidadAtendida()).orElse(BigDecimal.ZERO);
+                BigDecimal nuevoAtendido = atendidoPrevio.add(incremento);
+                detalle.setCantidadAtendida(nuevoAtendido);
+                BigDecimal solicitado = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO);
+                EstadoSolicitudMovimientoDetalle nuevoEstado;
+                if (solicitado.compareTo(BigDecimal.ZERO) <= 0) {
+                    nuevoEstado = nuevoAtendido.compareTo(BigDecimal.ZERO) > 0
+                            ? EstadoSolicitudMovimientoDetalle.ATENDIDO
+                            : EstadoSolicitudMovimientoDetalle.PENDIENTE;
+                } else if (nuevoAtendido.compareTo(solicitado) >= 0) {
+                    nuevoEstado = EstadoSolicitudMovimientoDetalle.ATENDIDO;
+                } else if (nuevoAtendido.compareTo(BigDecimal.ZERO) > 0) {
+                    nuevoEstado = EstadoSolicitudMovimientoDetalle.PARCIAL;
+                } else {
+                    nuevoEstado = EstadoSolicitudMovimientoDetalle.PENDIENTE;
+                }
+                detalle.setEstado(nuevoEstado);
+                detallesActualizar.add(detalle);
+            }
+
+            if (!detallesActualizar.isEmpty()) {
+                solicitudMovimientoDetalleRepository.saveAll(detallesActualizar);
+                solicitudFueActualizada = true;
+            }
+
+            if (!solicitudReservada && !consumoPorLote.isEmpty()) {
+                for (Map.Entry<Long, BigDecimal> entry : consumoPorLote.entrySet()) {
+                    LoteProducto lote = lotesCache.get(entry.getKey());
+                    if (lote == null) {
+                        continue;
+                    }
+                    BigDecimal reservadoActual = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO);
+                    BigDecimal nuevoReservado = reservadoActual.subtract(entry.getValue());
+                    if (nuevoReservado.compareTo(BigDecimal.ZERO) < 0) {
+                        nuevoReservado = BigDecimal.ZERO;
+                    }
+                    lote.setStockReservado(nuevoReservado);
+                }
+                loteProductoRepository.saveAll(lotesCache.values());
+            }
+
+            if (solicitud.getDetalles() != null && !solicitud.getDetalles().isEmpty()) {
+                boolean todosAtendidos = solicitud.getDetalles().stream()
+                        .filter(Objects::nonNull)
+                        .allMatch(det -> det.getEstado() == EstadoSolicitudMovimientoDetalle.ATENDIDO);
+                solicitud.setEstado(todosAtendidos
+                        ? EstadoSolicitudMovimiento.AUTORIZADA
+                        : EstadoSolicitudMovimiento.PARCIAL);
+                solicitud.setFechaResolucion(LocalDateTime.now());
+                solicitudFueActualizada = true;
+            } else {
+                solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
+                solicitud.setFechaResolucion(LocalDateTime.now());
+                solicitudFueActualizada = true;
+            }
+
+            if (solicitud.getDetalles() != null) {
+                detalleRespuesta = solicitud.getDetalles().stream()
+                        .filter(Objects::nonNull)
+                        .map(det -> SolicitudDetalleAtencionDTO.builder()
+                                .detalleId(det.getId())
+                                .atendida(det.getEstado() == EstadoSolicitudMovimientoDetalle.ATENDIDO)
+                                .cantidadAtendida(det.getCantidadAtendida())
+                                .cantidadSolicitada(det.getCantidad())
+                                .estadoDetalle(det.getEstado())
+                                .build())
+                        .collect(Collectors.toList());
+            }
+        } else if (solicitud != null && atenciones.isEmpty()) {
+            if (solicitud.getDetalles() == null || solicitud.getDetalles().isEmpty()) {
+                solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
+                solicitud.setFechaResolucion(LocalDateTime.now());
+                solicitudFueActualizada = true;
+            }
         }
 
         // Detección automática de devolución interna
@@ -402,34 +579,32 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
         }
 
-        if (solicitud != null) {
-            if (solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA) {
-                solicitud.setEstado(EstadoSolicitudMovimiento.ATENDIDA);
-            } else {
-                solicitud.setEstado(EstadoSolicitudMovimiento.EJECUTADA);
-            }
-            List<SolicitudMovimientoDetalle> detallesSolicitud = solicitud.getDetalles();
-            if (detallesSolicitud != null && !detallesSolicitud.isEmpty()) {
-                List<SolicitudMovimientoDetalle> detallesActualizados = new ArrayList<>();
-                for (SolicitudMovimientoDetalle detalle : detallesSolicitud) {
-                    if (detalle == null) {
-                        continue;
-                    }
-                    BigDecimal nuevaCantidadAtendida = detalle.getCantidad() != null
-                            ? detalle.getCantidad()
-                            : guardado.getCantidad();
-                    detalle.setCantidadAtendida(nuevaCantidadAtendida);
-                    log.debug("DETALLE_SOLICITUD_ACTUALIZADO id={} cantidadSolicitada={} cantidadAtendida={}",
-                            detalle.getId(), detalle.getCantidad(), nuevaCantidadAtendida);
-                    detallesActualizados.add(detalle);
-                }
-                if (!detallesActualizados.isEmpty()) {
-                    solicitudMovimientoDetalleRepository.saveAll(detallesActualizados);
-                }
-            }
+        if (solicitud != null && solicitudFueActualizada) {
             solicitudMovimientoRepository.save(solicitud);
         }
-        return mapper.safeToResponseDTO(guardado);
+
+        if (solicitud != null && detalleRespuesta.isEmpty() && solicitud.getDetalles() != null) {
+            detalleRespuesta = solicitud.getDetalles().stream()
+                    .filter(Objects::nonNull)
+                    .map(det -> SolicitudDetalleAtencionDTO.builder()
+                            .detalleId(det.getId())
+                            .atendida(det.getEstado() == EstadoSolicitudMovimientoDetalle.ATENDIDO)
+                            .cantidadAtendida(det.getCantidadAtendida())
+                            .cantidadSolicitada(det.getCantidad())
+                            .estadoDetalle(det.getEstado())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
+        MovimientoInventarioResponseDTO respuesta = mapper.safeToResponseDTO(guardado);
+        if (solicitud != null) {
+            respuesta.setSolicitudId(solicitud.getId());
+            respuesta.setEstadoSolicitud(solicitud.getEstado());
+            respuesta.setDetallesSolicitud(detalleRespuesta.isEmpty()
+                    ? List.of()
+                    : List.copyOf(detalleRespuesta));
+        }
+        return respuesta;
     }
 
     @Override
