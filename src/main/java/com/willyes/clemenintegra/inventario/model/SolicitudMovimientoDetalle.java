@@ -30,6 +30,9 @@ public class SolicitudMovimientoDetalle {
     @Column(nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidad;
 
+    @Column(name = "cantidad_atendida", precision = 18, scale = 6)
+    private BigDecimal cantidadAtendida;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "almacen_origen_id")
     private Almacen almacenOrigen;

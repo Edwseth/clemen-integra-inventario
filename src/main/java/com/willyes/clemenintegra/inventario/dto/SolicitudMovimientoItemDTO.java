@@ -19,6 +19,7 @@ public class SolicitudMovimientoItemDTO {
     private Long loteId;
     private String codigoLote;
     private BigDecimal cantidadSolicitada;
+    private BigDecimal cantidadAtendida;
     private String unidadMedida;
     private Long almacenOrigenId;
     private String nombreAlmacenOrigen;

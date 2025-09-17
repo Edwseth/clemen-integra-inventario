@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -76,6 +77,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final MovimientoInventarioMapper mapper;
     private final UsuarioService usuarioService;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
+    private final SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
     private final InventoryCatalogResolver catalogResolver;
 
     @Resource
@@ -341,6 +343,25 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 solicitud.setEstado(EstadoSolicitudMovimiento.ATENDIDA);
             } else {
                 solicitud.setEstado(EstadoSolicitudMovimiento.EJECUTADA);
+            }
+            List<SolicitudMovimientoDetalle> detallesSolicitud = solicitud.getDetalles();
+            if (detallesSolicitud != null && !detallesSolicitud.isEmpty()) {
+                List<SolicitudMovimientoDetalle> detallesActualizados = new ArrayList<>();
+                for (SolicitudMovimientoDetalle detalle : detallesSolicitud) {
+                    if (detalle == null) {
+                        continue;
+                    }
+                    BigDecimal nuevaCantidadAtendida = detalle.getCantidad() != null
+                            ? detalle.getCantidad()
+                            : guardado.getCantidad();
+                    detalle.setCantidadAtendida(nuevaCantidadAtendida);
+                    log.debug("DETALLE_SOLICITUD_ACTUALIZADO id={} cantidadSolicitada={} cantidadAtendida={}",
+                            detalle.getId(), detalle.getCantidad(), nuevaCantidadAtendida);
+                    detallesActualizados.add(detalle);
+                }
+                if (!detallesActualizados.isEmpty()) {
+                    solicitudMovimientoDetalleRepository.saveAll(detallesActualizados);
+                }
             }
             solicitudMovimientoRepository.save(solicitud);
         }
