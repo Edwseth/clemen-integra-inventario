@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,6 +50,11 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select l from LoteProducto l where l.id = :id")
     Optional<LoteProducto> findByIdForUpdate(@Param("id") Long id);
+
+    List<LoteProducto> findByProductoIdAndAlmacenesIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+            Long productoId,
+            Integer almacenId,
+            Collection<EstadoLote> estados);
 
     @Query(value = """
         SELECT lp.id AS loteProductoId,
