@@ -856,7 +856,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             if (!consumidos.isEmpty()) {
                 String lotesLog = consumidos.stream()
                         .map(par -> String.format("{loteId=%d, cantidad=%s}", par.loteId(), par.cantidad()))
-                        .collect(Collectors.joining(", \"));
+                        .collect(Collectors.joining(", "));
                 log.info("AUTO_SPLIT_FEFO productoId={} opId={} almacenOrigenId={} lotes=[{}] total={}",
                         producto.getId(), dto.ordenProduccionId(),
                         almacenOrigen != null ? almacenOrigen.getId() : null,
