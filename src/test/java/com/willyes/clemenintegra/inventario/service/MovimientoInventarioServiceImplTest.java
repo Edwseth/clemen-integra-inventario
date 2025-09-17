@@ -786,7 +786,7 @@ class MovimientoInventarioServiceImplTest {
                 loteInicial.getCodigoLote(), producto.getId(), destino.getId())).thenReturn(Optional.empty());
         when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
                 loteAdicional.getCodigoLote(), producto.getId(), destino.getId())).thenReturn(Optional.empty());
-        when(loteProductoRepository.findByProductoIdAndAlmacenesIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+        when(loteProductoRepository.findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
                 producto.getId().longValue(), origen.getId(),
                 List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO)))
                 .thenReturn(List.of(loteInicial, loteAdicional));
@@ -854,7 +854,7 @@ class MovimientoInventarioServiceImplTest {
         when(entityManager.getReference(Almacen.class, destino.getId())).thenReturn(destino);
         when(loteProductoRepository.findById(loteInicial.getId())).thenReturn(Optional.of(loteInicial));
         when(loteProductoRepository.findById(loteAdicional.getId())).thenReturn(Optional.of(loteAdicional));
-        when(loteProductoRepository.findByProductoIdAndAlmacenesIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+        when(loteProductoRepository.findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
                 producto.getId().longValue(), origen.getId(),
                 List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO)))
                 .thenReturn(List.of(loteInicial, loteAdicional));

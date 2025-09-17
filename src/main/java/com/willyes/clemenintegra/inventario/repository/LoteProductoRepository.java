@@ -51,7 +51,7 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     @Query("select l from LoteProducto l where l.id = :id")
     Optional<LoteProducto> findByIdForUpdate(@Param("id") Long id);
 
-    List<LoteProducto> findByProductoIdAndAlmacenesIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+    List<LoteProducto> findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
             Long productoId,
             Integer almacenId,
             Collection<EstadoLote> estados);

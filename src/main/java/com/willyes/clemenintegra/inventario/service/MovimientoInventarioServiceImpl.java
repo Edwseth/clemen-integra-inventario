@@ -954,7 +954,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         List<LoteProducto> candidatos = loteProductoRepository
-                .findByProductoIdAndAlmacenesIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+                .findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
                         productoId,
                         almacenOrigenId,
                         List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO));
