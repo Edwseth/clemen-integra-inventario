@@ -31,7 +31,7 @@ public class LoteProducto {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(name = "codigo_lote", nullable = false, unique = true, length = 100)
+    @Column(name = "codigo_lote", nullable = false, length = 100)
     private String codigoLote;
 
     @Column(name = "fecha_fabricacion")
