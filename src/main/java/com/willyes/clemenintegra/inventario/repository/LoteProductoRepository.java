@@ -7,7 +7,6 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -78,16 +77,6 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
         """, nativeQuery = true)
     List<com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection> findFefoDisponibles(
             @Param("productoId") Long productoId, @Param("limit") int limit);
-
-    @Modifying
-    @Query(value = """
-      UPDATE lotes_productos
-      SET stock_reservado = stock_reservado + :cantidad,
-          agotado = CASE WHEN stock_lote - stock_reservado - :cantidad <= 0 THEN true ELSE agotado END,
-          fecha_agotado = CASE WHEN stock_lote - stock_reservado - :cantidad <= 0 THEN NOW() ELSE fecha_agotado END
-      WHERE id = :loteId AND agotado = false AND (stock_lote - stock_reservado) >= :cantidad
-    """, nativeQuery = true)
-    int reservarStock(@Param("loteId") Long loteId, @Param("cantidad") BigDecimal cantidad);
 
     // LÍNEA CODEx: nuevas consultas para disponibilidad detallada por producto
     @Query("""
