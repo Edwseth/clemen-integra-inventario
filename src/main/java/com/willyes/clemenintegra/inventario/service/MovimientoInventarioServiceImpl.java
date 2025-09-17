@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +66,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private static final String PRE_BODEGA_PRODUCCION_NORMALIZADO =
             java.text.Normalizer.normalize("Pre-Bodega Producción", java.text.Normalizer.Form.NFD)
                     .replaceAll("\\p{M}", "").toLowerCase();
+    private static final Set<RolUsuario> ROLES_OPERATIVOS = EnumSet.of(
+            RolUsuario.ROL_JEFE_ALMACENES,
+            RolUsuario.ROL_ALMACENISTA,
+            RolUsuario.ROL_SUPER_ADMIN
+    );
     private final AlmacenRepository almacenRepository;
     private final ProductoRepository productoRepository;
     private final ProveedorRepository proveedorRepository;
@@ -201,6 +207,29 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             Long responsableId = responsable != null ? responsable.getId() : null;
             final boolean esJefeAlmacenes = usuario.getRol() == RolUsuario.ROL_JEFE_ALMACENES;
             final boolean tieneRolPrivilegiado = esJefeAlmacenes || usuario.getRol() == RolUsuario.ROL_SUPER_ADMIN;
+            final boolean tienePermisoOperativo = ROLES_OPERATIVOS.contains(usuario.getRol());
+            Long responsableIdDesdeDto = dto.usuarioId();
+            boolean responsableActualizado = false;
+            String eventoResponsable = null;
+
+            if (responsableIdDesdeDto != null && !Objects.equals(responsableId, responsableIdDesdeDto)) {
+                if (!Objects.equals(responsableIdDesdeDto, userActualId) && !tieneRolPrivilegiado) {
+                    log.warn("RESPONSABLE_DTO_NO_AUTORIZADO: solId={}, responsableActual={}, responsableDto={}, userActual={}",
+                            solicitud.getId(), responsableId, responsableIdDesdeDto, userActualId);
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "USUARIO_NO_AUTORIZADO");
+                }
+
+                if (Objects.equals(responsableIdDesdeDto, userActualId)) {
+                    solicitud.setUsuarioResponsable(usuario);
+                } else {
+                    solicitud.setUsuarioResponsable(entityManager.getReference(Usuario.class, responsableIdDesdeDto));
+                }
+                responsableId = responsableIdDesdeDto;
+                responsableActualizado = true;
+                eventoResponsable = "RESPONSABLE_ASIGNADO_DESDE_DTO";
+                log.info("RESPONSABLE_ASIGNADO_DESDE_DTO: solId={}, responsableId={}, userActual={}",
+                        solicitud.getId(), responsableId, userActualId);
+            }
 
             // 1) Ya resuelta → 409
             if (solicitud.getEstado() == EstadoSolicitudMovimiento.EJECUTADA
@@ -228,9 +257,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
                 // 3) Responsable requerido → 422 o asignación automática
                 if (responsableId == null) {
-                    if (esJefeAlmacenes) {
+                    if (tienePermisoOperativo) {
                         solicitud.setUsuarioResponsable(usuario);
                         responsableId = userActualId;
+                        responsableActualizado = true;
+                        eventoResponsable = "RESPONSABLE_AUTOASIGNADO";
                         log.info("RESPONSABLE_AUTOASIGNADO: solId={}, responsableId={}, userActual={}",
                                 solicitud.getId(), responsableId, userActualId);
                     } else {
@@ -238,6 +269,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                 solicitud.getId(), null, userActualId);
                         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESPONSABLE_REQUERIDO");
                     }
+                }
+
+                if (responsableActualizado) {
+                    solicitudMovimientoRepository.saveAndFlush(solicitud);
+                    String eventoLog = eventoResponsable != null ? eventoResponsable : "RESPONSABLE_ACTUALIZADO";
+                    log.info("{}_PERSISTIDO: solId={}, responsableId={}, userActual={}",
+                            eventoLog, solicitud.getId(), responsableId, userActualId);
                 }
 
                 // 4) Usuario debe ser el responsable o tener rol privilegiado → 403
