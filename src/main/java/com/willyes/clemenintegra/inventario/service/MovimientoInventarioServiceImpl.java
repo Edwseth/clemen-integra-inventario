@@ -842,7 +842,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ID_REQUERIDO");
         }
 
-        LoteProducto loteOrigen = loteProductoRepository.findById(dto.loteProductoId())
+        LoteProducto loteOrigen = loteProductoRepository.findByIdForUpdate(dto.loteProductoId())
                 .orElseThrow(() -> {
                     log.warn(
                             "procesarMovimientoConLoteExistente: lote no encontrado loteId={} productoId={}",
@@ -889,19 +889,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean esTransferenciaInternaProduccion = tipo == TipoMovimiento.TRANSFERENCIA
                 && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
         boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
+        boolean requiereAutoSplit = tipo == TipoMovimiento.TRANSFERENCIA
+                && esTransferenciaInternaProduccion
+                && autoSplitSolicitado
+                && cantidad.compareTo(disponibleNoNegativo) > 0;
 
         if (EnumSet.of(TipoMovimiento.SALIDA, TipoMovimiento.TRANSFERENCIA,
                 TipoMovimiento.DEVOLUCION, TipoMovimiento.AJUSTE).contains(tipo)) {
-            if (solicitud != null && solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA) {
+            if (solicitud != null
+                    && solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA
+                    && !requiereAutoSplit) {
                 if (reservadoActual.compareTo(cantidad) < 0) {
                     log.warn("RESERVA_INSUFICIENTE: loteId={} reservado={} solicitado={} productoId={}",
                             loteOrigen.getId(), reservadoActual, cantidad, producto.getId());
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_INSUFICIENTE");
                 }
-            } else if (!(tipo == TipoMovimiento.TRANSFERENCIA
-                    && esTransferenciaInternaProduccion
-                    && autoSplitSolicitado
-                    && cantidad.compareTo(disponibleNoNegativo) > 0)) {
+            } else if (!requiereAutoSplit) {
                 if (disponibleNoNegativo.compareTo(cantidad) < 0) {
                     log.warn("Stock insuficiente en lote: loteId={} disponible={} solicitado={} productoId={}",
                             loteOrigen.getId(), disponibleNoNegativo, cantidad, producto.getId());
@@ -949,13 +952,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_DISPONIBLE_TRANSFERIR");
             }
 
-            if (cantidad.compareTo(disponibleNoNegativo) <= 0 || !esTransferenciaInternaProduccion || !autoSplitSolicitado) {
-                if (cantidad.compareTo(disponibleNoNegativo) > 0) {
-                    log.warn("Stock insuficiente en lote: loteId={} disponible={} solicitado={} productoId={}",
-                            loteOrigen.getId(), disponibleNoNegativo, cantidad, producto.getId());
-                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
-                }
-                MovimientoLoteDetalle detalle = ejecutarTransferenciaDesdeLote(loteOrigen, destino, producto, cantidad);
+            if (!requiereAutoSplit) {
+                MovimientoLoteDetalle detalle = ejecutarTransferenciaDesdeLote(loteOrigen, destino, producto, cantidad, solicitud);
                 return List.of(detalle);
             }
 
@@ -969,7 +967,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
             BigDecimal cantidadInicial = cantidad.min(disponibleNoNegativo);
             if (cantidadInicial.compareTo(BigDecimal.ZERO) > 0) {
-                detalles.add(ejecutarTransferenciaDesdeLote(loteOrigen, destino, producto, cantidadInicial));
+                detalles.add(ejecutarTransferenciaDesdeLote(loteOrigen, destino, producto, cantidadInicial, solicitud));
                 consumidos.add(new ParLoteCantidad(loteOrigen.getId(), cantidadInicial));
             }
 
@@ -996,7 +994,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 List<ParLoteCantidad> plan = planificarAutoSplit(productoId, almacenOrigenId,
                         loteOrigen.getId(), restante);
                 for (ParLoteCantidad par : plan) {
-                    LoteProducto loteAdicional = loteProductoRepository.findById(par.loteId())
+                    LoteProducto loteAdicional = loteProductoRepository.findByIdForUpdate(par.loteId())
                             .orElseThrow(() -> {
                                 log.warn("AUTO_SPLIT_LOTE_ADICIONAL_NO_ENCONTRADO loteId={} productoId={}",
                                         par.loteId(), productoId);
@@ -1018,7 +1016,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
                     }
 
-                    MovimientoLoteDetalle parcial = ejecutarTransferenciaDesdeLote(loteAdicional, destino, producto, par.cantidad());
+                    MovimientoLoteDetalle parcial = ejecutarTransferenciaDesdeLote(loteAdicional, destino, producto, par.cantidad(), solicitud);
                     detalles.add(parcial);
                     consumidos.add(new ParLoteCantidad(loteAdicional.getId(), par.cantidad()));
                 }
@@ -1079,50 +1077,129 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private MovimientoLoteDetalle ejecutarTransferenciaDesdeLote(LoteProducto loteOrigen,
                                                                  Almacen destino,
                                                                  Producto producto,
-                                                                 BigDecimal cantidadTransferir) {
+                                                                 BigDecimal cantidadTransferir,
+                                                                 SolicitudMovimiento solicitud) {
         if (destino == null) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_DESTINO_REQUERIDO");
         }
-        int comparacion = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO)
-                .compareTo(cantidadTransferir);
-        if (comparacion > 0) {
-            loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidadTransferir));
-            loteProductoRepository.save(loteOrigen);
 
-            Optional<LoteProducto> destinoExistente = loteProductoRepository
-                    .findByCodigoLoteAndProductoIdAndAlmacenId(
-                            loteOrigen.getCodigoLote(),
-                            producto.getId(),
-                            destino.getId());
+        BigDecimal cantidadNormalizada = Optional.ofNullable(cantidadTransferir)
+                .map(c -> c.setScale(6, RoundingMode.HALF_UP))
+                .orElse(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
+        if (cantidadNormalizada.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_TRANSFERENCIA_INVALIDA");
+        }
 
-            LoteProducto loteDestino = destinoExistente.orElseGet(() -> LoteProducto.builder()
-                    .producto(producto)
-                    .codigoLote(loteOrigen.getCodigoLote())
-                    .fechaFabricacion(loteOrigen.getFechaFabricacion())
-                    .fechaVencimiento(loteOrigen.getFechaVencimiento())
-                    .estado(loteOrigen.getEstado())
-                    .almacen(destino)
-                    .stockLote(BigDecimal.ZERO)
-                    .build());
+        BigDecimal stockActual = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO);
+        if (stockActual.compareTo(cantidadNormalizada) < 0) {
+            log.warn("TRANSFERENCIA_STOCK_INSUFICIENTE loteId={} stockActual={} requerido={}",
+                    loteOrigen.getId(), stockActual, cantidadNormalizada);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_STOCK_INSUFICIENTE");
+        }
 
-            BigDecimal nuevoStock = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO)
-                    .add(cantidadTransferir);
-            loteDestino.setStockLote(nuevoStock);
+        LoteProducto loteDestino = ensureDestinoLote(producto.getId(), loteOrigen.getCodigoLote(), destino.getId());
 
-            if (destino.getCategoria() == TipoCategoria.OBSOLETOS) {
-                loteDestino.setEstado(EstadoLote.RECHAZADO);
+        BigDecimal nuevoStockOrigen = stockActual.subtract(cantidadNormalizada)
+                .setScale(2, RoundingMode.HALF_UP);
+        loteOrigen.setStockLote(nuevoStockOrigen);
+
+        if (esAtencionReserva(solicitud)) {
+            BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
+            BigDecimal decremento = reservadoActual.min(cantidadNormalizada);
+            BigDecimal nuevoReservado = reservadoActual.subtract(decremento);
+            if (nuevoReservado.compareTo(BigDecimal.ZERO) < 0) {
+                nuevoReservado = BigDecimal.ZERO;
             }
-
-            LoteProducto guardadoDestino = loteProductoRepository.save(loteDestino);
-            return new MovimientoLoteDetalle(guardadoDestino, cantidadTransferir);
+            loteOrigen.setStockReservado(nuevoReservado.setScale(6, RoundingMode.HALF_UP));
         }
 
-        loteOrigen.setAlmacen(destino);
+        recalcularAgotadoSegunDisponibilidad(loteOrigen);
+        loteProductoRepository.save(loteOrigen);
+
+        BigDecimal stockDestino = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO);
+        BigDecimal nuevoStockDestino = stockDestino.add(cantidadNormalizada)
+                .setScale(2, RoundingMode.HALF_UP);
+        loteDestino.setStockLote(nuevoStockDestino);
+        if (loteDestino.getStockReservado() == null) {
+            loteDestino.setStockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
+        }
         if (destino.getCategoria() == TipoCategoria.OBSOLETOS) {
-            loteOrigen.setEstado(EstadoLote.RECHAZADO);
+            loteDestino.setEstado(EstadoLote.RECHAZADO);
+        } else if (loteDestino.getEstado() == null) {
+            loteDestino.setEstado(EstadoLote.DISPONIBLE);
         }
-        LoteProducto guardado = loteProductoRepository.save(loteOrigen);
-        return new MovimientoLoteDetalle(guardado, cantidadTransferir);
+
+        recalcularAgotadoSegunDisponibilidad(loteDestino);
+        LoteProducto guardadoDestino = loteProductoRepository.save(loteDestino);
+        return new MovimientoLoteDetalle(guardadoDestino, cantidadNormalizada.setScale(2, RoundingMode.HALF_UP));
+    }
+
+    private LoteProducto ensureDestinoLote(Integer productoId, String codigoLote, Integer almacenDestinoId) {
+        if (productoId == null || almacenDestinoId == null || codigoLote == null || codigoLote.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DESTINO_LOTE_PARAMETROS_INVALIDOS");
+        }
+
+        Optional<LoteProducto> existente = loteProductoRepository
+                .findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(productoId, codigoLote, almacenDestinoId);
+        if (existente.isPresent()) {
+            return existente.get();
+        }
+
+        Producto productoRef = entityManager.getReference(Producto.class, productoId.longValue());
+        Almacen almacenRef = entityManager.getReference(Almacen.class, almacenDestinoId.longValue());
+
+        LoteProducto referencia = loteProductoRepository
+                .findByCodigoLoteAndProductoId(codigoLote, productoId.longValue())
+                .orElse(null);
+
+        LoteProducto nuevo = LoteProducto.builder()
+                .codigoLote(codigoLote)
+                .producto(productoRef)
+                .almacen(almacenRef)
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                .stockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP))
+                .agotado(true)
+                .fechaAgotado(LocalDateTime.now())
+                .build();
+
+        if (referencia != null) {
+            nuevo.setFechaFabricacion(referencia.getFechaFabricacion());
+            nuevo.setFechaVencimiento(referencia.getFechaVencimiento());
+            nuevo.setFechaLiberacion(referencia.getFechaLiberacion());
+            nuevo.setTemperaturaAlmacenamiento(referencia.getTemperaturaAlmacenamiento());
+            nuevo.setUsuarioLiberador(referencia.getUsuarioLiberador());
+            nuevo.setOrdenProduccion(referencia.getOrdenProduccion());
+            nuevo.setProduccion(referencia.getProduccion());
+        }
+
+        LoteProducto guardado = loteProductoRepository.save(nuevo);
+        entityManager.flush();
+        entityManager.lock(guardado, LockModeType.PESSIMISTIC_WRITE);
+        return guardado;
+    }
+
+    private void recalcularAgotadoSegunDisponibilidad(LoteProducto lote) {
+        BigDecimal stock = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO)
+                .setScale(6, RoundingMode.HALF_UP);
+        BigDecimal reservado = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO)
+                .setScale(6, RoundingMode.HALF_UP);
+        BigDecimal disponible = stock.subtract(reservado);
+        if (disponible.compareTo(BigDecimal.ZERO) <= 0) {
+            lote.setAgotado(true);
+            lote.setFechaAgotado(LocalDateTime.now());
+        } else {
+            lote.setAgotado(false);
+            lote.setFechaAgotado(null);
+        }
+    }
+
+    private boolean esAtencionReserva(SolicitudMovimiento solicitud) {
+        if (solicitud == null) {
+            return false;
+        }
+        return solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA
+                || solicitud.getOrdenProduccion() != null;
     }
 
     private List<ParLoteCantidad> planificarAutoSplit(Long productoId,

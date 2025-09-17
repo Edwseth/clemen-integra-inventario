@@ -54,6 +54,12 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     @Query("select l from LoteProducto l where l.id = :id")
     Optional<LoteProducto> findByIdWithLock(@Param("id") Long id);
 
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from LoteProducto l where l.producto.id = :productoId and l.codigoLote = :codigoLote and l.almacen.id = :almacenId")
+    Optional<LoteProducto> findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(@Param("productoId") Integer productoId,
+                                                                              @Param("codigoLote") String codigoLote,
+                                                                              @Param("almacenId") Integer almacenId);
+
     List<LoteProducto> findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
             Long productoId,
             Integer almacenId,
