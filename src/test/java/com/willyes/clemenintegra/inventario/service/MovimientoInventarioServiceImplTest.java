@@ -53,6 +53,7 @@ class MovimientoInventarioServiceImplTest {
     @Mock private MovimientoInventarioMapper movimientoInventarioMapper;
     @Mock private UsuarioService usuarioService;
     @Mock private SolicitudMovimientoRepository solicitudMovimientoRepository;
+    @Mock private SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
     @Mock private EntityManager entityManager;
     @Mock private InventoryCatalogResolver catalogResolver;
 
@@ -74,6 +75,7 @@ class MovimientoInventarioServiceImplTest {
                 movimientoInventarioMapper,
                 usuarioService,
                 solicitudMovimientoRepository,
+                solicitudMovimientoDetalleRepository,
                 catalogResolver,
                 entityManager
         );
