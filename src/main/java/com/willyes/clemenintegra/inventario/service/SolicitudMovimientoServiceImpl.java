@@ -61,6 +61,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
+    private final ReservaLoteService reservaLoteService;
 
     @Value("${app.inventario.prebodega.id:6}")
     private Integer preBodegaProduccionId;
@@ -166,7 +167,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             }
         }
 
-        SolicitudMovimiento guardada = repository.save(solicitud);
+        SolicitudMovimiento guardada = repository.saveAndFlush(solicitud);
+        reservaLoteService.sincronizarReservasSolicitud(guardada);
         return toResponse(guardada);
     }
 
@@ -293,7 +295,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Transactional
     public SolicitudMovimientoResponseDTO aprobarSolicitud(Long id, Long responsableId) {
         validarAutenticacion();
-        SolicitudMovimiento solicitud = repository.findById(id)
+        SolicitudMovimiento solicitud = repository.findByIdWithLock(id)
                 .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
         if (solicitud.getEstado() != EstadoSolicitudMovimiento.PENDIENTE) {
             throw new IllegalStateException("La solicitud ya fue procesada");
@@ -309,7 +311,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         solicitud.setUsuarioResponsable(responsable);
         solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
         solicitud.setFechaResolucion(LocalDateTime.now());
-        SolicitudMovimiento actualizada = repository.save(solicitud);
+        SolicitudMovimiento actualizada = repository.saveAndFlush(solicitud);
+        reservaLoteService.sincronizarReservasSolicitud(actualizada);
         return toResponse(actualizada);
     }
 

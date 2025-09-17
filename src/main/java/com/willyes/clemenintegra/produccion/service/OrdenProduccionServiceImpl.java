@@ -39,6 +39,7 @@ import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
+import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
@@ -115,6 +116,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final InventoryCatalogResolver catalogResolver;
     private final UmValidator umValidator;
     private final VidaUtilProductoRepository vidaUtilProductoRepository;
+    private final ReservaLoteService reservaLoteService;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -811,11 +813,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     continue;
                 }
 
-                int updated = loteProductoRepository.reservarStock(lote.getLoteProductoId(), usar);
-                if (updated == 0) {
-                    continue;
-                }
-
                 SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
                         .solicitudMovimiento(solicitud)
                         .lote(new LoteProducto(lote.getLoteProductoId()))
@@ -833,7 +830,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         "STOCK_INSUFICIENTE: faltan " + restante);
             }
 
-            solicitudMovimientoRepository.save(solicitud);
+            solicitudMovimientoRepository.saveAndFlush(solicitud);
+            reservaLoteService.sincronizarReservasSolicitud(solicitud);
         }
     }
 

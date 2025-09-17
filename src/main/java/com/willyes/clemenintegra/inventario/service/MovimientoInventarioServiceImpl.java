@@ -95,6 +95,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
     private final SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
     private final InventoryCatalogResolver catalogResolver;
+    private final ReservaLoteService reservaLoteService;
 
     @Resource
     private final EntityManager entityManager;
@@ -460,10 +461,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
+            SolicitudMovimientoDetalle detalle = obtenerDetalleParaAtencion(solicitud, atencion);
+            reservaLoteService.consumirReserva(solicitud, detalle, lote, cantidad);
+
             actualizarStockLote(lote, cantidad);
             loteProductoRepository.save(lote);
 
-            SolicitudMovimientoDetalle detalle = obtenerDetalleParaAtencion(solicitud, atencion);
             if (detalle != null) {
                 actualizarDetalleSolicitud(detalle, cantidad);
                 solicitudMovimientoDetalleRepository.save(detalle);
@@ -505,23 +508,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     private void actualizarStockLote(LoteProducto lote, BigDecimal cantidad) {
         BigDecimal stockActual = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
-        BigDecimal reservadoActual = Optional.ofNullable(lote.getStockReservado())
-                .map(valor -> valor.setScale(6, RoundingMode.HALF_UP))
-                .orElse(BigDecimal.ZERO.setScale(6));
-
         BigDecimal cantidadStock = cantidad.setScale(2, RoundingMode.HALF_UP);
         BigDecimal nuevoStock = stockActual.subtract(cantidadStock);
         if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "STOCK_LOTE_INSUFICIENTE");
         }
 
-        BigDecimal nuevoReservado = reservadoActual.subtract(cantidad);
-        if (nuevoReservado.compareTo(BigDecimal.ZERO) < 0) {
-            nuevoReservado = BigDecimal.ZERO.setScale(6);
-        }
-
         lote.setStockLote(nuevoStock.setScale(2, RoundingMode.HALF_UP));
-        lote.setStockReservado(nuevoReservado.setScale(6, RoundingMode.HALF_UP));
 
         if (lote.getStockLote().compareTo(BigDecimal.ZERO) == 0) {
             lote.setAgotado(true);
