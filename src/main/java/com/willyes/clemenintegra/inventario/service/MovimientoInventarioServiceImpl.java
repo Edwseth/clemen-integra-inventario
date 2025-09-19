@@ -885,6 +885,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
         BigDecimal disponible = stockActual.subtract(reservadoActual);
         BigDecimal disponibleNoNegativo = disponible.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : disponible;
+        boolean solicitudAutorizadaOParcial = solicitud != null
+                && (solicitud.getEstado() == EstadoSolicitudMovimiento.AUTORIZADA
+                || solicitud.getEstado() == EstadoSolicitudMovimiento.PARCIAL);
+        BigDecimal reservaPendiente = BigDecimal.ZERO;
+        if (solicitudAutorizadaOParcial) {
+            reservaPendiente = calcularReservaPendiente(solicitud, loteOrigen);
+            BigDecimal reservadoPositivo = reservadoActual.compareTo(BigDecimal.ZERO) > 0
+                    ? reservadoActual
+                    : BigDecimal.ZERO;
+            if (reservaPendiente.compareTo(reservadoPositivo) > 0) {
+                reservaPendiente = reservadoPositivo;
+            }
+        }
+        BigDecimal disponibleConReserva = solicitudAutorizadaOParcial
+                ? disponibleNoNegativo.add(reservaPendiente)
+                : disponibleNoNegativo;
 
         boolean esTransferenciaInternaProduccion = tipo == TipoMovimiento.TRANSFERENCIA
                 && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
@@ -905,9 +921,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_INSUFICIENTE");
                 }
             } else if (!requiereAutoSplit) {
-                if (disponibleNoNegativo.compareTo(cantidad) < 0) {
-                    log.warn("Stock insuficiente en lote: loteId={} disponible={} solicitado={} productoId={}",
-                            loteOrigen.getId(), disponibleNoNegativo, cantidad, producto.getId());
+                if (disponibleConReserva.compareTo(cantidad) < 0) {
+                    log.warn("Stock insuficiente en lote: loteId={} disponible={} reservaPendiente={} solicitado={} productoId={}",
+                            loteOrigen.getId(), disponibleNoNegativo, reservaPendiente, cantidad, producto.getId());
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
                 }
             }
@@ -1192,6 +1208,43 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             lote.setAgotado(false);
             lote.setFechaAgotado(null);
         }
+    }
+
+    private BigDecimal calcularReservaPendiente(SolicitudMovimiento solicitud, LoteProducto lote) {
+        if (solicitud == null || lote == null || lote.getId() == null) {
+            return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        }
+        List<SolicitudMovimientoDetalle> detalles = solicitud.getDetalles();
+        if (detalles == null || detalles.isEmpty()) {
+            return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        }
+
+        Long loteId = lote.getId();
+        BigDecimal total = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        for (SolicitudMovimientoDetalle detalle : detalles) {
+            if (detalle == null) {
+                continue;
+            }
+            LoteProducto detalleLote = detalle.getLote();
+            if (detalleLote == null || detalleLote.getId() == null
+                    || !Objects.equals(detalleLote.getId(), loteId)) {
+                continue;
+            }
+            BigDecimal cantidadDetalle = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal atendida = Optional.ofNullable(detalle.getCantidadAtendida()).orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal pendiente = cantidadDetalle.subtract(atendida);
+            if (pendiente.compareTo(BigDecimal.ZERO) < 0) {
+                pendiente = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+            }
+            total = total.add(pendiente);
+        }
+
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            total = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        }
+        return total.setScale(6, RoundingMode.HALF_UP);
     }
 
     private boolean esAtencionReserva(SolicitudMovimiento solicitud) {
