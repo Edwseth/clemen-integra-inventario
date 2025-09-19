@@ -17,6 +17,8 @@ import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -114,6 +116,49 @@ class MovimientoInventarioControllerTest {
         when(stockQueryService.obtenerStockDisponible(anyLong())).thenReturn(BigDecimal.ONE);
         when(movimientoInventarioService.registrarMovimiento(any(MovimientoInventarioDTO.class)))
                 .thenReturn(MovimientoInventarioResponseDTO.builder().id(200L).build());
+
+        ResponseEntity<?> response = controller.registrar(dto);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        verify(movimientoInventarioService).registrarMovimiento(dto);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EstadoSolicitudMovimiento.class, names = {"PENDIENTE", "RESERVADA"})
+    void registrarSalidaConReservaPendienteDebeDelegarAlServicio(EstadoSolicitudMovimiento estado) {
+        solicitud.setEstado(estado);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                BigDecimal.valueOf(4),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                producto.getId(),
+                lote.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                solicitud.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        when(productoRepository.findById(producto.getId().longValue())).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.findById(lote.getId())).thenReturn(Optional.of(lote));
+        when(solicitudMovimientoRepository.findWithDetalles(solicitud.getId())).thenReturn(Optional.of(solicitud));
+        when(stockQueryService.obtenerStockDisponible(anyLong())).thenReturn(BigDecimal.ONE);
+        when(movimientoInventarioService.registrarMovimiento(any(MovimientoInventarioDTO.class)))
+                .thenReturn(MovimientoInventarioResponseDTO.builder().id(201L).build());
 
         ResponseEntity<?> response = controller.registrar(dto);
 
