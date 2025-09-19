@@ -39,6 +39,12 @@ public interface ReservaLoteRepository extends JpaRepository<ReservaLote, Long> 
     BigDecimal sumPendienteByLoteId(@Param("loteId") Long loteId,
                                     @Param("estadoCancelada") EstadoReservaLote estadoCancelada);
 
+    @Query("select coalesce(sum(case when r.estado = :estadoActiva then " +
+            "case when (r.cantidadReservada - r.cantidadConsumida) > 0 then (r.cantidadReservada - r.cantidadConsumida) else 0 end " +
+            "else 0 end), 0) from ReservaLote r where r.lote.id = :loteId")
+    BigDecimal sumPendienteActivaByLoteId(@Param("loteId") Long loteId,
+                                          @Param("estadoActiva") EstadoReservaLote estadoActiva);
+
     List<ReservaLote> findBySolicitudMovimientoDetalleId(Long detalleId);
 
     List<ReservaLote> findBySolicitudMovimientoDetalle_SolicitudMovimientoId(Long solicitudId);

@@ -57,6 +57,8 @@ class MovimientoInventarioServiceImplTest {
     @Mock
     private ReservaLoteService reservaLoteService;
     @Mock
+    private ReservaLoteRepository reservaLoteRepository;
+    @Mock
     private EntityManager entityManager;
 
     @InjectMocks
