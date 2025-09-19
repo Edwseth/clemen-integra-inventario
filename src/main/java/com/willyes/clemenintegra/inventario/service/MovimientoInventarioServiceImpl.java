@@ -942,7 +942,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         if (tipo == TipoMovimiento.TRANSFERENCIA) {
-            if (loteOrigen.getEstado() != EstadoLote.DISPONIBLE) {
+            boolean productoTerminado = producto.getCategoriaProducto() != null
+                    && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO;
+            boolean estadoPermitido = loteOrigen.getEstado() == EstadoLote.DISPONIBLE
+                    || (productoTerminado && loteOrigen.getEstado() == EstadoLote.LIBERADO);
+            if (!estadoPermitido) {
                 log.warn(
                         "Transferencia con lote no disponible: loteId={} estado={} origenId={} destinoId={} productoId={} cantidad={}",
                         loteOrigen.getId(), loteOrigen.getEstado(),
@@ -1123,9 +1127,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (loteDestino.getStockReservado() == null) {
             loteDestino.setStockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
         }
+        if (loteDestino.getFechaLiberacion() == null && loteOrigen.getFechaLiberacion() != null) {
+            loteDestino.setFechaLiberacion(loteOrigen.getFechaLiberacion());
+        }
+        if (loteDestino.getUsuarioLiberador() == null && loteOrigen.getUsuarioLiberador() != null) {
+            loteDestino.setUsuarioLiberador(loteOrigen.getUsuarioLiberador());
+        }
         if (destino.getCategoria() == TipoCategoria.OBSOLETOS) {
             loteDestino.setEstado(EstadoLote.RECHAZADO);
-        } else if (loteDestino.getEstado() == null) {
+        } else {
             loteDestino.setEstado(EstadoLote.DISPONIBLE);
         }
 
