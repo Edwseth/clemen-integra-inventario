@@ -9,16 +9,18 @@ import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
-import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
-import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
@@ -96,6 +98,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
     private final InventoryCatalogResolver catalogResolver;
     private final ReservaLoteService reservaLoteService;
+    private final ReservaLoteRepository reservaLoteRepository;
 
     @Resource
     private final EntityManager entityManager;
@@ -462,7 +465,33 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
             SolicitudMovimientoDetalle detalle = obtenerDetalleParaAtencion(solicitud, atencion);
+            if (detalle != null) {
+                BigDecimal solicitada = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO)
+                        .setScale(6, RoundingMode.HALF_UP);
+                BigDecimal atendidaPrev = Optional.ofNullable(detalle.getCantidadAtendida()).orElse(BigDecimal.ZERO)
+                        .setScale(6, RoundingMode.HALF_UP);
+                BigDecimal pendienteDetalle = solicitada.subtract(atendidaPrev);
+                if (pendienteDetalle.compareTo(BigDecimal.ZERO) < 0) {
+                    pendienteDetalle = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+                }
+                if (pendienteDetalle.compareTo(BigDecimal.ZERO) == 0) {
+                    log.debug("IDEMP-DETALLE sin pendiente, se omite consumo detalleId={} solicitudId={} loteId={}",
+                            detalle.getId(), solicitud.getId(), loteId);
+                    continue;
+                }
+                if (cantidad.compareTo(pendienteDetalle) > 0) {
+                    log.warn("ATENCION_CANTIDAD_EXCEDE_PENDIENTE detalleId={} pendiente={} aprobado={}",
+                            detalle.getId(), pendienteDetalle, cantidad);
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
+                }
+            }
+
             reservaLoteService.consumirReserva(solicitud, detalle, lote, cantidad);
+
+            BigDecimal stockAntes = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+            BigDecimal reservadoAntes = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO);
+            log.debug("VAL-ACTUALIZA antes actualizarStockLote loteId={} stockAntes={} reservadoAntes={} req={}",
+                    lote.getId(), stockAntes, reservadoAntes, cantidad);
 
             actualizarStockLote(lote, cantidad);
             loteProductoRepository.save(lote);
@@ -507,18 +536,37 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private void actualizarStockLote(LoteProducto lote, BigDecimal cantidad) {
-        BigDecimal stockActual = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
-        BigDecimal cantidadStock = cantidad.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal stockActual = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal cantidadStock = Optional.ofNullable(cantidad).orElse(BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
         BigDecimal nuevoStock = stockActual.subtract(cantidadStock);
         if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "STOCK_LOTE_INSUFICIENTE");
         }
 
-        lote.setStockLote(nuevoStock.setScale(2, RoundingMode.HALF_UP));
+        BigDecimal reservadoPendiente = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        if (lote.getId() != null) {
+            reservadoPendiente = Optional.ofNullable(
+                            reservaLoteRepository.sumPendienteActivaByLoteId(lote.getId(), EstadoReservaLote.ACTIVA))
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+        }
 
-        if (lote.getStockLote().compareTo(BigDecimal.ZERO) == 0) {
+        log.debug("VAL-RESERVA loteId={} reservadoPendiente={} stockNuevo={}",
+                lote.getId(), reservadoPendiente, nuevoStock);
+
+        lote.setStockLote(nuevoStock.setScale(2, RoundingMode.HALF_UP));
+        lote.setStockReservado(reservadoPendiente);
+
+        if (lote.getStockLote().compareTo(BigDecimal.ZERO) <= 0) {
             lote.setAgotado(true);
-            lote.setFechaAgotado(LocalDateTime.now());
+            if (lote.getFechaAgotado() == null) {
+                lote.setFechaAgotado(LocalDateTime.now());
+            }
+        } else {
+            lote.setAgotado(false);
+            lote.setFechaAgotado(null);
         }
     }
 
@@ -850,6 +898,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
                 });
 
+        boolean esPorLote = solicitud != null;
+        log.debug("VAL-GATE esPorLote={} solicitudId={} tipo={}", esPorLote,
+                solicitud != null ? solicitud.getId() : null, tipo);
+
         boolean estadoBloqueado = EnumSet.of(EstadoLote.RETENIDO,
                         EstadoLote.RECHAZADO, EstadoLote.VENCIDO)
                 .contains(loteOrigen.getEstado())
@@ -902,6 +954,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? disponibleNoNegativo.add(reservaPendiente)
                 : disponibleNoNegativo;
 
+        log.debug("VAL-LOTE loteId={} stockLote={} reservadoTotal={} pendienteSolicitud={} disponible={} req={}",
+                loteOrigen.getId(), stockActual, reservadoActual, reservaPendiente, disponibleConReserva, cantidad);
+
         boolean esTransferenciaInternaProduccion = tipo == TipoMovimiento.TRANSFERENCIA
                 && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
         boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
@@ -930,18 +985,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         if (tipo == TipoMovimiento.SALIDA) {
-            log.debug("MOV-SALIDA descontando prod={}, qty={}, opId={}",
-                    dto.productoId(), cantidad, dto.ordenProduccionId());
-            loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidad));
-            if (solicitud != null && solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA) {
-                loteOrigen.setStockReservado(reservadoActual.subtract(cantidad));
+            log.debug("MOV-SALIDA procesando prod={}, qty={}, solicitudId={}, opId={}",
+                    dto.productoId(), cantidad, solicitud != null ? solicitud.getId() : null, dto.ordenProduccionId());
+            if (solicitud != null) {
+                log.debug("MOV-SALIDA delegando ajuste de lote a la atención de solicitud solicitudId={} loteId={}",
+                        solicitud.getId(), loteOrigen.getId());
+                return List.of(new MovimientoLoteDetalle(loteOrigen, cantidad));
             }
-            if (loteOrigen.getStockLote().compareTo(BigDecimal.ZERO) <= 0) {
-                loteOrigen.setAgotado(true);
-                if (loteOrigen.getFechaAgotado() == null) {
-                    loteOrigen.setFechaAgotado(LocalDateTime.now());
-                }
-            }
+            BigDecimal stockAntes = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO);
+            BigDecimal reservadoAntes = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
+            log.debug("VAL-ACTUALIZA antes actualizarStockLote loteId={} stockAntes={} reservadoAntes={} req={}",
+                    loteOrigen.getId(), stockAntes, reservadoAntes, cantidad);
+            actualizarStockLote(loteOrigen, cantidad);
             LoteProducto actualizado = loteProductoRepository.save(loteOrigen);
             return List.of(new MovimientoLoteDetalle(actualizado, cantidad));
         }
