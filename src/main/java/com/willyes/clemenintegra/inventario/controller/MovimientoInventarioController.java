@@ -5,6 +5,9 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -33,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/movimientos")
@@ -43,6 +47,7 @@ public class MovimientoInventarioController {
     private final MovimientoInventarioService service;
     private final ProductoRepository productoRepo;
     private final LoteProductoRepository loteRepo;
+    private final SolicitudMovimientoRepository solicitudMovimientoRepository;
     private final StockQueryService stockQueryService;
 
     @Operation(summary = "Registrar un movimiento de inventario")
@@ -63,6 +68,7 @@ public class MovimientoInventarioController {
             // 1) Validación de stock para salidas
             var tipo = dto.tipoMovimiento();
             boolean isSalida = tipo == TipoMovimiento.SALIDA || tipo == TipoMovimiento.AJUSTE;
+            SolicitudMovimiento solicitudMovimiento = null;
 
             if (isSalida) {
                 Producto prod = productoRepo.findById(dto.productoId().longValue())
@@ -70,12 +76,50 @@ public class MovimientoInventarioController {
                 LoteProducto lote = loteRepo.findById(dto.loteProductoId())
                         .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
+                if (dto.solicitudMovimientoId() != null) {
+                    solicitudMovimiento = solicitudMovimientoRepository
+                            .findWithDetalles(dto.solicitudMovimientoId())
+                            .orElse(null);
+                }
+
                 BigDecimal cant = dto.cantidad();
                 BigDecimal stockProd = stockQueryService.obtenerStockDisponible(prod.getId().longValue());
-                BigDecimal stockLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO)
-                        .subtract(Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO));
+                BigDecimal stockActualLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+                BigDecimal stockReservado = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO);
+                BigDecimal stockDisponibleLote = stockActualLote.subtract(stockReservado);
 
-                if (stockProd.compareTo(cant) < 0 || stockLote.compareTo(cant) < 0) {
+                BigDecimal stockDisponibleNoNegativo = stockDisponibleLote.compareTo(BigDecimal.ZERO) < 0
+                        ? BigDecimal.ZERO
+                        : stockDisponibleLote;
+
+                boolean solicitudAutorizadaOParcial = solicitudMovimiento != null
+                        && (solicitudMovimiento.getEstado() == EstadoSolicitudMovimiento.AUTORIZADA
+                        || solicitudMovimiento.getEstado() == EstadoSolicitudMovimiento.PARCIAL);
+
+                BigDecimal reservaPendiente = solicitudAutorizadaOParcial
+                        ? calcularReservaPendiente(solicitudMovimiento, lote)
+                        : BigDecimal.ZERO;
+                if (solicitudAutorizadaOParcial) {
+                    BigDecimal reservadoPositivo = stockReservado.compareTo(BigDecimal.ZERO) > 0
+                            ? stockReservado
+                            : BigDecimal.ZERO;
+                    if (reservaPendiente.compareTo(reservadoPositivo) > 0) {
+                        reservaPendiente = reservadoPositivo;
+                    }
+                }
+
+                BigDecimal disponibleConReserva = stockDisponibleNoNegativo.add(reservaPendiente);
+                BigDecimal stockProductoConReserva = stockProd.add(reservaPendiente);
+
+                boolean stockProductoInsuficiente = stockProd.compareTo(cant) < 0;
+                boolean stockLoteInsuficiente = stockDisponibleLote.compareTo(cant) < 0;
+
+                if (solicitudAutorizadaOParcial) {
+                    stockProductoInsuficiente = stockProductoConReserva.compareTo(cant) < 0;
+                    stockLoteInsuficiente = disponibleConReserva.compareTo(cant) < 0;
+                }
+
+                if (stockProductoInsuficiente || stockLoteInsuficiente) {
                     return ResponseEntity
                             .status(HttpStatus.CONFLICT)
                             .body(Map.of("message", "No hay suficiente stock disponible"));
@@ -188,6 +232,37 @@ public class MovimientoInventarioController {
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaIngreso", "id"), "fechaIngreso");
         Page<MovimientoInventarioResponseDTO> movimientos = service.listarTodos(sanitized);
         return ResponseEntity.ok(movimientos);
+    }
+
+    private BigDecimal calcularReservaPendiente(SolicitudMovimiento solicitud, LoteProducto lote) {
+        if (solicitud == null || lote == null || lote.getId() == null) {
+            return BigDecimal.ZERO;
+        }
+        List<SolicitudMovimientoDetalle> detalles = solicitud.getDetalles();
+        if (detalles == null || detalles.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        Long loteId = lote.getId();
+        BigDecimal total = BigDecimal.ZERO;
+        for (SolicitudMovimientoDetalle detalle : detalles) {
+            if (detalle == null || detalle.getLote() == null || detalle.getLote().getId() == null) {
+                continue;
+            }
+            if (!Objects.equals(detalle.getLote().getId(), loteId)) {
+                continue;
+            }
+            BigDecimal cantidadDetalle = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO);
+            BigDecimal atendida = Optional.ofNullable(detalle.getCantidadAtendida()).orElse(BigDecimal.ZERO);
+            BigDecimal pendiente = cantidadDetalle.subtract(atendida);
+            if (pendiente.compareTo(BigDecimal.ZERO) < 0) {
+                pendiente = BigDecimal.ZERO;
+            }
+            total = total.add(pendiente);
+        }
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return total;
     }
 
 }
