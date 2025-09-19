@@ -4,11 +4,13 @@ import com.willyes.clemenintegra.shared.dto.auth.AuthResponseDTO;
 import com.willyes.clemenintegra.shared.dto.auth.Codigo2FARequestDTO;
 import com.willyes.clemenintegra.shared.dto.auth.LoginRequestDTO;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.notification.EmailService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ public class AuthServiceImpl implements AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
+    private final EmailService emailService;
 
     @Transactional
     public void iniciarLogin(LoginRequestDTO dto) {
@@ -48,8 +51,23 @@ public class AuthServiceImpl implements AuthService {
         usuario.setCodigo2FAExpiraEn(LocalDateTime.now().plusMinutes(5));
         usuarioRepository.save(usuario);
 
-        // TODO: enviar el código por el canal deseado
-        log.info("🔐 Código 2FA generado para {}: {}", usuario.getNombreUsuario(), codigo);
+        String correoDestino = usuario.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalStateException("El usuario no tiene un correo electrónico registrado para el 2FA");
+        }
+
+        String asunto = "Código de verificación de Clemen-Integra";
+        String cuerpo = String.format("Hola %s,%n%nTu código de verificación es: %s.%n" +
+                        "Este código caduca en 5 minutos. Si no solicitaste este acceso, ignora este mensaje.%n%n" +
+                        "Equipo Clemen-Integra", usuario.getNombreUsuario(), codigo);
+
+        try {
+            emailService.enviarCorreoTexto(correoDestino, asunto, cuerpo);
+            log.info("🔐 Código 2FA enviado a {}", correoDestino);
+        } catch (MailException ex) {
+            log.error("Error al enviar el código 2FA al correo {}", correoDestino, ex);
+            throw new IllegalStateException("No se pudo enviar el código de verificación. Intente nuevamente más tarde.");
+        }
     }
 
     @Transactional
