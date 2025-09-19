@@ -51,6 +51,8 @@ public class AuthServiceImpl implements AuthService {
         usuario.setCodigo2FAExpiraEn(LocalDateTime.now().plusMinutes(5));
         usuarioRepository.save(usuario);
 
+        log.info("🔐 Código 2FA generado para {}: {}", usuario.getNombreUsuario(), codigo);
+
         String correoDestino = usuario.getCorreo();
         if (correoDestino == null || correoDestino.isBlank()) {
             throw new IllegalStateException("El usuario no tiene un correo electrónico registrado para el 2FA");
