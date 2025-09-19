@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "usuarios", uniqueConstraints = {
         @UniqueConstraint(name = "un_nombre_usuario_UNIQUE", columnNames = "nombre_usuario"),
-        @UniqueConstraint(name = "un_correo_usuario_UNIQUE", columnNames = "correo")
+        // TODO: Reactivar la restricción de unicidad del correo al desplegar en producción.
+        // @UniqueConstraint(name = "un_correo_usuario_UNIQUE", columnNames = "correo")
 })
 @Data
 @NoArgsConstructor
