@@ -92,32 +92,37 @@ public class MovimientoInventarioController {
                         ? BigDecimal.ZERO
                         : stockDisponibleLote;
 
-                boolean solicitudAutorizadaOParcial = solicitudMovimiento != null
-                        && (solicitudMovimiento.getEstado() == EstadoSolicitudMovimiento.AUTORIZADA
-                        || solicitudMovimiento.getEstado() == EstadoSolicitudMovimiento.PARCIAL);
+                BigDecimal reservaPendiente = BigDecimal.ZERO;
+                boolean solicitudConReserva = false;
 
-                BigDecimal reservaPendiente = solicitudAutorizadaOParcial
-                        ? calcularReservaPendiente(solicitudMovimiento, lote)
-                        : BigDecimal.ZERO;
-                if (solicitudAutorizadaOParcial) {
-                    BigDecimal reservadoPositivo = stockReservado.compareTo(BigDecimal.ZERO) > 0
-                            ? stockReservado
-                            : BigDecimal.ZERO;
-                    if (reservaPendiente.compareTo(reservadoPositivo) > 0) {
-                        reservaPendiente = reservadoPositivo;
+                if (solicitudMovimiento != null) {
+                    reservaPendiente = calcularReservaPendiente(solicitudMovimiento, lote);
+                    boolean estadoPermiteReserva = solicitudMovimiento.getEstado() == EstadoSolicitudMovimiento.AUTORIZADA
+                            || solicitudMovimiento.getEstado() == EstadoSolicitudMovimiento.PARCIAL
+                            || solicitudMovimiento.getEstado() == EstadoSolicitudMovimiento.RESERVADA;
+                    boolean reservaDisponible = reservaPendiente.compareTo(BigDecimal.ZERO) > 0;
+                    solicitudConReserva = estadoPermiteReserva || reservaDisponible;
+
+                    if (solicitudConReserva) {
+                        BigDecimal reservadoPositivo = stockReservado.compareTo(BigDecimal.ZERO) > 0
+                                ? stockReservado
+                                : BigDecimal.ZERO;
+                        if (reservaPendiente.compareTo(reservadoPositivo) > 0) {
+                            reservaPendiente = reservadoPositivo;
+                        }
+                    } else {
+                        reservaPendiente = BigDecimal.ZERO;
                     }
                 }
 
                 BigDecimal disponibleConReserva = stockDisponibleNoNegativo.add(reservaPendiente);
                 BigDecimal stockProductoConReserva = stockProd.add(reservaPendiente);
 
-                boolean stockProductoInsuficiente = stockProd.compareTo(cant) < 0;
-                boolean stockLoteInsuficiente = stockDisponibleLote.compareTo(cant) < 0;
+                BigDecimal stockProductoEvaluado = solicitudConReserva ? stockProductoConReserva : stockProd;
+                BigDecimal stockLoteEvaluado = solicitudConReserva ? disponibleConReserva : stockDisponibleNoNegativo;
 
-                if (solicitudAutorizadaOParcial) {
-                    stockProductoInsuficiente = stockProductoConReserva.compareTo(cant) < 0;
-                    stockLoteInsuficiente = disponibleConReserva.compareTo(cant) < 0;
-                }
+                boolean stockProductoInsuficiente = stockProductoEvaluado.compareTo(cant) < 0;
+                boolean stockLoteInsuficiente = stockLoteEvaluado.compareTo(cant) < 0;
 
                 if (stockProductoInsuficiente || stockLoteInsuficiente) {
                     return ResponseEntity
