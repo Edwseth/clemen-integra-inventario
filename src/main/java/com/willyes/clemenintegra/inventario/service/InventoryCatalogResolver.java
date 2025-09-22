@@ -23,7 +23,9 @@ public class InventoryCatalogResolver {
     private Long almacenPtId;
     private Long almacenCuarentenaId;
     private Long almacenObsoletosId;
-    private Long almacenBodegaPrincipalId;
+    private Long almacenMateriaPrimaId;
+    private Long almacenMaterialEmpaqueId;
+    private Long almacenSuministrosId;
     private Long almacenPreBodegaProduccionId;
 
     private Long motivoEntradaPtId;
@@ -40,7 +42,9 @@ public class InventoryCatalogResolver {
         almacenPtId = validateAlmacen(properties.getAlmacen().getPt().getId());
         almacenCuarentenaId = validateAlmacen(properties.getAlmacen().getCuarentena().getId());
         almacenObsoletosId = validateAlmacen(properties.getAlmacen().getObsoletos().getId());
-        almacenBodegaPrincipalId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getBodegaPrincipal());
+        almacenMateriaPrimaId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getMateriaPrima());
+        almacenMaterialEmpaqueId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getMaterialEmpaque());
+        almacenSuministrosId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getSuministros());
         almacenPreBodegaProduccionId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getPreBodegaProduccion());
 
         motivoEntradaPtId = resolveMotivo(properties.getMotivo().getEntradaPt());
@@ -55,8 +59,12 @@ public class InventoryCatalogResolver {
         tipoDetalleTransferenciaId = validateTipoDetalle(properties.getTipoDetalle().getTransferenciaId());
         tipoDetalleSalidaId = validateTipoDetalle(properties.getTipoDetalle().getSalidaId());
 
-        log.info("Inventory catalogs loaded pt={} cuarentena={} obsoletos={} bodegaPrincipal={} preBodegaProduccion={} motivoEntradaPt={} motivoTransferenciaCalidad={} motivoDevolucion={} motivoAjuste={} tipoDetalleEntrada={} tipoDetalleTransferencia={} tipoDetalleSalida={}",
-                almacenPtId, almacenCuarentenaId, almacenObsoletosId, almacenBodegaPrincipalId, almacenPreBodegaProduccionId,
+        log.info(
+                "Inventory catalogs loaded pt={} cuarentena={} obsoletos={} materiaPrima={} materialEmpaque={} suministros={} " +
+                        "preBodegaProduccion={} motivoEntradaPt={} motivoTransferenciaCalidad={} motivoDevolucion={} motivoAjuste={} " +
+                        "tipoDetalleEntrada={} tipoDetalleTransferencia={} tipoDetalleSalida={}",
+                almacenPtId, almacenCuarentenaId, almacenObsoletosId,
+                almacenMateriaPrimaId, almacenMaterialEmpaqueId, almacenSuministrosId, almacenPreBodegaProduccionId,
                 motivoEntradaPtId, motivoTransferenciaCalidadId, motivoDevolucionDesdeProduccionId,
                 motivoAjusteRechazoId, tipoDetalleEntradaId, tipoDetalleTransferenciaId, tipoDetalleSalidaId);
     }
@@ -96,7 +104,9 @@ public class InventoryCatalogResolver {
     public Long getAlmacenPtId() { return almacenPtId; }
     public Long getAlmacenCuarentenaId() { return almacenCuarentenaId; }
     public Long getAlmacenObsoletosId() { return almacenObsoletosId; }
-    public Long getAlmacenBodegaPrincipalId() { return almacenBodegaPrincipalId; }
+    public Long getAlmacenMateriaPrimaId() { return almacenMateriaPrimaId; }
+    public Long getAlmacenMaterialEmpaqueId() { return almacenMaterialEmpaqueId; }
+    public Long getAlmacenSuministrosId() { return almacenSuministrosId; }
     public Long getAlmacenPreBodegaProduccionId() { return almacenPreBodegaProduccionId; }
 
     public Long getMotivoIdEntradaProductoTerminado() { return motivoEntradaPtId; }

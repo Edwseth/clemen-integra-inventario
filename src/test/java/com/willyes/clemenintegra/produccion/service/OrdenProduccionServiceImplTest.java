@@ -4,12 +4,14 @@ import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
+import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
@@ -36,8 +38,10 @@ import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.service.UnidadConversionService;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -50,6 +54,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -113,13 +118,24 @@ class OrdenProduccionServiceImplTest {
     @InjectMocks
     private OrdenProduccionServiceImpl service;
 
-    @Test
+    @ParameterizedTest(name = "rechaza stock solo en pre-bodega para {0}")
+    @MethodSource("categoriasInsumoOrigen")
     @SuppressWarnings("unchecked")
-    void guardarConValidacionStock_rechazaCuandoSoloHayStockEnPreBodega() {
-        Long bodegaPrincipalId = 10L;
+    void guardarConValidacionStock_rechazaCuandoSoloHayStockEnPreBodega(TipoCategoria tipoCategoria) {
         Long preBodegaId = 20L;
-        when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(bodegaPrincipalId);
+        Long almacenOrigenId = switch (tipoCategoria) {
+            case MATERIA_PRIMA -> 10L;
+            case MATERIAL_EMPAQUE -> 11L;
+            case SUMINISTROS -> 12L;
+            default -> throw new IllegalArgumentException("Tipo de categoría no soportado: " + tipoCategoria);
+        };
+
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
+        switch (tipoCategoria) {
+            case MATERIA_PRIMA -> when(catalogResolver.getAlmacenMateriaPrimaId()).thenReturn(almacenOrigenId);
+            case MATERIAL_EMPAQUE -> when(catalogResolver.getAlmacenMaterialEmpaqueId()).thenReturn(almacenOrigenId);
+            case SUMINISTROS -> when(catalogResolver.getAlmacenSuministrosId()).thenReturn(almacenOrigenId);
+        }
 
         Producto productoFinal = new Producto();
         productoFinal.setId(1);
@@ -135,6 +151,9 @@ class OrdenProduccionServiceImplTest {
         UnidadMedida unidad = new UnidadMedida();
         unidad.setSimbolo("kg");
         insumo.setUnidadMedida(unidad);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(tipoCategoria);
+        insumo.setCategoriaProducto(categoria);
 
         DetalleFormula detalle = DetalleFormula.builder()
                 .insumo(insumo)
@@ -162,7 +181,7 @@ class OrdenProduccionServiceImplTest {
         ArgumentCaptor<List<Long>> almacenesCaptor = ArgumentCaptor.forClass(List.class);
         verify(stockQueryService).obtenerStockDisponible(productosCaptor.capture(), almacenesCaptor.capture());
         assertThat(productosCaptor.getValue()).containsExactly(insumo.getId().longValue());
-        assertThat(almacenesCaptor.getValue()).containsExactly(bodegaPrincipalId);
+        assertThat(almacenesCaptor.getValue()).containsExactly(almacenOrigenId);
 
         verifyNoInteractions(solicitudMovimientoService);
     }
@@ -170,9 +189,9 @@ class OrdenProduccionServiceImplTest {
     @Test
     void reservarInsumosParaOP_noReservaLotesDePreBodega() {
         Long ordenId = 7L;
-        Long bodegaPrincipalId = 10L;
+        Long almacenMaterialEmpaqueId = 10L;
         Long preBodegaId = 20L;
-        when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(bodegaPrincipalId);
+        when(catalogResolver.getAlmacenMaterialEmpaqueId()).thenReturn(almacenMaterialEmpaqueId);
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
 
         Producto productoFinal = new Producto();
@@ -185,6 +204,9 @@ class OrdenProduccionServiceImplTest {
 
         Producto insumo = new Producto();
         insumo.setId(200);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.MATERIAL_EMPAQUE);
+        insumo.setCategoriaProducto(categoria);
         DetalleFormula detalle = DetalleFormula.builder()
                 .insumo(insumo)
                 .cantidadNecesaria(BigDecimal.ONE)
@@ -223,6 +245,10 @@ class OrdenProduccionServiceImplTest {
 
         verifyNoInteractions(solicitudMovimientoService);
         verify(reservaLoteService, never()).sincronizarReservasSolicitud(any(SolicitudMovimiento.class));
+    }
+
+    private static Stream<TipoCategoria> categoriasInsumoOrigen() {
+        return Stream.of(TipoCategoria.MATERIA_PRIMA, TipoCategoria.MATERIAL_EMPAQUE, TipoCategoria.SUMINISTROS);
     }
 
     private record TestLoteFefoDisponibleProjection(Long loteProductoId,
