@@ -138,25 +138,35 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     /**
      * Obtiene los almacenes habilitados para consumir insumos desde producción.
      * <p>
-     * Actualmente solo se permite consumir desde la bodega principal configurada
-     * para producción. La pre-bodega de producción se excluye de manera explícita
-     * porque su stock está reservado para las transferencias de salida y no debe
-     * afectar la validación ni la reserva FEFO de insumos.
+     * Actualmente solo se permite consumir desde el almacén de origen configurado
+     * por categoría para producción. La pre-bodega de producción se excluye de
+     * manera explícita porque su stock está reservado para las transferencias de
+     * salida y no debe afectar la validación ni la reserva FEFO de insumos.
      * </p>
      */
     private List<Long> obtenerAlmacenesOrigen(Producto insumo) {
-        Long bodegaPrincipalId = catalogResolver.getAlmacenBodegaPrincipalId();
         Long preBodegaProduccionId = catalogResolver.getAlmacenPreBodegaProduccionId();
+        Long origenId = obtenerAlmacenOrigenSegunCategoria(insumo);
 
-        if (bodegaPrincipalId == null) {
+        if (origenId == null || Objects.equals(origenId, preBodegaProduccionId)) {
             return List.of();
         }
 
-        if (Objects.equals(bodegaPrincipalId, preBodegaProduccionId)) {
-            return List.of();
+        return List.of(origenId);
+    }
+
+    private Long obtenerAlmacenOrigenSegunCategoria(Producto insumo) {
+        if (insumo == null || insumo.getCategoriaProducto() == null ||
+                insumo.getCategoriaProducto().getTipo() == null) {
+            return null;
         }
 
-        return List.of(bodegaPrincipalId);
+        return switch (insumo.getCategoriaProducto().getTipo()) {
+            case MATERIA_PRIMA -> catalogResolver.getAlmacenMateriaPrimaId();
+            case MATERIAL_EMPAQUE -> catalogResolver.getAlmacenMaterialEmpaqueId();
+            case SUMINISTROS -> catalogResolver.getAlmacenSuministrosId();
+            default -> null;
+        };
     }
 
     private String generarCodigoLote(Producto producto) {
