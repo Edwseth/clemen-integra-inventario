@@ -83,6 +83,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Function;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -128,6 +129,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Value("${inventory.mov.clasificacion.entradaPt}")
     private String clasificacionEntradaPtConf;
 
+    private static final Map<TipoCategoria, Function<InventoryCatalogResolver, Long>> ALMACENES_ORIGEN_POR_CATEGORIA = Map.of(
+            TipoCategoria.MATERIA_PRIMA, InventoryCatalogResolver::getAlmacenOrigenMateriaPrimaId,
+            TipoCategoria.MATERIAL_EMPAQUE, InventoryCatalogResolver::getAlmacenOrigenMaterialEmpaqueId,
+            TipoCategoria.SUMINISTROS, InventoryCatalogResolver::getAlmacenOrigenSuministrosId);
+
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefijo = "OP-CLEMEN-" + fecha;
@@ -146,27 +152,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
      */
     private List<Long> obtenerAlmacenesOrigen(Producto insumo) {
         Long preBodegaProduccionId = catalogResolver.getAlmacenPreBodegaProduccionId();
-        Long origenId = obtenerAlmacenOrigenSegunCategoria(insumo);
+        Long origenId = Optional.ofNullable(insumo)
+                .map(Producto::getCategoriaProducto)
+                .map(CategoriaProducto::getTipo)
+                .map(ALMACENES_ORIGEN_POR_CATEGORIA::get)
+                .map(func -> func.apply(catalogResolver))
+                .orElse(null);
 
         if (origenId == null || Objects.equals(origenId, preBodegaProduccionId)) {
             return List.of();
         }
 
         return List.of(origenId);
-    }
-
-    private Long obtenerAlmacenOrigenSegunCategoria(Producto insumo) {
-        if (insumo == null || insumo.getCategoriaProducto() == null ||
-                insumo.getCategoriaProducto().getTipo() == null) {
-            return null;
-        }
-
-        return switch (insumo.getCategoriaProducto().getTipo()) {
-            case MATERIA_PRIMA -> catalogResolver.getAlmacenMateriaPrimaId();
-            case MATERIAL_EMPAQUE -> catalogResolver.getAlmacenMaterialEmpaqueId();
-            case SUMINISTROS -> catalogResolver.getAlmacenSuministrosId();
-            default -> null;
-        };
     }
 
     private String generarCodigoLote(Producto producto) {

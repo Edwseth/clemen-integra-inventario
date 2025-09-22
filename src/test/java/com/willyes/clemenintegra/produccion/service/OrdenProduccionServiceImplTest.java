@@ -8,6 +8,8 @@ import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
@@ -51,6 +53,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -132,9 +135,9 @@ class OrdenProduccionServiceImplTest {
 
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
         switch (tipoCategoria) {
-            case MATERIA_PRIMA -> when(catalogResolver.getAlmacenMateriaPrimaId()).thenReturn(almacenOrigenId);
-            case MATERIAL_EMPAQUE -> when(catalogResolver.getAlmacenMaterialEmpaqueId()).thenReturn(almacenOrigenId);
-            case SUMINISTROS -> when(catalogResolver.getAlmacenSuministrosId()).thenReturn(almacenOrigenId);
+            case MATERIA_PRIMA -> when(catalogResolver.getAlmacenOrigenMateriaPrimaId()).thenReturn(almacenOrigenId);
+            case MATERIAL_EMPAQUE -> when(catalogResolver.getAlmacenOrigenMaterialEmpaqueId()).thenReturn(almacenOrigenId);
+            case SUMINISTROS -> when(catalogResolver.getAlmacenOrigenSuministrosId()).thenReturn(almacenOrigenId);
         }
 
         Producto productoFinal = new Producto();
@@ -186,12 +189,109 @@ class OrdenProduccionServiceImplTest {
         verifyNoInteractions(solicitudMovimientoService);
     }
 
+    @ParameterizedTest(name = "reserva insumos desde almacén configurado para {0}")
+    @MethodSource("categoriasInsumoOrigen")
+    void reservarInsumosParaOP_reservaDesdeAlmacenConfigurado(TipoCategoria tipoCategoria) {
+        Long ordenId = 7L;
+        Long almacenOrigenId = switch (tipoCategoria) {
+            case MATERIA_PRIMA -> 30L;
+            case MATERIAL_EMPAQUE -> 31L;
+            case SUMINISTROS -> 32L;
+            default -> throw new IllegalArgumentException("Tipo de categoría no soportado: " + tipoCategoria);
+        };
+
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(99L);
+        switch (tipoCategoria) {
+            case MATERIA_PRIMA -> when(catalogResolver.getAlmacenOrigenMateriaPrimaId()).thenReturn(almacenOrigenId);
+            case MATERIAL_EMPAQUE -> when(catalogResolver.getAlmacenOrigenMaterialEmpaqueId()).thenReturn(almacenOrigenId);
+            case SUMINISTROS -> when(catalogResolver.getAlmacenOrigenSuministrosId()).thenReturn(almacenOrigenId);
+        }
+
+        Producto productoFinal = new Producto();
+        productoFinal.setId(100);
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(ordenId);
+        orden.setProducto(productoFinal);
+        orden.setCantidadProgramada(new BigDecimal("2"));
+
+        Producto insumo = new Producto();
+        insumo.setId(200);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(tipoCategoria);
+        insumo.setCategoriaProducto(categoria);
+        DetalleFormula detalle = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(BigDecimal.ONE)
+                .build();
+
+        FormulaProducto formula = FormulaProducto.builder()
+                .detalles(List.of(detalle))
+                .build();
+
+        when(repository.findById(ordenId)).thenReturn(Optional.of(orden));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(productoFinal.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        Usuario usuario = new Usuario();
+        usuario.setId(50L);
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(5L);
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(Optional.of(motivo));
+
+        Long tipoDetalleSalidaId = 90L;
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(tipoDetalleSalidaId);
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(tipoDetalleSalidaId);
+        when(tipoMovimientoDetalleRepository.findById(tipoDetalleSalidaId)).thenReturn(Optional.of(tipoDetalle));
+
+        when(loteProductoRepository.findFefoDisponibles(insumo.getId().longValue(), Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        new TestLoteFefoDisponibleProjection(999L, new BigDecimal("10"), almacenOrigenId.intValue()),
+                        new TestLoteFefoDisponibleProjection(998L, new BigDecimal("10"), 321)));
+
+        SolicitudMovimientoResponseDTO respuesta = SolicitudMovimientoResponseDTO.builder()
+                .id(400L)
+                .build();
+        when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
+                .thenReturn(respuesta);
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(respuesta.getId());
+        solicitud.setDetalles(new ArrayList<>());
+        when(solicitudMovimientoRepository.findById(respuesta.getId())).thenReturn(Optional.of(solicitud));
+        when(solicitudMovimientoRepository.saveAndFlush(any(SolicitudMovimiento.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.reservarInsumosParaOP(ordenId);
+
+        ArgumentCaptor<SolicitudMovimiento> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimiento.class);
+        verify(solicitudMovimientoRepository).saveAndFlush(solicitudCaptor.capture());
+
+        SolicitudMovimiento guardada = solicitudCaptor.getValue();
+        assertThat(guardada.getDetalles()).hasSize(1);
+        assertThat(guardada.getDetalles().get(0).getAlmacenOrigen()).isNotNull();
+        assertThat(guardada.getDetalles().get(0).getAlmacenOrigen().getId())
+                .isEqualTo(almacenOrigenId);
+
+        switch (tipoCategoria) {
+            case MATERIA_PRIMA -> verify(catalogResolver).getAlmacenOrigenMateriaPrimaId();
+            case MATERIAL_EMPAQUE -> verify(catalogResolver).getAlmacenOrigenMaterialEmpaqueId();
+            case SUMINISTROS -> verify(catalogResolver).getAlmacenOrigenSuministrosId();
+        }
+
+        verify(reservaLoteService).sincronizarReservasSolicitud(solicitud);
+    }
+
     @Test
     void reservarInsumosParaOP_noReservaLotesDePreBodega() {
         Long ordenId = 7L;
         Long almacenMaterialEmpaqueId = 10L;
         Long preBodegaId = 20L;
-        when(catalogResolver.getAlmacenMaterialEmpaqueId()).thenReturn(almacenMaterialEmpaqueId);
+        when(catalogResolver.getAlmacenOrigenMaterialEmpaqueId()).thenReturn(almacenMaterialEmpaqueId);
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
 
         Producto productoFinal = new Producto();

@@ -104,9 +104,13 @@ public class InventoryCatalogResolver {
     public Long getAlmacenPtId() { return almacenPtId; }
     public Long getAlmacenCuarentenaId() { return almacenCuarentenaId; }
     public Long getAlmacenObsoletosId() { return almacenObsoletosId; }
-    public Long getAlmacenMateriaPrimaId() { return almacenMateriaPrimaId; }
-    public Long getAlmacenMaterialEmpaqueId() { return almacenMaterialEmpaqueId; }
-    public Long getAlmacenSuministrosId() { return almacenSuministrosId; }
+    public Long getAlmacenOrigenMateriaPrimaId() { return almacenMateriaPrimaId; }
+    public Long getAlmacenOrigenMaterialEmpaqueId() { return almacenMaterialEmpaqueId; }
+    public Long getAlmacenOrigenSuministrosId() { return almacenSuministrosId; }
+
+    public Long getAlmacenMateriaPrimaId() { return getAlmacenOrigenMateriaPrimaId(); }
+    public Long getAlmacenMaterialEmpaqueId() { return getAlmacenOrigenMaterialEmpaqueId(); }
+    public Long getAlmacenSuministrosId() { return getAlmacenOrigenSuministrosId(); }
     public Long getAlmacenPreBodegaProduccionId() { return almacenPreBodegaProduccionId; }
 
     public Long getMotivoIdEntradaProductoTerminado() { return motivoEntradaPtId; }
