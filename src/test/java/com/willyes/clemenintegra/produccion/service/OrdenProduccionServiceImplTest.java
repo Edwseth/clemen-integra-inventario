@@ -1,0 +1,246 @@
+package com.willyes.clemenintegra.produccion.service;
+
+import com.willyes.clemenintegra.bom.model.DetalleFormula;
+import com.willyes.clemenintegra.bom.model.FormulaProducto;
+import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
+import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
+import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
+import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
+import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
+import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
+import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
+import com.willyes.clemenintegra.inventario.service.StockQueryService;
+import com.willyes.clemenintegra.inventario.service.UmValidator;
+import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.service.UsuarioService;
+import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
+import com.willyes.clemenintegra.inventario.service.UnidadConversionService;
+import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class OrdenProduccionServiceImplTest {
+
+    @Mock
+    private FormulaProductoRepository formulaProductoRepository;
+    @Mock
+    private ProductoRepository productoRepository;
+    @Mock
+    private StockQueryService stockQueryService;
+    @Mock
+    private UsuarioRepository usuarioRepository;
+    @Mock
+    private SolicitudMovimientoService solicitudMovimientoService;
+    @Mock
+    private OrdenProduccionRepository repository;
+    @Mock
+    private MotivoMovimientoRepository motivoMovimientoRepository;
+    @Mock
+    private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
+    @Mock
+    private CierreProduccionRepository cierreProduccionRepository;
+    @Mock
+    private MovimientoInventarioService movimientoInventarioService;
+    @Mock
+    private LoteProductoRepository loteProductoRepository;
+    @Mock
+    private AlmacenRepository almacenRepository;
+    @Mock
+    private UnidadConversionService unidadConversionService;
+    @Mock
+    private EtapaProduccionRepository etapaProduccionRepository;
+    @Mock
+    private EtapaPlantillaRepository etapaPlantillaRepository;
+    @Mock
+    private MovimientoInventarioRepository movimientoInventarioRepository;
+    @Mock
+    private MovimientoInventarioMapper movimientoInventarioMapper;
+    @Mock
+    private UsuarioService usuarioService;
+    @Mock
+    private SolicitudMovimientoRepository solicitudMovimientoRepository;
+    @Mock
+    private InventoryCatalogResolver catalogResolver;
+    @Mock
+    private UmValidator umValidator;
+    @Mock
+    private VidaUtilProductoRepository vidaUtilProductoRepository;
+    @Mock
+    private ReservaLoteService reservaLoteService;
+
+    @InjectMocks
+    private OrdenProduccionServiceImpl service;
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void guardarConValidacionStock_rechazaCuandoSoloHayStockEnPreBodega() {
+        Long bodegaPrincipalId = 10L;
+        Long preBodegaId = 20L;
+        when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(bodegaPrincipalId);
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
+
+        Producto productoFinal = new Producto();
+        productoFinal.setId(1);
+        productoFinal.setNombre("Producto terminado");
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setProducto(productoFinal);
+        orden.setCantidadProgramada(new BigDecimal("5"));
+
+        Producto insumo = new Producto();
+        insumo.setId(2);
+        insumo.setNombre("Insumo base");
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("kg");
+        insumo.setUnidadMedida(unidad);
+
+        DetalleFormula detalle = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(new BigDecimal("2"))
+                .build();
+
+        FormulaProducto formula = FormulaProducto.builder()
+                .detalles(List.of(detalle))
+                .build();
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(productoFinal.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(any())).thenReturn(List.of(insumo));
+        when(stockQueryService.obtenerStockDisponible(anyList(), anyList()))
+                .thenReturn(Map.of(insumo.getId().longValue(), BigDecimal.ZERO));
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertThat(resultado.isEsValida()).isFalse();
+        assertThat(resultado.getInsumosFaltantes())
+                .extracting(InsumoFaltanteDTO::getProductoId)
+                .containsExactly(insumo.getId().longValue());
+
+        ArgumentCaptor<List<Long>> productosCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<Long>> almacenesCaptor = ArgumentCaptor.forClass(List.class);
+        verify(stockQueryService).obtenerStockDisponible(productosCaptor.capture(), almacenesCaptor.capture());
+        assertThat(productosCaptor.getValue()).containsExactly(insumo.getId().longValue());
+        assertThat(almacenesCaptor.getValue()).containsExactly(bodegaPrincipalId);
+
+        verifyNoInteractions(solicitudMovimientoService);
+    }
+
+    @Test
+    void reservarInsumosParaOP_noReservaLotesDePreBodega() {
+        Long ordenId = 7L;
+        Long bodegaPrincipalId = 10L;
+        Long preBodegaId = 20L;
+        when(catalogResolver.getAlmacenBodegaPrincipalId()).thenReturn(bodegaPrincipalId);
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
+
+        Producto productoFinal = new Producto();
+        productoFinal.setId(100);
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(ordenId);
+        orden.setProducto(productoFinal);
+        orden.setCantidadProgramada(new BigDecimal("3"));
+
+        Producto insumo = new Producto();
+        insumo.setId(200);
+        DetalleFormula detalle = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(BigDecimal.ONE)
+                .build();
+
+        FormulaProducto formula = FormulaProducto.builder()
+                .detalles(List.of(detalle))
+                .build();
+
+        when(repository.findById(ordenId)).thenReturn(Optional.of(orden));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(productoFinal.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        Usuario usuario = new Usuario();
+        usuario.setId(50L);
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(5L);
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(Optional.of(motivo));
+
+        Long tipoDetalleSalidaId = 90L;
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(tipoDetalleSalidaId);
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(tipoDetalleSalidaId);
+        when(tipoMovimientoDetalleRepository.findById(tipoDetalleSalidaId)).thenReturn(Optional.of(tipoDetalle));
+
+        when(loteProductoRepository.findFefoDisponibles(insumo.getId().longValue(), Integer.MAX_VALUE))
+                .thenReturn(List.of(new TestLoteFefoDisponibleProjection(999L, new BigDecimal("3"), preBodegaId.intValue())));
+
+        assertThatThrownBy(() -> service.reservarInsumosParaOP(ordenId))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+
+        verifyNoInteractions(solicitudMovimientoService);
+        verify(reservaLoteService, never()).sincronizarReservasSolicitud(any(SolicitudMovimiento.class));
+    }
+
+    private record TestLoteFefoDisponibleProjection(Long loteProductoId,
+                                                    BigDecimal stockLote,
+                                                    Integer almacenId) implements LoteFefoDisponibleProjection {
+        @Override
+        public String getCodigoLote() {
+            return "LOT-" + loteProductoId;
+        }
+
+        @Override
+        public LocalDateTime getFechaVencimiento() {
+            return null;
+        }
+
+        @Override
+        public String getNombreAlmacen() {
+            return null;
+        }
+    }
+}

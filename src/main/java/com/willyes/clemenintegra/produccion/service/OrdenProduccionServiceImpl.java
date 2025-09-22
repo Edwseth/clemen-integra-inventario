@@ -82,6 +82,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Arrays;
+import java.util.Objects;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -134,11 +135,28 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return prefijo + "-" + String.format("%02d", contador + 1);
     }
 
+    /**
+     * Obtiene los almacenes habilitados para consumir insumos desde producción.
+     * <p>
+     * Actualmente solo se permite consumir desde la bodega principal configurada
+     * para producción. La pre-bodega de producción se excluye de manera explícita
+     * porque su stock está reservado para las transferencias de salida y no debe
+     * afectar la validación ni la reserva FEFO de insumos.
+     * </p>
+     */
     private List<Long> obtenerAlmacenesOrigen(Producto insumo) {
-        return List.of(
-                catalogResolver.getAlmacenBodegaPrincipalId(),
-                catalogResolver.getAlmacenPreBodegaProduccionId()
-        );
+        Long bodegaPrincipalId = catalogResolver.getAlmacenBodegaPrincipalId();
+        Long preBodegaProduccionId = catalogResolver.getAlmacenPreBodegaProduccionId();
+
+        if (bodegaPrincipalId == null) {
+            return List.of();
+        }
+
+        if (Objects.equals(bodegaPrincipalId, preBodegaProduccionId)) {
+            return List.of();
+        }
+
+        return List.of(bodegaPrincipalId);
     }
 
     private String generarCodigoLote(Producto producto) {
@@ -254,9 +272,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             cantidadesEscaladas.put(insumoId, cantidadRequerida);
 
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
-            BigDecimal stockDisponible = stockQueryService
-                    .obtenerStockDisponible(List.of(insumoId), almacenesValidos)
-                    .getOrDefault(insumoId, BigDecimal.ZERO);
+            BigDecimal stockDisponible = BigDecimal.ZERO;
+            if (!almacenesValidos.isEmpty()) {
+                stockDisponible = stockQueryService
+                        .obtenerStockDisponible(List.of(insumoId), almacenesValidos)
+                        .getOrDefault(insumoId, BigDecimal.ZERO);
+            }
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
@@ -756,9 +777,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal restante = requerida;
 
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
+            if (almacenesValidos.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "STOCK_INSUFICIENTE: faltan " + restante);
+            }
+
             List<LoteFefoDisponibleProjection> lotes = loteProductoRepository.findFefoDisponibles(insumoId, Integer.MAX_VALUE)
                     .stream()
-                    .filter(l -> almacenesValidos.isEmpty() || (l.getAlmacenId() != null && almacenesValidos.contains(l.getAlmacenId().longValue())))
+                    .filter(l -> l.getAlmacenId() != null && almacenesValidos.contains(l.getAlmacenId().longValue()))
                     .toList();
 
             if (lotes.isEmpty()) {
