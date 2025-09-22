@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -49,6 +51,7 @@ public class MovimientoInventarioController {
     private final LoteProductoRepository loteRepo;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
     private final StockQueryService stockQueryService;
+    private final InventoryCatalogResolver inventoryCatalogResolver;
 
     @Operation(summary = "Registrar un movimiento de inventario")
     @ApiResponse(responseCode = "201", description = "Movimiento registrado correctamente")
@@ -76,14 +79,39 @@ public class MovimientoInventarioController {
                 LoteProducto lote = loteRepo.findById(dto.loteProductoId())
                         .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
+                List<Long> almacenesFiltrados = new ArrayList<>();
+                Long preBodegaId = inventoryCatalogResolver.getAlmacenPreBodegaProduccionId();
+
+                if (dto.almacenOrigenId() != null) {
+                    almacenesFiltrados.add(dto.almacenOrigenId().longValue());
+                }
+
                 if (dto.solicitudMovimientoId() != null) {
                     solicitudMovimiento = solicitudMovimientoRepository
                             .findWithDetalles(dto.solicitudMovimientoId())
                             .orElse(null);
+                    if (solicitudMovimiento != null
+                            && solicitudMovimiento.getAlmacenOrigen() != null
+                            && solicitudMovimiento.getAlmacenOrigen().getId() != null) {
+                        almacenesFiltrados.add(solicitudMovimiento.getAlmacenOrigen().getId().longValue());
+                    }
+                }
+
+                if (preBodegaId != null) {
+                    almacenesFiltrados.removeIf(id -> Objects.equals(id, preBodegaId));
+                }
+
+                if (almacenesFiltrados.isEmpty()) {
+                    return ResponseEntity
+                            .status(HttpStatus.CONFLICT)
+                            .body(Map.of("message", "No hay suficiente stock disponible"));
                 }
 
                 BigDecimal cant = dto.cantidad();
-                BigDecimal stockProd = stockQueryService.obtenerStockDisponible(prod.getId().longValue());
+                Long productoId = prod.getId().longValue();
+                BigDecimal stockProd = stockQueryService
+                        .obtenerStockDisponible(List.of(productoId), almacenesFiltrados)
+                        .getOrDefault(productoId, BigDecimal.ZERO);
                 BigDecimal stockActualLote = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
                 BigDecimal stockReservado = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO);
                 BigDecimal stockDisponibleLote = stockActualLote.subtract(stockReservado);
