@@ -443,7 +443,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     ) {
         entityManager.lock(solicitud, LockModeType.PESSIMISTIC_WRITE);
 
-        List<AtencionDTO> atenciones = obtenerAtencionesParaSolicitud(dto);
+        List<AtencionDTO> atenciones = obtenerAtencionesParaSolicitud(dto, solicitud);
         if (atenciones.isEmpty()) {
             actualizarEstadoSolicitud(solicitud);
             solicitudMovimientoRepository.saveAndFlush(solicitud);
@@ -507,7 +507,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return construirRespuestaSolicitud(solicitud);
     }
 
-    private List<AtencionDTO> obtenerAtencionesParaSolicitud(MovimientoInventarioDTO dto) {
+    private List<AtencionDTO> obtenerAtencionesParaSolicitud(MovimientoInventarioDTO dto, SolicitudMovimiento solicitud) {
         List<AtencionDTO> atenciones = dto.atenciones() != null
                 ? dto.atenciones().stream().filter(Objects::nonNull).collect(Collectors.toList())
                 : List.of();
@@ -516,14 +516,93 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return atenciones;
         }
 
-        if (dto.solicitudMovimientoId() != null && dto.loteProductoId() != null && dto.cantidad() != null) {
-            AtencionDTO fallback = new AtencionDTO();
-            fallback.setLoteId(dto.loteProductoId());
-            fallback.setCantidad(dto.cantidad());
-            fallback.setAlmacenOrigenId(dto.almacenOrigenId());
-            fallback.setAlmacenDestinoId(dto.almacenDestinoId());
-            log.debug("SOLICITUD usando fallback de atenciones para lote {}", dto.loteProductoId());
-            return List.of(fallback);
+        if (dto.solicitudMovimientoId() == null || solicitud == null) {
+            return List.of();
+        }
+
+        List<SolicitudMovimientoDetalle> detalles = Optional.ofNullable(solicitud.getDetalles()).orElse(List.of());
+        if (detalles.isEmpty()) {
+            return List.of();
+        }
+
+        Long loteObjetivo = dto.loteProductoId();
+        if (loteObjetivo == null && solicitud.getLote() != null) {
+            loteObjetivo = solicitud.getLote().getId();
+        }
+
+        BigDecimal restanteTotal = dto.cantidad() != null
+                ? dto.cantidad().setScale(6, RoundingMode.HALF_UP)
+                : null;
+        BigDecimal cero = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+
+        List<AtencionDTO> generadas = new ArrayList<>();
+        for (SolicitudMovimientoDetalle detalle : detalles) {
+            if (detalle == null) {
+                continue;
+            }
+
+            EstadoSolicitudMovimientoDetalle estadoDetalle = detalle.getEstado();
+            if (estadoDetalle != EstadoSolicitudMovimientoDetalle.PENDIENTE
+                    && estadoDetalle != EstadoSolicitudMovimientoDetalle.PARCIAL) {
+                continue;
+            }
+
+            Long detalleLoteId = detalle.getLote() != null ? detalle.getLote().getId() : null;
+            if (loteObjetivo != null && !Objects.equals(loteObjetivo, detalleLoteId)) {
+                continue;
+            }
+
+            if (restanteTotal != null && restanteTotal.compareTo(cero) <= 0) {
+                break;
+            }
+
+            BigDecimal solicitada = Optional.ofNullable(detalle.getCantidad())
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal atendida = Optional.ofNullable(detalle.getCantidadAtendida())
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal pendiente = solicitada.subtract(atendida);
+            if (pendiente.compareTo(BigDecimal.ZERO) < 0) {
+                pendiente = BigDecimal.ZERO;
+            }
+            pendiente = pendiente.setScale(6, RoundingMode.HALF_UP);
+            if (pendiente.compareTo(cero) <= 0) {
+                continue;
+            }
+
+            BigDecimal cantidadAtencion = pendiente;
+            if (restanteTotal != null && cantidadAtencion.compareTo(restanteTotal) > 0) {
+                cantidadAtencion = restanteTotal;
+            }
+            cantidadAtencion = cantidadAtencion.setScale(6, RoundingMode.HALF_UP);
+            if (cantidadAtencion.compareTo(cero) <= 0) {
+                continue;
+            }
+
+            AtencionDTO generado = new AtencionDTO();
+            generado.setDetalleId(detalle.getId());
+            generado.setLoteId(detalleLoteId != null ? detalleLoteId : loteObjetivo);
+            generado.setCantidad(cantidadAtencion);
+            generado.setAlmacenOrigenId(detalle.getAlmacenOrigen() != null
+                    ? detalle.getAlmacenOrigen().getId()
+                    : dto.almacenOrigenId());
+            generado.setAlmacenDestinoId(detalle.getAlmacenDestino() != null
+                    ? detalle.getAlmacenDestino().getId()
+                    : dto.almacenDestinoId());
+            generadas.add(generado);
+
+            if (restanteTotal != null) {
+                restanteTotal = restanteTotal.subtract(cantidadAtencion).setScale(6, RoundingMode.HALF_UP);
+                if (restanteTotal.compareTo(cero) < 0) {
+                    restanteTotal = cero;
+                }
+            }
+        }
+
+        if (!generadas.isEmpty()) {
+            log.debug("SOLICITUD atenciones generadas automaticamente: {}", generadas.size());
+            return generadas;
         }
         return List.of();
     }
