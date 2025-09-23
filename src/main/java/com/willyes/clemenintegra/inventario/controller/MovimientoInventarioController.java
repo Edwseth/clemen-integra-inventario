@@ -34,11 +34,13 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Objects;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/movimientos")
@@ -99,6 +101,29 @@ public class MovimientoInventarioController {
 
                 if (preBodegaId != null) {
                     almacenesFiltrados.removeIf(id -> Objects.equals(id, preBodegaId));
+                }
+
+                if (almacenesFiltrados.isEmpty() && solicitudMovimiento != null) {
+                    Set<Long> almacenesDesdeDetalles = new LinkedHashSet<>();
+                    if (solicitudMovimiento.getDetalles() != null) {
+                        for (SolicitudMovimientoDetalle detalle : solicitudMovimiento.getDetalles()) {
+                            if (detalle != null
+                                    && detalle.getAlmacenOrigen() != null
+                                    && detalle.getAlmacenOrigen().getId() != null) {
+                                almacenesDesdeDetalles.add(detalle.getAlmacenOrigen().getId().longValue());
+                            }
+                        }
+                    }
+                    if (preBodegaId != null) {
+                        almacenesDesdeDetalles.removeIf(id -> Objects.equals(id, preBodegaId));
+                    }
+                    if (!almacenesDesdeDetalles.isEmpty()) {
+                        almacenesFiltrados.addAll(almacenesDesdeDetalles);
+                    }
+                }
+
+                if (!almacenesFiltrados.isEmpty()) {
+                    almacenesFiltrados = new ArrayList<>(new LinkedHashSet<>(almacenesFiltrados));
                 }
 
                 if (almacenesFiltrados.isEmpty()) {
