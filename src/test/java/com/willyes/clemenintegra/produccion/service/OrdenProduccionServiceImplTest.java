@@ -30,6 +30,7 @@ import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import com.willyes.clemenintegra.inventario.service.UmValidator;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
@@ -47,6 +48,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -62,11 +64,15 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doNothing;
 
 @ExtendWith(MockitoExtension.class)
 class OrdenProduccionServiceImplTest {
@@ -118,6 +124,7 @@ class OrdenProduccionServiceImplTest {
     @Mock
     private ReservaLoteService reservaLoteService;
 
+    @Spy
     @InjectMocks
     private OrdenProduccionServiceImpl service;
 
@@ -172,6 +179,8 @@ class OrdenProduccionServiceImplTest {
         when(productoRepository.findAllById(any())).thenReturn(List.of(insumo));
         when(stockQueryService.obtenerStockDisponible(anyList(), anyList()))
                 .thenReturn(Map.of(insumo.getId().longValue(), BigDecimal.ZERO));
+        when(stockQueryService.obtenerStockDisponible(anyList()))
+                .thenReturn(Map.of(insumo.getId().longValue(), BigDecimal.ZERO));
 
         ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
 
@@ -185,6 +194,7 @@ class OrdenProduccionServiceImplTest {
         verify(stockQueryService).obtenerStockDisponible(productosCaptor.capture(), almacenesCaptor.capture());
         assertThat(productosCaptor.getValue()).containsExactly(insumo.getId().longValue());
         assertThat(almacenesCaptor.getValue()).containsExactly(almacenOrigenId);
+        verify(stockQueryService).obtenerStockDisponible(eq(List.of(insumo.getId().longValue())));
 
         verifyNoInteractions(solicitudMovimientoService);
     }
@@ -242,6 +252,93 @@ class OrdenProduccionServiceImplTest {
         assertThat(almacenesCaptor.getValue()).isEmpty();
 
         verifyNoInteractions(solicitudMovimientoService);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void guardarConValidacionStock_validaConFallbackCuandoStockFueraDeAlmacen() {
+        Long preBodegaId = 20L;
+        Long almacenOrigenId = 10L;
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
+        when(catalogResolver.getAlmacenOrigenMateriaPrimaId()).thenReturn(almacenOrigenId);
+
+        Producto productoFinal = new Producto();
+        productoFinal.setId(1);
+        productoFinal.setNombre("Producto final");
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(100L);
+        orden.setCodigoOrden("OP-EXISTENTE");
+        orden.setProducto(productoFinal);
+        orden.setCantidadProgramada(new BigDecimal("5"));
+        orden.setCantidadProducida(BigDecimal.ZERO);
+        orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
+        orden.setEstado(EstadoProduccion.CREADA);
+
+        Usuario responsable = new Usuario();
+        responsable.setId(50L);
+        responsable.setNombreCompleto("Responsable OP");
+        orden.setResponsable(responsable);
+
+        Producto insumo = new Producto();
+        insumo.setId(2);
+        insumo.setNombre("Insumo externo");
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("kg");
+        insumo.setUnidadMedida(unidad);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.MATERIA_PRIMA);
+        insumo.setCategoriaProducto(categoria);
+
+        DetalleFormula detalle = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(new BigDecimal("2"))
+                .build();
+
+        FormulaProducto formula = FormulaProducto.builder()
+                .detalles(List.of(detalle))
+                .build();
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(productoFinal.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(any())).thenReturn(List.of(insumo));
+        when(stockQueryService.obtenerStockDisponible(anyList(), anyList()))
+                .thenReturn(Map.of(insumo.getId().longValue(), BigDecimal.ZERO));
+        when(stockQueryService.obtenerStockDisponible(anyList()))
+                .thenReturn(Map.of(insumo.getId().longValue(), new BigDecimal("15")));
+
+        when(repository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaPlantillaRepository.findByProductoIdAndActivoTrueOrderBySecuenciaAsc(anyInt()))
+                .thenReturn(List.of());
+        doNothing().when(service).reservarInsumosParaOP(anyLong());
+
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(5L);
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION))
+                .thenReturn(Optional.of(motivo));
+
+        Long tipoDetalleId = 30L;
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(tipoDetalleId);
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(tipoDetalleId);
+        when(tipoMovimientoDetalleRepository.findById(tipoDetalleId)).thenReturn(Optional.of(tipoDetalle));
+
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
+        when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().build());
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertThat(resultado.isEsValida()).isTrue();
+        assertThat(resultado.getInsumosFaltantes()).isNull();
+        assertThat(resultado.getOrden()).isNotNull();
+
+        verify(stockQueryService).obtenerStockDisponible(eq(List.of(insumo.getId().longValue())), eq(List.of(almacenOrigenId)));
+        verify(stockQueryService).obtenerStockDisponible(eq(List.of(insumo.getId().longValue())));
+
+        ArgumentCaptor<SolicitudMovimientoRequestDTO> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
+        verify(solicitudMovimientoService).registrarSolicitud(solicitudCaptor.capture());
+        assertThat(solicitudCaptor.getValue().getCantidad()).isEqualByComparingTo(new BigDecimal("10"));
     }
 
     @ParameterizedTest(name = "reserva insumos desde almacén configurado para {0}")

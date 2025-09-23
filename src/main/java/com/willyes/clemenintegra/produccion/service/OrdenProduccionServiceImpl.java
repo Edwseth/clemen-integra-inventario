@@ -293,6 +293,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                             almacenesValidos.isEmpty() ? Collections.emptyList() : almacenesValidos)
                     .getOrDefault(insumoId, BigDecimal.ZERO);
 
+            if (!almacenesValidos.isEmpty() && stockDisponible.compareTo(BigDecimal.ZERO) == 0) {
+                BigDecimal stockGlobal = stockQueryService
+                        .obtenerStockDisponible(List.of(insumoId))
+                        .getOrDefault(insumoId, BigDecimal.ZERO);
+                stockDisponible = stockGlobal;
+                log.info("OP-validacion fallback stock insumo={} almacenes={} stockGlobal={}",
+                        insumoId, almacenesValidos, stockDisponible);
+            }
+
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
                 producibleConEste = stockDisponible.divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
