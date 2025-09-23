@@ -16,6 +16,10 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
+import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -984,13 +988,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
 
     private List<MovimientoLoteDetalle> procesarMovimientoConLoteExistente(MovimientoInventarioDTO dto,
-                                                                          TipoMovimiento tipo,
-                                                                          Almacen origen,
-                                                                          Almacen destino,
-                                                                          Producto producto,
-                                                                          BigDecimal cantidad,
-                                                                          boolean devolucionInterna,
-                                                                          SolicitudMovimiento solicitud) {
+                                                                           TipoMovimiento tipo,
+                                                                           Almacen origen,
+                                                                           Almacen destino,
+                                                                           Producto producto,
+                                                                           BigDecimal cantidad,
+                                                                           boolean devolucionInterna,
+                                                                           SolicitudMovimiento solicitud) {
         if (dto.loteProductoId() == null) {
             log.warn(
                     "procesarMovimientoConLoteExistente: falta loteProductoId tipo={} productoId={} origenId={} destinoId={} cantidad={}",
@@ -1027,8 +1031,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Almacen almacenOrigen = origen != null
                 ? origen
                 : (dto.almacenOrigenId() != null
-                        ? entityManager.getReference(Almacen.class, dto.almacenOrigenId())
-                        : null);
+                ? entityManager.getReference(Almacen.class, dto.almacenOrigenId())
+                : null);
 
         boolean esDevolucionInternaCalculada =
                 dto.tipoMovimiento() == TipoMovimiento.DEVOLUCION
@@ -1570,3 +1574,4 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
 }
+
