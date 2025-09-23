@@ -76,6 +76,7 @@ import org.springframework.http.ProblemDetail;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -279,12 +280,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             cantidadesEscaladas.put(insumoId, cantidadRequerida);
 
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
-            BigDecimal stockDisponible = BigDecimal.ZERO;
-            if (!almacenesValidos.isEmpty()) {
-                stockDisponible = stockQueryService
-                        .obtenerStockDisponible(List.of(insumoId), almacenesValidos)
-                        .getOrDefault(insumoId, BigDecimal.ZERO);
+            if (almacenesValidos.isEmpty()) {
+                TipoCategoria tipoCategoria = Optional.ofNullable(productoInsumo.getCategoriaProducto())
+                        .map(CategoriaProducto::getTipo)
+                        .orElse(null);
+                log.warn("No se encontraron almacenes de origen configurados para insumo {} (categoría: {})",
+                        insumoId, tipoCategoria);
             }
+
+            BigDecimal stockDisponible = stockQueryService
+                    .obtenerStockDisponible(List.of(insumoId),
+                            almacenesValidos.isEmpty() ? Collections.emptyList() : almacenesValidos)
+                    .getOrDefault(insumoId, BigDecimal.ZERO);
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
