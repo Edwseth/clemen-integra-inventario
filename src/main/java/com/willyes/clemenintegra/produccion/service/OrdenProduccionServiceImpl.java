@@ -361,6 +361,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();
             BigDecimal cantidad = cantidadesEscaladas.get(insumoId);
+            List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
+            List<LoteFefoDisponibleProjection> lotesSeleccionados = seleccionarLotesFefo(
+                    guardada.getId(), insumoId, cantidad, almacenesValidos);
+
             SolicitudMovimientoRequestDTO req = SolicitudMovimientoRequestDTO.builder()
                     .tipoMovimiento(TipoMovimiento.TRANSFERENCIA)
                     .productoId(insumoId)
@@ -371,7 +375,58 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .tipoMovimientoDetalleId(tipoDetalleId)
                     .almacenDestinoId(catalogResolver.getAlmacenPreBodegaProduccionId())
                     .build();
-            solicitudMovimientoService.registrarSolicitud(req);
+
+            SolicitudMovimientoResponseDTO respuestaSolicitud = solicitudMovimientoService.registrarSolicitud(req);
+            Long solicitudId = Optional.ofNullable(respuestaSolicitud)
+                    .map(SolicitudMovimientoResponseDTO::getId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA"));
+
+            SolicitudMovimiento solicitud = solicitudMovimientoRepository.findById(solicitudId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA"));
+
+            solicitud.setLote(null);
+            solicitud.setAlmacenOrigen(null);
+
+            List<SolicitudMovimientoDetalle> detallesSolicitud = solicitud.getDetalles();
+            if (detallesSolicitud == null) {
+                detallesSolicitud = new ArrayList<>();
+                solicitud.setDetalles(detallesSolicitud);
+            } else {
+                detallesSolicitud.clear();
+            }
+
+            BigDecimal restante = cantidad;
+
+            for (LoteFefoDisponibleProjection lote : lotesSeleccionados) {
+                if (restante.compareTo(BigDecimal.ZERO) <= 0) {
+                    break;
+                }
+
+                BigDecimal disponible = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+                BigDecimal usar = disponible.min(restante);
+                if (usar.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+
+                SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
+                        .solicitudMovimiento(solicitud)
+                        .lote(new LoteProducto(lote.getLoteProductoId()))
+                        .cantidad(usar)
+                        .almacenOrigen(lote.getAlmacenId() != null ? new Almacen(lote.getAlmacenId()) : null)
+                        .almacenDestino(solicitud.getAlmacenDestino())
+                        .build();
+                detallesSolicitud.add(detSolicitud);
+
+                restante = restante.subtract(usar);
+            }
+
+            if (restante.compareTo(BigDecimal.ZERO) > 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "STOCK_INSUFICIENTE: faltan " + restante);
+            }
+
+            solicitudMovimientoRepository.saveAndFlush(solicitud);
+            reservaLoteService.sincronizarReservasSolicitud(solicitud);
         }
 
         OrdenProduccionResponseDTO ordenResp = ProduccionMapper.toResponse(guardada);
@@ -775,6 +830,56 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
     }
 
+    private List<LoteFefoDisponibleProjection> seleccionarLotesFefo(Long ordenId, Long insumoId,
+            BigDecimal requerida, List<Long> almacenesValidos) {
+        List<LoteFefoDisponibleProjection> lotesDisponibles = loteProductoRepository
+                .findFefoDisponibles(insumoId, Integer.MAX_VALUE);
+
+        List<Long> almacenesPreferidos = almacenesValidos == null ? List.of() : almacenesValidos;
+        List<LoteFefoDisponibleProjection> lotesSeleccionados;
+        boolean usoFallback;
+        String motivoFallback = null;
+
+        if (almacenesPreferidos.isEmpty()) {
+            usoFallback = true;
+            lotesSeleccionados = lotesDisponibles;
+            motivoFallback = "SIN_ALMACEN_CONFIGURADO";
+        } else {
+            lotesSeleccionados = lotesDisponibles.stream()
+                    .filter(l -> l.getAlmacenId() != null && almacenesPreferidos.contains(l.getAlmacenId().longValue()))
+                    .toList();
+
+            BigDecimal cubierto = lotesSeleccionados.stream()
+                    .map(LoteFefoDisponibleProjection::getStockLote)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            usoFallback = lotesSeleccionados.isEmpty() || cubierto.compareTo(requerida) < 0;
+            if (usoFallback) {
+                lotesSeleccionados = lotesDisponibles;
+                motivoFallback = "STOCK_NO_DISPONIBLE_EN_ORIGEN";
+            }
+        }
+
+        if (usoFallback) {
+            log.info("OP-reserva fallback FEFO ordenId={}, insumoId={}, requerida={}, motivo={}, almacenesPreferidos={}",
+                    ordenId, insumoId, requerida, motivoFallback, almacenesPreferidos);
+        }
+
+        if (lotesSeleccionados.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "STOCK_INSUFICIENTE: faltan " + requerida);
+        }
+
+        Long primerLoteId = lotesSeleccionados.get(0).getLoteProductoId();
+        if (primerLoteId == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "STOCK_INSUFICIENTE: faltan " + requerida);
+        }
+
+        return lotesSeleccionados;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void reservarInsumosParaOP(Long ordenId) {
         OrdenProduccion orden = repository.findById(ordenId)
@@ -799,49 +904,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal requerida = insumo.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
 
-            List<LoteFefoDisponibleProjection> lotesDisponibles = loteProductoRepository
-                    .findFefoDisponibles(insumoId, Integer.MAX_VALUE);
-
-            List<LoteFefoDisponibleProjection> lotesSeleccionados;
-            boolean usoFallback;
-            String motivoFallback = null;
-
-            if (almacenesValidos.isEmpty()) {
-                usoFallback = true;
-                lotesSeleccionados = lotesDisponibles;
-                motivoFallback = "SIN_ALMACEN_CONFIGURADO";
-            } else {
-                lotesSeleccionados = lotesDisponibles.stream()
-                        .filter(l -> l.getAlmacenId() != null && almacenesValidos.contains(l.getAlmacenId().longValue()))
-                        .toList();
-
-                BigDecimal cubierto = lotesSeleccionados.stream()
-                        .map(LoteFefoDisponibleProjection::getStockLote)
-                        .filter(Objects::nonNull)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                usoFallback = lotesSeleccionados.isEmpty() || cubierto.compareTo(requerida) < 0;
-                if (usoFallback) {
-                    lotesSeleccionados = lotesDisponibles;
-                    motivoFallback = "STOCK_NO_DISPONIBLE_EN_ORIGEN";
-                }
-            }
-
-            if (usoFallback) {
-                log.info("OP-reserva fallback FEFO ordenId={}, insumoId={}, requerida={}, motivo={}, almacenesPreferidos={}",
-                        ordenId, insumoId, requerida, motivoFallback, almacenesValidos);
-            }
-
-            if (lotesSeleccionados.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                        "STOCK_INSUFICIENTE: faltan " + requerida);
-            }
+            List<LoteFefoDisponibleProjection> lotesSeleccionados = seleccionarLotesFefo(
+                    ordenId, insumoId, requerida, almacenesValidos);
 
             Long primerLoteId = lotesSeleccionados.get(0).getLoteProductoId();
-            if (primerLoteId == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                        "STOCK_INSUFICIENTE: faltan " + requerida);
-            }
 
             SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()
                     .tipoMovimiento(TipoMovimiento.SALIDA)
