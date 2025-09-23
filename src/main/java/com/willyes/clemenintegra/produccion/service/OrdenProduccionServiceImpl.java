@@ -811,6 +811,20 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
 
+        // Idempotencia: si ya existen solicitudes SALIDA pendientes para esta OP, no recrear
+        List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
+        List<SolicitudMovimiento> yaPendientes = Optional.ofNullable(
+                solicitudMovimientoRepository.findWithDetalles(ordenId, estadosPendientes, null, null)
+        ).orElse(List.of());
+
+        boolean haySalidasPendientes = yaPendientes.stream()
+                .anyMatch(s -> s.getTipoMovimiento() == TipoMovimiento.SALIDA);
+
+        if (haySalidasPendientes) {
+            log.info("OP-reserva: ya existen solicitudes SALIDA pendientes para ordenId={}, se omite recreación", ordenId);
+            return;
+        }
+
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
         log.debug("OP-reserva iniciar ordenId={}, user={}", ordenId, usuario.getId());
 
