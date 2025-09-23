@@ -255,7 +255,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findByProductoIdAndEstadoAndActivoTrue(productoId, EstadoFormula.APROBADA)
                 .orElseThrow(() -> new IllegalArgumentException("No existe una fórmula activa y aprobada para el producto"));
 
-        Map<Long, BigDecimal> cantidadesEscaladas = new HashMap<>();
         List<InsumoFaltanteDTO> faltantes = new ArrayList<>();
         boolean stockSuficiente = true;
         Integer maxProducible = null;
@@ -277,7 +276,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             }
 
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
-            cantidadesEscaladas.put(insumoId, cantidadRequerida);
 
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
             if (almacenesValidos.isEmpty()) {
@@ -993,38 +991,69 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             repository.save(orden);
         }
 
-        // Consumo etapa 1 desde reservas
+        // Consumo etapa 1 desde reservas (idempotente por detalle)
         if (etapa.getSecuencia() != null && etapa.getSecuencia() == 1) {
-            boolean yaConsumido = movimientoInventarioRepository
-                    .existsByOrdenProduccionIdAndClasificacion(ordenId, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
-            if (!yaConsumido) {
-                List<SolicitudMovimiento> reservas = solicitudMovimientoRepository
-                        .findWithDetalles(ordenId, List.of(EstadoSolicitudMovimiento.RESERVADA), null, null);
-                for (SolicitudMovimiento res : reservas) {
-                    for (SolicitudMovimientoDetalle detRes : res.getDetalles()) {
+            List<SolicitudMovimiento> reservas = solicitudMovimientoRepository
+                    .findWithDetalles(ordenId, List.of(EstadoSolicitudMovimiento.RESERVADA), null, null);
+
+            // TipoDetalle de SALIDA para medir lo ya movido por cada detalle
+            Long tipoDetalleSalidaId = catalogResolver.getTipoDetalleSalidaId();
+
+            for (SolicitudMovimiento res : reservas) {
+                if (res.getProducto() == null || res.getProducto().getId() == null) continue;
+
+                for (SolicitudMovimientoDetalle detRes : res.getDetalles()) {
+                    if (detRes.getLote() == null || detRes.getLote().getId() == null) continue;
+
+                    Integer productoIdInt = res.getProducto().getId();                     // para el DTO
+                    Long productoIdLong = productoIdInt.longValue();                       // para consultas repo
+                    Long loteId = detRes.getLote().getId();
+
+                    Integer almacenOrigenId = detRes.getAlmacenOrigen() != null
+                            ? detRes.getAlmacenOrigen().getId().intValue()
+                            : detRes.getLote().getAlmacen().getId().intValue();
+
+                    Integer almacenDestinoId = detRes.getAlmacenDestino() != null
+                            ? detRes.getAlmacenDestino().getId().intValue()
+                            : null;
+
+                    Long motivoId = (res.getMotivoMovimiento() != null) ? res.getMotivoMovimiento().getId() : null;
+                    Long tipoDetId = (res.getTipoMovimientoDetalle() != null) ? res.getTipoMovimientoDetalle().getId() : null;
+
+                    // ¿Cuánto ya se movió (SALIDA) para esta solicitud/producto/lote con el tipo-detalle de SALIDA?
+                    BigDecimal yaMovido = Optional.ofNullable(
+                            movimientoInventarioRepository.sumaPorSolicitudYTipo(
+                                    res.getId(), productoIdLong, loteId,
+                                    TipoMovimiento.SALIDA, tipoDetalleSalidaId, null
+                            )
+                    ).orElse(BigDecimal.ZERO);
+
+                    BigDecimal pendiente = detRes.getCantidad().subtract(yaMovido);
+                    if (pendiente.compareTo(BigDecimal.ZERO) > 0) {
                         MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
-                                null,
-                                detRes.getCantidad(),
-                                TipoMovimiento.SALIDA,
-                                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                                null,
-                                res.getProducto().getId(),
-                                detRes.getLote().getId(),
-                                detRes.getAlmacenOrigen() != null ? detRes.getAlmacenOrigen().getId().intValue() : detRes.getLote().getAlmacen().getId().intValue(),
-                                detRes.getAlmacenDestino() != null ? detRes.getAlmacenDestino().getId().intValue() : null,
-                                null,
-                                null,
-                                res.getMotivoMovimiento() != null ? res.getMotivoMovimiento().getId() : null,
-                                res.getTipoMovimientoDetalle() != null ? res.getTipoMovimientoDetalle().getId() : null,
-                                res.getId(),
-                                null,
-                                ordenId,
-                                null,
-                                null,
-                                null,
-                                detRes.getLote().getEstado(),
-                                null,
-                                null);
+                                null,                                   // id
+                                pendiente,                              // cantidad
+                                TipoMovimiento.SALIDA,                  // tipoMovimiento
+                                ClasificacionMovimientoInventario.SALIDA_PRODUCCION, // clasificacion
+                                null,                                   // docReferencia
+                                productoIdInt,                          // productoId (Integer)
+                                loteId,                                 // loteProductoId (Long)
+                                almacenOrigenId,                        // almacenOrigenId (Integer)
+                                almacenDestinoId,                       // almacenDestinoId (Integer)
+                                null,                                   // proveedorId
+                                null,                                   // ordenCompraId
+                                motivoId,                               // motivoMovimientoId (Long)
+                                tipoDetId,                              // tipoMovimientoDetalleId (Long)
+                                res.getId(),                            // solicitudMovimientoId (Long)
+                                null,                                   // usuarioId (READ_ONLY)
+                                ordenId,                                // ordenProduccionId (Long)
+                                null,                                   // ordenCompraDetalleId
+                                null,                                   // codigoLote
+                                null,                                   // fechaVencimiento
+                                detRes.getLote().getEstado(),           // estadoLote
+                                null,                                   // autoSplit
+                                null                                    // atenciones
+                        );
                         movimientoInventarioService.registrarMovimiento(movDto);
                     }
                 }
