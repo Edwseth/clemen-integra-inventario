@@ -189,6 +189,61 @@ class OrdenProduccionServiceImplTest {
         verifyNoInteractions(solicitudMovimientoService);
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void guardarConValidacionStock_consultaStockGlobalCuandoNoHayAlmacenConfigurado() {
+        Long preBodegaId = 30L;
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(preBodegaId);
+
+        Producto productoFinal = new Producto();
+        productoFinal.setId(1);
+        productoFinal.setNombre("Producto final");
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setProducto(productoFinal);
+        orden.setCantidadProgramada(new BigDecimal("3"));
+
+        Producto insumo = new Producto();
+        insumo.setId(2);
+        insumo.setNombre("Insumo sin origen");
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("kg");
+        insumo.setUnidadMedida(unidad);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.MATERIA_PRIMA);
+        insumo.setCategoriaProducto(categoria);
+
+        DetalleFormula detalle = DetalleFormula.builder()
+                .insumo(insumo)
+                .cantidadNecesaria(new BigDecimal("2"))
+                .build();
+
+        FormulaProducto formula = FormulaProducto.builder()
+                .detalles(List.of(detalle))
+                .build();
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(productoFinal.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(any())).thenReturn(List.of(insumo));
+        when(stockQueryService.obtenerStockDisponible(anyList(), anyList()))
+                .thenReturn(Map.of(insumo.getId().longValue(), BigDecimal.ONE));
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertThat(resultado.isEsValida()).isFalse();
+        assertThat(resultado.getInsumosFaltantes()).hasSize(1);
+        assertThat(resultado.getInsumosFaltantes().get(0).getDisponible())
+                .isEqualByComparingTo(BigDecimal.ONE);
+
+        ArgumentCaptor<List<Long>> productosCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<Long>> almacenesCaptor = ArgumentCaptor.forClass(List.class);
+        verify(stockQueryService).obtenerStockDisponible(productosCaptor.capture(), almacenesCaptor.capture());
+        assertThat(productosCaptor.getValue()).containsExactly(insumo.getId().longValue());
+        assertThat(almacenesCaptor.getValue()).isEmpty();
+
+        verifyNoInteractions(solicitudMovimientoService);
+    }
+
     @ParameterizedTest(name = "reserva insumos desde almacén configurado para {0}")
     @MethodSource("categoriasInsumoOrigen")
     void reservarInsumosParaOP_reservaDesdeAlmacenConfigurado(TipoCategoria tipoCategoria) {
