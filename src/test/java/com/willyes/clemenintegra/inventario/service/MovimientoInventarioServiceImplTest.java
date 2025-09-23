@@ -13,7 +13,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,6 +24,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
@@ -291,5 +294,92 @@ class MovimientoInventarioServiceImplTest {
                 .containsExactly(detalle12.getId(), detalle88.getId());
         assertThat(cantidadCaptor.getAllValues())
                 .containsExactly(new BigDecimal("12.000000"), new BigDecimal("88.000000"));
+    }
+
+    @Test
+    void lanzaConflictoCuandoCantidadSolicitadaExcedePendienteTotal() {
+        Almacen origen = new Almacen();
+        origen.setId(8);
+
+        Producto producto = new Producto();
+        producto.setId(900);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO);
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(901L);
+        lote.setProducto(producto);
+        lote.setAlmacen(origen);
+        lote.setCodigoLote("LOTE-EXCESO");
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(902L)
+                .estado(EstadoSolicitudMovimiento.AUTORIZADA)
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .producto(producto)
+                .lote(lote)
+                .almacenOrigen(origen)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        SolicitudMovimientoDetalle detallePendiente60 = SolicitudMovimientoDetalle.builder()
+                .id(903L)
+                .solicitudMovimiento(solicitud)
+                .lote(lote)
+                .cantidad(new BigDecimal("60.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        SolicitudMovimientoDetalle detallePendiente40 = SolicitudMovimientoDetalle.builder()
+                .id(904L)
+                .solicitudMovimiento(solicitud)
+                .lote(lote)
+                .cantidad(new BigDecimal("40.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        solicitud.getDetalles().add(detallePendiente60);
+        solicitud.getDetalles().add(detallePendiente40);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("150.000000"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                producto.getId(),
+                lote.getId(),
+                origen.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                solicitud.getId(),
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                EstadoLote.DISPONIBLE,
+                Boolean.FALSE,
+                List.of()
+        );
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(
+                service,
+                "obtenerAtencionesParaSolicitud",
+                dto,
+                solicitud
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException rse = (ResponseStatusException) exception;
+                    assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.CONFLICT.value());
+                    assertThat(rse.getReason()).isEqualTo("ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
+                });
     }
 }

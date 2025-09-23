@@ -600,6 +600,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
         }
 
+        if (restanteTotal != null && restanteTotal.compareTo(cero) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
+        }
+
         if (!generadas.isEmpty()) {
             log.debug("SOLICITUD atenciones generadas automaticamente: {}", generadas.size());
             return generadas;
