@@ -51,7 +51,7 @@ public class InventarioConsultaServiceImpl implements InventarioConsultaService 
                         .codigoLote(lp.getCodigoLote())
                         .stockLote(lp.getStockLote())
                         .fechaVencimiento(lp.getFechaVencimiento())
-                        .almacenId(lp.getAlmacenId())
+                        .almacenId(Math.toIntExact(lp.getAlmacenId()))
                         .nombreAlmacen(lp.getNombreAlmacen())
                         .build())
                 .collect(Collectors.toList());

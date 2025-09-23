@@ -84,6 +84,7 @@ public class MovimientoInventarioController {
                 List<Long> almacenesFiltrados = new ArrayList<>();
                 Long preBodegaId = inventoryCatalogResolver.getAlmacenPreBodegaProduccionId();
 
+
                 if (dto.almacenOrigenId() != null) {
                     almacenesFiltrados.add(dto.almacenOrigenId().longValue());
                 }
@@ -126,7 +127,12 @@ public class MovimientoInventarioController {
                     almacenesFiltrados = new ArrayList<>(new LinkedHashSet<>(almacenesFiltrados));
                 }
 
-                if (almacenesFiltrados.isEmpty()) {
+                log.debug("MOV-CONTROLLER stock pre-check: solicitudId={} productoId={} loteId={} cant={} preBodegaId={} almacenesFiltrados={}",
+                        dto.solicitudMovimientoId(), dto.productoId(), dto.loteProductoId(), dto.cantidad(),
+                        preBodegaId, almacenesFiltrados);
+
+
+                if (almacenesFiltrados.isEmpty() && dto.solicitudMovimientoId() == null) {
                     return ResponseEntity
                             .status(HttpStatus.CONFLICT)
                             .body(Map.of("message", "No hay suficiente stock disponible"));
@@ -174,13 +180,28 @@ public class MovimientoInventarioController {
                 BigDecimal stockProductoEvaluado = solicitudConReserva ? stockProductoConReserva : stockProd;
                 BigDecimal stockLoteEvaluado = solicitudConReserva ? disponibleConReserva : stockDisponibleNoNegativo;
 
-                boolean stockProductoInsuficiente = stockProductoEvaluado.compareTo(cant) < 0;
+                log.debug("MOV-CONTROLLER stock eval: solicitudId={} estadoSol={} reservaPendiente={} stockProd={} stockLote={} stockReservado={} dispLote={} dispConReserva={} prodEval={} loteEval={} cant={}",
+                        dto.solicitudMovimientoId(),
+                        solicitudMovimiento != null ? solicitudMovimiento.getEstado() : null,
+                        reservaPendiente, stockProd, stockActualLote, stockReservado, stockDisponibleNoNegativo,
+                        disponibleConReserva, stockProductoEvaluado, stockLoteEvaluado, cant);
+
+
                 boolean stockLoteInsuficiente = stockLoteEvaluado.compareTo(cant) < 0;
 
-                if (stockProductoInsuficiente || stockLoteInsuficiente) {
-                    return ResponseEntity
-                            .status(HttpStatus.CONFLICT)
-                            .body(Map.of("message", "No hay suficiente stock disponible"));
+                if (solicitudConReserva) {
+                    // Cuando consumimos una reserva, validamos solo por lote (+reserva).
+                    if (stockLoteInsuficiente) {
+                        return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(Map.of("message", "No hay suficiente stock disponible"));
+                    }
+                } else {
+                    // Sin solicitud/reserva, mantenemos la doble validación.
+                    boolean stockProductoInsuficiente = stockProductoEvaluado.compareTo(cant) < 0;
+                    if (stockProductoInsuficiente || stockLoteInsuficiente) {
+                        return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(Map.of("message", "No hay suficiente stock disponible"));
+                    }
                 }
             }
 
