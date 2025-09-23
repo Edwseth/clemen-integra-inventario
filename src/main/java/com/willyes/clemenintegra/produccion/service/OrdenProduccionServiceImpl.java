@@ -222,8 +222,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         BigDecimal cantidad = umValidator.ajustar(cantidadOriginal);
         RoundingMode redondeo = umValidator.getRoundingMode();
+        int scale = catalogResolver.decimals(producto.getUnidadMedida());
 
-        BigDecimal cantidadLote = cantidad.setScale(2, redondeo);
+        BigDecimal cantidadLote = cantidad.setScale(scale, redondeo);
         int enterosLote = cantidadLote.precision() - cantidadLote.scale();
         if (enterosLote > 8) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRECISION_LOTE_EXCEDIDA");

@@ -81,9 +81,18 @@ public class MovimientoInventarioController {
                 LoteProducto lote = loteRepo.findById(dto.loteProductoId())
                         .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
+                Long detalleSalidaPtId = inventoryCatalogResolver.getTipoDetalleSalidaId();
+                boolean esSalidaPt = dto.tipoMovimiento() == TipoMovimiento.SALIDA
+                        && dto.tipoMovimientoDetalleId() != null
+                        && Objects.equals(dto.tipoMovimientoDetalleId(), detalleSalidaPtId);
+                Long almacenPtId = esSalidaPt ? inventoryCatalogResolver.getAlmacenPtId() : null;
+
                 List<Long> almacenesFiltrados = new ArrayList<>();
                 Long preBodegaId = inventoryCatalogResolver.getAlmacenPreBodegaProduccionId();
 
+                if (esSalidaPt && almacenPtId != null) {
+                    almacenesFiltrados.add(almacenPtId);
+                }
 
                 if (dto.almacenOrigenId() != null) {
                     almacenesFiltrados.add(dto.almacenOrigenId().longValue());

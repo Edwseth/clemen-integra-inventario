@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -72,6 +74,14 @@ class MovimientoInventarioServiceImplTest {
 
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
+
+    @BeforeEach
+    void initDefaults() {
+        when(catalogResolver.decimals(any())).thenReturn(2);
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(8L);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
+        when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), any())).thenReturn(BigDecimal.ZERO);
+    }
 
     @Test
     @SuppressWarnings("unchecked")
@@ -187,6 +197,144 @@ class MovimientoInventarioServiceImplTest {
         assertThat(resultado.get(0).lote()).isEqualTo(loteDestino);
         assertThat(resultado.get(0).cantidad()).isEqualByComparingTo(new BigDecimal("10.00"));
         assertThat(loteOrigen.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
+    }
+
+    @Test
+    void actualizarStockLoteRespetaEscalaCeroDecimales() {
+        Producto producto = new Producto();
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("UND");
+        producto.setUnidadMedida(unidad);
+        LoteProducto lote = new LoteProducto();
+        lote.setId(50L);
+        lote.setProducto(producto);
+        lote.setStockLote(new BigDecimal("10"));
+        lote.setStockReservado(BigDecimal.ZERO);
+
+        when(catalogResolver.decimals(unidad)).thenReturn(0);
+
+        ReflectionTestUtils.invokeMethod(service, "actualizarStockLote", lote, new BigDecimal("1"), producto);
+
+        assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("9"));
+    }
+
+    @Test
+    void actualizarStockLoteRespetaEscalaTresDecimales() {
+        Producto producto = new Producto();
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("KG");
+        producto.setUnidadMedida(unidad);
+        LoteProducto lote = new LoteProducto();
+        lote.setId(51L);
+        lote.setProducto(producto);
+        lote.setStockLote(new BigDecimal("5.000"));
+        lote.setStockReservado(BigDecimal.ZERO);
+
+        when(catalogResolver.decimals(unidad)).thenReturn(3);
+
+        ReflectionTestUtils.invokeMethod(service, "actualizarStockLote", lote, new BigDecimal("1.234"), producto);
+
+        assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("3.766"));
+    }
+
+    @Test
+    void actualizarStockLoteRespetaEscalaSeisDecimales() {
+        Producto producto = new Producto();
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("ML");
+        producto.setUnidadMedida(unidad);
+        LoteProducto lote = new LoteProducto();
+        lote.setId(52L);
+        lote.setProducto(producto);
+        lote.setStockLote(new BigDecimal("2.000000"));
+        lote.setStockReservado(BigDecimal.ZERO);
+
+        when(catalogResolver.decimals(unidad)).thenReturn(6);
+
+        ReflectionTestUtils.invokeMethod(service, "actualizarStockLote", lote, new BigDecimal("0.123456"), producto);
+
+        assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("1.876544"));
+    }
+
+    @Test
+    void procesarSalidaPtConsumeLotesEnOrdenFefo() {
+        Producto producto = new Producto();
+        producto.setId(200);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("KG");
+        producto.setUnidadMedida(unidad);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setCategoriaProducto(categoria);
+
+        Almacen almacenPt = new Almacen();
+        almacenPt.setId(2);
+
+        LoteProducto lote1 = new LoteProducto();
+        lote1.setId(10L);
+        lote1.setProducto(producto);
+        lote1.setAlmacen(almacenPt);
+        lote1.setEstado(EstadoLote.DISPONIBLE);
+        lote1.setStockLote(new BigDecimal("4.000"));
+        lote1.setStockReservado(BigDecimal.ZERO);
+
+        LoteProducto lote2 = new LoteProducto();
+        lote2.setId(20L);
+        lote2.setProducto(producto);
+        lote2.setAlmacen(almacenPt);
+        lote2.setEstado(EstadoLote.DISPONIBLE);
+        lote2.setStockLote(new BigDecimal("5.000"));
+        lote2.setStockReservado(BigDecimal.ZERO);
+
+        when(catalogResolver.decimals(unidad)).thenReturn(3);
+        when(loteProductoRepository.findFefoSalidaPt(eq(producto.getId().longValue()), eq(2L), any()))
+                .thenReturn(List.of(lote1, lote2));
+        when(loteProductoRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(lote1));
+        when(loteProductoRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(lote2));
+        when(loteProductoRepository.save(any(LoteProducto.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("6.000"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                producto.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                8L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        @SuppressWarnings("unchecked")
+        List<MovimientoInventarioServiceImpl.MovimientoLoteDetalle> resultado =
+                (List<MovimientoInventarioServiceImpl.MovimientoLoteDetalle>) ReflectionTestUtils.invokeMethod(
+                        service,
+                        "procesarSalidaPt",
+                        dto,
+                        producto,
+                        new BigDecimal("6.000"),
+                        2L
+                );
+
+        assertThat(resultado).hasSize(2);
+        assertThat(resultado.get(0).lote().getId()).isEqualTo(10L);
+        assertThat(resultado.get(0).cantidad()).isEqualByComparingTo(new BigDecimal("4.000"));
+        assertThat(resultado.get(1).cantidad()).isEqualByComparingTo(new BigDecimal("2.000"));
+        assertThat(lote1.getStockLote()).isEqualByComparingTo(new BigDecimal("0.000"));
+        assertThat(lote2.getStockLote()).isEqualByComparingTo(new BigDecimal("3.000"));
     }
 
     @Test

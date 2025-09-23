@@ -65,6 +65,21 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             Integer almacenId,
             Collection<EstadoLote> estados);
 
+    @Query("""
+            select l from LoteProducto l
+            where l.producto.id = :productoId
+              and l.almacen.id = :almacenId
+              and l.estado in :estados
+              and l.agotado = false
+              and (l.stockLote - coalesce(l.stockReservado, 0)) > 0
+            order by case when l.fechaVencimiento is null then 1 else 0 end,
+                     l.fechaVencimiento,
+                     l.id
+            """)
+    List<LoteProducto> findFefoSalidaPt(@Param("productoId") Long productoId,
+                                        @Param("almacenId") Long almacenId,
+                                        @Param("estados") Collection<EstadoLote> estados);
+
     @Query(value = """
         SELECT lp.id AS loteProductoId,
                lp.codigo_lote AS codigoLote,

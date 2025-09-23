@@ -66,6 +66,8 @@ class MovimientoInventarioControllerTest {
     @BeforeEach
     void setUp() {
         when(inventoryCatalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(PRE_BODEGA_ID);
+        when(inventoryCatalogResolver.getTipoDetalleSalidaId()).thenReturn(8L);
+        when(inventoryCatalogResolver.getAlmacenPtId()).thenReturn(2L);
 
         producto = new Producto();
         producto.setId(1);
@@ -89,6 +91,44 @@ class MovimientoInventarioControllerTest {
                 .detalles(List.of(detalle))
                 .build();
         detalle.setSolicitudMovimiento(solicitud);
+    }
+
+    @Test
+    void registrarSalidaNoPtNoAgregaAlmacenPt() {
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                BigDecimal.valueOf(3),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                producto.getId(),
+                lote.getId(),
+                100,
+                null,
+                null,
+                null,
+                null,
+                99L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        when(productoRepository.findById(producto.getId().longValue())).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.findById(lote.getId())).thenReturn(Optional.of(lote));
+        when(stockQueryService.obtenerStockDisponible(anyList(), anyList()))
+                .thenReturn(Map.of(producto.getId().longValue(), BigDecimal.TEN));
+        when(movimientoInventarioService.registrarMovimiento(any(MovimientoInventarioDTO.class)))
+                .thenReturn(MovimientoInventarioResponseDTO.builder().id(210L).build());
+
+        controller.registrar(dto);
+
+        verify(inventoryCatalogResolver, never()).getAlmacenPtId();
     }
 
     @Test

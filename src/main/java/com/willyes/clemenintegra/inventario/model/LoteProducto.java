@@ -40,7 +40,7 @@ public class LoteProducto {
     @Column(name = "fecha_vencimiento")
     private LocalDateTime fechaVencimiento;
 
-    @Column(name = "stock_lote", nullable = false, precision = 10, scale = 2)
+    @Column(name = "stock_lote", nullable = false, precision = 18, scale = 6)
     private BigDecimal stockLote;
 
     @Builder.Default
@@ -102,7 +102,7 @@ public class LoteProducto {
         }
 
         if (stockLote != null) {
-            stockLote = stockLote.setScale(2, RoundingMode.DOWN);
+            stockLote = stockLote.setScale(6, RoundingMode.DOWN);
         }
     }
 }

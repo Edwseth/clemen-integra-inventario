@@ -64,6 +64,10 @@ class MovimientoInventarioServiceIntegrationTest {
 
     @Test
     void salidaConSolicitudReservadaDescuentaUnaSolaVez() {
+        when(inventoryCatalogResolver.decimals(any())).thenReturn(2);
+        when(inventoryCatalogResolver.getTipoDetalleSalidaId()).thenReturn(8L);
+        when(inventoryCatalogResolver.getAlmacenPtId()).thenReturn(2L);
+
         Usuario usuario = usuarioRepository.save(Usuario.builder()
                 .nombreUsuario("operador")
                 .clave("secreto")

@@ -6,9 +6,13 @@ import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import jakarta.annotation.PostConstruct;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +23,24 @@ public class InventoryCatalogResolver {
     private final AlmacenRepository almacenRepository;
     private final MotivoMovimientoRepository motivoRepository;
     private final TipoMovimientoDetalleRepository tipoDetalleRepository;
+
+    private static final Map<String, Integer> UNIDAD_DECIMALS = Map.ofEntries(
+            Map.entry("UND", 0),
+            Map.entry("UN", 0),
+            Map.entry("UNI", 0),
+            Map.entry("UNID", 0),
+            Map.entry("PZA", 0),
+            Map.entry("PIEZA", 0),
+            Map.entry("KG", 3),
+            Map.entry("L", 3),
+            Map.entry("LT", 3),
+            Map.entry("LB", 3),
+            Map.entry("G", 6),
+            Map.entry("GR", 6),
+            Map.entry("ML", 6),
+            Map.entry("MG", 6),
+            Map.entry("CC", 6)
+    );
 
     private Long almacenPtId;
     private Long almacenCuarentenaId;
@@ -121,4 +143,28 @@ public class InventoryCatalogResolver {
     public Long getTipoDetalleEntradaId() { return tipoDetalleEntradaId; }
     public Long getTipoDetalleTransferenciaId() { return tipoDetalleTransferenciaId; }
     public Long getTipoDetalleSalidaId() { return tipoDetalleSalidaId; }
+
+    /**
+     * Determina la cantidad de decimales permitidos para la unidad de medida indicada.
+     * Si no existe una configuración específica, se utiliza el máximo configurado.
+     */
+    public int decimals(UnidadMedida unidad) {
+        int max = properties.getUm().getDecimales().getMax();
+        int min = properties.getUm().getDecimales().getMin();
+        if (unidad == null) {
+            return max;
+        }
+        String clave = unidad.getSimbolo() != null && !unidad.getSimbolo().isBlank()
+                ? unidad.getSimbolo()
+                : unidad.getNombre();
+        if (clave == null) {
+            return max;
+        }
+        String normalized = clave.trim().toUpperCase(Locale.ROOT);
+        Integer configurado = UNIDAD_DECIMALS.get(normalized);
+        if (configurado != null) {
+            return Math.min(max, Math.max(min, configurado));
+        }
+        return max;
+    }
 }
