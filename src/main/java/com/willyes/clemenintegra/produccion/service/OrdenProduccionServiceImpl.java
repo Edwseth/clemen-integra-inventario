@@ -347,87 +347,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         List<EtapaPlantilla> plantilla = cargarPlantillaEtapas(guardada.getProducto().getId());
         clonarEtapasParaOrden(guardada, plantilla);
+
+        // Reserva FEFO y sincronización de reservas: SOLO AQUÍ (una vez)
         reservarInsumosParaOP(guardada.getId());
-
-        Long motivoId = motivoMovimientoRepository
-                .findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION)
-                .map(m -> m.getId())
-                .orElseThrow(() -> new IllegalStateException("Motivo TRANSFERENCIA_INTERNA_PRODUCCION no configurado"));
-        Long tipoDetalleId = tipoMovimientoDetalleRepository
-                .findById(catalogResolver.getTipoDetalleSalidaId())
-                .map(TipoMovimientoDetalle::getId)
-                .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
-
-        for (DetalleFormula insumo : formula.getDetalles()) {
-            Long insumoId = insumo.getInsumo().getId().longValue();
-            BigDecimal cantidad = cantidadesEscaladas.get(insumoId);
-            List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
-            List<LoteFefoDisponibleProjection> lotesSeleccionados = seleccionarLotesFefo(
-                    guardada.getId(), insumoId, cantidad, almacenesValidos);
-
-            SolicitudMovimientoRequestDTO req = SolicitudMovimientoRequestDTO.builder()
-                    .tipoMovimiento(TipoMovimiento.TRANSFERENCIA)
-                    .productoId(insumoId)
-                    .cantidad(cantidad)
-                    .ordenProduccionId(guardada.getId())
-                    .usuarioSolicitanteId(guardada.getResponsable().getId())
-                    .motivoMovimientoId(motivoId)
-                    .tipoMovimientoDetalleId(tipoDetalleId)
-                    .almacenDestinoId(catalogResolver.getAlmacenPreBodegaProduccionId())
-                    .build();
-
-            SolicitudMovimientoResponseDTO respuestaSolicitud = solicitudMovimientoService.registrarSolicitud(req);
-            Long solicitudId = Optional.ofNullable(respuestaSolicitud)
-                    .map(SolicitudMovimientoResponseDTO::getId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA"));
-
-            SolicitudMovimiento solicitud = solicitudMovimientoRepository.findById(solicitudId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA"));
-
-            solicitud.setLote(null);
-            solicitud.setAlmacenOrigen(null);
-
-            List<SolicitudMovimientoDetalle> detallesSolicitud = solicitud.getDetalles();
-            if (detallesSolicitud == null) {
-                detallesSolicitud = new ArrayList<>();
-                solicitud.setDetalles(detallesSolicitud);
-            } else {
-                detallesSolicitud.clear();
-            }
-
-            BigDecimal restante = cantidad;
-
-            for (LoteFefoDisponibleProjection lote : lotesSeleccionados) {
-                if (restante.compareTo(BigDecimal.ZERO) <= 0) {
-                    break;
-                }
-
-                BigDecimal disponible = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
-                BigDecimal usar = disponible.min(restante);
-                if (usar.compareTo(BigDecimal.ZERO) <= 0) {
-                    continue;
-                }
-
-                SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
-                        .solicitudMovimiento(solicitud)
-                        .lote(new LoteProducto(lote.getLoteProductoId()))
-                        .cantidad(usar)
-                        .almacenOrigen(lote.getAlmacenId() != null ? new Almacen(lote.getAlmacenId()) : null)
-                        .almacenDestino(solicitud.getAlmacenDestino())
-                        .build();
-                detallesSolicitud.add(detSolicitud);
-
-                restante = restante.subtract(usar);
-            }
-
-            if (restante.compareTo(BigDecimal.ZERO) > 0) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                        "STOCK_INSUFICIENTE: faltan " + restante);
-            }
-
-            solicitudMovimientoRepository.saveAndFlush(solicitud);
-            reservaLoteService.sincronizarReservasSolicitud(solicitud);
-        }
 
         OrdenProduccionResponseDTO ordenResp = ProduccionMapper.toResponse(guardada);
 
