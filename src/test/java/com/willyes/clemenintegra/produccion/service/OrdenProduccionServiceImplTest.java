@@ -5,9 +5,11 @@ import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
@@ -68,7 +70,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -439,7 +440,7 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
-    void reservarInsumosParaOP_noReservaLotesDePreBodega() {
+    void reservarInsumosParaOP_recurreAFallbackCuandoStockSoloEnOtroAlmacen() {
         Long ordenId = 7L;
         Long almacenMaterialEmpaqueId = 10L;
         Long preBodegaId = 20L;
@@ -490,13 +491,35 @@ class OrdenProduccionServiceImplTest {
         when(loteProductoRepository.findFefoDisponibles(insumo.getId().longValue(), Integer.MAX_VALUE))
                 .thenReturn(List.of(new TestLoteFefoDisponibleProjection(999L, new BigDecimal("3"), preBodegaId.intValue())));
 
-        assertThatThrownBy(() -> service.reservarInsumosParaOP(ordenId))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
-                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        SolicitudMovimientoResponseDTO respuesta = SolicitudMovimientoResponseDTO.builder()
+                .id(401L)
+                .build();
+        when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
+                .thenReturn(respuesta);
 
-        verifyNoInteractions(solicitudMovimientoService);
-        verify(reservaLoteService, never()).sincronizarReservasSolicitud(any(SolicitudMovimiento.class));
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(respuesta.getId());
+        solicitud.setDetalles(new ArrayList<>());
+        when(solicitudMovimientoRepository.findById(respuesta.getId())).thenReturn(Optional.of(solicitud));
+        when(solicitudMovimientoRepository.saveAndFlush(any(SolicitudMovimiento.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.reservarInsumosParaOP(ordenId);
+
+        ArgumentCaptor<SolicitudMovimientoRequestDTO> requestCaptor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
+        verify(solicitudMovimientoService).registrarSolicitud(requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getLoteId()).isEqualTo(999L);
+
+        ArgumentCaptor<SolicitudMovimiento> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimiento.class);
+        verify(solicitudMovimientoRepository).saveAndFlush(solicitudCaptor.capture());
+        SolicitudMovimiento guardada = solicitudCaptor.getValue();
+        assertThat(guardada.getDetalles())
+                .extracting(SolicitudMovimientoDetalle::getLote)
+                .extracting(LoteProducto::getId)
+                .containsExactly(999L);
+        assertThat(guardada.getDetalles().get(0).getAlmacenOrigen().getId()).isEqualTo(preBodegaId);
+
+        verify(reservaLoteService).sincronizarReservasSolicitud(solicitud);
     }
 
     private static Stream<TipoCategoria> categoriasInsumoOrigen() {
