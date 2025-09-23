@@ -536,6 +536,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         BigDecimal cero = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
 
         List<AtencionDTO> generadas = new ArrayList<>();
+        List<SolicitudMovimientoDetalle> detallesCoincidentes = new ArrayList<>();
+        List<SolicitudMovimientoDetalle> detallesRestantes = new ArrayList<>();
         for (SolicitudMovimientoDetalle detalle : detalles) {
             if (detalle == null) {
                 continue;
@@ -548,10 +550,41 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
 
             Long detalleLoteId = detalle.getLote() != null ? detalle.getLote().getId() : null;
-            if (loteObjetivo != null && !Objects.equals(loteObjetivo, detalleLoteId)) {
-                continue;
+            if (loteObjetivo != null && Objects.equals(loteObjetivo, detalleLoteId)) {
+                detallesCoincidentes.add(detalle);
+            } else {
+                detallesRestantes.add(detalle);
             }
+        }
 
+        restanteTotal = generarAtencionesDesdeDetalles(detallesCoincidentes, dto, loteObjetivo, cero, restanteTotal, generadas);
+
+        boolean debeProcesarRestantes = (restanteTotal == null || restanteTotal.compareTo(cero) > 0)
+                && !detallesRestantes.isEmpty();
+        if (debeProcesarRestantes) {
+            restanteTotal = generarAtencionesDesdeDetalles(detallesRestantes, dto, loteObjetivo, cero, restanteTotal, generadas);
+        }
+
+        if (restanteTotal != null && restanteTotal.compareTo(cero) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
+        }
+
+        if (!generadas.isEmpty()) {
+            log.debug("SOLICITUD atenciones generadas automaticamente: {}", generadas.size());
+            return generadas;
+        }
+        return List.of();
+    }
+
+    private BigDecimal generarAtencionesDesdeDetalles(
+            List<SolicitudMovimientoDetalle> detalles,
+            MovimientoInventarioDTO dto,
+            Long loteObjetivo,
+            BigDecimal cero,
+            BigDecimal restanteTotal,
+            List<AtencionDTO> generadas
+    ) {
+        for (SolicitudMovimientoDetalle detalle : detalles) {
             if (restanteTotal != null && restanteTotal.compareTo(cero) <= 0) {
                 break;
             }
@@ -580,6 +613,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 continue;
             }
 
+            Long detalleLoteId = detalle.getLote() != null ? detalle.getLote().getId() : null;
+
             AtencionDTO generado = new AtencionDTO();
             generado.setDetalleId(detalle.getId());
             generado.setLoteId(detalleLoteId != null ? detalleLoteId : loteObjetivo);
@@ -599,16 +634,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 }
             }
         }
-
-        if (restanteTotal != null && restanteTotal.compareTo(cero) > 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
-        }
-
-        if (!generadas.isEmpty()) {
-            log.debug("SOLICITUD atenciones generadas automaticamente: {}", generadas.size());
-            return generadas;
-        }
-        return List.of();
+        return restanteTotal;
     }
 
     private BigDecimal normalizarCantidad(BigDecimal valor) {

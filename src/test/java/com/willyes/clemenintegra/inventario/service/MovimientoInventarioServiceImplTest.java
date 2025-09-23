@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.AtencionDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.*;
@@ -186,6 +187,99 @@ class MovimientoInventarioServiceImplTest {
         assertThat(resultado.get(0).lote()).isEqualTo(loteDestino);
         assertThat(resultado.get(0).cantidad()).isEqualByComparingTo(new BigDecimal("10.00"));
         assertThat(loteOrigen.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void generaAtencionesParaDetallesDeDistintosLotesSinConflicto() {
+        Almacen origen = new Almacen();
+        origen.setId(20);
+
+        Producto producto = new Producto();
+        producto.setId(3000);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO);
+
+        LoteProducto loteUno = new LoteProducto();
+        loteUno.setId(4000L);
+        loteUno.setProducto(producto);
+        loteUno.setAlmacen(origen);
+
+        LoteProducto loteDos = new LoteProducto();
+        loteDos.setId(4001L);
+        loteDos.setProducto(producto);
+        loteDos.setAlmacen(origen);
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(5000L)
+                .estado(EstadoSolicitudMovimiento.AUTORIZADA)
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .producto(producto)
+                .almacenOrigen(origen)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        SolicitudMovimientoDetalle detalleLoteUno = SolicitudMovimientoDetalle.builder()
+                .id(5001L)
+                .solicitudMovimiento(solicitud)
+                .lote(loteUno)
+                .cantidad(new BigDecimal("50.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        SolicitudMovimientoDetalle detalleLoteDos = SolicitudMovimientoDetalle.builder()
+                .id(5002L)
+                .solicitudMovimiento(solicitud)
+                .lote(loteDos)
+                .cantidad(new BigDecimal("60.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        solicitud.getDetalles().add(detalleLoteUno);
+        solicitud.getDetalles().add(detalleLoteDos);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("110.000000"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                producto.getId(),
+                loteUno.getId(),
+                origen.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                solicitud.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                EstadoLote.DISPONIBLE,
+                Boolean.FALSE,
+                List.of()
+        );
+
+        List<AtencionDTO> generadas = (List<AtencionDTO>) ReflectionTestUtils.invokeMethod(
+                service,
+                "obtenerAtencionesParaSolicitud",
+                dto,
+                solicitud
+        );
+
+        assertThat(generadas).hasSize(2);
+        assertThat(generadas).extracting(AtencionDTO::getDetalleId)
+                .containsExactly(detalleLoteUno.getId(), detalleLoteDos.getId());
+        assertThat(generadas).extracting(AtencionDTO::getLoteId)
+                .containsExactly(loteUno.getId(), loteDos.getId());
+        assertThat(generadas).extracting(AtencionDTO::getCantidad)
+                .containsExactly(new BigDecimal("50.000000"), new BigDecimal("60.000000"));
     }
 
     @Test
