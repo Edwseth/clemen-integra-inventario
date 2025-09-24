@@ -99,6 +99,7 @@ class MovimientoInventarioControllerTest {
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 100,
@@ -143,6 +144,7 @@ class MovimientoInventarioControllerTest {
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 100,
@@ -184,6 +186,7 @@ class MovimientoInventarioControllerTest {
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 (int) PRE_BODEGA_ID,
@@ -213,6 +216,56 @@ class MovimientoInventarioControllerTest {
         assertThat(((Map<?, ?>) response.getBody()).get("message"))
                 .isEqualTo("No hay suficiente stock disponible");
         verify(movimientoInventarioService, never()).registrarMovimiento(any(MovimientoInventarioDTO.class));
+    }
+
+    @Test
+    void postSalida_noForzaPt_cuandoDetalleNoEsPt() {
+        when(inventoryCatalogResolver.getTipoDetalleSalidaPtId()).thenReturn(99L);
+        when(inventoryCatalogResolver.getTipoDetalleSalidaId()).thenReturn(33L);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                BigDecimal.ONE,
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                "Cliente Especial",
+                1,
+                null,
+                321,
+                null,
+                null,
+                null,
+                null,
+                33L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Boolean.TRUE,
+                null
+        );
+
+        MovimientoInventarioResponseDTO respuesta = MovimientoInventarioResponseDTO.builder()
+                .id(10L)
+                .build();
+        when(movimientoInventarioService.registrarMovimiento(any(MovimientoInventarioDTO.class)))
+                .thenReturn(respuesta);
+
+        ResponseEntity<?> response = controller.registrar(dto);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService).registrarMovimiento(captor.capture());
+
+        MovimientoInventarioDTO enviado = captor.getValue();
+        assertThat(enviado.almacenOrigenId()).isEqualTo(321);
+        assertThat(enviado.tipoMovimientoDetalleId()).isEqualTo(33L);
+        assertThat(enviado.docReferencia()).isEqualTo("DESTINO: Cliente Especial");
     }
 }
 

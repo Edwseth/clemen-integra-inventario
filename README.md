@@ -72,6 +72,13 @@ El código ha sido refactorizado mediante **Codex Workspace**, mejorando la legi
 
 Los antiguos endpoints `/api/productos/reporte-stock`, `/api/lotes/reporte-vencimiento`, `/api/lotes/reporte-alertas` y `/api/movimientos/reporte-excel` fueron eliminados en favor de las rutas unificadas bajo `/api/reportes`.
 
+#### Salida PT (FEFO)
+- Se considera “Salida PT” únicamente cuando el movimiento es de tipo **SALIDA** y su `tipoMovimientoDetalleId` coincide con la clave configurada para producto terminado. En cualquier otro caso se procesa como una salida regular.
+- Al autocompletar el `tipoMovimientoDetalleId`, solo se asume PT si existe una señal inequívoca (documento de referencia o destino) y el producto pertenece a **Producto Terminado** o el origen es el almacén PT configurado. De lo contrario se devuelve `422 tipoMovimientoDetalleId es requerido para SALIDAS no PT`.
+- Las salidas PT siempre se atienden desde el almacén PT. Si el DTO trae otro almacén origen se rechaza con `422 ALMACEN_ORIGEN_NO_VALIDO_PT`; cuando el valor está ausente el servicio fuerza automáticamente el almacén PT configurado.
+- El auto-split PT aplica una política **FEFO** sobre lotes del almacén PT que estén en estado **DISPONIBLE** o **LIBERADO**, ignorando lotes agotados o en estados de retención. Si el stock elegible no cubre la cantidad solicitada, se devuelve `422 STOCK_INSUFICIENTE` sin consumos parciales.
+- Cuando llega `destinoTexto` y no se envía `docReferencia`, el backend normaliza la referencia como `DESTINO: {destinoTexto}` para mantener la trazabilidad.
+
 ### Producción
 - **Órdenes de producción** `/api/produccion/ordenes` – CRUD.
   - El campo `unidadMedidaSimbolo` indica la unidad de la `cantidadProgramada`

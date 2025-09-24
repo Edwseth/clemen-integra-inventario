@@ -222,8 +222,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         BigDecimal cantidad = umValidator.ajustar(cantidadOriginal);
         RoundingMode redondeo = umValidator.getRoundingMode();
+        int escala = catalogResolver.decimals(producto.getUnidadMedida());
 
-        BigDecimal cantidadLote = cantidad.setScale(2, redondeo);
+        BigDecimal cantidadLote = cantidad.setScale(escala, redondeo);
         int enterosLote = cantidadLote.precision() - cantidadLote.scale();
         if (enterosLote > 8) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRECISION_LOTE_EXCEDIDA");
@@ -673,6 +674,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     TipoMovimiento.ENTRADA,
                     clasifEntrada,
                     orden.getCodigoOrden(),
+                    null,
                     orden.getProducto().getId(),
                     lote.getId(),
                     null,
@@ -1036,6 +1038,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                                 TipoMovimiento.SALIDA,                  // tipoMovimiento
                                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION, // clasificacion
                                 null,                                   // docReferencia
+                                null,
                                 productoIdInt,                          // productoId (Integer)
                                 loteId,                                 // loteProductoId (Long)
                                 almacenOrigenId,                        // almacenOrigenId (Integer)
