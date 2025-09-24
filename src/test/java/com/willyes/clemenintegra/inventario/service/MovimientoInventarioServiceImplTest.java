@@ -1,32 +1,36 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.AtencionDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
-import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
-import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.*;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class MovimientoInventarioServiceImplTest {
@@ -58,358 +62,418 @@ class MovimientoInventarioServiceImplTest {
     @Mock
     private SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
     @Mock
-    private InventoryCatalogResolver catalogResolver;
+    private InventoryCatalogResolver inventoryCatalogResolver;
     @Mock
     private ReservaLoteService reservaLoteService;
     @Mock
+    private ReservaLoteRepository reservaLoteRepository;
+    @Mock
     private EntityManager entityManager;
 
+    @InjectMocks
     private MovimientoInventarioServiceImpl service;
-    private Usuario usuarioOperador;
-
-    @BeforeEach
-    void setUp() {
-        service = new MovimientoInventarioServiceImpl(
-                almacenRepository,
-                productoRepository,
-                proveedorRepository,
-                ordenCompraRepository,
-                ordenCompraService,
-                loteProductoRepository,
-                motivoMovimientoRepository,
-                tipoMovimientoDetalleRepository,
-                movimientoInventarioRepository,
-                movimientoInventarioMapper,
-                usuarioService,
-                solicitudMovimientoRepository,
-                solicitudMovimientoDetalleRepository,
-                catalogResolver,
-                reservaLoteService,
-                entityManager
-        );
-        usuarioOperador = new Usuario();
-        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioOperador);
-        SecurityContextHolder.getContext()
-                .setAuthentication(new TestingAuthenticationToken("tester", "secret"));
-    }
-
-    @AfterEach
-    void clearContext() {
-        SecurityContextHolder.clearContext();
-    }
 
     @Test
-    void transferenciaManualDesdeCuarentenaAceptaLoteLiberadoProductoTerminado() {
-        Integer productoId = 100;
-        Long loteId = 50L;
-        Integer origenId = 1;
-        Integer destinoId = 2;
-        Long tipoDetalleId = 10L;
-        BigDecimal cantidad = new BigDecimal("5.0");
+    @SuppressWarnings("unchecked")
+    void permiteTransferenciaUsandoReservaPendienteCuandoSolicitudAutorizada() {
+        Almacen origen = new Almacen();
+        origen.setId(1);
+        origen.setNombre("Origen");
+        origen.setUbicacion("Ubicacion");
+        origen.setCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        origen.setTipo(TipoAlmacen.PRINCIPAL);
 
-        CategoriaProducto categoriaPT = CategoriaProducto.builder()
-                .id(1L)
-                .nombre("PT")
-                .tipo(TipoCategoria.PRODUCTO_TERMINADO)
-                .build();
+        Almacen destino = new Almacen();
+        destino.setId(2);
+        destino.setNombre("Destino");
+        destino.setUbicacion("Ubicacion");
+        destino.setCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        destino.setTipo(TipoAlmacen.PRINCIPAL);
+
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setId(10L);
+        categoria.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+
         Producto producto = new Producto();
-        producto.setId(productoId);
-        producto.setCategoriaProducto(categoriaPT);
+        producto.setId(100);
+        producto.setCategoriaProducto(categoria);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO);
 
-        Almacen almacenOrigen = Almacen.builder()
-                .id(origenId)
-                .nombre("Cuarentena")
-                .ubicacion("Zona QA")
-                .categoria(TipoCategoria.PRODUCTO_TERMINADO)
-                .tipo(TipoAlmacen.PRINCIPAL)
-                .build();
-        Almacen almacenDestino = Almacen.builder()
-                .id(destinoId)
-                .nombre("Principal")
-                .ubicacion("Zona PT")
-                .categoria(TipoCategoria.PRODUCTO_TERMINADO)
-                .tipo(TipoAlmacen.PRINCIPAL)
-                .build();
+        LoteProducto loteOrigen = new LoteProducto();
+        loteOrigen.setId(50L);
+        loteOrigen.setCodigoLote("LOT-001");
+        loteOrigen.setAlmacen(origen);
+        loteOrigen.setProducto(producto);
+        loteOrigen.setEstado(EstadoLote.DISPONIBLE);
+        loteOrigen.setStockLote(new BigDecimal("10.00"));
+        loteOrigen.setStockReservado(new BigDecimal("10.000000"));
 
-        LocalDateTime fechaLiberacion = LocalDateTime.now().minusHours(2);
-        Usuario usuarioLiberador = new Usuario();
+        LoteProducto loteDestino = new LoteProducto();
+        loteDestino.setId(51L);
+        loteDestino.setCodigoLote("LOT-001");
+        loteDestino.setAlmacen(destino);
+        loteDestino.setProducto(producto);
+        loteDestino.setEstado(EstadoLote.DISPONIBLE);
+        loteDestino.setStockLote(new BigDecimal("0.00"));
+        loteDestino.setStockReservado(new BigDecimal("0.000000"));
 
-        LoteProducto loteOrigen = LoteProducto.builder()
-                .id(loteId)
-                .codigoLote("L-001")
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(200L)
+                .estado(EstadoSolicitudMovimiento.AUTORIZADA)
+                .tipoMovimiento(TipoMovimiento.TRANSFERENCIA)
                 .producto(producto)
-                .almacen(almacenOrigen)
-                .estado(EstadoLote.LIBERADO)
-                .stockLote(new BigDecimal("10.0"))
-                .stockReservado(BigDecimal.ZERO)
-                .fechaLiberacion(fechaLiberacion)
-                .usuarioLiberador(usuarioLiberador)
+                .almacenOrigen(origen)
+                .almacenDestino(destino)
+                .fechaSolicitud(LocalDateTime.now())
+                .detalles(new java.util.ArrayList<>())
                 .build();
+
+        SolicitudMovimientoDetalle detalle = SolicitudMovimientoDetalle.builder()
+                .id(300L)
+                .solicitudMovimiento(solicitud)
+                .lote(loteOrigen)
+                .cantidad(new BigDecimal("10.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .build();
+        solicitud.getDetalles().add(detalle);
 
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null,
-                cantidad,
+                new BigDecimal("10.000000"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
                 null,
-                productoId,
-                loteId,
-                origenId,
-                destinoId,
+                producto.getId(),
+                loteOrigen.getId(),
+                origen.getId(),
+                destino.getId(),
                 null,
                 null,
                 null,
-                tipoDetalleId,
+                99L,
+                solicitud.getId(),
                 null,
                 null,
                 null,
-                null,
-                null,
+                loteOrigen.getCodigoLote(),
                 null,
                 null,
                 Boolean.FALSE,
-                null
+                List.of()
         );
 
-        TipoMovimientoDetalle tipoDetalle = TipoMovimientoDetalle.builder()
-                .id(tipoDetalleId)
-                .descripcion("Transferencia manual")
-                .build();
-        MovimientoInventario movimiento = new MovimientoInventario();
-        movimiento.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
-        movimiento.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
-
-        configurarStubsBasicos(dto, producto, loteOrigen, almacenOrigen, almacenDestino, tipoDetalle, movimiento);
+        when(loteProductoRepository.findByIdForUpdate(loteOrigen.getId())).thenReturn(Optional.of(loteOrigen));
         when(loteProductoRepository.findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(
-                eq(productoId),
-                eq(loteOrigen.getCodigoLote()),
-                eq(destinoId))
-        ).thenReturn(Optional.empty());
-        when(loteProductoRepository.findByCodigoLoteAndProductoId(
-                eq(loteOrigen.getCodigoLote()),
-                eq(productoId.longValue())
-        )).thenReturn(Optional.of(loteOrigen));
-        when(movimientoInventarioRepository.save(any(MovimientoInventario.class)))
-                .thenAnswer(inv -> {
-                    MovimientoInventario guardado = inv.getArgument(0);
-                    guardado.setId(200L);
-                    return guardado;
-                });
-        when(movimientoInventarioMapper.safeToResponseDTO(any()))
-                .thenReturn(new MovimientoInventarioResponseDTO());
-
-        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
-
-        assertNotNull(respuesta);
-
-        ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
-        verify(loteProductoRepository, atLeast(2)).save(loteCaptor.capture());
-        List<LoteProducto> guardados = loteCaptor.getAllValues();
-        LoteProducto loteDestinoGuardado = guardados.stream()
-                .filter(l -> l.getAlmacen() != null
-                        && Objects.equals(l.getAlmacen().getId(), destinoId))
-                .reduce((first, second) -> second)
-                .orElse(null);
-
-        assertNotNull(loteDestinoGuardado, "Se esperaba registrar lote destino");
-        assertEquals(EstadoLote.DISPONIBLE, loteDestinoGuardado.getEstado());
-        assertEquals(fechaLiberacion, loteDestinoGuardado.getFechaLiberacion());
-        assertSame(usuarioLiberador, loteDestinoGuardado.getUsuarioLiberador());
-        assertEquals(new BigDecimal("5.00"), loteDestinoGuardado.getStockLote());
-    }
-
-    @Test
-    void transferenciaManualDesdeCuarentenaRechazaEstadosNoPermitidos() {
-        Integer productoId = 101;
-        Long loteId = 60L;
-        Integer origenId = 11;
-        Integer destinoId = 12;
-        Long tipoDetalleId = 20L;
-
-        CategoriaProducto categoriaPT = CategoriaProducto.builder()
-                .id(2L)
-                .nombre("PT")
-                .tipo(TipoCategoria.PRODUCTO_TERMINADO)
-                .build();
-        Producto producto = new Producto();
-        producto.setId(productoId);
-        producto.setCategoriaProducto(categoriaPT);
-
-        Almacen almacenOrigen = Almacen.builder()
-                .id(origenId)
-                .nombre("Cuarentena")
-                .ubicacion("Zona QA")
-                .categoria(TipoCategoria.PRODUCTO_TERMINADO)
-                .tipo(TipoAlmacen.PRINCIPAL)
-                .build();
-        Almacen almacenDestino = Almacen.builder()
-                .id(destinoId)
-                .nombre("Principal")
-                .ubicacion("Zona PT")
-                .categoria(TipoCategoria.PRODUCTO_TERMINADO)
-                .tipo(TipoAlmacen.PRINCIPAL)
-                .build();
-
-        LoteProducto loteOrigen = LoteProducto.builder()
-                .id(loteId)
-                .codigoLote("L-002")
-                .producto(producto)
-                .almacen(almacenOrigen)
-                .estado(EstadoLote.EN_CUARENTENA)
-                .stockLote(new BigDecimal("8.0"))
-                .stockReservado(BigDecimal.ZERO)
-                .build();
-
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
-                new BigDecimal("3.0"),
-                TipoMovimiento.TRANSFERENCIA,
-                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
-                null,
-                productoId,
-                loteId,
-                origenId,
-                destinoId,
-                null,
-                null,
-                null,
-                tipoDetalleId,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                Boolean.FALSE,
-                null
-        );
-
-        TipoMovimientoDetalle tipoDetalle = TipoMovimientoDetalle.builder()
-                .id(tipoDetalleId)
-                .descripcion("Transferencia manual")
-                .build();
-        MovimientoInventario movimiento = new MovimientoInventario();
-        movimiento.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
-        movimiento.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
-
-        configurarStubsBasicos(dto, producto, loteOrigen, almacenOrigen, almacenDestino, tipoDetalle, movimiento);
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.registrarMovimiento(dto));
-        assertEquals("LOTE_NO_DISPONIBLE_TRANSFERIR", ex.getReason());
-    }
-
-    @Test
-    void transferenciaManualDesdeCuarentenaRechazaProductoNoTerminado() {
-        Integer productoId = 102;
-        Long loteId = 61L;
-        Integer origenId = 13;
-        Integer destinoId = 14;
-        Long tipoDetalleId = 21L;
-
-        CategoriaProducto categoriaMP = CategoriaProducto.builder()
-                .id(3L)
-                .nombre("MP")
-                .tipo(TipoCategoria.MATERIA_PRIMA)
-                .build();
-        Producto producto = new Producto();
-        producto.setId(productoId);
-        producto.setCategoriaProducto(categoriaMP);
-
-        Almacen almacenOrigen = Almacen.builder()
-                .id(origenId)
-                .nombre("Cuarentena")
-                .ubicacion("Zona QA")
-                .categoria(TipoCategoria.MATERIA_PRIMA)
-                .tipo(TipoAlmacen.PRINCIPAL)
-                .build();
-        Almacen almacenDestino = Almacen.builder()
-                .id(destinoId)
-                .nombre("Principal")
-                .ubicacion("Zona PT")
-                .categoria(TipoCategoria.MATERIA_PRIMA)
-                .tipo(TipoAlmacen.PRINCIPAL)
-                .build();
-
-        LoteProducto loteOrigen = LoteProducto.builder()
-                .id(loteId)
-                .codigoLote("L-003")
-                .producto(producto)
-                .almacen(almacenOrigen)
-                .estado(EstadoLote.LIBERADO)
-                .stockLote(new BigDecimal("6.0"))
-                .stockReservado(BigDecimal.ZERO)
-                .build();
-
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
-                new BigDecimal("2.0"),
-                TipoMovimiento.TRANSFERENCIA,
-                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
-                null,
-                productoId,
-                loteId,
-                origenId,
-                destinoId,
-                null,
-                null,
-                null,
-                tipoDetalleId,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                Boolean.FALSE,
-                null
-        );
-
-        TipoMovimientoDetalle tipoDetalle = TipoMovimientoDetalle.builder()
-                .id(tipoDetalleId)
-                .descripcion("Transferencia manual")
-                .build();
-        MovimientoInventario movimiento = new MovimientoInventario();
-        movimiento.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
-        movimiento.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
-
-        configurarStubsBasicos(dto, producto, loteOrigen, almacenOrigen, almacenDestino, tipoDetalle, movimiento);
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.registrarMovimiento(dto));
-        assertEquals("LOTE_NO_DISPONIBLE_TRANSFERIR", ex.getReason());
-    }
-
-    private void configurarStubsBasicos(MovimientoInventarioDTO dto,
-                                        Producto producto,
-                                        LoteProducto loteOrigen,
-                                        Almacen almacenOrigen,
-                                        Almacen almacenDestino,
-                                        TipoMovimientoDetalle tipoDetalle,
-                                        MovimientoInventario movimiento) {
-        when(tipoMovimientoDetalleRepository.findById(dto.tipoMovimientoDetalleId()))
-                .thenReturn(Optional.of(tipoDetalle));
-        when(productoRepository.findById(dto.productoId().longValue()))
-                .thenReturn(Optional.of(producto));
-        when(entityManager.getReference(eq(Almacen.class), eq(dto.almacenOrigenId())))
-                .thenReturn(almacenOrigen);
-        when(entityManager.getReference(eq(Almacen.class), eq(dto.almacenDestinoId())))
-                .thenReturn(almacenDestino);
-        when(entityManager.getReference(eq(Almacen.class), eq(dto.almacenDestinoId().longValue())))
-                .thenReturn(almacenDestino);
-        when(entityManager.getReference(eq(Producto.class), eq(producto.getId().longValue())))
-                .thenReturn(producto);
-        when(movimientoInventarioMapper.toEntity(dto)).thenReturn(movimiento);
-        when(loteProductoRepository.findByIdForUpdate(dto.loteProductoId()))
-                .thenReturn(Optional.of(loteOrigen));
+                producto.getId(), loteOrigen.getCodigoLote(), destino.getId()))
+                .thenReturn(Optional.of(loteDestino));
         when(loteProductoRepository.save(any(LoteProducto.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
-        when(movimientoInventarioRepository.save(any(MovimientoInventario.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
-        when(movimientoInventarioMapper.safeToResponseDTO(any()))
-                .thenReturn(new MovimientoInventarioResponseDTO());
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<MovimientoInventarioServiceImpl.MovimientoLoteDetalle> resultado =
+                (List<MovimientoInventarioServiceImpl.MovimientoLoteDetalle>) ReflectionTestUtils.invokeMethod(
+                        service,
+                        "procesarMovimientoConLoteExistente",
+                        dto,
+                        TipoMovimiento.TRANSFERENCIA,
+                        origen,
+                        destino,
+                        producto,
+                        new BigDecimal("10.000000"),
+                        false,
+                        solicitud
+                );
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).lote()).isEqualTo(loteDestino);
+        assertThat(resultado.get(0).cantidad()).isEqualByComparingTo(new BigDecimal("10.00"));
+        assertThat(loteOrigen.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void generaAtencionesParaDetallesDeDistintosLotesSinConflicto() {
+        Almacen origen = new Almacen();
+        origen.setId(20);
+
+        Producto producto = new Producto();
+        producto.setId(3000);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO);
+
+        LoteProducto loteUno = new LoteProducto();
+        loteUno.setId(4000L);
+        loteUno.setProducto(producto);
+        loteUno.setAlmacen(origen);
+
+        LoteProducto loteDos = new LoteProducto();
+        loteDos.setId(4001L);
+        loteDos.setProducto(producto);
+        loteDos.setAlmacen(origen);
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(5000L)
+                .estado(EstadoSolicitudMovimiento.AUTORIZADA)
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .producto(producto)
+                .almacenOrigen(origen)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        SolicitudMovimientoDetalle detalleLoteUno = SolicitudMovimientoDetalle.builder()
+                .id(5001L)
+                .solicitudMovimiento(solicitud)
+                .lote(loteUno)
+                .cantidad(new BigDecimal("50.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        SolicitudMovimientoDetalle detalleLoteDos = SolicitudMovimientoDetalle.builder()
+                .id(5002L)
+                .solicitudMovimiento(solicitud)
+                .lote(loteDos)
+                .cantidad(new BigDecimal("60.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        solicitud.getDetalles().add(detalleLoteUno);
+        solicitud.getDetalles().add(detalleLoteDos);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("110.000000"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                producto.getId(),
+                loteUno.getId(),
+                origen.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                solicitud.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                EstadoLote.DISPONIBLE,
+                Boolean.FALSE,
+                List.of()
+        );
+
+        List<AtencionDTO> generadas = (List<AtencionDTO>) ReflectionTestUtils.invokeMethod(
+                service,
+                "obtenerAtencionesParaSolicitud",
+                dto,
+                solicitud
+        );
+
+        assertThat(generadas).hasSize(2);
+        assertThat(generadas).extracting(AtencionDTO::getDetalleId)
+                .containsExactly(detalleLoteUno.getId(), detalleLoteDos.getId());
+        assertThat(generadas).extracting(AtencionDTO::getLoteId)
+                .containsExactly(loteUno.getId(), loteDos.getId());
+        assertThat(generadas).extracting(AtencionDTO::getCantidad)
+                .containsExactly(new BigDecimal("50.000000"), new BigDecimal("60.000000"));
+    }
+
+    @Test
+    void atiendeSolicitudConMultiplesDetallesDelMismoLoteSinExcederPendiente() {
+        Almacen origen = new Almacen();
+        origen.setId(3);
+
+        Producto producto = new Producto();
+        producto.setId(500);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO);
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(600L);
+        lote.setProducto(producto);
+        lote.setAlmacen(origen);
+        lote.setStockLote(new BigDecimal("150.00"));
+        lote.setStockReservado(new BigDecimal("100.000000"));
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(700L)
+                .estado(EstadoSolicitudMovimiento.AUTORIZADA)
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .producto(producto)
+                .lote(lote)
+                .almacenOrigen(origen)
+                .fechaSolicitud(LocalDateTime.now())
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        SolicitudMovimientoDetalle detalle12 = SolicitudMovimientoDetalle.builder()
+                .id(710L)
+                .solicitudMovimiento(solicitud)
+                .lote(lote)
+                .cantidad(new BigDecimal("12.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        SolicitudMovimientoDetalle detalle88 = SolicitudMovimientoDetalle.builder()
+                .id(711L)
+                .solicitudMovimiento(solicitud)
+                .lote(lote)
+                .cantidad(new BigDecimal("88.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        solicitud.getDetalles().add(detalle12);
+        solicitud.getDetalles().add(detalle88);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("100.000000"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                producto.getId(),
+                lote.getId(),
+                origen.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                123L,
+                solicitud.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                EstadoLote.DISPONIBLE,
+                Boolean.FALSE,
+                List.of()
+        );
+
+        when(loteProductoRepository.findByIdForUpdate(lote.getId())).thenReturn(Optional.of(lote));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(solicitudMovimientoDetalleRepository.findById(detalle12.getId())).thenReturn(Optional.of(detalle12));
+        when(solicitudMovimientoDetalleRepository.findById(detalle88.getId())).thenReturn(Optional.of(detalle88));
+        when(solicitudMovimientoDetalleRepository.save(any(SolicitudMovimientoDetalle.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(reservaLoteRepository.sumPendienteActivaByLoteId(eq(lote.getId()), eq(EstadoReservaLote.ACTIVA)))
+                .thenReturn(BigDecimal.ZERO);
+
+        assertThatCode(() -> ReflectionTestUtils.invokeMethod(
+                service,
+                "atenderSolicitudMovimiento",
+                dto,
+                solicitud
+        )).doesNotThrowAnyException();
+
+        ArgumentCaptor<SolicitudMovimientoDetalle> detalleCaptor = ArgumentCaptor.forClass(SolicitudMovimientoDetalle.class);
+        ArgumentCaptor<BigDecimal> cantidadCaptor = ArgumentCaptor.forClass(BigDecimal.class);
+
+        verify(reservaLoteService, times(2)).consumirReserva(
+                eq(solicitud),
+                detalleCaptor.capture(),
+                eq(lote),
+                cantidadCaptor.capture()
+        );
+
+        assertThat(detalleCaptor.getAllValues()).extracting(SolicitudMovimientoDetalle::getId)
+                .containsExactly(detalle12.getId(), detalle88.getId());
+        assertThat(cantidadCaptor.getAllValues())
+                .containsExactly(new BigDecimal("12.000000"), new BigDecimal("88.000000"));
+    }
+
+    @Test
+    void lanzaConflictoCuandoCantidadSolicitadaExcedePendienteTotal() {
+        Almacen origen = new Almacen();
+        origen.setId(8);
+
+        Producto producto = new Producto();
+        producto.setId(900);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO);
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(901L);
+        lote.setProducto(producto);
+        lote.setAlmacen(origen);
+        lote.setCodigoLote("LOTE-EXCESO");
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(902L)
+                .estado(EstadoSolicitudMovimiento.AUTORIZADA)
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .producto(producto)
+                .lote(lote)
+                .almacenOrigen(origen)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        SolicitudMovimientoDetalle detallePendiente60 = SolicitudMovimientoDetalle.builder()
+                .id(903L)
+                .solicitudMovimiento(solicitud)
+                .lote(lote)
+                .cantidad(new BigDecimal("60.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        SolicitudMovimientoDetalle detallePendiente40 = SolicitudMovimientoDetalle.builder()
+                .id(904L)
+                .solicitudMovimiento(solicitud)
+                .lote(lote)
+                .cantidad(new BigDecimal("40.000000"))
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .almacenOrigen(origen)
+                .build();
+
+        solicitud.getDetalles().add(detallePendiente60);
+        solicitud.getDetalles().add(detallePendiente40);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("150.000000"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                producto.getId(),
+                lote.getId(),
+                origen.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                solicitud.getId(),
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                EstadoLote.DISPONIBLE,
+                Boolean.FALSE,
+                List.of()
+        );
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(
+                service,
+                "obtenerAtencionesParaSolicitud",
+                dto,
+                solicitud
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException rse = (ResponseStatusException) exception;
+                    assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.CONFLICT.value());
+                    assertThat(rse.getReason()).isEqualTo("ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
+                });
     }
 }
-

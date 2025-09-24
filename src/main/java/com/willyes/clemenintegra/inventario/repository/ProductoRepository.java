@@ -61,11 +61,12 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
             SELECT p.id AS productoId,
                    COALESCE(SUM(CASE WHEN lp.estado IN ('DISPONIBLE','LIBERADO')
                                      AND lp.agotado = false
+                                     AND lp.almacenes_id IN (?2)
                                      AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
                                      THEN (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) ELSE 0 END), 0) AS stockDisponible
             FROM productos p
             LEFT JOIN lotes_productos lp ON lp.productos_id = p.id
-            WHERE p.id IN (?1) AND lp.almacenes_id IN (?2) AND lp.agotado = false
+            WHERE p.id IN (?1)
             GROUP BY p.id
             """, nativeQuery = true)
     List<StockDisponibleProjection> calcularStockDisponiblePorProductoEnAlmacenes(List<Long> ids, List<Long> almacenes);

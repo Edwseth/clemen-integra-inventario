@@ -11,6 +11,6 @@ public interface LoteFefoDisponibleProjection {
     String getCodigoLote();
     BigDecimal getStockLote();
     LocalDateTime getFechaVencimiento();
-    Integer getAlmacenId();
+    Long getAlmacenId();
     String getNombreAlmacen();
 }

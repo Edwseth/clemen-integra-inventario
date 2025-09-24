@@ -35,7 +35,9 @@ public class InventoryCatalogProperties {
 
     @Data
     public static class Origen {
-        private Long bodegaPrincipal;
+        private Long materiaPrima;
+        private Long materialEmpaque;
+        private Long suministros;
         private Long preBodegaProduccion;
     }
 
