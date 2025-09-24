@@ -146,6 +146,20 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Long resolvedTipoDetalleId = resolveTipoMovimientoDetalleId(dto, producto);
         TipoMovimientoDetalle tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(resolvedTipoDetalleId)
                 .orElseThrow(() -> new NoSuchElementException("Tipo de detalle de movimiento no encontrado"));
+
+        // === PATCH OP TRANSFERENCIA ===
+        if (dto.ordenProduccionId() != null && dto.tipoMovimiento() == TipoMovimiento.TRANSFERENCIA) {
+            Long transferenciaId = java.util.Optional.ofNullable(catalogResolver.getTipoDetalleTransferenciaId())
+                    .orElseThrow(() -> new IllegalStateException("CONFIG_FALTANTE: inventory.tipoDetalle.transferenciaId"));
+            if (!java.util.Objects.equals(tipoMovimientoDetalle.getId(), transferenciaId)) {
+                tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(transferenciaId)
+                        .orElseThrow(() -> new NoSuchElementException("Tipo detalle 'TRANSFERENCIA' no configurado"));
+            }
+            // asegurar que la “Clasificación” NO quede en blanco ni caiga en el motivo
+            movimiento.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
+        }
+        // === /PATCH ===
+
         if (requiereSolicitudMovimientoId(tipoMovimientoDetalle) && dto.solicitudMovimientoId() == null) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
