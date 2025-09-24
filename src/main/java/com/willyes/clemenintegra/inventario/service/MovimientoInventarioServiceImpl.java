@@ -16,10 +16,6 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
-import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
-import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
-import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
-import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.DataFormat;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -108,6 +105,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     @Resource
     private final EntityManager entityManager;
+    @Value("${app.inventario.prebodega.id}")
+    private Integer preBodegaId;
+    @Value("${inventory.tipoDetalle.transferenciaId}")
+    private Integer tipoDetalleTransferenciaId;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -330,6 +331,39 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (dto.almacenDestinoId() == null && solicitud != null && solicitud.getAlmacenDestino() != null) {
             almacenDestino = solicitud.getAlmacenDestino();
         }
+
+        // === OP OVERRIDES (destino y tipo/detalle) ===
+        boolean esOP = (dto.ordenProduccionId() != null)
+                || (solicitud != null && solicitud.getOrdenProduccion() != null);
+
+        // 2.1) Forzar destino a Pre-Bodega para OP
+        if (esOP && preBodegaId != null) {
+            if (almacenDestino == null || !Objects.equals(almacenDestino.getId(), preBodegaId.longValue())) {
+                log.info("OP_DESTINO_FORZADO: destinoAnterior={} -> PreBodega({})",
+                        (almacenDestino != null ? almacenDestino.getId() : null), preBodegaId);
+            }
+            almacenDestino = entityManager.getReference(Almacen.class, preBodegaId.longValue());
+        }
+
+        // 2.2) Para OP, asegurar tipo/detalle de TRANSFERENCIA
+        if (esOP) {
+            // Si el tipo del DTO no es TRANSFERENCIA, lo corregimos.
+            if (dto.tipoMovimiento() != TipoMovimiento.TRANSFERENCIA) {
+                tipoMovimiento = TipoMovimiento.TRANSFERENCIA;
+                movimiento.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+            }
+            // Si el detalle actual no es el de TRANSFERENCIA, lo reemplazamos por el configurado.
+            if (tipoDetalleTransferenciaId != null
+                    && (tipoMovimientoDetalle == null
+                    || !Objects.equals(tipoMovimientoDetalle.getId(), tipoDetalleTransferenciaId.longValue()))) {
+                tipoMovimientoDetalle = tipoMovimientoDetalleRepository
+                        .findById(tipoDetalleTransferenciaId.longValue())
+                        .orElse(tipoMovimientoDetalle);
+                log.info("OP_DETALLE_FORZADO: tipoDetalleId={}",
+                        (tipoMovimientoDetalle != null ? tipoMovimientoDetalle.getId() : null));
+            }
+        }
+        // === /OP OVERRIDES ===
 
         // Detección automática de devolución interna
         boolean devolucionInterna = false;
@@ -633,13 +667,27 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             generado.setDetalleId(detalle.getId());
             generado.setLoteId(detalleLoteId != null ? detalleLoteId : loteObjetivo);
             generado.setCantidad(cantidadAtencion);
-            generado.setAlmacenOrigenId(detalle.getAlmacenOrigen() != null
-                    ? detalle.getAlmacenOrigen().getId()
-                    : dto.almacenOrigenId());
-            generado.setAlmacenDestinoId(detalle.getAlmacenDestino() != null
-                    ? detalle.getAlmacenDestino().getId()
-                    : dto.almacenDestinoId());
+            generado.setAlmacenOrigenId(
+                    detalle.getAlmacenOrigen() != null
+                            ? (detalle.getAlmacenOrigen().getId() != null ? detalle.getAlmacenOrigen().getId().intValue() : null)
+                            : (dto.almacenOrigenId() != null ? dto.almacenOrigenId().intValue() : null)
+            );
+
+            // --- NORMALIZAR A INTEGER EL DESTINO ---
+            Integer destinoAtencion =
+                    (detalle.getAlmacenDestino() != null
+                            ? (detalle.getAlmacenDestino().getId() != null ? detalle.getAlmacenDestino().getId().intValue() : null)
+                            : (dto.almacenDestinoId() != null ? dto.almacenDestinoId().intValue() : null)
+                    );
+
+            // Para OP, forzar Pre-Bodega como destino de la atención
+            if (dto.ordenProduccionId() != null && preBodegaId != null) {
+                destinoAtencion = preBodegaId; // ya es Integer
+            }
+
+            generado.setAlmacenDestinoId(destinoAtencion);
             generadas.add(generado);
+
 
             if (restanteTotal != null) {
                 restanteTotal = restanteTotal.subtract(cantidadAtencion).setScale(6, RoundingMode.HALF_UP);
