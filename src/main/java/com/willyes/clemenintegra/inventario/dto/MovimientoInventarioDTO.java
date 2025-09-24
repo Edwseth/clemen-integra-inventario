@@ -19,6 +19,7 @@ public record MovimientoInventarioDTO(
         TipoMovimiento tipoMovimiento,
         ClasificacionMovimientoInventario clasificacionMovimientoInventario,
         String docReferencia,
+        String destinoTexto,
 
         @NotNull(message = "El producto es obligatorio")
         Integer productoId,

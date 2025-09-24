@@ -64,6 +64,7 @@ public class MovimientoInventarioController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
+        dto = normalizarMovimientoDto(dto);
         try {
             int atenciones = dto.atenciones() != null ? dto.atenciones().size() : 0;
             log.debug("MOV-CONTROLLER registrar solicitudId={} atenciones={} tipo={} clasificacion={} producto={} lote={}",
@@ -73,9 +74,20 @@ public class MovimientoInventarioController {
             // 1) Validación de stock para salidas
             var tipo = dto.tipoMovimiento();
             boolean isSalida = tipo == TipoMovimiento.SALIDA || tipo == TipoMovimiento.AJUSTE;
+            boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
+            boolean atencionesVacias = dto.atenciones() == null || dto.atenciones().isEmpty();
+            Long detalleSalidaPtId = Optional.ofNullable(inventoryCatalogResolver.getTipoDetalleSalidaPtId())
+                    .orElse(inventoryCatalogResolver.getTipoDetalleSalidaId());
+            boolean esSalidaPt = dto.tipoMovimiento() == TipoMovimiento.SALIDA
+                    && detalleSalidaPtId != null
+                    && Objects.equals(dto.tipoMovimientoDetalleId(), detalleSalidaPtId);
+            boolean permitirLoteNulo = dto.loteProductoId() == null && autoSplitSolicitado && atencionesVacias;
             SolicitudMovimiento solicitudMovimiento = null;
 
-            if (isSalida) {
+            if (isSalida && permitirLoteNulo) {
+                log.debug("MOV-CONTROLLER skip stock pre-check autoSplit={} atencionesVacias={} esSalidaPt={}",
+                        autoSplitSolicitado, atencionesVacias, esSalidaPt);
+            } else if (isSalida) {
                 Producto prod = productoRepo.findById(dto.productoId().longValue())
                         .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
                 LoteProducto lote = loteRepo.findById(dto.loteProductoId())
@@ -342,6 +354,48 @@ public class MovimientoInventarioController {
             return BigDecimal.ZERO;
         }
         return total;
+    }
+
+    private MovimientoInventarioDTO normalizarMovimientoDto(MovimientoInventarioDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        String destinoTexto = dto.destinoTexto();
+        if (destinoTexto != null) {
+            destinoTexto = destinoTexto.trim();
+            if (destinoTexto.isBlank()) {
+                destinoTexto = null;
+            }
+        }
+        String docReferencia = dto.docReferencia();
+        if ((docReferencia == null || docReferencia.isBlank()) && destinoTexto != null) {
+            docReferencia = "DESTINO: " + destinoTexto;
+        }
+        return new MovimientoInventarioDTO(
+                dto.id(),
+                dto.cantidad(),
+                dto.tipoMovimiento(),
+                dto.clasificacionMovimientoInventario(),
+                docReferencia,
+                destinoTexto,
+                dto.productoId(),
+                dto.loteProductoId(),
+                dto.almacenOrigenId(),
+                dto.almacenDestinoId(),
+                dto.proveedorId(),
+                dto.ordenCompraId(),
+                dto.motivoMovimientoId(),
+                dto.tipoMovimientoDetalleId(),
+                dto.solicitudMovimientoId(),
+                dto.usuarioId(),
+                dto.ordenProduccionId(),
+                dto.ordenCompraDetalleId(),
+                dto.codigoLote(),
+                dto.fechaVencimiento(),
+                dto.estadoLote(),
+                dto.autoSplit(),
+                dto.atenciones()
+        );
     }
 
 }

@@ -58,6 +58,7 @@ public class InventoryCatalogProperties {
         private Long entradaId;
         private Long transferenciaId;
         private Long salidaId;
+        private Long salidaPtId;
     }
 
     @Data

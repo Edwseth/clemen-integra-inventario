@@ -62,7 +62,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -117,10 +119,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new AuthenticationCredentialsNotFoundException("No se encontró autenticación válida");
         }
 
-        if (dto.tipoMovimientoDetalleId() == null) {
-            throw new IllegalArgumentException("tipo_movimiento_detalle_id es obligatorio"); // [Codex Edit]
-        }
-
         if (dto.tipoMovimiento() == TipoMovimiento.ENTRADA
                 && Objects.equals(dto.motivoMovimientoId(), catalogResolver.getMotivoIdEntradaProductoTerminado())
                 && dto.ordenProduccionId() == null) {
@@ -136,25 +134,38 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (!atenciones.isEmpty()) {
             log.debug("MOV-SERVICE atenciones recibidas: {}", atenciones.size());
         }
+        boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
 
         List<MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO> detalleRespuesta = List.of();
-
-        TipoMovimientoDetalle tipoMovimientoDetalle = null;
-        if (dto.tipoMovimientoDetalleId() != null) {
-            tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(dto.tipoMovimientoDetalleId())
-                    .orElseThrow(() -> new NoSuchElementException("Tipo de detalle de movimiento no encontrado"));
-            if (requiereSolicitudMovimientoId(tipoMovimientoDetalle) && dto.solicitudMovimientoId() == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                        "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
-            }
-        }
 
         // 1. Cargar entidades principales
         Producto producto = productoRepository.findById(dto.productoId().longValue())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
 
-        Almacen almacenOrigen = dto.almacenOrigenId() != null
-                ? entityManager.getReference(Almacen.class, dto.almacenOrigenId()) : null;
+        Long resolvedTipoDetalleId = resolveTipoMovimientoDetalleId(dto, producto);
+        TipoMovimientoDetalle tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(resolvedTipoDetalleId)
+                .orElseThrow(() -> new NoSuchElementException("Tipo de detalle de movimiento no encontrado"));
+        if (requiereSolicitudMovimientoId(tipoMovimientoDetalle) && dto.solicitudMovimientoId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
+        }
+
+        TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
+        boolean salidaPt = isSalidaPt(tipoMovimiento, resolvedTipoDetalleId);
+
+        Long almacenPtId = null;
+        Almacen almacenOrigen;
+        if (salidaPt) {
+            almacenPtId = ensureAlmacenPtId();
+            if (dto.almacenOrigenId() != null && !Objects.equals(dto.almacenOrigenId().longValue(), almacenPtId)) {
+                log.warn("ALMACEN_ORIGEN_NO_VALIDO_PT dtoOrigenId={} ptId={}", dto.almacenOrigenId(), almacenPtId);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_ORIGEN_NO_VALIDO_PT");
+            }
+            almacenOrigen = entityManager.getReference(Almacen.class, almacenPtId);
+        } else {
+            almacenOrigen = dto.almacenOrigenId() != null
+                    ? entityManager.getReference(Almacen.class, dto.almacenOrigenId()) : null;
+        }
 
         Almacen almacenDestino = dto.almacenDestinoId() != null
                 ? entityManager.getReference(Almacen.class, dto.almacenDestinoId()) : null;
@@ -165,7 +176,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? entityManager.getReference(OrdenProduccion.class, dto.ordenProduccionId())
                 : null;
 
-        TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
         ClasificacionMovimientoInventario clasificacion = dto.clasificacionMovimientoInventario();
 
         log.debug("MOV-REQ tipo={}, clasificacion={}, prod={}, qty={}, opId={}",
@@ -197,7 +207,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
 
             Long solicitudAlmacenOrigenId = solicitud.getAlmacenOrigen() != null ? Long.valueOf(solicitud.getAlmacenOrigen().getId()) : null;
-            Long dtoAlmacenOrigenId = dto.almacenOrigenId() != null ? dto.almacenOrigenId().longValue() : null;
+            Long dtoAlmacenOrigenId = salidaPt ? almacenPtId
+                    : dto.almacenOrigenId() != null ? dto.almacenOrigenId().longValue() : null;
             if (solicitudAlmacenOrigenId != null && !Objects.equals(solicitudAlmacenOrigenId, dtoAlmacenOrigenId)) {
                 log.warn("MISMATCH_ALMACEN_ORIGEN_ID: esperado={}, recibido={}", solicitudAlmacenOrigenId, dto.almacenOrigenId());
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_ALMACEN_ORIGEN_ID");
@@ -371,6 +382,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             LoteProducto loteRecepcion = crearLoteRecepcion(dto, producto, almacenDestino, usuario,
                     cantidadSolicitada, motivoMovimiento);
             lotesProcesados = List.of(new MovimientoLoteDetalle(loteRecepcion, cantidadSolicitada));
+        } else if (salidaPt) {
+            lotesProcesados = procesarSalidaPt(dto, producto, cantidadSolicitada,
+                    almacenPtId, atenciones, autoSplitSolicitado);
         } else {
             lotesProcesados = procesarMovimientoConLoteExistente(dto, tipoMovimiento, almacenOrigen,
                     almacenDestino, producto, cantidadSolicitada, devolucionInterna, solicitud);
@@ -403,11 +417,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setOrdenCompraDetalle(ordenCompraDetalle);
         movimiento.setMotivoMovimiento(dto.motivoMovimientoId() != null
                 ? entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId()) : null);
-        movimiento.setTipoMovimientoDetalle(tipoMovimientoDetalle != null
-                ? tipoMovimientoDetalle
-                : dto.tipoMovimientoDetalleId() != null
-                ? entityManager.getReference(TipoMovimientoDetalle.class, dto.tipoMovimientoDetalleId())
-                : null);
+        movimiento.setTipoMovimientoDetalle(tipoMovimientoDetalle);
         movimiento.setRegistradoPor(usuario);
         if (solicitud != null) {
             movimiento.setSolicitudMovimiento(solicitud);
@@ -497,7 +507,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             log.debug("VAL-ACTUALIZA antes actualizarStockLote loteId={} stockAntes={} reservadoAntes={} req={}",
                     lote.getId(), stockAntes, reservadoAntes, cantidad);
 
-            actualizarStockLote(lote, cantidad);
+            actualizarStockLote(lote, cantidad, lote.getProducto());
             loteProductoRepository.save(lote);
 
             if (detalle != null) {
@@ -648,11 +658,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return valor.setScale(6, RoundingMode.HALF_UP);
     }
 
-    private void actualizarStockLote(LoteProducto lote, BigDecimal cantidad) {
-        BigDecimal stockActual = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO)
-                .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal cantidadStock = Optional.ofNullable(cantidad).orElse(BigDecimal.ZERO)
-                .setScale(2, RoundingMode.HALF_UP);
+    private void actualizarStockLote(LoteProducto lote, BigDecimal cantidad, Producto producto) {
+        BigDecimal stockActual = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+        BigDecimal cantidadStock = Optional.ofNullable(cantidad).orElse(BigDecimal.ZERO);
         BigDecimal nuevoStock = stockActual.subtract(cantidadStock);
         if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "STOCK_LOTE_INSUFICIENTE");
@@ -669,7 +677,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         log.debug("VAL-RESERVA loteId={} reservadoPendiente={} stockNuevo={}",
                 lote.getId(), reservadoPendiente, nuevoStock);
 
-        lote.setStockLote(nuevoStock.setScale(2, RoundingMode.HALF_UP));
+        int escala = resolverEscalaProducto(producto);
+        lote.setStockLote(nuevoStock.setScale(escala, RoundingMode.HALF_UP));
         lote.setStockReservado(reservadoPendiente);
 
         if (lote.getStockLote().compareTo(BigDecimal.ZERO) <= 0) {
@@ -681,6 +690,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             lote.setAgotado(false);
             lote.setFechaAgotado(null);
         }
+    }
+
+    private int resolverEscalaProducto(Producto producto) {
+        return catalogResolver.decimals(producto != null ? producto.getUnidadMedida() : null);
     }
 
     private SolicitudMovimientoDetalle obtenerDetalleParaAtencion(SolicitudMovimiento solicitud, AtencionDTO atencion) {
@@ -816,10 +829,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Movimientos Inventario");
 
-        // NUEVO: estilo con 2 decimales
         DataFormat df = workbook.createDataFormat();
-        CellStyle styleDec2 = workbook.createCellStyle();
-        styleDec2.setDataFormat(df.getFormat("0.00"));
+        Map<Integer, CellStyle> estilosPorEscala = new HashMap<>();
 
         // Cabecera
         String[] encabezados = {
@@ -859,8 +870,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             BigDecimal cant = mov.getCantidad();
             Cell cCant = row.createCell(6);
             if (cant != null) {
-                cCant.setCellValue(cant.setScale(2, RoundingMode.HALF_UP).doubleValue());
-                cCant.setCellStyle(styleDec2);
+                int escala = catalogResolver.decimals(mov.getProducto() != null
+                        ? mov.getProducto().getUnidadMedida() : null);
+                cCant.setCellValue(cant.setScale(escala, RoundingMode.HALF_UP).doubleValue());
+                cCant.setCellStyle(obtenerEstiloCantidad(workbook, df, estilosPorEscala, escala));
             } else {
                 cCant.setBlank();
             }
@@ -887,10 +900,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     public ByteArrayInputStream exportarMovimientosAExcel(List<MovimientoInventario> movimientos) {
         try (Workbook workbook = new XSSFWorkbook()) {
-            // NUEVO: estilo con 2 decimales
             DataFormat df = workbook.createDataFormat();
-            CellStyle styleDec2 = workbook.createCellStyle();
-            styleDec2.setDataFormat(df.getFormat("0.00"));
+            Map<Integer, CellStyle> estilosPorEscala = new HashMap<>();
             Sheet sheet = workbook.createSheet("Movimientos");
             Row header = sheet.createRow(0);
             String[] columnas = {"ID", "Producto", "Cantidad", "Tipo Movimiento", "Fecha"};
@@ -907,8 +918,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 BigDecimal cant = mov.getCantidad();
                 Cell c2 = row.createCell(2);
                 if (cant != null) {
-                    c2.setCellValue(cant.setScale(2, RoundingMode.HALF_UP).doubleValue());
-                    c2.setCellStyle(styleDec2);
+                    int escala = catalogResolver.decimals(mov.getProducto() != null
+                            ? mov.getProducto().getUnidadMedida() : null);
+                    c2.setCellValue(cant.setScale(escala, RoundingMode.HALF_UP).doubleValue());
+                    c2.setCellStyle(obtenerEstiloCantidad(workbook, df, estilosPorEscala, escala));
                 } else {
                     c2.setBlank();
                 }
@@ -923,6 +936,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         } catch (IOException e) {
             throw new IllegalStateException("Error generando el archivo Excel", e);
         }
+    }
+
+    private CellStyle obtenerEstiloCantidad(Workbook workbook,
+                                            DataFormat dataFormat,
+                                            Map<Integer, CellStyle> estilosPorEscala,
+                                            int escala) {
+        int escalaNormalizada = Math.max(0, escala);
+        return estilosPorEscala.computeIfAbsent(escalaNormalizada, key -> {
+            CellStyle estilo = workbook.createCellStyle();
+            String formato = "0";
+            if (escalaNormalizada > 0) {
+                formato = "0." + "0".repeat(escalaNormalizada);
+            }
+            estilo.setDataFormat(dataFormat.getFormat(formato));
+            return estilo;
+        });
     }
 
     private void validarParametros(TipoMovimiento tipo, Almacen origen, Almacen destino) {
@@ -984,6 +1013,113 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .stockLote(cantidad)
                 .build();
         return loteProductoRepository.save(lote);
+    }
+
+
+    private List<MovimientoLoteDetalle> procesarSalidaPt(MovimientoInventarioDTO dto,
+                                                         Producto producto,
+                                                         BigDecimal cantidadSolicitada,
+                                                         Long almacenPtId,
+                                                         List<AtencionDTO> atenciones,
+                                                         boolean autoSplitSolicitado) {
+        if (almacenPtId == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CONFIG_FALTANTE");
+        }
+        EnumSet<EstadoLote> estadosElegibles = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+        List<AtencionDTO> atencionesSeguras = atenciones != null
+                ? atenciones.stream().filter(Objects::nonNull).collect(Collectors.toList())
+                : List.of();
+        List<ParLoteCantidad> plan = new ArrayList<>();
+        if (autoSplitSolicitado && atencionesSeguras.isEmpty()) {
+            Integer productoId = producto.getId();
+            if (productoId == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_ID_REQUERIDO");
+            }
+            List<LoteProducto> candidatos = loteProductoRepository.findFefoSalidaPt(
+                    productoId.longValue(), almacenPtId, estadosElegibles);
+            BigDecimal restante = cantidadSolicitada;
+            for (LoteProducto candidato : candidatos) {
+                if (restante.compareTo(BigDecimal.ZERO) <= 0) {
+                    break;
+                }
+                BigDecimal stock = Optional.ofNullable(candidato.getStockLote()).orElse(BigDecimal.ZERO);
+                BigDecimal reservado = Optional.ofNullable(candidato.getStockReservado()).orElse(BigDecimal.ZERO);
+                BigDecimal disponible = stock.subtract(reservado);
+                if (disponible.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                BigDecimal tomar = disponible.min(restante);
+                if (tomar.compareTo(BigDecimal.ZERO) > 0) {
+                    plan.add(new ParLoteCantidad(candidato.getId(), tomar));
+                    restante = restante.subtract(tomar);
+                }
+            }
+            if (restante.compareTo(BigDecimal.ZERO) > 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "STOCK_INSUFICIENTE");
+            }
+        } else {
+            if (!atencionesSeguras.isEmpty()) {
+                BigDecimal suma = BigDecimal.ZERO;
+                for (AtencionDTO atencion : atencionesSeguras) {
+                    if (atencion.getLoteId() == null || atencion.getCantidad() == null) {
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDACION_ATENCIONES");
+                    }
+                    plan.add(new ParLoteCantidad(atencion.getLoteId(), atencion.getCantidad()));
+                    suma = suma.add(atencion.getCantidad());
+                }
+                if (suma.compareTo(cantidadSolicitada) != 0) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDACION_ATENCIONES");
+                }
+            } else if (dto.loteProductoId() != null) {
+                plan.add(new ParLoteCantidad(dto.loteProductoId(), cantidadSolicitada));
+            } else if (autoSplitSolicitado) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDACION_ATENCIONES");
+            } else {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ID_REQUERIDO");
+            }
+        }
+
+        List<MovimientoLoteDetalle> detalles = new ArrayList<>();
+        for (ParLoteCantidad par : plan) {
+            MovimientoLoteDetalle detalle = consumirLoteSalidaPt(par, producto, almacenPtId, estadosElegibles);
+            detalles.add(detalle);
+        }
+
+        if (detalles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "STOCK_INSUFICIENTE");
+        }
+        return detalles;
+    }
+
+    private MovimientoLoteDetalle consumirLoteSalidaPt(ParLoteCantidad consumo,
+                                                       Producto producto,
+                                                       Long almacenPtId,
+                                                       EnumSet<EstadoLote> estadosElegibles) {
+        if (consumo == null || consumo.loteId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ID_REQUERIDO");
+        }
+        LoteProducto lote = loteProductoRepository.findByIdForUpdate(consumo.loteId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO"));
+        if (lote.getProducto() == null || producto.getId() == null
+                || !Objects.equals(lote.getProducto().getId(), producto.getId())) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_PRODUCTO_INVALIDO");
+        }
+        if (lote.getAlmacen() == null || lote.getAlmacen().getId() == null
+                || !Objects.equals(lote.getAlmacen().getId().longValue(), almacenPtId)) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
+        }
+        if (!estadosElegibles.contains(lote.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ESTADO_NO_ELEGIBLE");
+        }
+        BigDecimal stock = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+        BigDecimal reservado = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO);
+        BigDecimal disponible = stock.subtract(reservado);
+        if (disponible.compareTo(consumo.cantidad()) < 0) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "STOCK_INSUFICIENTE");
+        }
+        actualizarStockLote(lote, consumo.cantidad(), producto);
+        LoteProducto actualizado = loteProductoRepository.save(lote);
+        return new MovimientoLoteDetalle(actualizado, consumo.cantidad());
     }
 
 
@@ -1109,7 +1245,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             BigDecimal reservadoAntes = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
             log.debug("VAL-ACTUALIZA antes actualizarStockLote loteId={} stockAntes={} reservadoAntes={} req={}",
                     loteOrigen.getId(), stockAntes, reservadoAntes, cantidad);
-            actualizarStockLote(loteOrigen, cantidad);
+            actualizarStockLote(loteOrigen, cantidad, producto);
             LoteProducto actualizado = loteProductoRepository.save(loteOrigen);
             return List.of(new MovimientoLoteDetalle(actualizado, cantidad));
         }
@@ -1283,8 +1419,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         LoteProducto loteDestino = ensureDestinoLote(producto.getId(), loteOrigen.getCodigoLote(), destino.getId());
 
+        int escala = resolverEscalaProducto(producto);
         BigDecimal nuevoStockOrigen = stockActual.subtract(cantidadNormalizada)
-                .setScale(2, RoundingMode.HALF_UP);
+                .setScale(escala, RoundingMode.HALF_UP);
         loteOrigen.setStockLote(nuevoStockOrigen);
 
         if (esAtencionReserva(solicitud)) {
@@ -1302,7 +1439,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         BigDecimal stockDestino = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO);
         BigDecimal nuevoStockDestino = stockDestino.add(cantidadNormalizada)
-                .setScale(2, RoundingMode.HALF_UP);
+                .setScale(escala, RoundingMode.HALF_UP);
         loteDestino.setStockLote(nuevoStockDestino);
         if (loteDestino.getStockReservado() == null) {
             loteDestino.setStockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
@@ -1315,7 +1452,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         recalcularAgotadoSegunDisponibilidad(loteDestino);
         LoteProducto guardadoDestino = loteProductoRepository.save(loteDestino);
-        return new MovimientoLoteDetalle(guardadoDestino, cantidadNormalizada.setScale(2, RoundingMode.HALF_UP));
+        BigDecimal cantidadDetalle = cantidadNormalizada.setScale(escala, RoundingMode.HALF_UP);
+        return new MovimientoLoteDetalle(guardadoDestino, cantidadDetalle);
     }
 
     private LoteProducto ensureDestinoLote(Integer productoId, String codigoLote, Integer almacenDestinoId) {
@@ -1336,12 +1474,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .findByCodigoLoteAndProductoId(codigoLote, productoId.longValue())
                 .orElse(null);
 
+        int escalaDestino = resolverEscalaProducto(productoRef);
+
         LoteProducto nuevo = LoteProducto.builder()
                 .codigoLote(codigoLote)
                 .producto(productoRef)
                 .almacen(almacenRef)
                 .estado(EstadoLote.DISPONIBLE)
-                .stockLote(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                .stockLote(BigDecimal.ZERO.setScale(escalaDestino, RoundingMode.HALF_UP))
                 .stockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP))
                 .agotado(true)
                 .fechaAgotado(LocalDateTime.now())
@@ -1472,6 +1612,74 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         return resultado;
+    }
+
+    private Long resolveTipoMovimientoDetalleId(MovimientoInventarioDTO dto, Producto producto) {
+        if (dto.tipoMovimientoDetalleId() != null) {
+            return dto.tipoMovimientoDetalleId();
+        }
+        if (dto.tipoMovimiento() != TipoMovimiento.SALIDA) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "TIPO_MOVIMIENTO_DETALLE_ID_REQUERIDO");
+        }
+        if (!puedeAutocompletarSalidaPt(dto, producto)) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "tipoMovimientoDetalleId es requerido para SALIDAS no PT");
+        }
+        Long salidaPtId = catalogResolver.getTipoDetalleSalidaPtId();
+        if (salidaPtId == null) {
+            Long salidaId = catalogResolver.getTipoDetalleSalidaId();
+            if (salidaId == null) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CONFIG_FALTANTE");
+            }
+            return salidaId;
+        }
+        return salidaPtId;
+    }
+
+    private boolean puedeAutocompletarSalidaPt(MovimientoInventarioDTO dto, Producto producto) {
+        if (dto == null || producto == null) {
+            return false;
+        }
+        if (!tieneSenalSalidaPt(dto)) {
+            return false;
+        }
+        boolean productoEsPt = producto.getCategoriaProducto() != null
+                && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO;
+        Long almacenPtId = catalogResolver.getAlmacenPtId();
+        boolean origenCompatible = almacenPtId != null
+                && (dto.almacenOrigenId() == null
+                || Objects.equals(dto.almacenOrigenId().longValue(), almacenPtId));
+        return productoEsPt || origenCompatible;
+    }
+
+    private boolean tieneSenalSalidaPt(MovimientoInventarioDTO dto) {
+        String doc = dto.docReferencia();
+        if (doc != null && !doc.isBlank()) {
+            return true;
+        }
+        String destino = dto.destinoTexto();
+        return destino != null && !destino.isBlank();
+    }
+
+    private boolean isSalidaPt(TipoMovimiento tipoMovimiento, Long tipoDetalleId) {
+        if (tipoMovimiento != TipoMovimiento.SALIDA || tipoDetalleId == null) {
+            return false;
+        }
+        Long salidaPtId = catalogResolver.getTipoDetalleSalidaPtId();
+        if (salidaPtId != null) {
+            return Objects.equals(tipoDetalleId, salidaPtId);
+        }
+        Long salidaId = catalogResolver.getTipoDetalleSalidaId();
+        return salidaId != null && Objects.equals(tipoDetalleId, salidaId);
+    }
+
+    private Long ensureAlmacenPtId() {
+        Long almacenPtId = catalogResolver.getAlmacenPtId();
+        if (almacenPtId == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CONFIG_FALTANTE");
+        }
+        return almacenPtId;
     }
 
     private MovimientoInventario duplicarMovimientoBase(MovimientoInventario base,

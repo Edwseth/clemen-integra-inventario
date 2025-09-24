@@ -162,6 +162,7 @@ class MovimientoInventarioServiceIntegrationTest {
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 almacen.getId(),

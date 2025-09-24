@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.config.InventoryCatalogProperties;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
@@ -9,6 +10,9 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +40,30 @@ public class InventoryCatalogResolver {
     private Long tipoDetalleEntradaId;
     private Long tipoDetalleTransferenciaId;
     private Long tipoDetalleSalidaId;
+    private Long tipoDetalleSalidaPtId;
+
+    private static final Map<String, Integer> DECIMALES_POR_UNIDAD = Map.ofEntries(
+            Map.entry("UND", 0),
+            Map.entry("UN", 0),
+            Map.entry("UNIDAD", 0),
+            Map.entry("PZA", 0),
+            Map.entry("PIEZA", 0),
+            Map.entry("CAJA", 0),
+            Map.entry("BOLSA", 0),
+            Map.entry("KG", 3),
+            Map.entry("KILOGRAMO", 3),
+            Map.entry("LB", 3),
+            Map.entry("G", 3),
+            Map.entry("GR", 3),
+            Map.entry("GRAMO", 3),
+            Map.entry("L", 3),
+            Map.entry("LT", 3),
+            Map.entry("LITRO", 3),
+            Map.entry("MG", 6),
+            Map.entry("MILIGRAMO", 6),
+            Map.entry("ML", 6),
+            Map.entry("MILILITRO", 6)
+    );
 
     @PostConstruct
     public void init() {
@@ -58,15 +86,20 @@ public class InventoryCatalogResolver {
         tipoDetalleEntradaId = validateTipoDetalle(properties.getTipoDetalle().getEntradaId());
         tipoDetalleTransferenciaId = validateTipoDetalle(properties.getTipoDetalle().getTransferenciaId());
         tipoDetalleSalidaId = validateTipoDetalle(properties.getTipoDetalle().getSalidaId());
+        Long salidaPtConfig = properties.getTipoDetalle().getSalidaPtId();
+        if (salidaPtConfig != null) {
+            tipoDetalleSalidaPtId = validateTipoDetalle(salidaPtConfig);
+        }
 
         log.info(
                 "Inventory catalogs loaded pt={} cuarentena={} obsoletos={} materiaPrima={} materialEmpaque={} suministros={} " +
                         "preBodegaProduccion={} motivoEntradaPt={} motivoTransferenciaCalidad={} motivoDevolucion={} motivoAjuste={} " +
-                        "tipoDetalleEntrada={} tipoDetalleTransferencia={} tipoDetalleSalida={}",
+                        "tipoDetalleEntrada={} tipoDetalleTransferencia={} tipoDetalleSalida={} tipoDetalleSalidaPt={}",
                 almacenPtId, almacenCuarentenaId, almacenObsoletosId,
                 almacenMateriaPrimaId, almacenMaterialEmpaqueId, almacenSuministrosId, almacenPreBodegaProduccionId,
                 motivoEntradaPtId, motivoTransferenciaCalidadId, motivoDevolucionDesdeProduccionId,
-                motivoAjusteRechazoId, tipoDetalleEntradaId, tipoDetalleTransferenciaId, tipoDetalleSalidaId);
+                motivoAjusteRechazoId, tipoDetalleEntradaId, tipoDetalleTransferenciaId, tipoDetalleSalidaId,
+                getTipoDetalleSalidaPtId());
     }
 
     private Long validateAlmacen(Long id) {
@@ -121,4 +154,66 @@ public class InventoryCatalogResolver {
     public Long getTipoDetalleEntradaId() { return tipoDetalleEntradaId; }
     public Long getTipoDetalleTransferenciaId() { return tipoDetalleTransferenciaId; }
     public Long getTipoDetalleSalidaId() { return tipoDetalleSalidaId; }
+
+    public Long getTipoDetalleSalidaPtId() {
+        return tipoDetalleSalidaPtId != null ? tipoDetalleSalidaPtId : tipoDetalleSalidaId;
+    }
+
+    public int decimals(UnidadMedida unidad) {
+        int min = Math.max(0, properties.getUm().getDecimales().getMin());
+        int max = Math.max(min, properties.getUm().getDecimales().getMax());
+        if (unidad == null) {
+            return min;
+        }
+
+        int resolved = resolveDecimalsFromUnidad(unidad, min);
+        if (resolved < min) {
+            resolved = min;
+        }
+        if (resolved > max) {
+            resolved = max;
+        }
+        return resolved;
+    }
+
+    private int resolveDecimalsFromUnidad(UnidadMedida unidad, int defaultValue) {
+        String simbolo = normalizarUnidad(unidad.getSimbolo());
+        if (!simbolo.isEmpty()) {
+            Integer exact = DECIMALES_POR_UNIDAD.get(simbolo);
+            if (exact != null) {
+                return exact;
+            }
+            if (simbolo.contains("MG") || simbolo.contains("MICRO")) {
+                return Math.max(defaultValue, 6);
+            }
+            if (simbolo.contains("G") || simbolo.contains("KG") || simbolo.contains("L")) {
+                return Math.max(defaultValue, 3);
+            }
+        }
+
+        String nombre = normalizarUnidad(unidad.getNombre());
+        if (!nombre.isEmpty()) {
+            Integer exact = DECIMALES_POR_UNIDAD.get(nombre);
+            if (exact != null) {
+                return exact;
+            }
+            if (nombre.contains("MILIGRAM") || nombre.contains("MICRO")) {
+                return Math.max(defaultValue, 6);
+            }
+            if (nombre.contains("GRAM") || nombre.contains("LITR") || nombre.contains("KILO")) {
+                return Math.max(defaultValue, 3);
+            }
+        }
+        return defaultValue;
+    }
+
+    private String normalizarUnidad(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        return java.text.Normalizer.normalize(valor, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toUpperCase(Locale.ROOT)
+                .trim();
+    }
 }
