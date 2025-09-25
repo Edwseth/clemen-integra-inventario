@@ -1,15 +1,19 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.config.InventoryCatalogProperties;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Locale;
 import java.util.Map;
@@ -157,6 +161,23 @@ public class InventoryCatalogResolver {
 
     public Long getTipoDetalleSalidaPtId() {
         return tipoDetalleSalidaPtId != null ? tipoDetalleSalidaPtId : tipoDetalleSalidaId;
+    }
+
+    public Long resolveAlmacenPrincipal(Producto producto) {
+        if (producto == null
+                || producto.getCategoriaProducto() == null
+                || producto.getCategoriaProducto().getTipo() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_CATEGORIA");
+        }
+        TipoCategoria tipo = producto.getCategoriaProducto().getTipo();
+        return switch (tipo) {
+            case MATERIA_PRIMA -> getAlmacenMateriaPrimaId();
+            case MATERIAL_EMPAQUE -> getAlmacenMaterialEmpaqueId();
+            case PRODUCTO_TERMINADO -> getAlmacenPtId();
+            default -> throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "TIPO_CATEGORIA_SIN_ALMACEN (tipo=" + tipo + ")");
+        };
     }
 
     public int decimals(UnidadMedida unidad) {
