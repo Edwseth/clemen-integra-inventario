@@ -71,6 +71,14 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         LoteProducto lote = loteRepository.findById(dto.getLoteProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteProductoId()));
 
+        // FAIL-FAST: solo se permite registrar evaluación si el lote sigue en cuarentena/retención
+        if (!estaEnCuarentenaOLotenRetenido(lote)) {
+            log.warn("AUDIT_CALIDAD: intento de registrar evaluación con lote fuera de cuarentena/retención. loteId={} estado={} almacenId={}",
+                    lote.getId(), (lote.getEstado() != null ? lote.getEstado().name() : null), obtenerAlmacenId(lote));
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El lote no está en CUARENTENA o RETENIDO. No es posible registrar evaluación.");
+            }
+
         Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
         String operacion = buildOperacion("registrarEvaluacion", dto.getTipoEvaluacion());
         auditarYRestaurarCuarentena(lote, cuarentenaId, operacion, user);
@@ -147,6 +155,14 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         LoteProducto lote = loteRepository.findById(dto.getLoteProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteProductoId()));
+
+        // FAIL-FAST: no permitir actualizar evaluaciones si el lote ya no está en estado de cuarentena/retención
+        if (!estaEnCuarentenaOLotenRetenido(lote)) {
+            log.warn("AUDIT_CALIDAD: intento de actualizar evaluación con lote fuera de cuarentena/retención. loteId={} estado={} almacenId={}",
+                    lote.getId(), (lote.getEstado() != null ? lote.getEstado().name() : null), obtenerAlmacenId(lote));
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El lote no está en CUARENTENA o RETENIDO. No es posible actualizar evaluación.");
+        }
 
         Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
         String operacion = buildOperacion("actualizarEvaluacion", dto.getTipoEvaluacion());
@@ -225,13 +241,18 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
             return;
         }
         Long almacenActual = obtenerAlmacenId(lote);
-        if (!Objects.equals(almacenActual, cuarentenaId)) {
+        // Solo restaurar si el lote SIGUE en estado de cuarentena/retención
+        if (!Objects.equals(almacenActual, cuarentenaId) && estaEnCuarentenaOLotenRetenido(lote)) {
             log.warn("AUDIT_CALIDAD: cambiando almacen loteId={} de {} a {} por {}. Usuario={} rol={} estado={} operacion={}",
                     lote.getId(), almacenActual, cuarentenaId, "pre-evaluacion",
                     usuarioActual != null ? usuarioActual.getId() : null,
                     usuarioActual != null ? usuarioActual.getRol() : null,
                     lote.getEstado(), operacion);
             restaurarCuarentena(lote, cuarentenaId, operacion, usuarioActual, almacenActual);
+        } else if (!estaEnCuarentenaOLotenRetenido(lote)) {
+            // Si el estado ya no es de cuarentena/retención, no modificar almacén (posible liberación legítima)
+            log.warn("AUDIT_CALIDAD: lote fuera de estado de cuarentena/retención durante {}. loteId={} estado={} almacenId={}",
+                    operacion, lote.getId(), (lote.getEstado() != null ? lote.getEstado().name() : null), almacenActual);
         }
     }
 
@@ -242,10 +263,13 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         }
         loteRepository.findById(loteId).ifPresent(actual -> {
             Long almacenActual = obtenerAlmacenId(actual);
-            if (!Objects.equals(almacenActual, cuarentenaId)) {
+            if (!Objects.equals(almacenActual, cuarentenaId) && estaEnCuarentenaOLotenRetenido(actual)) {
                 log.warn("AUDIT_CALIDAD: detectado cambio de almacén tras {}. loteId={} almacenId={} estado={}",
                         operacion, loteId, almacenActual, actual.getEstado());
                 restaurarCuarentena(actual, cuarentenaId, operacion, usuarioActual, almacenActual);
+            } else if (!estaEnCuarentenaOLotenRetenido(actual)) {
+                log.warn("AUDIT_CALIDAD: post-{}: lote fuera de estado de cuarentena/retención; no se restaura. loteId={} estado={} almacenId={}",
+                        operacion, loteId, (actual.getEstado() != null ? actual.getEstado().name() : null), almacenActual);
             }
         });
     }
@@ -271,5 +295,11 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
             return null;
         }
         return lote.getAlmacen().getId().longValue();
+    }
+
+    private boolean estaEnCuarentenaOLotenRetenido(LoteProducto lote) {
+        if (lote == null || lote.getEstado() == null) return false;
+        String nombre = lote.getEstado().name();
+        return "EN_CUARENTENA".equals(nombre) || "RETENIDO".equals(nombre);
     }
 }
