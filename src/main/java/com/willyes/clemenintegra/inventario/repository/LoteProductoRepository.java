@@ -130,5 +130,7 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
      order by lp.estado asc, lp.fechaVencimiento asc
     """)
     List<com.willyes.clemenintegra.bom.dto.LoteResumenDTO> listarLotesPorProducto(@Param("productoId") Long productoId);
+
+    List<LoteProducto> findAllByCodigoLoteAndProductoId(String codigoLote, Long productoId);
 }
 

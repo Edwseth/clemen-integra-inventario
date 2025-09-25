@@ -19,6 +19,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
@@ -207,23 +208,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? entityManager.getReference(OrdenProduccion.class, dto.ordenProduccionId())
                 : null;
 
-        log.debug("MOV-REQ tipo={}, clasificacion={}, prod={}, qty={}, opId={}",
+        log.debug("MOV-REQ (pre-solicitud) tipo={}, clasificacion={}, prod={}, qty={}, opIdDTO={}",
                 tipoMovimiento, clasificacion, dto.productoId(), dto.cantidad(), dto.ordenProduccionId());
-
-        if (clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION
-                && tipoMovimiento != TipoMovimiento.SALIDA) {
-            log.warn("INCONSISTENT_MOVEMENT: tipo={}, clasificacion={}, opId={}",
-                    tipoMovimiento, clasificacion, dto.ordenProduccionId());
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "INCONSISTENT_MOVEMENT: SALIDA_PRODUCCION requiere tipoMovimiento=SALIDA");
-        }
-        if (clasificacion == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
-                && tipoMovimiento != TipoMovimiento.TRANSFERENCIA) {
-            log.warn("INCONSISTENT_MOVEMENT: tipo={}, clasificacion={}, opId={}",
-                    tipoMovimiento, clasificacion, dto.ordenProduccionId());
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "INCONSISTENT_MOVEMENT: TRANSFERENCIA_INTERNA_PRODUCCION requiere tipoMovimiento=TRANSFERENCIA");
-        }
 
         SolicitudMovimiento solicitud = null;
         if (dto.solicitudMovimientoId() != null) {
@@ -238,9 +224,23 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
 
             if (solicitud.getTipoMovimiento() != dto.tipoMovimiento()) {
-                log.warn("MISMATCH_TIPO_MOVIMIENTO: esperado={}, recibido={}", solicitud.getTipoMovimiento(), dto.tipoMovimiento());
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_TIPO_MOVIMIENTO");
-            }
+            // Comparar contra el tipo YA normalizado, no contra el del DTO
+                if (solicitud.getTipoMovimiento() != tipoMovimiento) {
+                    // Compatibilidad: solicitudes antiguas de OP pueden venir con SALIDA,
+                    // pero el backend normaliza a TRANSFERENCIA_INTERNA_PRODUCCION.
+                    boolean solicitudEsSalidaYBackNormalizoATransferencia =
+                            ((dto.ordenProduccionId() != null) || (solicitud.getOrdenProduccion() != null))
+                                    && solicitud.getTipoMovimiento() == TipoMovimiento.SALIDA
+                                    && tipoMovimiento == TipoMovimiento.TRANSFERENCIA;
+
+                    if (solicitudEsSalidaYBackNormalizoATransferencia) {
+                        log.info("OP_SOLICITUD_TIPO_COMPATIBILIZADO: solId={}, esperadoEnSolicitud=SALIDA, usado=TRANSFERENCIA",
+                                solicitud.getId());
+                    } else {
+                        log.warn("MISMATCH_TIPO_MOVIMIENTO: esperado={}, recibido={}", solicitud.getTipoMovimiento(), tipoMovimiento);
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_TIPO_MOVIMIENTO");
+                    }
+                }
 
             Long solicitudAlmacenOrigenId = solicitud.getAlmacenOrigen() != null ? Long.valueOf(solicitud.getAlmacenOrigen().getId()) : null;
             Long dtoAlmacenOrigenId = salidaPt ? almacenPtId
@@ -381,7 +381,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             almacenDestino = entityManager.getReference(Almacen.class, preBodegaId.longValue());
         }
 
-        // 2.2) Para OP, asegurar tipo/detalle de TRANSFERENCIA
+        // 2.2) Para OP, asegurar tipo/detalle/clasificación de TRANSFERENCIA INTERNA PRODUCCIÓN
         if (esOP) {
             // Si el tipo del DTO no es TRANSFERENCIA, lo corregimos.
             if (dto.tipoMovimiento() != TipoMovimiento.TRANSFERENCIA) {
@@ -395,9 +395,30 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 tipoMovimientoDetalle = tipoMovimientoDetalleRepository
                         .findById(tipoDetalleTransferenciaId.longValue())
                         .orElse(tipoMovimientoDetalle);
-                log.info("OP_DETALLE_FORZADO: tipoDetalleId={}",
-                        (tipoMovimientoDetalle != null ? tipoMovimientoDetalle.getId() : null));
             }
+            // Forzar CLASIFICACIÓN para OP, incluso si el DTO no la traía
+            clasificacion = ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
+            movimiento.setClasificacion(clasificacion);
+        }
+
+        // === VALIDACIONES DE CONSISTENCIA (después de normalizar y cargar solicitud) ===
+            log.debug("MOV-REQ (post-normalizacion) tipo={}, clasificacion={}, prod={}, qty={}, opIdDTO={}, esOP={}",
+                    tipoMovimiento, clasificacion, dto.productoId(), dto.cantidad(), dto.ordenProduccionId(), esOP);
+            if (clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                    && tipoMovimiento != TipoMovimiento.SALIDA) {
+                log.warn("INCONSISTENT_MOVEMENT: tipo={}, clasificacion={}, opIdDTO={}, esOP={}",
+                        tipoMovimiento, clasificacion, dto.ordenProduccionId(), esOP);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "INCONSISTENT_MOVEMENT: SALIDA_PRODUCCION requiere tipoMovimiento=SALIDA");
+            }
+            if (clasificacion == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
+                    && tipoMovimiento != TipoMovimiento.TRANSFERENCIA) {
+                log.warn("INCONSISTENT_MOVEMENT: tipo={}, clasificacion={}, opIdDTO={}, esOP={}",
+                        tipoMovimiento, clasificacion, dto.ordenProduccionId(), esOP);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "INCONSISTENT_MOVEMENT: TRANSFERENCIA_INTERNA_PRODUCCION requiere tipoMovimiento=TRANSFERENCIA");
+            }
+
         }
         // === /OP OVERRIDES ===
 
@@ -1501,7 +1522,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_STOCK_INSUFICIENTE");
         }
 
-        LoteProducto loteDestino = ensureDestinoLote(producto.getId(), loteOrigen.getCodigoLote(), destino.getId());
+        LoteProducto loteDestino = ensureDestinoLote(producto, loteOrigen.getCodigoLote(), loteOrigen, destino);
 
         int escala = resolverEscalaProducto(producto);
         BigDecimal nuevoStockOrigen = stockActual.subtract(cantidadNormalizada)
@@ -1540,50 +1561,45 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return new MovimientoLoteDetalle(guardadoDestino, cantidadDetalle);
     }
 
-    private LoteProducto ensureDestinoLote(Integer productoId, String codigoLote, Integer almacenDestinoId) {
-        if (productoId == null || almacenDestinoId == null || codigoLote == null || codigoLote.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DESTINO_LOTE_PARAMETROS_INVALIDOS");
+    private LoteProducto ensureDestinoLote(
+            Producto producto,
+            String codigoLote,
+            LoteProducto loteOrigen,
+            Almacen almacenDestino
+    ) {
+        Integer prodId = producto.getId();
+        Integer destinoId = almacenDestino.getId();
+
+        // 1) Intentar encontrar el lote EXACTO en el almacén destino
+        Optional<LoteProducto> exacto = loteProductoRepository
+                .findByCodigoLoteAndProductoIdAndAlmacenId(codigoLote, prodId, destinoId);
+
+        if (exacto.isPresent()) {
+            return exacto.get();
         }
 
-        Optional<LoteProducto> existente = loteProductoRepository
-                .findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(productoId, codigoLote, almacenDestinoId);
-        if (existente.isPresent()) {
-            return existente.get();
-        }
-
-        Producto productoRef = entityManager.getReference(Producto.class, productoId.longValue());
-        Almacen almacenRef = entityManager.getReference(Almacen.class, almacenDestinoId.longValue());
-
-        LoteProducto referencia = loteProductoRepository
-                .findByCodigoLoteAndProductoId(codigoLote, productoId.longValue())
-                .orElse(null);
-
-        int escalaDestino = resolverEscalaProducto(productoRef);
-
-        LoteProducto nuevo = LoteProducto.builder()
-                .codigoLote(codigoLote)
-                .producto(productoRef)
-                .almacen(almacenRef)
-                .estado(EstadoLote.DISPONIBLE)
-                .stockLote(BigDecimal.ZERO.setScale(escalaDestino, RoundingMode.HALF_UP))
-                .stockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP))
-                .agotado(true)
-                .fechaAgotado(LocalDateTime.now())
-                .build();
-
-        if (referencia != null) {
-            nuevo.setFechaFabricacion(referencia.getFechaFabricacion());
-            nuevo.setFechaVencimiento(referencia.getFechaVencimiento());
-            nuevo.setFechaLiberacion(referencia.getFechaLiberacion());
-            nuevo.setTemperaturaAlmacenamiento(referencia.getTemperaturaAlmacenamiento());
-            nuevo.setUsuarioLiberador(referencia.getUsuarioLiberador());
-            nuevo.setOrdenProduccion(referencia.getOrdenProduccion());
-            nuevo.setProduccion(referencia.getProduccion());
+        // 2) Si NO existe en el destino, lo creamos en destino (clonando metadatos relevantes)
+        LoteProducto nuevo = new LoteProducto();
+        nuevo.setProducto(producto);
+        nuevo.setCodigoLote(codigoLote);
+        nuevo.setAlmacen(almacenDestino);
+        // Copia metadatos útiles del origen si aplica
+        if (loteOrigen != null) {
+            nuevo.setEstado(loteOrigen.getEstado());
+            nuevo.setFechaFabricacion(loteOrigen.getFechaFabricacion());
+            nuevo.setFechaVencimiento(loteOrigen.getFechaVencimiento());
+            nuevo.setTemperaturaAlmacenamiento(loteOrigen.getTemperaturaAlmacenamiento());
+            // NO copiar stock: se ajustará por el movimiento
+            nuevo.setStockLote(BigDecimal.ZERO);
+            nuevo.setStockReservado(BigDecimal.ZERO);
+        } else {
+            nuevo.setStockLote(BigDecimal.ZERO);
+            nuevo.setStockReservado(BigDecimal.ZERO);
         }
 
         LoteProducto guardado = loteProductoRepository.save(nuevo);
-        entityManager.flush();
-        entityManager.lock(guardado, LockModeType.PESSIMISTIC_WRITE);
+        log.info("DESTINO_LOTE_CREADO: code={}, prod={}, destinoId={}, loteId={}",
+                codigoLote, prodId, destinoId, guardado.getId());
         return guardado;
     }
 
