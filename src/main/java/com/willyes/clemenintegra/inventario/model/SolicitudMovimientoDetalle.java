@@ -56,5 +56,9 @@ public class SolicitudMovimientoDetalle {
             estado = EstadoSolicitudMovimientoDetalle.PENDIENTE;
         }
     }
+
+    public LoteProducto getLote() {
+        return lote;
+    }
 }
 

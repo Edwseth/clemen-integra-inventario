@@ -50,6 +50,8 @@ public class MovimientoInventarioResponseDTO {
     @Builder
     public static class SolicitudDetalleAtencionDTO {
         private Long detalleId;
+        private Long loteId;
+        private String codigoLote;
         private boolean atendida;
         private BigDecimal cantidadAtendida;
         private BigDecimal cantidadSolicitada;

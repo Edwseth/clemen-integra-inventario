@@ -466,6 +466,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         BigDecimal cantidadSolicitada = dto.cantidad();
         List<MovimientoLoteDetalle> lotesProcesados;
 
+        boolean solicitudConPartidas = solicitud != null
+                && solicitud.getDetalles() != null
+                && !solicitud.getDetalles().isEmpty();
+
         if (tipoMovimiento == TipoMovimiento.RECEPCION) {
             if (dto.ordenCompraId() == null) {
                 throw new IllegalArgumentException("Las recepciones sin Orden de Compra deben usar un lote existente");
@@ -473,12 +477,27 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             LoteProducto loteRecepcion = crearLoteRecepcion(dto, producto, almacenDestino, usuario,
                     cantidadSolicitada, motivoMovimiento);
             lotesProcesados = List.of(new MovimientoLoteDetalle(loteRecepcion, cantidadSolicitada));
+
         } else if (salidaPt) {
             lotesProcesados = procesarSalidaPt(dto, producto, cantidadSolicitada,
                     almacenPtId, atenciones, autoSplitSolicitado);
+
+        } else if (solicitudConPartidas) {
+            // ⬅️ NUEVO: aprobar por partidas (por cada lote del detalle)
+            lotesProcesados = procesarMovimientoPorPartidas(
+                    solicitud,
+                    producto,
+                    almacenDestino,
+                    tipoMovimiento,
+                    devolucionInterna
+            );
+
         } else {
-            lotesProcesados = procesarMovimientoConLoteExistente(dto, tipoMovimiento, almacenOrigen,
-                    almacenDestino, producto, cantidadSolicitada, devolucionInterna, solicitud);
+            // Comportamiento anterior (un solo lote desde DTO)
+            lotesProcesados = procesarMovimientoConLoteExistente(
+                    dto, tipoMovimiento, almacenOrigen, almacenDestino,
+                    producto, cantidadSolicitada, devolucionInterna, solicitud
+            );
         }
 
         if (lotesProcesados == null || lotesProcesados.isEmpty()) {
@@ -517,7 +536,27 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         MovimientoInventario guardado = repository.save(movimiento);
 
         if (solicitud != null) {
-            detalleRespuesta = atenderSolicitudMovimiento(dto, solicitud);
+            detalleRespuesta = solicitud.getDetalles().stream()
+                    .map(d -> {
+                        BigDecimal atendidaBD = d.getCantidadAtendida() != null
+                                ? d.getCantidadAtendida()
+                                : BigDecimal.ZERO;
+
+                        boolean atendida = atendidaBD.compareTo(d.getCantidad()) >= 0
+                                // Si tu enum tiene ATENDIDA/ATENDIDO, ajusta el literal:
+                                || d.getEstado() == EstadoSolicitudMovimientoDetalle.ATENDIDO;
+
+                        return MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO.builder()
+                                .detalleId(d.getId())
+                                .loteId(d.getLote() != null ? d.getLote().getId() : null)
+                                .codigoLote(d.getLote() != null ? d.getLote().getCodigoLote() : null)
+                                .atendida(atendida)
+                                .cantidadAtendida(atendidaBD)
+                                .cantidadSolicitada(d.getCantidad())
+                                .estadoDetalle(d.getEstado())
+                                .build();
+                    })
+                    .collect(java.util.stream.Collectors.toList());
         }
 
         if (lotesProcesados.size() > 1) {
@@ -1879,6 +1918,110 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         String normalized = java.text.Normalizer.normalize(descripcion, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "").toUpperCase();
         return normalized.contains("SOLICITUD") || normalized.contains("RESERVA");
+    }
+
+    private static final BigDecimal ZERO = new BigDecimal("0");
+
+    @Transactional
+    private List<MovimientoLoteDetalle> procesarMovimientoPorPartidas(
+            SolicitudMovimiento solicitud,
+            Producto producto,
+            Almacen almacenDestino,
+            TipoMovimiento tipoMovimiento,
+            boolean devolucionInterna
+    ) {
+        List<MovimientoLoteDetalle> result = new ArrayList<>();
+
+        // Solo procesamos partidas PENDIENTE o PARCIAL
+        for (SolicitudMovimientoDetalle det : solicitud.getDetalles()) {
+            if (det.getEstado() != EstadoSolicitudMovimientoDetalle.PENDIENTE
+                    && det.getEstado() != EstadoSolicitudMovimientoDetalle.PARCIAL) {
+                continue;
+            }
+
+            BigDecimal atendida = Optional.ofNullable(det.getCantidadAtendida()).orElse(ZERO);
+            BigDecimal pendiente = det.getCantidad().subtract(atendida);
+            if (pendiente.signum() <= 0) {
+                det.setEstado(EstadoSolicitudMovimientoDetalle.ATENDIDO);
+                continue;
+            }
+
+            // 1) Lote origen con lock
+            Long loteId = det.getLote() != null ? det.getLote().getId() : null;
+            if (loteId == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_SIN_LOTE");
+            }
+
+            LoteProducto loteOrigen = loteProductoRepository.findByIdForUpdate(loteId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO"));
+
+            // 2) Validar stock "movible" = disponible + reserva propia de esta partida
+            BigDecimal stockLote = Optional.ofNullable(loteOrigen.getStockLote()).orElse(ZERO);
+            BigDecimal stockReservado = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(ZERO);
+            BigDecimal movible = stockLote.subtract(stockReservado.subtract(pendiente));
+
+            if (movible.compareTo(pendiente) < 0) {
+                log.warn("Stock insuficiente en lote: loteId={} movible={} solicitado={} productoId={}",
+                        loteOrigen.getId(), movible, pendiente, producto.getId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
+            }
+
+            // 3) Asegurar/crear lote destino (mismo código), en el almacén destino normalizado
+            String codigoLote = null;
+            // 1) Preferimos el del loteOrigen (es el que realmente vamos a mover)
+            if (loteOrigen != null && loteOrigen.getCodigoLote() != null) {
+                codigoLote = loteOrigen.getCodigoLote();
+            }
+            // 2) Si no, usamos el del lote referenciado por el detalle (si viene cargado)
+            else if (det.getLote() != null && det.getLote().getCodigoLote() != null) {
+                codigoLote = det.getLote().getCodigoLote();
+            }
+            // 3) Como último recurso, tomamos el que traiga la solicitud principal
+            else if (solicitud != null && solicitud.getCodigoLote() != null) {
+                codigoLote = solicitud.getCodigoLote();
+            }
+            LoteProducto loteDestino = ensureDestinoLote(
+                    producto,
+                    codigoLote,
+                    loteOrigen,
+                    almacenDestino
+            );
+
+            Almacen destinoAlmacen = Objects.requireNonNull(
+                    loteDestino.getAlmacen(),
+                    "loteDestino sin almacén asociado"
+            );
+            //    Usa la misma llamada que ya haces en 'procesarMovimientoConLoteExistente' (mismos args extra).
+            ejecutarTransferenciaDesdeLote(
+                    loteOrigen,          // Lote de origen
+                    destinoAlmacen,      // Almacén destino (del lote destino)
+                    producto,            // Producto
+                    pendiente,           // Cantidad a mover (lo 'pendiente' del detalle)
+                    solicitud            // La solicitud (puede ser null si aplica)
+            );
+
+            // 5) Ajustar stock y reservas del origen
+            loteOrigen.setStockLote(stockLote.subtract(pendiente));
+            loteOrigen.setStockReservado(stockReservado.subtract(pendiente));
+
+            // 6) Marcar la partida como atendida totalmente
+            det.setCantidadAtendida(det.getCantidad());
+            det.setEstado(EstadoSolicitudMovimientoDetalle.ATENDIDO);
+
+            // Para que se generen los "movimientos hermanos" al final
+            result.add(new MovimientoLoteDetalle(loteDestino, pendiente));
+        }
+
+        // 7) Cerrar la solicitud (ATENDIDA o PARCIAL)
+        boolean todasAtendidas = solicitud.getDetalles().stream()
+                .allMatch(d -> d.getEstado() == EstadoSolicitudMovimientoDetalle.ATENDIDO);
+
+        solicitud.setEstado(todasAtendidas
+                ? EstadoSolicitudMovimiento.ATENDIDA
+                : EstadoSolicitudMovimiento.PARCIAL);
+
+        solicitudMovimientoRepository.saveAndFlush(solicitud);
+        return result;
     }
 
 }
