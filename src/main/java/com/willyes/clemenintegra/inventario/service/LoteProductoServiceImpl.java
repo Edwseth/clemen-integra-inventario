@@ -431,15 +431,16 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lote no encontrado"));
 
-        Long almacenPtId = catalogResolver.getAlmacenPtId();
+        Producto producto = lote.getProducto();
+        Long destinoPrincipalId = catalogResolver.resolveAlmacenPrincipal(producto);
         Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
-        if (almacenPtId.equals(lote.getAlmacen().getId().longValue())
+        if (destinoPrincipalId.equals(lote.getAlmacen().getId().longValue())
                 && lote.getEstado() == estadoLiberado
                 && lote.getFechaLiberacion() != null
                 && lote.getUsuarioLiberador() != null) {
             boolean movExistente = movimientoInventarioRepository
                     .existsByTipoMovimientoAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoIdAndClasificacion(
-                            TipoMovimiento.TRANSFERENCIA, lote.getId(), almacenCuarentenaId, almacenPtId, clasificacion);
+                            TipoMovimiento.TRANSFERENCIA, lote.getId(), almacenCuarentenaId, destinoPrincipalId, clasificacion);
             if (movExistente) {
                 return loteProductoMapper.toResponseDTO(lote);
             }
@@ -464,7 +465,6 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(loteId);
 
-        Producto producto = lote.getProducto();
         TipoAnalisisCalidad tipo = producto.getTipoAnalisisCalidad();
 
         if (tipo == TipoAnalisisCalidad.FISICO_QUIMICO || tipo == TipoAnalisisCalidad.AMBOS) {
@@ -475,8 +475,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         }
 
         Almacen origen = lote.getAlmacen();
-        Almacen destino = almacenRepo.findById(almacenPtId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_PT_INEXISTENTE"));
+        Almacen destino = almacenRepo.findById(destinoPrincipalId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_DESTINO_INEXISTENTE"));
         BigDecimal cantidad = lote.getStockLote();
 
         lote.setEstado(estadoLiberado);
@@ -484,6 +484,11 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         lote.setUsuarioLiberador(usuarioActual);
         lote.setAlmacen(destino);
         loteRepo.save(lote);
+
+        log.info("QC_LIBERACION destino={} tipoProducto={} loteId={}",
+                destinoPrincipalId,
+                producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getTipo() : null,
+                loteId);
 
         MovimientoInventario mov = MovimientoInventario.builder()
                 .cantidad(cantidad)
