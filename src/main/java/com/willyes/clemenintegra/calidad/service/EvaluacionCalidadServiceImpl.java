@@ -4,24 +4,28 @@ import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
-import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
+import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
+import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
@@ -32,16 +36,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
     private final EvaluacionCalidadRepository repository;
     private final LoteProductoRepository loteRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final UsuarioService usuarioService;
     private final EvaluacionCalidadMapper mapper;
+    private final UsuarioService usuarioService;
+    private final UsuarioRepository usuarioRepository;
+    private final InventoryCatalogResolver catalogResolver;
+    private final AlmacenRepository almacenRepository;
 
     public Page<EvaluacionCalidadResponseDTO> listar(ResultadoEvaluacion resultado, Pageable pageable) {
         Page<EvaluacionCalidad> page = (resultado != null)
@@ -58,12 +66,15 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     }
 
     public EvaluacionCalidadResponseDTO crear(EvaluacionCalidadRequestDTO dto, java.util.List<MultipartFile> archivos) {
+        Usuario user = usuarioService.obtenerUsuarioAutenticado();
+
         LoteProducto lote = loteRepository.findById(dto.getLoteProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteProductoId()));
 
-        Usuario user = usuarioService.obtenerUsuarioAutenticado();
+        Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+        String operacion = buildOperacion("registrarEvaluacion", dto.getTipoEvaluacion());
+        auditarYRestaurarCuarentena(lote, cuarentenaId, operacion, user);
 
-        // Validar rol de acuerdo al tipo de evaluación
         if (dto.getTipoEvaluacion() == TipoEvaluacion.FISICO_QUIMICO
                 && !java.util.Set.of(RolUsuario.ROL_ANALISTA_CALIDAD, RolUsuario.ROL_JEFE_CALIDAD).contains(user.getRol())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -75,7 +86,6 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                     "Solo un microbiólogo o el jefe de calidad puede registrar evaluaciones microbiológicas");
         }
 
-        // Evitar duplicado de lote + tipo
         if (repository.existsByLoteProductoIdAndTipoEvaluacion(lote.getId(), dto.getTipoEvaluacion())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una evaluación de este tipo para el lote");
         }
@@ -117,12 +127,13 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
             }
         }
 
-        // Construye y persiste la entidad
         EvaluacionCalidad entidad = mapper.toEntity(dto, lote, user);
         entidad.setFechaEvaluacion(LocalDateTime.now());
         entidad.setArchivosAdjuntos(adjuntos);
 
         entidad = repository.save(entidad);
+
+        verificarAlmacenPostOperacion(lote.getId(), cuarentenaId, operacion, user);
 
         return mapper.toResponseDTO(entidad);
     }
@@ -131,11 +142,15 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         EvaluacionCalidad existing = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Evaluación no encontrada con ID: " + id));
 
+        Usuario user = usuarioRepository.findById(dto.getUsuarioEvaluadorId())
+                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + dto.getUsuarioEvaluadorId()));
+
         LoteProducto lote = loteRepository.findById(dto.getLoteProductoId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteProductoId()));
 
-        Usuario user = usuarioRepository.findById(dto.getUsuarioEvaluadorId())
-                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + dto.getUsuarioEvaluadorId()));
+        Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+        String operacion = buildOperacion("actualizarEvaluacion", dto.getTipoEvaluacion());
+        auditarYRestaurarCuarentena(lote, cuarentenaId, operacion, user);
 
         existing.setResultado(dto.getResultado());
         existing.setTipoEvaluacion(dto.getTipoEvaluacion());
@@ -155,6 +170,8 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         existing.setFechaEvaluacion(LocalDateTime.now());
 
         existing = repository.save(existing);
+
+        verificarAlmacenPostOperacion(lote.getId(), cuarentenaId, operacion, user);
 
         return mapper.toResponseDTO(existing);
     }
@@ -191,4 +208,68 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         repository.deleteById(id);
     }
 
+    private String buildOperacion(String prefijo, TipoEvaluacion tipo) {
+        return prefijo + (tipo != null ? tipo.name() : "");
+    }
+
+    private void auditarYRestaurarCuarentena(LoteProducto lote, Long cuarentenaId,
+                                             String operacion, Usuario usuarioActual) {
+        if (lote == null) {
+            return;
+        }
+        if (cuarentenaId == null) {
+            log.error("AUDIT_CALIDAD: id de almacén de cuarentena no configurado. loteId={} operacion={} usuario={} rol={}",
+                    lote.getId(), operacion,
+                    usuarioActual != null ? usuarioActual.getId() : null,
+                    usuarioActual != null ? usuarioActual.getRol() : null);
+            return;
+        }
+        Long almacenActual = obtenerAlmacenId(lote);
+        if (!Objects.equals(almacenActual, cuarentenaId)) {
+            log.warn("AUDIT_CALIDAD: cambiando almacen loteId={} de {} a {} por {}. Usuario={} rol={} estado={} operacion={}",
+                    lote.getId(), almacenActual, cuarentenaId, "pre-evaluacion",
+                    usuarioActual != null ? usuarioActual.getId() : null,
+                    usuarioActual != null ? usuarioActual.getRol() : null,
+                    lote.getEstado(), operacion);
+            restaurarCuarentena(lote, cuarentenaId, operacion, usuarioActual, almacenActual);
+        }
+    }
+
+    private void verificarAlmacenPostOperacion(Long loteId, Long cuarentenaId,
+                                               String operacion, Usuario usuarioActual) {
+        if (loteId == null || cuarentenaId == null) {
+            return;
+        }
+        loteRepository.findById(loteId).ifPresent(actual -> {
+            Long almacenActual = obtenerAlmacenId(actual);
+            if (!Objects.equals(almacenActual, cuarentenaId)) {
+                log.warn("AUDIT_CALIDAD: detectado cambio de almacén tras {}. loteId={} almacenId={} estado={}",
+                        operacion, loteId, almacenActual, actual.getEstado());
+                restaurarCuarentena(actual, cuarentenaId, operacion, usuarioActual, almacenActual);
+            }
+        });
+    }
+
+    private void restaurarCuarentena(LoteProducto lote, Long cuarentenaId,
+                                     String operacion, Usuario usuarioActual, Long almacenPrevio) {
+        if (lote == null || cuarentenaId == null) {
+            return;
+        }
+        Almacen cuarentena = almacenRepository.findById(cuarentenaId)
+                .orElseGet(() -> new Almacen(Math.toIntExact(cuarentenaId)));
+        lote.setAlmacen(cuarentena);
+        loteRepository.saveAndFlush(lote);
+        log.warn("AUDIT_CALIDAD: cambiando almacen loteId={} de {} a {} por {}. Usuario={} rol={} estado={} operacion={}",
+                lote.getId(), almacenPrevio, cuarentenaId, "restaurar-cuarentena",
+                usuarioActual != null ? usuarioActual.getId() : null,
+                usuarioActual != null ? usuarioActual.getRol() : null,
+                lote.getEstado(), operacion);
+    }
+
+    private Long obtenerAlmacenId(LoteProducto lote) {
+        if (lote == null || lote.getAlmacen() == null || lote.getAlmacen().getId() == null) {
+            return null;
+        }
+        return lote.getAlmacen().getId().longValue();
+    }
 }
