@@ -37,6 +37,7 @@ public class InventoryCatalogResolver {
     private Long almacenPreBodegaProduccionId;
 
     private Long motivoEntradaPtId;
+    private Long motivoSalidaProduccionId;
     private Long motivoTransferenciaCalidadId;
     private Long motivoDevolucionDesdeProduccionId;
     private Long motivoAjusteRechazoId;
@@ -45,6 +46,7 @@ public class InventoryCatalogResolver {
     private Long tipoDetalleTransferenciaId;
     private Long tipoDetalleSalidaId;
     private Long tipoDetalleSalidaPtId;
+    private Long tipoDetalleSalidaProduccionId;
 
     private static final Map<String, Integer> DECIMALES_POR_UNIDAD = Map.ofEntries(
             Map.entry("UND", 0),
@@ -154,7 +156,9 @@ public class InventoryCatalogResolver {
     public Long getMotivoIdTransferenciaCalidad() { return motivoTransferenciaCalidadId; }
     public Long getMotivoIdDevolucionDesdeProduccion() { return motivoDevolucionDesdeProduccionId; }
     public Long getMotivoIdAjusteRechazo() { return motivoAjusteRechazoId; }
+    public Long getMotivoSalidaProduccionId() {return motivoSalidaProduccionId;}
 
+    public Long getTipoDetalleSalidaProduccionId() {return tipoDetalleSalidaProduccionId;}
     public Long getTipoDetalleEntradaId() { return tipoDetalleEntradaId; }
     public Long getTipoDetalleTransferenciaId() { return tipoDetalleTransferenciaId; }
     public Long getTipoDetalleSalidaId() { return tipoDetalleSalidaId; }
