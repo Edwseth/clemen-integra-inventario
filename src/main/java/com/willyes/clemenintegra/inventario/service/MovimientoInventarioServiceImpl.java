@@ -2060,6 +2060,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     // =====================================
     // CONSUMO AUTOMÁTICO DE INSUMOS POR OP
     // =====================================
+    @Override
     @Transactional
     public void consumirInsumosPorOrden(Long ordenProduccionId, Long usuarioId) {
 

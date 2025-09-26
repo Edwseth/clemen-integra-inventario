@@ -15,6 +15,7 @@ import java.util.List;
 public interface MovimientoInventarioService {
 
     MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto);
+    void consumirInsumosPorOrden(Long ordenProduccionId, Long usuarioId);
 
     Page<MovimientoInventarioResponseDTO> filtrar(
             LocalDateTime fechaInicio, LocalDateTime fechaFin,
