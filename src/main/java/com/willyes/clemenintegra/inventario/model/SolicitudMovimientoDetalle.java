@@ -57,8 +57,5 @@ public class SolicitudMovimientoDetalle {
         }
     }
 
-    public LoteProducto getLote() {
-        return lote;
-    }
 }
 

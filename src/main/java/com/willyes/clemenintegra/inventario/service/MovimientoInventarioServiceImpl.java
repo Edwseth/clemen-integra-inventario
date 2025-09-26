@@ -136,28 +136,20 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Long tipoMovimientoDetalleId = dto.tipoMovimientoDetalleId();
         Integer almacenDestinoIdNormalizado = dto.almacenDestinoId();
 
-        if (esOpDesdeDto) {
+        // >>> NUEVO: identifica si el cierre de OP está enviando una ENTRADA de PT
+        final boolean esEntradaPt = (tipoMovimiento == TipoMovimiento.ENTRADA);
+
+        if (esOpDesdeDto && !esEntradaPt) {
             tipoMovimiento = TipoMovimiento.TRANSFERENCIA;
             clasificacion = ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
-
-            Long transferenciaId = Optional.ofNullable(catalogResolver.getTipoDetalleTransferenciaId())
-                    .orElseThrow(() -> new IllegalStateException(
-                            "CONFIG_FALTANTE: inventory.tipoDetalle.transferenciaId"));
-            tipoMovimientoDetalleId = transferenciaId;
-
-            Long preBodegaProduccionId = Optional.ofNullable(catalogResolver.getAlmacenPreBodegaProduccionId())
-                    .orElseThrow(() -> new IllegalStateException(
-                            "CONFIG_FALTANTE: inventory.almacenPreBodegaProduccionId"));
-            almacenDestinoIdNormalizado = Math.toIntExact(preBodegaProduccionId);
-
             movimiento.setTipoMovimiento(tipoMovimiento);
             movimiento.setClasificacion(clasificacion);
-
             log.info("OP_NORMALIZED movimiento: tipo={}, clasificacion={}, opId={}, destino={}",
                     tipoMovimiento, clasificacion, dto.ordenProduccionId(), almacenDestinoIdNormalizado);
         }
+       // IMPORTANTe: si es ENTRADA de PT, NO tocar tipo/clasificación aquí
 
-        List<AtencionDTO> atenciones = dto.atenciones() != null
+         List<AtencionDTO> atenciones = dto.atenciones() != null
                 ? dto.atenciones().stream().filter(Objects::nonNull).collect(Collectors.toList())
                 : List.of();
         if (!atenciones.isEmpty()) {
@@ -368,40 +360,60 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             almacenDestino = solicitud.getAlmacenDestino();
         }
 
-        // === OP OVERRIDES (destino y tipo/detalle) ===
-        boolean esOP = esOpDesdeDto
-                || (solicitud != null && solicitud.getOrdenProduccion() != null);
+            // === OP OVERRIDES (solo para TRASLADO DE INSUMOS a Pre-Bodega) ===
+            boolean esOP = esOpDesdeDto || (solicitud != null && solicitud.getOrdenProduccion() != null);
 
-        // 2.1) Forzar destino a Pre-Bodega para OP
-        if (esOP && preBodegaId != null) {
-            if (almacenDestino == null || !Objects.equals(almacenDestino.getId(), preBodegaId.longValue())) {
-                log.info("OP_DESTINO_FORZADO: destinoAnterior={} -> PreBodega({})",
-                        (almacenDestino != null ? almacenDestino.getId() : null), preBodegaId);
+            // Cargar motivo si viene en el DTO (para decidir reglas)
+            MotivoMovimiento motivoDesdeDto = null;
+            if (dto.motivoMovimientoId() != null) {
+                motivoDesdeDto = motivoMovimientoRepository.findById(dto.motivoMovimientoId())
+                        .orElse(null);
             }
-            almacenDestino = entityManager.getReference(Almacen.class, preBodegaId.longValue());
-        }
 
-        // 2.2) Para OP, asegurar tipo/detalle/clasificación de TRANSFERENCIA INTERNA PRODUCCIÓN
-        if (esOP) {
-            // Si el tipo del DTO no es TRANSFERENCIA, lo corregimos.
-            if (dto.tipoMovimiento() != TipoMovimiento.TRANSFERENCIA) {
-                tipoMovimiento = TipoMovimiento.TRANSFERENCIA;
-                movimiento.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
-            }
-            // Si el detalle actual no es el de TRANSFERENCIA, lo reemplazamos por el configurado.
-            if (tipoDetalleTransferenciaId != null
-                    && (tipoMovimientoDetalle == null
-                    || !Objects.equals(tipoMovimientoDetalle.getId(), tipoDetalleTransferenciaId.longValue()))) {
-                tipoMovimientoDetalle = tipoMovimientoDetalleRepository
-                        .findById(tipoDetalleTransferenciaId.longValue())
-                        .orElse(tipoMovimientoDetalle);
-            }
-            // Forzar CLASIFICACIÓN para OP, incluso si el DTO no la traía
-            clasificacion = ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
-            movimiento.setClasificacion(clasificacion);
-        }
+            // Heurística mínima: solo forzar cuando sea el traslado interno de INSUMOS a Pre-Bodega
+            boolean esEntradaPorProduccion = (dto.tipoMovimiento() == TipoMovimiento.ENTRADA)
+                    || (motivoDesdeDto != null
+                    && motivoDesdeDto.getMotivo() == ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO);
 
-        // === VALIDACIONES DE CONSISTENCIA (después de normalizar y cargar solicitud) ===
+            boolean esSalidaProduccion = (dto.tipoMovimiento() == TipoMovimiento.SALIDA)
+                    || (motivoDesdeDto != null
+                    && motivoDesdeDto.getMotivo() == ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+
+            boolean esTrasladoInsumosOP =
+                    esOP
+                            && !esEntradaPorProduccion
+                            && !esSalidaProduccion
+                            && dto.tipoMovimiento() == TipoMovimiento.TRANSFERENCIA;
+
+            if (esTrasladoInsumosOP && preBodegaId != null) {
+                // 1) Forzar destino Pre-Bodega
+                if (almacenDestino == null || !Objects.equals(almacenDestino.getId(), preBodegaId.longValue())) {
+                    log.info("OP_DESTINO_FORZADO: destinoAnterior={} -> PreBodega({})",
+                            (almacenDestino != null ? almacenDestino.getId() : null), preBodegaId);
+                }
+                almacenDestino = entityManager.getReference(Almacen.class, preBodegaId.longValue());
+
+                // 2) Normalizar tipo/detalle/clasificación a TRASLADO INTERNO PRODUCCIÓN
+                if (dto.tipoMovimiento() != TipoMovimiento.TRANSFERENCIA) {
+                    tipoMovimiento = TipoMovimiento.TRANSFERENCIA;
+                    movimiento.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+                }
+                if (tipoDetalleTransferenciaId != null
+                        && (tipoMovimientoDetalle == null
+                        || !Objects.equals(tipoMovimientoDetalle.getId(), tipoDetalleTransferenciaId.longValue()))) {
+                    tipoMovimientoDetalle = tipoMovimientoDetalleRepository
+                            .findById(tipoDetalleTransferenciaId.longValue())
+                            .orElse(tipoMovimientoDetalle);
+                }
+                clasificacion = ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
+                movimiento.setClasificacion(clasificacion);
+
+                log.info("OP_NORMALIZED traslado de insumos: tipo={}, clasificacion={}, opId={}, destino={}",
+                        tipoMovimiento, clasificacion, dto.ordenProduccionId(), preBodegaId);
+            }
+            // === /OP OVERRIDES ===
+
+            // === VALIDACIONES DE CONSISTENCIA (después de normalizar y cargar solicitud) ===
             log.debug("MOV-REQ (post-normalizacion) tipo={}, clasificacion={}, prod={}, qty={}, opIdDTO={}, esOP={}",
                     tipoMovimiento, clasificacion, dto.productoId(), dto.cantidad(), dto.ordenProduccionId(), esOP);
             if (clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION
