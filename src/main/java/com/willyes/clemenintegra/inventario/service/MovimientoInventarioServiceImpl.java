@@ -142,7 +142,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         // >>> NUEVO: identifica si el cierre de OP está enviando una ENTRADA de PT
         final boolean esEntradaPt = (tipoMovimiento == TipoMovimiento.ENTRADA);
 
-        if (esOpDesdeDto && !esEntradaPt) {
+        if (esOpDesdeDto && !esEntradaPt && clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION) {
             tipoMovimiento = TipoMovimiento.TRANSFERENCIA;
             clasificacion = ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
             movimiento.setTipoMovimiento(tipoMovimiento);
@@ -178,7 +178,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
         }
 
-        boolean salidaPt = isSalidaPt(tipoMovimiento, resolvedTipoDetalleId);
+        boolean salidaPt = (clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
+                && isSalidaPt(tipoMovimiento, resolvedTipoDetalleId);
 
         Long almacenPtId = null;
         Almacen almacenOrigen;

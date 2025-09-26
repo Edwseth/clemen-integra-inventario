@@ -18,13 +18,24 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
 
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.service.UsuarioService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+
+
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/produccion/ordenes")
@@ -35,6 +46,9 @@ public class OrdenProduccionController {
 
     private final OrdenProduccionService service;
     private final UsuarioService usuarioService;
+    private final com.willyes.clemenintegra.inventario.service.MovimientoInventarioService movimientoInventarioService;
+    //private final UsuarioService usuarioService;
+
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
@@ -161,4 +175,23 @@ public class OrdenProduccionController {
         LoteProductoResponse lote = service.obtenerLote(id);
         return lote != null ? ResponseEntity.ok(lote) : ResponseEntity.notFound().build();
     }
+
+    @PostMapping("/{ordenId}/backfill-salida")
+    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION')")
+    public ResponseEntity<Map<String, Object>> backfillSalidaProduccion(@PathVariable Long ordenId) {
+
+        // Obtener el usuario autenticado usando el mismo patrón del resto del backend
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+
+        // Ejecutar consumo idempotente
+        movimientoInventarioService.consumirInsumosPorOrden(ordenId, usuario.getId());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("ordenId", ordenId);
+        body.put("status", "OK");
+        body.put("accion", "SALIDA_PRODUCCION_BACKFILL");
+        return ResponseEntity.ok(body);
+    }
+
+
 }
