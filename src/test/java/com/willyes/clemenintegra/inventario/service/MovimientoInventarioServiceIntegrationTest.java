@@ -93,7 +93,7 @@ class MovimientoInventarioServiceIntegrationTest {
                 .unidadMedida(unidad)
                 .categoriaProducto(categoria)
                 .creadoPor(usuario)
-                .tipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
                 .activo(true)
                 .build());
 

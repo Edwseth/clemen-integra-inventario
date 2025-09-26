@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,6 +36,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,7 +67,8 @@ class MovimientoInventarioControllerTest {
 
     @BeforeEach
     void setUp() {
-        when(inventoryCatalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(PRE_BODEGA_ID);
+        lenient().when(inventoryCatalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(PRE_BODEGA_ID);
+        lenient().when(inventoryCatalogResolver.isSalidaPtEnabled()).thenReturn(true);
 
         producto = new Producto();
         producto.setId(1);
@@ -221,7 +224,7 @@ class MovimientoInventarioControllerTest {
     @Test
     void postSalida_noForzaPt_cuandoDetalleNoEsPt() {
         when(inventoryCatalogResolver.getTipoDetalleSalidaPtId()).thenReturn(99L);
-        when(inventoryCatalogResolver.getTipoDetalleSalidaId()).thenReturn(33L);
+        lenient().when(inventoryCatalogResolver.getTipoDetalleSalidaId()).thenReturn(33L);
 
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null,

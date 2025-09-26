@@ -28,6 +28,7 @@ public class InventoryCatalogResolver {
     private final MotivoMovimientoRepository motivoRepository;
     private final TipoMovimientoDetalleRepository tipoDetalleRepository;
 
+    private boolean salidaPtEnabled;
     private Long almacenPtId;
     private Long almacenCuarentenaId;
     private Long almacenObsoletosId;
@@ -93,8 +94,14 @@ public class InventoryCatalogResolver {
         tipoDetalleEntradaId = validateTipoDetalle(properties.getTipoDetalle().getEntradaId());
         tipoDetalleTransferenciaId = validateTipoDetalle(properties.getTipoDetalle().getTransferenciaId());
         tipoDetalleSalidaId = validateTipoDetalle(properties.getTipoDetalle().getSalidaId());
+        salidaPtEnabled = properties.getSalidaPt().isEnabled();
         Long salidaPtConfig = properties.getTipoDetalle().getSalidaPtId();
-        if (salidaPtConfig != null) {
+        if (salidaPtEnabled) {
+            if (salidaPtConfig == null || salidaPtConfig <= 0) {
+                throw new IllegalStateException("CONFIG_FALTANTE (SALIDA_PT)");
+            }
+            tipoDetalleSalidaPtId = validateTipoDetalle(salidaPtConfig);
+        } else if (salidaPtConfig != null) {
             tipoDetalleSalidaPtId = validateTipoDetalle(salidaPtConfig);
         }
 
@@ -107,6 +114,9 @@ public class InventoryCatalogResolver {
                 motivoEntradaPtId, motivoTransferenciaCalidadId, motivoDevolucionDesdeProduccionId,
                 motivoAjusteRechazoId, tipoDetalleEntradaId, tipoDetalleTransferenciaId, tipoDetalleSalidaId,
                 getTipoDetalleSalidaPtId());
+
+        log.info("Salida PT enabled: {} almacenPtId={} tipoDetalleId={}",
+                salidaPtEnabled, almacenPtId, getTipoDetalleSalidaPtId());
     }
 
     private Long validateAlmacen(Long id) {
@@ -166,6 +176,10 @@ public class InventoryCatalogResolver {
 
     public Long getTipoDetalleSalidaPtId() {
         return tipoDetalleSalidaPtId != null ? tipoDetalleSalidaPtId : tipoDetalleSalidaId;
+    }
+
+    public boolean isSalidaPtEnabled() {
+        return salidaPtEnabled;
     }
 
     public Long resolveAlmacenPrincipal(Producto producto) {

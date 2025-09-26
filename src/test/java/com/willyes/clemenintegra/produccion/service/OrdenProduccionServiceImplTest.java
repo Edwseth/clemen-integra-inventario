@@ -41,7 +41,7 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
-import com.willyes.clemenintegra.inventario.service.UnidadConversionService;
+import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
@@ -530,8 +530,18 @@ class OrdenProduccionServiceImplTest {
                                                     BigDecimal stockLote,
                                                     Integer almacenId) implements LoteFefoDisponibleProjection {
         @Override
+        public Long getLoteProductoId() {
+            return loteProductoId;
+        }
+
+        @Override
         public String getCodigoLote() {
             return "LOT-" + loteProductoId;
+        }
+
+        @Override
+        public BigDecimal getStockLote() {
+            return stockLote;
         }
 
         @Override
@@ -542,6 +552,11 @@ class OrdenProduccionServiceImplTest {
         @Override
         public String getNombreAlmacen() {
             return null;
+        }
+
+        @Override
+        public Long getAlmacenId() {
+            return almacenId != null ? almacenId.longValue() : null;
         }
     }
 }

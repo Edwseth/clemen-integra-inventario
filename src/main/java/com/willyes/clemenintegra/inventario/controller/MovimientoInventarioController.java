@@ -76,9 +76,14 @@ public class MovimientoInventarioController {
             boolean isSalida = tipo == TipoMovimiento.SALIDA || tipo == TipoMovimiento.AJUSTE;
             boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
             boolean atencionesVacias = dto.atenciones() == null || dto.atenciones().isEmpty();
-            Long detalleSalidaPtId = Optional.ofNullable(inventoryCatalogResolver.getTipoDetalleSalidaPtId())
-                    .orElse(inventoryCatalogResolver.getTipoDetalleSalidaId());
-            boolean esSalidaPt = dto.tipoMovimiento() == TipoMovimiento.SALIDA
+            Long detalleSalidaPtId = inventoryCatalogResolver.isSalidaPtEnabled()
+                    ? inventoryCatalogResolver.getTipoDetalleSalidaPtId()
+                    : null;
+            if (detalleSalidaPtId == null) {
+                detalleSalidaPtId = inventoryCatalogResolver.getTipoDetalleSalidaId();
+            }
+            boolean esSalidaPt = inventoryCatalogResolver.isSalidaPtEnabled()
+                    && dto.tipoMovimiento() == TipoMovimiento.SALIDA
                     && detalleSalidaPtId != null
                     && Objects.equals(dto.tipoMovimientoDetalleId(), detalleSalidaPtId);
             boolean permitirLoteNulo = dto.loteProductoId() == null && autoSplitSolicitado && atencionesVacias;
