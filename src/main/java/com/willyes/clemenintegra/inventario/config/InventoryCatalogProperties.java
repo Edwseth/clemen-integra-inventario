@@ -15,6 +15,7 @@ public class InventoryCatalogProperties {
     private final Produccion produccion = new Produccion();
     private final Mov mov = new Mov();
     private final Um um = new Um();
+    private final SalidaPt salidaPt = new SalidaPt();
 
     @Data
     public static class Almacen {
@@ -60,6 +61,11 @@ public class InventoryCatalogProperties {
         private Long transferenciaId;
         private Long salidaId;
         private Long salidaPtId;
+    }
+
+    @Data
+    public static class SalidaPt {
+        private boolean enabled = true;
     }
 
     @Data

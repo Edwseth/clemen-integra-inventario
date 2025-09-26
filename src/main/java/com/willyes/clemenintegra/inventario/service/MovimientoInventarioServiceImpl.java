@@ -178,22 +178,24 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
         }
 
-        boolean salidaPt = (clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
-                && isSalidaPt(tipoMovimiento, resolvedTipoDetalleId);
+        Integer almacenOrigenIdNormalizadoInt = dto.almacenOrigenId();
+        boolean salidaPt = isSalidaPt(tipoMovimiento, resolvedTipoDetalleId);
 
         Long almacenPtId = null;
-        Almacen almacenOrigen;
         if (salidaPt) {
             almacenPtId = ensureAlmacenPtId();
             if (dto.almacenOrigenId() != null && !Objects.equals(dto.almacenOrigenId().longValue(), almacenPtId)) {
                 log.warn("ALMACEN_ORIGEN_NO_VALIDO_PT dtoOrigenId={} ptId={}", dto.almacenOrigenId(), almacenPtId);
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_ORIGEN_NO_VALIDO_PT");
             }
-            almacenOrigen = entityManager.getReference(Almacen.class, almacenPtId);
-        } else {
-            almacenOrigen = dto.almacenOrigenId() != null
-                    ? entityManager.getReference(Almacen.class, dto.almacenOrigenId()) : null;
+            almacenOrigenIdNormalizadoInt = almacenPtId != null ? Math.toIntExact(almacenPtId) : null;
         }
+
+        Long almacenOrigenIdNormalizado = almacenOrigenIdNormalizadoInt != null
+                ? almacenOrigenIdNormalizadoInt.longValue()
+                : null;
+        Almacen almacenOrigen = almacenOrigenIdNormalizadoInt != null
+                ? entityManager.getReference(Almacen.class, almacenOrigenIdNormalizadoInt)
+                : null;
 
         Almacen almacenDestino = almacenDestinoIdNormalizado != null
                 ? entityManager.getReference(Almacen.class, almacenDestinoIdNormalizado.longValue()) : null;
@@ -238,9 +240,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     }
                 }
 
-            Long solicitudAlmacenOrigenId = solicitud.getAlmacenOrigen() != null ? Long.valueOf(solicitud.getAlmacenOrigen().getId()) : null;
-            Long dtoAlmacenOrigenId = salidaPt ? almacenPtId
-                    : dto.almacenOrigenId() != null ? dto.almacenOrigenId().longValue() : null;
+            Long solicitudAlmacenOrigenId = solicitud.getAlmacenOrigen() != null
+                    ? Long.valueOf(solicitud.getAlmacenOrigen().getId()) : null;
+            Long dtoAlmacenOrigenId = almacenOrigenIdNormalizado;
             if (solicitudAlmacenOrigenId != null && !Objects.equals(solicitudAlmacenOrigenId, dtoAlmacenOrigenId)) {
                 log.warn("MISMATCH_ALMACEN_ORIGEN_ID: esperado={}, recibido={}", solicitudAlmacenOrigenId, dto.almacenOrigenId());
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_ALMACEN_ORIGEN_ID");
@@ -1260,6 +1262,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         List<MovimientoLoteDetalle> detalles = new ArrayList<>();
         for (ParLoteCantidad par : plan) {
             MovimientoLoteDetalle detalle = consumirLoteSalidaPt(par, producto, almacenPtId, estadosElegibles);
+            log.info("SALIDA_PT producto={} lote={} cantidad={} autosplit={} destino={} doc={}",
+                    producto != null ? producto.getId() : null,
+                    detalle.lote() != null ? detalle.lote().getId() : null,
+                    detalle.cantidad(),
+                    autoSplitSolicitado,
+                    dto.destinoTexto(),
+                    dto.docReferencia());
             detalles.add(detalle);
         }
 
@@ -1836,7 +1845,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private boolean isSalidaPt(TipoMovimiento tipoMovimiento, Long tipoDetalleId) {
-        if (tipoMovimiento != TipoMovimiento.SALIDA || tipoDetalleId == null) {
+        if (!catalogResolver.isSalidaPtEnabled() || tipoMovimiento != TipoMovimiento.SALIDA || tipoDetalleId == null) {
             return false;
         }
         Long salidaPtId = catalogResolver.getTipoDetalleSalidaPtId();
