@@ -497,6 +497,24 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             lotesProcesados = procesarSalidaPt(dto, producto, cantidadSolicitada,
                     almacenPtId, atenciones, autoSplitSolicitado);
 
+        } else if (tipoMovimiento == TipoMovimiento.SALIDA
+                && clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION) {
+
+            // Consumir directamente del lote (ya en Pre-Bodega).
+            // OJO: ignoramos la 'solicitud' para el cálculo de stock (pasamos null),
+            // pero el movimiento seguirá quedando LIGADO a la solicitud más abajo
+            // cuando se setea movimiento.setSolicitudMovimiento(solicitud).
+            lotesProcesados = procesarMovimientoConLoteExistente(
+                    dto,
+                    tipoMovimiento,
+                    almacenOrigen,
+                    almacenDestino,
+                    producto,
+                    cantidadSolicitada,
+                    devolucionInterna,
+                    /* solicitud */ null // <- clave para evitar el early-return que no descuenta stock
+            );
+
         } else if (solicitudConPartidas) {
             // ⬅️ NUEVO: aprobar por partidas (por cada lote del detalle)
             lotesProcesados = procesarMovimientoPorPartidas(
@@ -2040,25 +2058,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     // =====================================
-// CONSUMO AUTOMÁTICO DE INSUMOS POR OP
-// =====================================
+    // CONSUMO AUTOMÁTICO DE INSUMOS POR OP
+    // =====================================
     @Transactional
     public void consumirInsumosPorOrden(Long ordenProduccionId, Long usuarioId) {
 
-        // 0) IDs de catálogos (existen en tu resolver)
         final Long preBodegaId = Objects.requireNonNull(
                 catalogResolver.getAlmacenPreBodegaProduccionId(),
                 "CONFIG_FALTANTE: inventory.almacenPreBodegaProduccionId");
 
-        final Long motivoSalidaProdId = Objects.requireNonNull(
-                catalogResolver.getMotivoSalidaProduccionId(),
-                "CONFIG_FALTANTE: inventory.motivo.salidaProduccionId");
-
-        final Long tipoDetSalidaProdId = Objects.requireNonNull(
-                catalogResolver.getTipoDetalleSalidaId(),
-                "CONFIG_FALTANTE: inventory.tipoDetalle.salidaProduccionId");
-
-        // 1) Traer todas las solicitudes de esa OP con sus detalles y lotes
+        // 1) Traer TODAS las solicitudes de la OP (cualquier estado) con sus partidas + lote
         List<SolicitudMovimiento> solicitudes = entityManager.createQuery(
                         "select distinct s " +
                                 "from SolicitudMovimiento s " +
@@ -2073,27 +2082,41 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return;
         }
 
-        // 2) Por cada detalle, generar una SALIDA desde el lote en Pre-Bodega
+        // 2) Por cada partida, emitir SALIDA_PRODUCCION desde el lote ya trasladado a Pre-Bodega
         for (SolicitudMovimiento sol : solicitudes) {
+
             final Producto producto = sol.getProducto();
             if (producto == null || producto.getId() == null) {
                 log.warn("CONSUMO_OP: solicitud sin producto. solId={}", sol.getId());
                 continue;
             }
 
-            for (SolicitudMovimientoDetalle det : sol.getDetalles()) {
-                // idempotencia: si ya lo diste por atendido/consumido, salta
-                if (det.getEstado() == EstadoSolicitudMovimientoDetalle.ATENDIDO) {
+            final Integer productoIdInt = producto.getId();
+            final Long productoIdLong = productoIdInt.longValue();
+
+            // Motivo / tipo-detalle: preferimos lo que traía la solicitud; si falta, usamos configuración general
+            final Long motivoPreferido = (sol.getMotivoMovimiento() != null) ? sol.getMotivoMovimiento().getId() : null;
+            final Long tipoDetPreferido = (sol.getTipoMovimientoDetalle() != null) ? sol.getTipoMovimientoDetalle().getId() : null;
+            final Long motivoSalida = (motivoPreferido != null)
+                    ? motivoPreferido
+                    : catalogResolver.getMotivoSalidaProduccionId(); // puede ser null si no está configurado
+            final Long tipoDetSalida = (tipoDetPreferido != null)
+                    ? tipoDetPreferido
+                    : Objects.requireNonNull(catalogResolver.getTipoDetalleSalidaId(),
+                    "CONFIG_FALTANTE: inventory.tipoDetalle.salidaId");
+
+            for (SolicitudMovimientoDetalle det : Optional.ofNullable(sol.getDetalles()).orElse(List.of())) {
+
+                // Cantidad “a consumir” = atendida (si la hubo) o solicitada
+                final BigDecimal qtySolicitada = Optional.ofNullable(det.getCantidad()).orElse(BigDecimal.ZERO);
+                final BigDecimal qtyAtendida  = Optional.ofNullable(det.getCantidadAtendida()).orElse(BigDecimal.ZERO);
+                final BigDecimal qtyObjetivo  = (qtyAtendida.signum() > 0) ? qtyAtendida : qtySolicitada;
+                if (qtyObjetivo.signum() <= 0) {
                     continue;
                 }
 
-                BigDecimal qty = det.getCantidadAtendida() != null ? det.getCantidadAtendida() : det.getCantidad();
-                if (qty == null || qty.signum() <= 0) {
-                    continue;
-                }
-
-                // código de lote de origen (del detalle o de la solicitud)
-                String codigoLote =
+                // Ubicar el lote equivalente en Pre-Bodega (mismo código de lote)
+                final String codigoLote =
                         (det.getLote() != null && det.getLote().getCodigoLote() != null)
                                 ? det.getLote().getCodigoLote()
                                 : sol.getCodigoLote();
@@ -2103,58 +2126,71 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     continue;
                 }
 
-                // 2.1) Ubicar el lote en Pre-Bodega (mismo código)
-                Optional<LoteProducto> lotePreBodegaOpt = loteProductoRepository
+                final Optional<LoteProducto> lotePreBodegaOpt = loteProductoRepository
                         .findByCodigoLoteAndProductoIdAndAlmacenId(
-                                codigoLote,
-                                producto.getId(),               // Integer requerido por la query
-                                preBodegaId.intValue()          // Integer requerido por la query
-                        );
+                                codigoLote, productoIdInt, preBodegaId.intValue());
 
                 if (lotePreBodegaOpt.isEmpty()) {
                     log.warn("CONSUMO_OP: no existe lote en Pre-Bodega para consumir. op={}, prod={}, lote={}",
-                            ordenProduccionId, producto.getId(), codigoLote);
+                            ordenProduccionId, productoIdInt, codigoLote);
+                    continue;
+                }
+                final LoteProducto lotePreBodega = lotePreBodegaOpt.get();
+
+                // Idempotencia: resta SALIDAS ya emitidas para esta solicitud/producto/lote y tipo-detalle
+                final BigDecimal yaConsumido = Optional.ofNullable(
+                        repository.sumaPorSolicitudYTipo(
+                                sol.getId(),
+                                productoIdLong,
+                                lotePreBodega.getId(),
+                                TipoMovimiento.SALIDA,
+                                tipoDetSalida,
+                                null) // motivo no filtra idempotencia
+                ).orElse(BigDecimal.ZERO);
+
+                final BigDecimal pendiente = qtyObjetivo.subtract(yaConsumido);
+                if (pendiente.signum() <= 0) {
+                    log.debug("CONSUMO_OP IDEMP: sin pendiente solId={} loteId={} consumido={} objetivo={}",
+                            sol.getId(), lotePreBodega.getId(), yaConsumido, qtyObjetivo);
                     continue;
                 }
 
-                LoteProducto lotePreBodega = lotePreBodegaOpt.get();
-
-                // 3) Registrar la SALIDA_PRODUCCION (record: usa el orden exacto de tu DTO)
-                MovimientoInventarioDTO dtoSalida = new MovimientoInventarioDTO(
-                        /* id */                         null,
-                        /* cantidad */                   qty,
-                        /* tipoMovimiento */             TipoMovimiento.SALIDA,
-                        /* clasificacion */              ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                        /* docReferencia */              null,
-                        /* destinoTexto */               null,
-                        /* productoId */                 producto.getId(),           // Integer
-                        /* loteProductoId */             lotePreBodega.getId(),      // Long
-                        /* almacenOrigenId */            preBodegaId.intValue(),     // Integer (origen = Pre-Bodega)
-                        /* almacenDestinoId */           null,
-                        /* proveedorId */                null,
-                        /* ordenCompraId */              null,
-                        /* motivoMovimientoId */         motivoSalidaProdId,         // Long
-                        /* tipoMovimientoDetalleId */    tipoDetSalidaProdId,        // Long
-                        /* solicitudMovimientoId */      null,
-                        /* usuarioId */                  usuarioId,                  // Long
-                        /* ordenProduccionId */          ordenProduccionId,          // Long
-                        /* ordenCompraDetalleId */       null,
-                        /* codigoLote */                 null,
-                        /* fechaVencimiento */           null,
-                        /* estadoLote */                 null,
-                        /* autoSplit */                  null,
-                        /* atenciones */                 null
+                // Registrar la SALIDA_PRODUCCION (desde Pre-Bodega). Dejamos ligada la solicitud para idempotencia.
+                final MovimientoInventarioDTO dtoSalida = new MovimientoInventarioDTO(
+                        null,                               // id
+                        pendiente,                          // cantidad
+                        TipoMovimiento.SALIDA,              // tipo
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION, // clasif
+                        null,                               // docReferencia
+                        null,                               // destinoTexto
+                        productoIdInt,                      // productoId (Integer)
+                        lotePreBodega.getId(),              // loteProductoId (Long)
+                        preBodegaId.intValue(),             // almacenOrigenId (Pre-Bodega)
+                        null,                               // almacenDestinoId
+                        null,                               // proveedorId
+                        null,                               // ordenCompraId
+                        motivoSalida,                       // motivoMovimientoId (puede ser null)
+                        tipoDetSalida,                      // tipoMovimientoDetalleId (obligatorio)
+                        sol.getId(),                        // solicitudMovimientoId  <-- clave para idempotencia
+                        usuarioId,                          // usuarioId
+                        ordenProduccionId,                  // ordenProduccionId
+                        null,                               // ordenCompraDetalleId
+                        null,                               // codigoLote
+                        null,                               // fechaVencimiento
+                        null,                               // estadoLote
+                        null,                               // autoSplit
+                        null                                // atenciones
                 );
 
-                // estamos dentro del mismo service
+                // Usa la rama especial añadida en registrarMovimiento para SALIDA_PRODUCCION
                 this.registrarMovimiento(dtoSalida);
 
-                // 4) Marcar el detalle como atendido/consumido (idempotente)
-                det.setEstado(EstadoSolicitudMovimientoDetalle.ATENDIDO);
-                // No necesitas save explícito: es entidad gestionada en @Transactional
+                // Marcar el detalle: si ya quedó cubierto, ATENDIDO (no rompe en reentradas)
+                det.setEstado(com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle.ATENDIDO);
             }
         }
     }
+
 
 }
 

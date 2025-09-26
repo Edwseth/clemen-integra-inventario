@@ -51,6 +51,7 @@ public class InventoryCatalogProperties {
         private String entradaPt;
         private String transferenciaCalidad;
         private String devolucionDesdeProduccion;
+        private String salidaProduccion;
     }
 
     @Data

@@ -84,6 +84,7 @@ public class InventoryCatalogResolver {
         motivoEntradaPtId = resolveMotivo(properties.getMotivo().getEntradaPt());
         motivoTransferenciaCalidadId = resolveMotivo(properties.getMotivo().getTransferenciaCalidad());
         motivoDevolucionDesdeProduccionId = resolveMotivo(properties.getMotivo().getDevolucionDesdeProduccion());
+        motivoSalidaProduccionId = resolveMotivo(properties.getMotivo().getSalidaProduccion());
         Long ajusteId = properties.getMov().getMotivo().getAjusteRechazo();
         if (ajusteId != null) {
             motivoAjusteRechazoId = validateMotivo(ajusteId);
