@@ -34,7 +34,7 @@ public class SalidaPtController {
     }
 
     @GetMapping("/salida-pt/config")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<SalidaPtConfigResponse> obtenerConfigSalidaPt() {
         return ResponseEntity.ok(new SalidaPtConfigResponse(
                 catalogResolver.isSalidaPtEnabled(),
@@ -44,7 +44,7 @@ public class SalidaPtController {
     }
 
     @GetMapping("/lotes/pt-disponibles")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<LotePtDisponibleDTO>> listarLotesDisponiblesPt(
             @RequestParam("productoId") Long productoId,
             @RequestParam(value = "minCantidad", required = false) BigDecimal minCantidad
@@ -54,7 +54,7 @@ public class SalidaPtController {
         }
         Long almacenPtId = catalogResolver.getAlmacenPtId();
         if (catalogResolver.isSalidaPtEnabled() && (almacenPtId == null || almacenPtId <= 0)) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CONFIG_FALTANTE");
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CONFIG_FALTANTE");
         }
         if (almacenPtId == null || almacenPtId <= 0) {
             return ResponseEntity.ok(List.of());

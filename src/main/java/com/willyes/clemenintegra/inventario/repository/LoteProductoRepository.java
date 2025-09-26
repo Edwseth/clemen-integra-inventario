@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Repository
@@ -66,29 +67,19 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
             Integer almacenId,
             Collection<EstadoLote> estados);
 
-    @Query(value = """
-        SELECT *
-        FROM lotes_productos lp
-        WHERE lp.productos_id = :productoId
-          AND lp.almacenes_id = :almacenPtId
-          AND lp.estado IN (:estados)
-          AND lp.agotado = false
-          AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
-        ORDER BY CASE WHEN lp.fecha_vencimiento IS NULL THEN 1 ELSE 0 END,
-                 lp.fecha_vencimiento ASC,
-                 lp.id ASC
-        """, nativeQuery = true)
-    List<LoteProducto> findFefoSalidaPtNative(@Param("productoId") Long productoId,
-                                              @Param("almacenPtId") Long almacenPtId,
-                                              @Param("estados") Collection<String> estados);
+    @Query("""
+      select l
+      from LoteProducto l
+      where l.producto.id = :productoId
+        and l.almacen.id = :almacenId
+        and (l.agotado = false or l.agotado is null)
+        and l.estado in :estados
+      order by l.fechaVencimiento asc nulls last, l.id asc
+    """)
+        List<LoteProducto> findFefoSalidaPt(@Param("productoId") Long productoId,
+                                            @Param("almacenId") Long almacenId,
+                                            @Param("estados") Set<EstadoLote> estados);
 
-    default List<LoteProducto> findFefoSalidaPt(Long productoId, Long almacenPtId,
-                                                Collection<EstadoLote> estadosElegibles) {
-        Collection<String> estados = estadosElegibles.stream()
-                .map(Enum::name)
-                .collect(Collectors.toList());
-        return findFefoSalidaPtNative(productoId, almacenPtId, estados);
-    }
 
     @Query(value = """
         SELECT lp.id AS loteProductoId,
