@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -34,6 +35,10 @@ public class SecurityConfig {
 
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    // Orígenes permitidos por perfil (lista separada por comas)
+    @Value("${app.cors.allowed-origins:}")
+    private String allowedOriginsProp;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
@@ -177,12 +182,17 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOriginPatterns(List.of(
-                "https://*.trycloudflare.com",
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "http://127.0.0.1:5173"
-        ));
+        // Lee la propiedad y convierte a lista (por comas). Filtra vacíos.
+        final java.util.List<String> patterns = java.util.Arrays.stream(allowedOriginsProp.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList();
+        // Fallback para dev si la propiedad no vino (evita bloquearte localmente).
+        configuration.setAllowedOriginPatterns(
+                patterns.isEmpty()
+                        ? java.util.List.of("http://localhost:5173")
+                        : patterns
+                );
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
