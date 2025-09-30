@@ -2,11 +2,9 @@ package com.willyes.clemenintegra.shared.config;
 
 import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.info.*;
-import io.swagger.v3.oas.models.servers.Server;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
 
 @Configuration
 public class OpenAPIConfig {
@@ -20,8 +18,7 @@ public class OpenAPIConfig {
                         .description("Documentación de los servicios REST para los módulos de Clemen-Integra")
                         .contact(new Contact()
                                 .name("Will Yes Solutions")
-                                .email("soporte@willyessolutions.com")))
-                .servers(List.of(new Server().url("http://localhost:8080")));
+                                .email("soporte@willyessolutions.com")));
     }
 }
 
