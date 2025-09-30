@@ -3,8 +3,7 @@ package com.willyes.clemenintegra.shared.security;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.model.UsuarioPrincipal;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,13 +15,14 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
@@ -32,15 +32,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    //private final CustomUserDetailsService customUserDetailsService;
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    //private final UsuarioPrincipal usuarioPrincipal;
-
-    //@Bean
-    //public PasswordEncoder passwordEncoder() {
-        //return new BCryptPasswordEncoder();
-    //}
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
