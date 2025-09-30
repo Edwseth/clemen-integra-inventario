@@ -5,7 +5,7 @@ import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
@@ -18,7 +18,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,6 +31,7 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("/api/calidad/evaluaciones")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
 public class EvaluacionCalidadController {
 
     private final EvaluacionCalidadService service;
@@ -83,6 +86,7 @@ public class EvaluacionCalidadController {
     }
 
     @GetMapping("/archivo/{nombreArchivo:.+}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public ResponseEntity<Resource> verArchivo(@PathVariable String nombreArchivo) {
         try {
             Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones")
