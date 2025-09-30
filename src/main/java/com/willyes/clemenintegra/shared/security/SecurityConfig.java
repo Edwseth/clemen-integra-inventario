@@ -66,8 +66,7 @@ public class SecurityConfig {
                             "/swagger-resources",
                             "/configuration/ui",
                             "/configuration/security",
-                            "/webjars/**",
-                            "/api/calidad/evaluaciones/archivo/**"
+                            "/webjars/**"
                     ).permitAll();
 
                     auth.requestMatchers(
@@ -111,7 +110,8 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
-                    auth.requestMatchers("/api/calidad/**", "/api/lotes/**").hasAnyAuthority(
+                    auth.requestMatchers("/api/calidad/**",
+                            "/api/calidad/evaluaciones/archivo/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                             RolUsuario.ROL_MICROBIOLOGO.name(),
@@ -185,7 +185,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
         configuration.setAllowedOriginPatterns(List.of(
-                "https://*.ngrok-free.app",
+                "https://*.trycloudflare.com",
                 "http://localhost:5173",
                 "http://localhost:3000",
                 "http://127.0.0.1:5173"
@@ -195,8 +195,7 @@ public class SecurityConfig {
                 "Authorization",
                 "Content-Type",
                 "Accept",
-                "X-Bypass-Auth-Redirect",
-                "ngrok-skip-browser-warning"
+                "X-Bypass-Auth-Redirect"
         ));
         configuration.setExposedHeaders(List.of("Content-Disposition"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
