@@ -1,16 +1,19 @@
 package com.willyes.clemenintegra.shared.security;
 
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 
@@ -35,7 +38,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String authHeader = request.getHeader("Authorization");
-        log.debug("Authorization header recibido: {}", authHeader);
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             final String token = authHeader.substring(7);
@@ -44,7 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Authentication authResult  = jwtAuthenticationProvider.authenticate(authRequest);
                 SecurityContextHolder.getContext().setAuthentication(authResult);
                 log.debug("Usuario {} autenticado en {}", authResult.getName(), uri);
-                log.info("Authorities asignadas: {}", authResult.getAuthorities());
+                log.debug("Authorities asignadas: {}", authResult.getAuthorities());
             } catch (org.springframework.security.core.AuthenticationException ex) {
                 log.warn("Auth failed [{}] en {} {}: {}",
                         ex.getClass().getSimpleName(), request.getMethod(), uri,
