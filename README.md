@@ -123,14 +123,41 @@ El utilitario `DateParser` acepta tanto `yyyy-MM-dd` como `dd/MM/yyyy` y convier
 - Maven 3.8+
 - Base de datos MySQL en funcionamiento
 
-Configurar las credenciales de base de datos en `src/main/resources/application.properties` mediante las variables `DB_USERNAME` y `DB_PASS`.
+Configura las credenciales de base de datos en `src/main/resources/application.properties` mediante las variables `DB_USERNAME` y `DB_PASS`. La URL JDBC puede mantenerse en `localhost` para **dev**; en **demo/prod** define `SPRING_DATASOURCE_URL` por entorno.
 
 ## Puesta en Marcha
 1. Clonar el repositorio y configurar MySQL.
 2. Definir `DB_USERNAME` y `DB_PASS` en `application.properties`.
 3. Ejecutar:
+
+### Perfiles y CORS
+El backend usa perfiles para controlar CORS y otras opciones:
+
+- `application-dev.properties`
+  ```
+  app.cors.allowed-origins=http://localhost:5173
+  ```
+- `application-demo.properties`
+  ```
+  app.cors.allowed-origins=https://<tu-app>.vercel.app, https://*.trycloudflare.com
+  ```
+> En producción, define `app.cors.allowed-origins` con los dominios finales del cliente (sin comodines).
+
+### Ejecución
+1. Clona el repositorio y configura MySQL.
+2. Define `DB_USERNAME` y `DB_PASS` en `application.properties` (o variables de entorno).
+3. Ejecuta con el perfil deseado:
 ```bash
 mvn clean install
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=dev    # desarrollo local
+# o
+java -jar target/clemen-integra-backend.jar --spring.profiles.active=demo  # demo (Vercel + Tunnel)
 ```
 La aplicación inicia por defecto en el puerto `8080` y la documentación Swagger se encuentra en `/swagger-ui.html`.
+
+### Swagger detrás de túnel
+No se fija un server.url en OpenAPI; Swagger infiere host y esquema (https) cuando se accede por túnel o proxy.
+
+### Seguridad y logging
+- Descargas de Calidad requieren roles (QA/Calidad/SUPER_ADMIN).
+- No se registran tokens JWT en logs; ajusta niveles en application-*.properties según entorno.
