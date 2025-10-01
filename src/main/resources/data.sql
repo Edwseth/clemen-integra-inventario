@@ -1,79 +1,79 @@
 -- =========================
 --  ALMACENES
 -- =========================
-INSERT INTO almacenes (id, nombre, ubicacion, categoria_almacen, tipo_almacen) VALUES
-(1,  'Principal Materia Prima',     'Zona A - MP',              'MATERIA_PRIMA',       'PRINCIPAL'),
-(2,  'Principal Producto Terminado','Zona B - PT',              'PRODUCTO_TERMINADO',  'PRINCIPAL'),
-(3,  'Obsoletos',                   'Zona E - Obsoletos',       'OBSOLETOS',           'PRINCIPAL'),
-(4,  'Principal Suministros',       'Zona D - Suministros',     'SUMINISTROS',         'PRINCIPAL'),
-(5,  'Principal Empaque',           'Zona C - Empaque',         'MATERIAL_EMPAQUE',    'PRINCIPAL'),
-(6,  'Pre-Bodega Producción',       'Zona F - Tránsito Producción','MATERIA_PRIMA',   'PRINCIPAL'),
-(7,  'Cuarentena Calidad',          'Zona Q - Inspección',      'PRODUCTO_TERMINADO',  'PRINCIPAL')
-ON DUPLICATE KEY UPDATE id = id;
+--INSERT INTO almacenes (id, nombre, ubicacion, categoria_almacen, tipo_almacen) VALUES
+--(1,  'Principal Materia Prima',     'Zona A - MP',              'MATERIA_PRIMA',       'PRINCIPAL'),
+--(2,  'Principal Producto Terminado','Zona B - PT',              'PRODUCTO_TERMINADO',  'PRINCIPAL'),
+--(3,  'Obsoletos',                   'Zona E - Obsoletos',       'OBSOLETOS',           'PRINCIPAL'),
+--(4,  'Principal Suministros',       'Zona D - Suministros',     'SUMINISTROS',         'PRINCIPAL'),
+--(5,  'Principal Empaque',           'Zona C - Empaque',         'MATERIAL_EMPAQUE',    'PRINCIPAL'),
+--(6,  'Pre-Bodega Producción',       'Zona F - Tránsito Producción','MATERIA_PRIMA',   'PRINCIPAL'),
+--(7,  'Cuarentena Calidad',          'Zona Q - Inspección',      'PRODUCTO_TERMINADO',  'PRINCIPAL')
+--ON DUPLICATE KEY UPDATE id = id;
 
 -- =========================
 --  MOTIVOS_MOVIMIENTO
 -- =========================
-INSERT INTO motivos_movimiento (id, motivo, descripcion) VALUES
-(1,  'AJUSTE_NEGATIVO',                 'Ajuste por merma, pérdida o error de conteo'),
-(2,  'AJUSTE_POSITIVO',                 'Ajuste por ingreso no registrado o corrección'),
-(3,  'DEVOLUCION_DESDE_PRODUCCION',     'Retorno de insumos desde producción'),
-(4,  'DEVOLUCION_DE_PROVEEDOR',         'Producto devuelto por proveedor con error'),
-(5,  'DEVOLUCION_A_PROVEEDOR',          'Devolución de insumos o materiales al proveedor'),
-(6,  'ENTRADA_PRODUCTO_TERMINADO',      'Ingreso de producto terminado al inventario'),
-(7,  'ENTRADA_REPROCESO',               'Ingreso de producto reprocesado'),
-(8,  'RECEPCION_COMPRA',                'Recepción de insumos por orden de compra'),
-(9,  'RECEPCION_DEVOLUCION_CLIENTE',    'Reingreso por devolución de cliente'),
-(10, 'SALIDA_MUESTRA_CALIDAD',          'Salida para muestra en laboratorio de calidad'),
-(11, 'SALIDA_PRODUCCION',               'Salida de insumos hacia producción'),
-(12, 'TRANSFERENCIA_INTERNA_PRODUCCION','Transferencia desde inventario a pre-bodega de producción'),
-(13, 'TRANSFERENCIA_GENERAL',           'Movimiento entre almacenes internos'),
-(14, 'LIBERACION_CALIDAD',              'Liberación de calidad'),
-(15, 'RECHAZO_CALIDAD',                 'Rechazo por calidad'),
-(16, 'SALIDA_CLIENTE',                  'Salida a cliente / centro de distribución')
-ON DUPLICATE KEY UPDATE id = id;
+--INSERT INTO motivos_movimiento (id, motivo, descripcion) VALUES
+--(1,  'AJUSTE_NEGATIVO',                 'Ajuste por merma, pérdida o error de conteo'),
+--(2,  'AJUSTE_POSITIVO',                 'Ajuste por ingreso no registrado o corrección'),
+--(3,  'DEVOLUCION_DESDE_PRODUCCION',     'Retorno de insumos desde producción'),
+--(4,  'DEVOLUCION_DE_PROVEEDOR',         'Producto devuelto por proveedor con error'),
+--(5,  'DEVOLUCION_A_PROVEEDOR',          'Devolución de insumos o materiales al proveedor'),
+--(6,  'ENTRADA_PRODUCTO_TERMINADO',      'Ingreso de producto terminado al inventario'),
+--(7,  'ENTRADA_REPROCESO',               'Ingreso de producto reprocesado'),
+--(8,  'RECEPCION_COMPRA',                'Recepción de insumos por orden de compra'),
+--(9,  'RECEPCION_DEVOLUCION_CLIENTE',    'Reingreso por devolución de cliente'),
+--(10, 'SALIDA_MUESTRA_CALIDAD',          'Salida para muestra en laboratorio de calidad'),
+--(11, 'SALIDA_PRODUCCION',               'Salida de insumos hacia producción'),
+--(12, 'TRANSFERENCIA_INTERNA_PRODUCCION','Transferencia desde inventario a pre-bodega de producción'),
+--(13, 'TRANSFERENCIA_GENERAL',           'Movimiento entre almacenes internos'),
+--(14, 'LIBERACION_CALIDAD',              'Liberación de calidad'),
+--(15, 'RECHAZO_CALIDAD',                 'Rechazo por calidad'),
+--(16, 'SALIDA_CLIENTE',                  'Salida a cliente / centro de distribución')
+--ON DUPLICATE KEY UPDATE id = id;
 
 -- =========================
 --  TIPOS_MOVIMIENTO_DETALLE
 -- =========================
-INSERT INTO tipos_movimiento_detalle (id, descripcion) VALUES
-(1,  'AJUSTE_NEGATIVO'),
-(2,  'AJUSTE_POSITIVO'),
-(5,  'DEVOLUCION_A_PROVEEDOR'),
-(3,  'DEVOLUCION_DESDE_PRODUCCION'),
-(4,  'DEVOLUCION_DE_PROVEEDOR'),
-(6,  'ENTRADA_PRODUCTO_TERMINADO'),
-(7,  'ENTRADA_REPROCESO'),
-(8,  'RECEPCION_COMPRA'),
-(9,  'RECEPCION_DEVOLUCION_CLIENTE'),
-(10, 'SALIDA_MUESTRA_CALIDAD'),
-(11, 'SALIDA_PRODUCCION'),
-(13, 'TRANSFERENCIA_GENERAL'),
-(12, 'TRANSFERENCIA_INTERNA_PRODUCCION')
-ON DUPLICATE KEY UPDATE id = id;
+--INSERT INTO tipos_movimiento_detalle (id, descripcion) VALUES
+--(1,  'AJUSTE_NEGATIVO'),
+--(2,  'AJUSTE_POSITIVO'),
+--(5,  'DEVOLUCION_A_PROVEEDOR'),
+--(3,  'DEVOLUCION_DESDE_PRODUCCION'),
+--(4,  'DEVOLUCION_DE_PROVEEDOR'),
+--(6,  'ENTRADA_PRODUCTO_TERMINADO'),
+--(7,  'ENTRADA_REPROCESO'),
+--(8,  'RECEPCION_COMPRA'),
+--(9,  'RECEPCION_DEVOLUCION_CLIENTE'),
+--(10, 'SALIDA_MUESTRA_CALIDAD'),
+--(11, 'SALIDA_PRODUCCION'),
+--(13, 'TRANSFERENCIA_GENERAL'),
+--(12, 'TRANSFERENCIA_INTERNA_PRODUCCION')
+--ON DUPLICATE KEY UPDATE id = id;
 
 -- =========================
 --  CATEGORIAS_PRODUCTO
 --  (id, nombre, tipo)
 -- =========================
-INSERT INTO categorias_producto (id, nombre, tipo) VALUES
-(1,  'Producto Terminado',  'PRODUCTO_TERMINADO'),
-(2,  'Material de Empaque', 'MATERIAL_EMPAQUE'),
-(3,  'Suministros',         'SUMINISTROS'),
-(4, 'Materia Prima',       'MATERIA_PRIMA')
-ON DUPLICATE KEY UPDATE id = id;
+--INSERT INTO categorias_producto (id, nombre, tipo) VALUES
+--(1,  'Producto Terminado',  'PRODUCTO_TERMINADO'),
+--(2,  'Material de Empaque', 'MATERIAL_EMPAQUE'),
+--(3,  'Suministros',         'SUMINISTROS'),
+--(4, 'Materia Prima',       'MATERIA_PRIMA')
+--ON DUPLICATE KEY UPDATE id = id;
 
 -- =========================
 --  UNIDADES_MEDIDA
 -- =========================
-INSERT INTO unidades_medida (id, nombre, simbolo) VALUES
-(1,  'GRAMO',      'g'),
-(2,  'LITRO',      'lt'),
-(3,  'MILILITRO',  'ml'),
-(4,  'UNIDAD',     'UND'),
-(5,  'CAJA',       'CAJA'),
-(6,  'PAQUETE',    'PAQ'),
-(7,  'METRO',      'm'),
-(8, 'Kilogramo',  'kg'),
-(9, 'Miligramos', 'mg')
-ON DUPLICATE KEY UPDATE id = id;
+--INSERT INTO unidades_medida (id, nombre, simbolo) VALUES
+--(1,  'GRAMO',      'g'),
+--(2,  'LITRO',      'lt'),
+--(3,  'MILILITRO',  'ml'),
+--(4,  'UNIDAD',     'UND'),
+--(5,  'CAJA',       'CAJA'),
+--(6,  'PAQUETE',    'PAQ'),
+--(7,  'METRO',      'm'),
+--(8, 'Kilogramo',  'kg'),
+--(9, 'Miligramos', 'mg')
+--ON DUPLICATE KEY UPDATE id = id;

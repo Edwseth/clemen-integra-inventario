@@ -20,7 +20,8 @@ public enum ClasificacionMovimientoInventario {
 
     // SALIDAS
     SALIDA_MUESTRA_CALIDAD, //
-    SALIDA_PRODUCCION, //
+    SALIDA_PRODUCCION,
+    SALIDA_CLIENTE,//
 
     // TRANSFERENCIAS
     TRANSFERENCIA_INTERNA_PRODUCCION,
