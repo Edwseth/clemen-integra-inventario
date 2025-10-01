@@ -115,12 +115,20 @@
       <artifactId>kernel</artifactId>
       <version>7.2.6</version>
     </dependency>
-
     <!-- iText 7: API de maquetación (Document, Table, Cell, Paragraph, etc.) -->
     <dependency>
       <groupId>com.itextpdf</groupId>
       <artifactId>layout</artifactId>
       <version>7.2.6</version>
+    </dependency>
+    <!-- Migraciones DB -->
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-mysql</artifactId>
     </dependency>
 
     <dependency>
