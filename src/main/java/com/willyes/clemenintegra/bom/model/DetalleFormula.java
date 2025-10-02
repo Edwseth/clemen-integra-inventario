@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.bom.model;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Digits;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ public class DetalleFormula {
     private UnidadMedida unidadMedida;
 
     @Column(name = "cantidad_necesaria")
+    @Digits(fraction = 4, integer = 10)
     private BigDecimal cantidadNecesaria;
 
     private Boolean obligatorio;
