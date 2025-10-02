@@ -184,21 +184,32 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
         // Lee la propiedad y convierte a lista (por comas). Filtra vacíos.
-        final java.util.List<String> patterns = java.util.Arrays.stream(allowedOriginsProp.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isBlank())
-                .toList();
+        final java.util.Set<String> originPatterns = new java.util.LinkedHashSet<>(
+                java.util.Arrays.stream(allowedOriginsProp.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank())
+                        .toList()
+        );
+        if (originPatterns.isEmpty()) {
+            originPatterns.add("http://localhost:5173");
+            originPatterns.add("http://127.0.0.1:5173");
+        }
+        final boolean hasExternalOrigin = originPatterns.stream().anyMatch(origin ->
+                !(origin.contains("://localhost") || origin.contains("://127.") || origin.contains("://0.0.0.0"))
+        );
+        if (!hasExternalOrigin) {
+            // Quick tunnel y front demo necesitan salir permitidos incluso si olvidaste el perfil.
+            originPatterns.add("https://*.trycloudflare.com");
+            originPatterns.add("https://clemen-integra-demo-front.vercel.app");
+        }
+        configuration.setAllowedOriginPatterns(new java.util.ArrayList<>(originPatterns));
         // Fallback para dev si la propiedad no vino (evita bloquearte localmente).
-        configuration.setAllowedOriginPatterns(
-                patterns.isEmpty()
-                        ? java.util.List.of("http://localhost:5173")
-                        : patterns
-                );
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
 
-        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setAllowedHeaders(List.of("*"));
 
-        configuration.setExposedHeaders(java.util.List.of("Content-Disposition","Location"));
+        configuration.setExposedHeaders(List.of("Content-Disposition","Location"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
