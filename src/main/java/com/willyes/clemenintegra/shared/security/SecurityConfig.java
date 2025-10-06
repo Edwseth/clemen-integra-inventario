@@ -109,6 +109,12 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    auth.requestMatchers("/api/recepciones/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers("/api/calidad/**",
                             "/api/calidad/evaluaciones/archivo/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
