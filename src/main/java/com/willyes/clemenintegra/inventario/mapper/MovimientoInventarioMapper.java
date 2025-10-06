@@ -87,6 +87,9 @@ public interface MovimientoInventarioMapper {
             dto.setEstadoSolicitud(solicitud.getEstado());
         }
 
+        dto.setCodigoRecepcion(m.getCodigoRecepcion());
+        dto.setRecepcionOcId(m.getRecepcionOc() != null ? m.getRecepcionOc().getId() : null);
+
         return dto;
     }
 }

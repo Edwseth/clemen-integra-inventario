@@ -39,6 +39,10 @@ public class MovimientoInventarioResponseDTO {
     private Long solicitudId;
     private EstadoSolicitudMovimiento estadoSolicitud;
     private List<SolicitudDetalleAtencionDTO> detallesSolicitud;
+    @JsonProperty("recepcionOcId")
+    private Long recepcionOcId;
+    @JsonProperty("codigoRecepcion")
+    private String codigoRecepcion;
 
 
     @JsonProperty("codigoSku")

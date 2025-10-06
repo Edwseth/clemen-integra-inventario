@@ -66,8 +66,8 @@ public class MovimientoInventario {
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_destino"))
     private Almacen almacenDestino;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "proveedores_id", nullable = false,
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "proveedores_id", nullable = true,
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_proveedores1"))
     private Proveedor proveedor;
 
@@ -98,6 +98,13 @@ public class MovimientoInventario {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "solicitud_movimiento_id")
     private SolicitudMovimiento solicitudMovimiento;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recepcion_oc_id", foreignKey = @ForeignKey(name = "fk_movimientos_inventario_recepcion_oc"))
+    private RecepcionOC recepcionOc;
+
+    @Column(name = "codigo_recepcion", length = 32)
+    private String codigoRecepcion;
 
     @PrePersist
     public void prePersist() {
@@ -142,6 +149,10 @@ public class MovimientoInventario {
 
     public OrdenProduccion getOrdenProduccion() {return ordenProduccion;}
     public void setOrdenProduccion(OrdenProduccion ordenProduccion) {this.ordenProduccion = ordenProduccion;}
+    public RecepcionOC getRecepcionOc() {return recepcionOc;}
+    public void setRecepcionOc(RecepcionOC recepcionOc) {this.recepcionOc = recepcionOc;}
+    public String getCodigoRecepcion() {return codigoRecepcion;}
+    public void setCodigoRecepcion(String codigoRecepcion) {this.codigoRecepcion = codigoRecepcion;}
 }
 
 

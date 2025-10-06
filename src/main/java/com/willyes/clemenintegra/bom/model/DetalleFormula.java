@@ -31,7 +31,7 @@ public class DetalleFormula {
     private UnidadMedida unidadMedida;
 
     @Column(name = "cantidad_necesaria")
-    @Digits(fraction = 4, integer = 10)
+    @Digits(fraction = 8, integer = 10)
     private BigDecimal cantidadNecesaria;
 
     private Boolean obligatorio;
