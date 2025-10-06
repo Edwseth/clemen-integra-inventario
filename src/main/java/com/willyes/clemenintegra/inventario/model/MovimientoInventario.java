@@ -71,8 +71,8 @@ public class MovimientoInventario {
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_proveedores1"))
     private Proveedor proveedor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ordenes_compra_id", nullable = false,
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "ordenes_compra_id", nullable = true,
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_ordenes_compra1"))
     private OrdenCompra ordenCompra;
 
