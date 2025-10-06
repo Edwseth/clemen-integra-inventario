@@ -19,7 +19,6 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
@@ -56,6 +55,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1181,6 +1181,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_CREACION_MOTIVO_INVALIDO");
         }
 
+        validarFechaVencimientoRecepcion(dto.fechaVencimiento());
+
         LoteProducto lote = LoteProducto.builder()
                 .codigoLote(dto.codigoLote())
                 .fechaFabricacion(LocalDateTime.now())
@@ -1195,6 +1197,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return loteProductoRepository.save(lote);
     }
 
+    private void validarFechaVencimientoRecepcion(LocalDateTime fechaVencimiento) {
+        if (fechaVencimiento == null) {
+            return;
+        }
+
+        LocalDate fechaMinima = LocalDate.now().plusWeeks(1);
+        LocalDate fechaLote = fechaVencimiento.toLocalDate();
+
+        if (fechaLote.isBefore(fechaMinima)) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "No se puede asignar una fecha de vencimiento menor a la fecha actual más una semana");
+        }
+    }
 
     private List<MovimientoLoteDetalle> procesarSalidaPt(MovimientoInventarioDTO dto,
                                                          Producto producto,
