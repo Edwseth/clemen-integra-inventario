@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
@@ -22,11 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.jpa.defer-datasource-initialization=true")
 @Transactional
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class MovimientoInventarioServiceIntegrationTest {
@@ -53,9 +57,24 @@ class MovimientoInventarioServiceIntegrationTest {
     private ReservaLoteRepository reservaLoteRepository;
     @Autowired
     private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
+    @Autowired
+    private MotivoMovimientoRepository motivoMovimientoRepository;
+    @Autowired
+    private OrdenCompraRepository ordenCompraRepository;
+    @Autowired
+    private OrdenCompraDetalleRepository ordenCompraDetalleRepository;
+    @Autowired
+    private ProveedorRepository proveedorRepository;
+    @Autowired
+    private MovimientoInventarioRepository movimientoInventarioRepository;
+    @Autowired
+    private RecepcionOCRepository recepcionOCRepository;
 
     @MockBean
     private InventoryCatalogResolver inventoryCatalogResolver;
+
+    @MockBean
+    private JavaMailSender javaMailSender;
 
     @AfterEach
     void limpiarContextoSeguridad() {
@@ -197,6 +216,128 @@ class MovimientoInventarioServiceIntegrationTest {
         assertThat(detalleActualizado.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
         assertThat(reservaActualizada.getEstado()).isEqualTo(EstadoReservaLote.CONSUMIDA);
         assertThat(reservaActualizada.getCantidadConsumida()).isEqualByComparingTo(new BigDecimal("10.000000"));
+    }
+
+    @Test
+    void recepcionCompraGeneraCabeceraYCodigo() {
+        when(inventoryCatalogResolver.decimals(any())).thenReturn(2);
+
+        Usuario usuario = usuarioRepository.save(Usuario.builder()
+                .nombreUsuario("receptor")
+                .clave("clave")
+                .nombreCompleto("Usuario Recepcion")
+                .correo("receptor@example.com")
+                .rol(RolUsuario.ROL_ALMACENISTA)
+                .activo(true)
+                .bloqueado(false)
+                .build());
+        autenticarUsuario(usuario);
+
+        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
+                .nombre("Unidad")
+                .simbolo("u")
+                .build());
+        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
+                .nombre("Materia Prima")
+                .tipo(TipoCategoria.MATERIA_PRIMA)
+                .build());
+        Producto producto = productoRepository.save(Producto.builder()
+                .codigoSku("SKU-RC")
+                .nombre("Producto Recepcion")
+                .descripcionProducto("Producto para recepcion")
+                .stockMinimo(BigDecimal.ZERO)
+                .stockMinimoProveedor(BigDecimal.ZERO)
+                .rendimientoUnidad(BigDecimal.ONE)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .creadoPor(usuario)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .activo(true)
+                .build());
+
+        Almacen almacenDestino = almacenRepository.save(Almacen.builder()
+                .nombre("Almacen Recepcion")
+                .ubicacion("Zona R")
+                .categoria(TipoCategoria.MATERIA_PRIMA)
+                .tipo(TipoAlmacen.PRINCIPAL)
+                .build());
+
+        Proveedor proveedor = proveedorRepository.save(Proveedor.builder()
+                .nombre("Proveedor Recepcion")
+                .identificacion("999")
+                .telefono("555")
+                .email("prov@recepcion.com")
+                .direccion("Calle 123")
+                .paginaWeb("www.prov.com")
+                .nombreContacto("Contacto Recepcion")
+                .activo(true)
+                .build());
+
+        OrdenCompra ordenCompra = ordenCompraRepository.save(OrdenCompra.builder()
+                .codigoOrden("OC-RC-1")
+                .fechaOrden(LocalDateTime.now())
+                .proveedor(proveedor)
+                .estado(EstadoOrdenCompra.CREADA)
+                .observaciones("Orden de prueba")
+                .build());
+
+        OrdenCompraDetalle detalle = ordenCompraDetalleRepository.save(OrdenCompraDetalle.builder()
+                .ordenCompra(ordenCompra)
+                .producto(producto)
+                .cantidad(new BigDecimal("5.000"))
+                .valorUnitario(new BigDecimal("10.000"))
+                .valorTotal(new BigDecimal("50.000"))
+                .iva(BigDecimal.ZERO.setScale(2))
+                .cantidadRecibida(BigDecimal.ZERO.setScale(3))
+                .build());
+        ordenCompra.setDetalles(new ArrayList<>(List.of(detalle)));
+
+        MotivoMovimiento motivo = motivoMovimientoRepository.save(MotivoMovimiento.builder()
+                .descripcion("Recepción Compra")
+                .motivo(ClasificacionMovimientoInventario.RECEPCION_COMPRA)
+                .build());
+
+        TipoMovimientoDetalle tipoDetalle = tipoMovimientoDetalleRepository.save(TipoMovimientoDetalle.builder()
+                .descripcion("Recepción OC")
+                .build());
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("5.000000"),
+                TipoMovimiento.RECEPCION,
+                ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                "Factura RC-01",
+                null,
+                producto.getId(),
+                null,
+                null,
+                almacenDestino.getId(),
+                proveedor.getId(),
+                ordenCompra.getId(),
+                motivo.getId(),
+                tipoDetalle.getId(),
+                null,
+                null,
+                null,
+                detalle.getId(),
+                "LOTE-RC-01",
+                LocalDateTime.now().plusWeeks(2),
+                null,
+                Boolean.FALSE,
+                List.of()
+        );
+
+        MovimientoInventarioResponseDTO respuesta = movimientoInventarioService.registrarMovimiento(dto);
+
+        MovimientoInventario guardado = movimientoInventarioRepository.findById(respuesta.getId()).orElseThrow();
+        assertThat(guardado.getRecepcionOc()).isNotNull();
+        RecepcionOC cabecera = recepcionOCRepository.findById(guardado.getRecepcionOc().getId()).orElseThrow();
+
+        assertThat(respuesta.getCodigoRecepcion()).isNotBlank();
+        assertThat(respuesta.getRecepcionOcId()).isEqualTo(cabecera.getId());
+        assertThat(guardado.getCodigoRecepcion()).isEqualTo(cabecera.getCodigo());
+        assertThat(cabecera.getOrdenCompra().getId()).isEqualTo(ordenCompra.getId());
+        assertThat(cabecera.getFechaRecepcion()).isEqualTo(guardado.getFechaIngreso().toLocalDate());
     }
 
     private void autenticarUsuario(Usuario usuario) {

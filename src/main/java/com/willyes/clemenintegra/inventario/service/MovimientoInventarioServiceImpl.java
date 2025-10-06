@@ -57,6 +57,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -74,6 +76,7 @@ import java.util.stream.Collectors;
 public class MovimientoInventarioServiceImpl implements MovimientoInventarioService {
 
     private static final Logger log = LoggerFactory.getLogger(MovimientoInventarioServiceImpl.class);
+    private static final ZoneId ZONA_BOGOTA = ZoneId.of("America/Bogota");
     /** Nombre normalizado del almacén Pre-Bodega Producción */
     private static final String PRE_BODEGA_PRODUCCION_NORMALIZADO =
             java.text.Normalizer.normalize("Pre-Bodega Producción", java.text.Normalizer.Form.NFD)
@@ -103,6 +106,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final InventoryCatalogResolver catalogResolver;
     private final ReservaLoteService reservaLoteService;
     private final ReservaLoteRepository reservaLoteRepository;
+    private final RecepcionOCService recepcionOCService;
     //private final Long motivoSalidaProdId = catalogResolver.getMotivoSalidaProduccionId();
     //private final Long tipoDetSalidaProdId = catalogResolver.getTipoDetalleSalidaProduccionId();
 
@@ -132,6 +136,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         MovimientoInventario movimiento = mapper.toEntity(dto);
+        LocalDateTime fechaIngreso = movimiento.getFechaIngreso();
+        if (fechaIngreso == null) {
+            fechaIngreso = ZonedDateTime.now(ZONA_BOGOTA).toLocalDateTime();
+            movimiento.setFechaIngreso(fechaIngreso);
+        }
 
         boolean esOpDesdeDto = dto.ordenProduccionId() != null;
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
@@ -460,6 +469,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         OrdenCompra orden = null;
+        RecepcionOC recepcionCabecera = null;
         if (tipoMovimiento == TipoMovimiento.RECEPCION
                 && motivoMovimiento != null
                 && motivoMovimiento.getMotivo() == ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
@@ -479,6 +489,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             if (!incluido) {
                 throw new IllegalArgumentException("El producto no pertenece a la orden de compra");
             }
+            Integer almacenDestinoIdRequerido = Objects.requireNonNull(almacenDestinoIdNormalizado,
+                    "Se requiere un almacén destino para la recepción");
+            LocalDate fechaNegocio = fechaIngreso.atZone(ZONA_BOGOTA).toLocalDate();
+            String observacionesCabecera = dto.destinoTexto() != null && !dto.destinoTexto().isBlank()
+                    ? dto.destinoTexto()
+                    : dto.docReferencia();
+            recepcionCabecera = recepcionOCService.findOrCreateCabecera(
+                    dto.ordenCompraId(),
+                    almacenDestinoIdRequerido,
+                    dto.proveedorId(),
+                    usuario.getId(),
+                    fechaNegocio,
+                    observacionesCabecera
+            );
+            movimiento.setRecepcionOc(recepcionCabecera);
+            movimiento.setCodigoRecepcion(recepcionCabecera.getCodigo());
         }
 
         BigDecimal cantidadSolicitada = dto.cantidad();
@@ -1899,6 +1925,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         copia.setTipoMovimientoDetalle(base.getTipoMovimientoDetalle());
         copia.setOrdenCompraDetalle(base.getOrdenCompraDetalle());
         copia.setSolicitudMovimiento(base.getSolicitudMovimiento());
+        copia.setRecepcionOc(base.getRecepcionOc());
+        copia.setCodigoRecepcion(base.getCodigoRecepcion());
         return copia;
     }
 
