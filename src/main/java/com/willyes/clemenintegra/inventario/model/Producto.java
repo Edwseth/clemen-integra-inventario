@@ -44,7 +44,7 @@ public class Producto {
      * Rendimiento de producción expresado en la unidad del producto.
      * Representa, por ejemplo, el volumen por unidad de empaque.
      */
-    @Column(name = "rendimiento_unidad")
+    @Column(name = "rendimiento_unidad", precision = 38, scale = 2, nullable = true)
     private BigDecimal rendimientoUnidad;
 
     @Column(name = "activo", nullable = false)

@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.mapper;
 
+import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
@@ -8,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.mapstruct.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProductoMapper {
@@ -56,6 +58,20 @@ public interface ProductoMapper {
     default void setDefaultRendimiento(@MappingTarget ProductoResponseDTO dto) {
         if (dto.getRendimiento() == null) {
             dto.setRendimiento(BigDecimal.ZERO);
+        }
+    }
+
+    // ====== NUEVOS: request -> entidad / update parcial ======
+    Producto toEntity(ProductoRequestDTO dto);
+
+    void update(@MappingTarget Producto entity, ProductoRequestDTO dto);
+
+    @AfterMapping
+    default void normalizeScale(@MappingTarget Producto entity) {
+        if (entity.getRendimientoUnidad() != null) {
+            entity.setRendimientoUnidad(
+                    entity.getRendimientoUnidad().setScale(2, RoundingMode.HALF_UP)
+            );
         }
     }
 

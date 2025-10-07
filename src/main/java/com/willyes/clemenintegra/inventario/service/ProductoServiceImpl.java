@@ -9,36 +9,33 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
-import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.jpa.domain.Specification;
-import static com.willyes.clemenintegra.inventario.service.spec.ProductoSpecifications.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.willyes.clemenintegra.inventario.service.spec.ProductoSpecifications.*;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductoServiceImpl implements ProductoService {
@@ -68,6 +65,38 @@ public class ProductoServiceImpl implements ProductoService {
         throw new IllegalStateException("No se pudo extraer el token JWT");
     }
 
+    private boolean esCategoriaPT(com.willyes.clemenintegra.inventario.model.CategoriaProducto categoria) {
+        if (categoria == null) return false;
+        // Si tu entidad tiene getTipo(): TipoCategoria (MP, ME, SU, PT)
+        TipoCategoria tipo = categoria.getTipo();
+        if (tipo != null && tipo == TipoCategoria.PRODUCTO_TERMINADO) return true;
+
+        // Fallback por nombre, por si acaso
+        String nombre = categoria.getNombre() != null ? categoria.getNombre().toUpperCase() : "";
+        return nombre.contains("PRODUCTO TERMINADO");
+    }
+
+    private boolean skuEmpiezaConPT(String sku) {
+        return sku != null && sku.trim().toUpperCase().startsWith("PT");
+    }
+
+    private BigDecimal sanitizeRendimiento(BigDecimal val) {
+        if (val == null) return null;
+        if (val.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Rendimiento × Unidad debe ser >= 0.00");
+        }
+        return val.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private TipoAnalisisCalidad obtenerTipoAnalisisDesdeDto(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return TipoAnalisisCalidad.NINGUNO;
+        }
+        return TipoAnalisisCalidad.valueOf(valor);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<ProductoResponseDTO> listarTodos(String nombre, String sku, Long categoriaProductoId, Boolean activo, Pageable pageable) {
 
         System.out.println("🟢 Entró correctamente a ProductoServiceImpl.listarTodos()");
@@ -97,6 +126,7 @@ public class ProductoServiceImpl implements ProductoService {
         return productos.map(p -> buildDto(p, stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)));
     }
 
+    @Transactional(readOnly = true)
     public List<ProductoResponseDTO> buscarPorCategoria(String categoria) {
         TipoCategoria tipo = TipoCategoria.valueOf(categoria.toUpperCase());
         List<Producto> lista = productoRepository.findByCategoriaProducto_Tipo(tipo);
@@ -107,6 +137,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ProductoResponseDTO> findByCategoriaTipo(String tipo) {
         TipoCategoria tipoEnum = TipoCategoria.valueOf(tipo); // conversión aquí
         List<Producto> lista = Optional.ofNullable(productoRepository.findByCategoriaProducto_Tipo(tipoEnum))
@@ -118,6 +149,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<ProductoResponseDTO> findByCategoriaTipoIn(List<String> tipos) {
         List<TipoCategoria> tiposEnum = tipos.stream()
                 .map(TipoCategoria::valueOf)
@@ -130,7 +162,8 @@ public class ProductoServiceImpl implements ProductoService {
                 .toList();
     }
 
-
+    @Override
+    @Transactional
     public ProductoResponseDTO crearProducto(ProductoRequestDTO dto) {
         validarDuplicados(dto.getSku(), dto.getNombre());
 
@@ -159,37 +192,18 @@ public class ProductoServiceImpl implements ProductoService {
                 .creadoPor(usuario)
                 .build();
 
+        if (esCategoriaPT(categoria) && skuEmpiezaConPT(dto.getSku())) {
+            producto.setRendimientoUnidad(sanitizeRendimiento(dto.getRendimientoUnidad()));
+        } else {
+            producto.setRendimientoUnidad(null);
+        }
+
         productoRepository.save(producto);
         return buildDto(producto);
     }
 
-    private void validarDuplicados(String sku, String nombre) {
-        if (productoRepository.existsByCodigoSku(sku)) {
-            throw new DataIntegrityViolationException("Ya existe un producto con ese código SKU.");
-        }
-        if (productoRepository.existsByNombre(nombre)) {
-            throw new IllegalArgumentException("Ya existe un producto con ese nombre.");
-        }
-    }
-
-    private void validarDuplicadosAlActualizar(Long id, String sku, String nombre) {
-        if (productoRepository.existsByCodigoSkuAndIdNot(sku, id)) {
-            throw new DataIntegrityViolationException("Ya existe otro producto con ese código SKU.");
-        }
-        if (productoRepository.existsByNombreAndIdNot(nombre, id)) {
-            throw new IllegalArgumentException("Ya existe otro producto con ese nombre.");
-        }
-    }
-
-    // Mapeo delegado a MapStruct
-    public ProductoResponseDTO obtenerPorId(Long id) {
-        Producto producto = productoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
-
-        BigDecimal stock = stockQueryService.obtenerStockDisponible(id);
-        return buildDto(producto, stock);
-    }
-
+    @Override
+    @Transactional
     public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
@@ -218,8 +232,46 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setCategoriaProducto(categoria);
         producto.setCreadoPor(usuario);
 
+        if (esCategoriaPT(categoria) && skuEmpiezaConPT(dto.getSku())) {
+            producto.setRendimientoUnidad(sanitizeRendimiento(dto.getRendimientoUnidad()));
+        } else {
+            producto.setRendimientoUnidad(null);
+        }
+
         productoRepository.save(producto);
         BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
+        return buildDto(producto, stock);
+    }
+
+    @Transactional
+    public void eliminarProducto(Long id) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
+        boolean hasLotes = loteProductoRepository.existsByProducto(producto);
+        boolean hasMovimientos = movimientoInventarioRepository.existsByProductoId(id);
+        if (hasLotes || hasMovimientos) {
+            throw new IllegalStateException("El producto tiene dependencias y no puede eliminarse");
+        }
+        productoRepository.delete(producto);
+    }
+
+    @Transactional
+    public ProductoResponseDTO actualizarEstado(Long id, Boolean activo) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
+        producto.setActivo(Boolean.TRUE.equals(activo));
+        productoRepository.save(producto);
+        BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
+        return buildDto(producto, stock);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductoResponseDTO obtenerPorId(Long id) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
+
+        BigDecimal stock = stockQueryService.obtenerStockDisponible(id);
         return buildDto(producto, stock);
     }
 
@@ -242,29 +294,90 @@ public class ProductoServiceImpl implements ProductoService {
         return new UnidadMedidaResponseDTO(unidad.getId(), unidad.getNombre(), unidad.getSimbolo());
     }
 
-    // PROD-INACTIVAR BEGIN
-    public void eliminarProducto(Long id) {
-        Producto producto = productoRepository.findById(id)
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable) {
+        Sort sort = pageable.getSort();
+        Sort safe = Sort.by(sort.stream()
+                .map(o -> switch (o.getProperty()) {
+                    case "nombre", "codigoSku", "sku", "id" ->
+                            "sku".equals(o.getProperty()) ? new Sort.Order(o.getDirection(), "codigoSku") : o;
+                    default -> new Sort.Order(o.isAscending() ? Sort.Direction.ASC : Sort.Direction.DESC, "nombre");
+                }).toList());
+        Pageable safePage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
+
+        Page<Producto> page = productoRepository.buscarPorTexto(q, safePage);
+        return page.map(p -> ProductoOptionDTO.builder()
+                .id(p.getId() == null ? null : Long.valueOf(p.getId()))
+                .nombre(p.getNombre())
+                .sku(p.getCodigoSku())
+                .build()
+        );
+    }
+
+    @Override
+    public Producto findById(Long id) {
+        return productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
-        boolean hasLotes = loteProductoRepository.existsByProducto(producto);
-        boolean hasMovimientos = movimientoInventarioRepository.existsByProductoId(id);
-        if (hasLotes || hasMovimientos) {
-            throw new IllegalStateException("El producto tiene dependencias y no puede eliminarse");
+    }
+
+    @Transactional(readOnly = true)
+    public Workbook generarReporteStockDisponibleExcel() {
+        List<Producto> productos = productoRepository.findAll();
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                productos.stream().map(p -> p.getId().longValue()).toList());
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Stock Disponible");
+
+        Row header = sheet.createRow(0);
+        String[] columnas = {
+                "ID", "Código SKU", "Nombre", "Stock Disponible",
+                "Unidad de Medida", "Stock Mínimo", "Activo", "Categoría"
+        };
+        for (int i = 0; i < columnas.length; i++) {
+            header.createCell(i).setCellValue(columnas[i]);
         }
-        productoRepository.delete(producto);
+
+        int rowNum = 1;
+        for (Producto producto : productos) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(producto.getId());
+            row.createCell(1).setCellValue(producto.getCodigoSku());
+            row.createCell(2).setCellValue(producto.getNombre());
+            BigDecimal stock = stockMap.getOrDefault(producto.getId().longValue(), BigDecimal.ZERO);
+            row.createCell(3).setCellValue((RichTextString) stock);
+            row.createCell(4).setCellValue(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : "");
+            row.createCell(5).setCellValue((RichTextString) (producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO));
+            row.createCell(6).setCellValue(producto.isActivo());
+            row.createCell(7).setCellValue(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : "");
+        }
+
+        for (int i = 0; i < columnas.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        return workbook;
     }
 
-    public ProductoResponseDTO actualizarEstado(Long id, Boolean activo) {
-        Producto producto = productoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
-        producto.setActivo(Boolean.TRUE.equals(activo));
-        productoRepository.save(producto);
-        BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
-        return buildDto(producto, stock);
+    private void validarDuplicados(String sku, String nombre) {
+        if (productoRepository.existsByCodigoSku(sku)) {
+            throw new DataIntegrityViolationException("Ya existe un producto con ese código SKU.");
+        }
+        if (productoRepository.existsByNombre(nombre)) {
+            throw new IllegalArgumentException("Ya existe un producto con ese nombre.");
+        }
     }
-    // PROD-INACTIVAR END
 
-    // PROD-FLAGS BEGIN
+    private void validarDuplicadosAlActualizar(Long id, String sku, String nombre) {
+        if (productoRepository.existsByCodigoSkuAndIdNot(sku, id)) {
+            throw new DataIntegrityViolationException("Ya existe otro producto con ese código SKU.");
+        }
+        if (productoRepository.existsByNombreAndIdNot(nombre, id)) {
+            throw new IllegalArgumentException("Ya existe otro producto con ese nombre.");
+        }
+    }
+
     private ProductoResponseDTO buildDto(Producto producto, BigDecimal stockDisponible) {
         ProductoResponseDTO dto = productoMapper.toDto(producto);
         dto.setEditable(producto.isActivo());
@@ -280,7 +393,6 @@ public class ProductoServiceImpl implements ProductoService {
         BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
         return buildDto(producto, stock);
     }
-    // PROD-FLAGS END
 
     public List<ProductoConEstadoLoteDTO> buscarProductosConLotesPorEstado(String estado) {
         EstadoLote estadoEnum = EstadoLote.valueOf(estado.toUpperCase());
@@ -338,76 +450,5 @@ public class ProductoServiceImpl implements ProductoService {
                 }).toList();
     }
 
-    public Workbook generarReporteStockDisponibleExcel() {
-        List<Producto> productos = productoRepository.findAll();
-        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
-                productos.stream().map(p -> p.getId().longValue()).toList());
-
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Stock Disponible");
-
-        Row header = sheet.createRow(0);
-        String[] columnas = {
-                "ID", "Código SKU", "Nombre", "Stock Disponible",
-                "Unidad de Medida", "Stock Mínimo", "Activo", "Categoría"
-        };
-        for (int i = 0; i < columnas.length; i++) {
-            header.createCell(i).setCellValue(columnas[i]);
-        }
-
-        int rowNum = 1;
-        for (Producto producto : productos) {
-            Row row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(producto.getId());
-            row.createCell(1).setCellValue(producto.getCodigoSku());
-            row.createCell(2).setCellValue(producto.getNombre());
-            BigDecimal stock = stockMap.getOrDefault(producto.getId().longValue(), BigDecimal.ZERO);
-            row.createCell(3).setCellValue((RichTextString) stock);
-            row.createCell(4).setCellValue(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : "");
-            row.createCell(5).setCellValue((RichTextString) (producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO));
-            row.createCell(6).setCellValue(producto.isActivo());
-            row.createCell(7).setCellValue(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : "");
-        }
-
-        for (int i = 0; i < columnas.length; i++) {
-            sheet.autoSizeColumn(i);
-        }
-
-        return workbook;
-    }
-
-    private TipoAnalisisCalidad obtenerTipoAnalisisDesdeDto(String valor) {
-        if (valor == null || valor.isBlank()) {
-            return TipoAnalisisCalidad.NINGUNO;
-        }
-        return TipoAnalisisCalidad.valueOf(valor);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable) {
-        Sort sort = pageable.getSort();
-        Sort safe = Sort.by(sort.stream()
-                .map(o -> switch (o.getProperty()) {
-                    case "nombre", "codigoSku", "sku", "id" ->
-                            "sku".equals(o.getProperty()) ? new Sort.Order(o.getDirection(), "codigoSku") : o;
-                    default -> new Sort.Order(o.isAscending() ? Sort.Direction.ASC : Sort.Direction.DESC, "nombre");
-                }).toList());
-        Pageable safePage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
-
-        Page<Producto> page = productoRepository.buscarPorTexto(q, safePage);
-        return page.map(p -> ProductoOptionDTO.builder()
-                .id(p.getId() == null ? null : Long.valueOf(p.getId()))
-                .nombre(p.getNombre())
-                .sku(p.getCodigoSku())
-                .build()
-        );
-    }
-
-    @Override
-    public Producto findById(Long id) {
-        return productoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
-    }
 }
 

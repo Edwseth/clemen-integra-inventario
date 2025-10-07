@@ -42,6 +42,14 @@ public class ProductoRequestDTO {
     @NotNull
     private Long categoriaProductoId;
 
+    /**
+     * Sólo aplica a PT con SKU que inicia en 'PT'.
+     * En otros casos, el backend lo ignorará (se forzará a null).
+     */
+    @Digits(integer = 36, fraction = 2, message = "Máximo 36 enteros y 2 decimales")
+    @DecimalMin(value = "0.00", message = "Debe ser >= 0.00")
+    private BigDecimal rendimientoUnidad;
+
     public String getTipoAnalisisCalidad() {return tipoAnalisisCalidad;}
     public void setTipoAnalisisCalidad(String tipoAnalisisCalidad) {this.tipoAnalisisCalidad = tipoAnalisisCalidad;}
 }
