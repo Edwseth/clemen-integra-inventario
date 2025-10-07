@@ -30,8 +30,8 @@ public class DetalleFormula {
     @JoinColumn(name = "unidad_medida_id")
     private UnidadMedida unidadMedida;
 
-    @Column(name = "cantidad_necesaria")
-    @Digits(fraction = 8, integer = 10)
+    @Column(name = "cantidad_necesaria", precision = 38, scale = 8, nullable = false)
+    @Digits(integer = 30, fraction = 8)
     private BigDecimal cantidadNecesaria;
 
     private Boolean obligatorio;
