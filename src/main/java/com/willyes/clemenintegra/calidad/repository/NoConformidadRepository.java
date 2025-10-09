@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface NoConformidadRepository extends JpaRepository<NoConformidad, Long> {
     boolean existsByCodigo(String codigo);
 
+    Optional<NoConformidad> findFirstByCodigoStartingWithOrderByCodigoDesc(String codigoPrefix);
+
     Page<NoConformidad> findBySeveridad(SeveridadNoConformidad severidad, Pageable pageable);
 
     Page<NoConformidad> findByOrigen(OrigenNoConformidad origen, Pageable pageable);
