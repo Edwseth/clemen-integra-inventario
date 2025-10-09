@@ -1,9 +1,17 @@
 package com.willyes.clemenintegra.calidad.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionCondicionDTO;
+
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
 /**
@@ -14,6 +22,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class EvaluacionCalidadRequestDTO {
 
     @NotNull(message = "El resultado es obligatorio")
@@ -31,6 +40,10 @@ public class EvaluacionCalidadRequestDTO {
     private Long loteProductoId;
 
     private Long usuarioEvaluadorId;
+
+    private EvaluacionCondicionDTO condicion;
+
+    private SeveridadNoConformidad severidadNc;
 }
 
 

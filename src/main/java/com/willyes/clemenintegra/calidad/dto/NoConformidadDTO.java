@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.calidad.dto;
 
+import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import jakarta.validation.constraints.NotNull;
@@ -26,6 +27,8 @@ public class NoConformidadDTO {
     @NotNull(message = "La severidad es obligatoria")
     private SeveridadNoConformidad severidad;
 
+    private EstadoNoConformidad estado;
+
     private String descripcion;
 
     @Size(max = 255, message = "La evidencia no puede exceder 255 caracteres")
@@ -36,5 +39,17 @@ public class NoConformidadDTO {
 
     @NotNull(message = "El usuario que reporta es obligatorio")
     private Long usuarioReportaId;
+
+    private Long loteId;
+
+    private Long productoId;
+
+    private Long evaluacionId;
+
+    private Long creadoPor;
+
+    private Long actualizadoPor;
+
+    private LocalDateTime actualizadoEn;
 }
 

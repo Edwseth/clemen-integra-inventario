@@ -25,6 +25,8 @@ import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoReposi
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
+import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -107,6 +109,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final ReservaLoteService reservaLoteService;
     private final ReservaLoteRepository reservaLoteRepository;
     private final RecepcionOCService recepcionOCService;
+    private final RetencionLoteService retencionLoteService;
     //private final Long motivoSalidaProdId = catalogResolver.getMotivoSalidaProduccionId();
     //private final Long tipoDetSalidaProdId = catalogResolver.getTipoDetalleSalidaProduccionId();
 
@@ -1389,6 +1392,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             log.warn(
                     "procesarMovimientoConLoteExistente: estado de lote inválido loteId={} estado={} productoId={}",
                     loteOrigen.getId(), loteOrigen.getEstado(), producto.getId());
+            if (loteOrigen.getEstado() == EstadoLote.RETENIDO) {
+                retencionLoteService.obtenerActivaPorLote(loteOrigen.getId()).ifPresent(ret -> {
+                    if (ret.getMotivo() == MotivoRetencion.NO_CONFORMIDAD) {
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "BLOQUEO_RETENCION_NC");
+                    }
+                });
+            }
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ESTADO_INVALIDO");
         }
 

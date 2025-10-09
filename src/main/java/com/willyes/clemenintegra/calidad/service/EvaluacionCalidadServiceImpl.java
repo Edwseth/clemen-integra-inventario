@@ -4,12 +4,18 @@ import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.CondicionUsoCreateDTO;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionCondicionDTO;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
+import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
+import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
+import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
+import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
@@ -50,6 +56,9 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     private final UsuarioRepository usuarioRepository;
     private final InventoryCatalogResolver catalogResolver;
     private final AlmacenRepository almacenRepository;
+    private final CondicionUsoService condicionUsoService;
+    private final RetencionLoteService retencionLoteService;
+    private final NoConformidadService noConformidadService;
 
     public Page<EvaluacionCalidadResponseDTO> listar(ResultadoEvaluacion resultado, Pageable pageable) {
         Page<EvaluacionCalidad> page = (resultado != null)
@@ -141,6 +150,8 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         entidad = repository.save(entidad);
 
+        manejarResultadoEvaluacion(entidad, dto, lote, user);
+
         verificarAlmacenPostOperacion(lote.getId(), cuarentenaId, operacion, user);
 
         return mapper.toResponseDTO(entidad);
@@ -186,6 +197,12 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         existing.setFechaEvaluacion(LocalDateTime.now());
 
         existing = repository.save(existing);
+
+        Usuario actor = usuarioService.obtenerUsuarioAutenticado();
+        if (actor == null) {
+            actor = user;
+        }
+        manejarResultadoEvaluacion(existing, dto, lote, actor);
 
         verificarAlmacenPostOperacion(lote.getId(), cuarentenaId, operacion, user);
 
@@ -301,5 +318,36 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         if (lote == null || lote.getEstado() == null) return false;
         String nombre = lote.getEstado().name();
         return "EN_CUARENTENA".equals(nombre) || "RETENIDO".equals(nombre);
+    }
+
+    private void manejarResultadoEvaluacion(EvaluacionCalidad evaluacion,
+                                            EvaluacionCalidadRequestDTO dto,
+                                            LoteProducto lote,
+                                            Usuario usuario) {
+        ResultadoEvaluacion resultado = dto.getResultado();
+        if (resultado == null) {
+            return;
+        }
+        if (resultado == ResultadoEvaluacion.CONDICIONADO) {
+            EvaluacionCondicionDTO condicion = dto.getCondicion();
+            if (condicion == null || condicion.getTipo() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CONDICION_USO_REQUERIDA");
+            }
+            CondicionUsoCreateDTO createDTO = CondicionUsoCreateDTO.builder()
+                    .loteId(lote.getId())
+                    .tipo(condicion.getTipo())
+                    .parametroFecha(condicion.getParametroFecha())
+                    .descripcion(condicion.getDescripcion())
+                    .build();
+            condicionUsoService.create(createDTO, usuario);
+        } else if (resultado == ResultadoEvaluacion.NO_CONFORME) {
+            SeveridadNoConformidad severidad = dto.getSeveridadNc();
+            if (severidad == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SEVERIDAD_NC_REQUERIDA");
+            }
+            var noConformidad = noConformidadService.registrarDesdeEvaluacion(lote, evaluacion, severidad,
+                    dto.getObservaciones(), usuario);
+            retencionLoteService.asegurarRetencionNoConformidad(lote, "NC pendiente", noConformidad, usuario);
+        }
     }
 }

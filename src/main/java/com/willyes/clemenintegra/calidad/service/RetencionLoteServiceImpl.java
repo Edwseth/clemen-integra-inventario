@@ -3,18 +3,25 @@ package com.willyes.clemenintegra.calidad.service;
 import com.willyes.clemenintegra.calidad.dto.RetencionLoteDTO;
 import com.willyes.clemenintegra.calidad.mapper.RetencionLoteMapper;
 import com.willyes.clemenintegra.calidad.model.RetencionLote;
+import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
+import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
+import java.util.List;
+import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +39,7 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         return page.map(mapper::toDTO);
     }
 
+    @Transactional
     public RetencionLoteDTO crear(RetencionLoteDTO dto) {
         LoteProducto lote = loteRepository.findById(dto.getLoteId())
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteId()));
@@ -41,6 +49,7 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         return mapper.toDTO(repository.save(entity));
     }
 
+    @Transactional
     public RetencionLoteDTO actualizar(Long id, RetencionLoteDTO dto) {
         RetencionLote existing = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Retención no encontrada con ID: " + id));
@@ -65,6 +74,69 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
 
     public void eliminar(Long id) {
         repository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public RetencionLote asegurarRetencionNoConformidad(LoteProducto lote,
+                                                        String descripcion,
+                                                        NoConformidad noConformidad,
+                                                        Usuario usuario) {
+        if (lote == null || lote.getId() == null) {
+            throw new IllegalArgumentException("Lote requerido");
+        }
+        if (usuario == null || usuario.getId() == null) {
+            throw new IllegalArgumentException("Usuario requerido");
+        }
+
+        Optional<RetencionLote> existente = repository.findFirstByLote_IdAndEstadoAndMotivo(
+                lote.getId(), EstadoRetencion.RETENIDO, MotivoRetencion.NO_CONFORMIDAD);
+        if (existente.isPresent()) {
+            RetencionLote retencion = existente.get();
+            retencion.setCausa(descripcion != null ? descripcion : retencion.getCausa());
+            if (noConformidad != null) {
+                retencion.setNoConformidad(noConformidad);
+            }
+            return repository.save(retencion);
+        }
+
+        Usuario aprobadoPor = usuarioRepository.findById(usuario.getId())
+                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + usuario.getId()));
+
+        RetencionLote nueva = RetencionLote.builder()
+                .lote(lote)
+                .causa(descripcion != null ? descripcion : "NC pendiente")
+                .fechaRetencion(LocalDateTime.now())
+                .estado(EstadoRetencion.RETENIDO)
+                .motivo(MotivoRetencion.NO_CONFORMIDAD)
+                .noConformidad(noConformidad)
+                .aprobadoPor(aprobadoPor)
+                .build();
+
+        RetencionLote guardada = repository.save(nueva);
+        if (lote.getEstado() != EstadoLote.RETENIDO) {
+            lote.setEstado(EstadoLote.RETENIDO);
+            loteRepository.save(lote);
+        }
+        return guardada;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<RetencionLote> obtenerActivaPorLote(Long loteId) {
+        if (loteId == null) {
+            return Optional.empty();
+        }
+        return repository.findFirstByLote_IdAndEstadoAndMotivo(loteId, EstadoRetencion.RETENIDO, MotivoRetencion.NO_CONFORMIDAD);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RetencionLote> obtenerRetencionesActivas(Long loteId) {
+        if (loteId == null) {
+            return List.of();
+        }
+        return repository.findByLote_IdAndEstado(loteId, EstadoRetencion.RETENIDO);
     }
 }
 
