@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.calidad.dto;
 
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
+import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -30,5 +31,9 @@ public class RetencionLoteDTO {
 
     @NotNull(message = "El aprobador es obligatorio")
     private Long aprobadoPorId;
+
+    private MotivoRetencion motivo;
+
+    private Long noConformidadId;
 }
 

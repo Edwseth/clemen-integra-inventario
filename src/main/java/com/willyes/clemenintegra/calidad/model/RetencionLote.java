@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.calidad.model;
 
+import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
+import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
@@ -27,6 +29,16 @@ public class RetencionLote {
 
     @Column(name = "causa", columnDefinition = "TEXT", nullable = false)
     private String causa;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "motivo", nullable = false,
+            columnDefinition = "ENUM('NO_CONFORMIDAD','OTRO')")
+    private MotivoRetencion motivo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "no_conformidad_id",
+            foreignKey = @ForeignKey(name = "fk_retencion_no_conformidad"))
+    private NoConformidad noConformidad;
 
     @Column(name = "fecha_retencion", nullable = false)
     private LocalDateTime fechaRetencion;

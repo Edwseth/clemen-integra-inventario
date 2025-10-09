@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
@@ -14,6 +15,10 @@ import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
+import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
+import com.willyes.clemenintegra.calidad.service.NoConformidadService;
+import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
+import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
@@ -63,6 +68,9 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final MotivoMovimientoRepository motivoMovimientoRepository;
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     private final InventoryCatalogResolver catalogResolver;
+    private final RetencionLoteService retencionLoteService;
+    private final NoConformidadService noConformidadService;
+    private final CondicionUsoService condicionUsoService;
 
     @Value("${inventory.lote.estadoLiberado}")
     private String estadoLiberadoConf;
@@ -474,6 +482,15 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             validarEvaluacion(evaluaciones, TipoEvaluacion.MICROBIOLOGICO);
         }
 
+        boolean retencionNcActiva = retencionLoteService.obtenerRetencionesActivas(loteId).stream()
+                .anyMatch(r -> r.getMotivo() == MotivoRetencion.NO_CONFORMIDAD);
+        noConformidadService.obtenerActivaPorLote(loteId).ifPresent(nc -> {
+            if (retencionNcActiva) {
+                log.warn("LIBERACION_BLOQUEADA_RETENCION_NC loteId={} ncId={}", loteId, nc.getId());
+            }
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "NC_ABIERTA");
+        });
+
         Almacen origen = lote.getAlmacen();
         Almacen destino = almacenRepo.findById(destinoPrincipalId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_DESTINO_INEXISTENTE"));
@@ -516,7 +533,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta evaluación requerida");
         }
         boolean aprobadas = filtradas.stream()
-                .allMatch(e -> e.getResultado() == ResultadoEvaluacion.CONFORME);
+                .allMatch(e -> e.getResultado() != ResultadoEvaluacion.NO_CONFORME);
         if (!aprobadas) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La evaluación requerida no está aprobada");
         }
@@ -526,6 +543,42 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         if (evaluacionRepository.findByLoteProductoId(loteId).isEmpty()) {
             throw new IllegalStateException("El lote no cuenta con evaluaciones registradas");
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EstadoCalidadLoteResponseDTO obtenerEstadoCalidad(Long loteId) {
+        LoteProducto lote = loteRepo.findById(loteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
+
+        var retenciones = retencionLoteService.obtenerRetencionesActivas(loteId);
+        var retencion = retenciones.stream().findFirst().orElse(null);
+        var ncOpt = noConformidadService.obtenerActivaPorLote(loteId);
+        var condiciones = condicionUsoService.getActivasByLote(loteId);
+
+        EstadoCalidadLoteResponseDTO.NcResumen ncResumen = ncOpt.map(nc -> EstadoCalidadLoteResponseDTO.NcResumen.builder()
+                .id(nc.getId())
+                .severidad(nc.getSeveridad())
+                .estado(nc.getEstado())
+                .build()).orElse(null);
+
+        EstadoCalidadLoteResponseDTO.CondicionUsoResumen condicionResumen = condiciones.isEmpty() ? null
+                : EstadoCalidadLoteResponseDTO.CondicionUsoResumen.builder()
+                .id(condiciones.get(0).getId())
+                .tipo(condiciones.get(0).getTipo())
+                .parametroFecha(condiciones.get(0).getParametroFecha())
+                .descripcion(condiciones.get(0).getDescripcion())
+                .build();
+
+        return EstadoCalidadLoteResponseDTO.builder()
+                .loteId(loteId)
+                .estadoLote(lote.getEstado() != null ? lote.getEstado().name() : null)
+                .retencionActiva(retencion != null)
+                .motivoRetencion(retencion != null ? retencion.getMotivo() : null)
+                .nc(ncResumen)
+                .condicionUsoActiva(!condiciones.isEmpty())
+                .condicionUso(condicionResumen)
+                .build();
     }
 }
 
