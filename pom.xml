@@ -192,6 +192,36 @@
       </plugin>
 
       <plugin>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-maven-plugin</artifactId>
+        <version>9.22.3</version>
+        <configuration>
+          <!-- NUEVO: toma las propiedades del perfil activo -->
+          <url>${flyway.url}</url>
+          <user>${flyway.user}</user>
+          <password>${flyway.password}</password>
+          <!-- Ruta a tus migraciones del repo -->
+          <locations>
+            <location>filesystem:src/main/resources/db/migration</location>
+          </locations>
+
+          <!-- Como ya hiciste baseline=1, lo mantenemos coherente -->
+          <baselineOnMigrate>true</baselineOnMigrate>
+          <baselineVersion>1</baselineVersion>
+          <connectRetries>3</connectRetries>
+        </configuration>
+
+        <!-- Driver JDBC para que el plugin pueda conectar a MySQL -->
+        <dependencies>
+          <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.3.0</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
@@ -207,4 +237,29 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <!-- Perfil: BD principal -->
+    <profile>
+      <id>db-principal</id>
+      <properties>
+        <flyway.url>jdbc:mysql://localhost:3306/clemen_integra_erp</flyway.url>
+        <flyway.user>${env.DB_USERNAME}</flyway.user>
+        <flyway.password>${env.DB_PASS}</flyway.password>
+        <!-- Si usas flags de conexión, inclúyelos en la URL:
+        <flyway.url>jdbc:mysql://localhost:3306/clemen_integra_erp?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=America/Bogota</flyway.url>
+        -->
+      </properties>
+    </profile>
+
+    <!-- Perfil: BD demo -->
+    <profile>
+      <id>db-demo</id>
+      <properties>
+        <flyway.url>jdbc:mysql://localhost:3306/clemen_integra_erp_demo?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=America/Bogota</flyway.url>
+        <flyway.user>ci_demo</flyway.user>
+        <flyway.password>DespliegueClemenIntegraErpDemo</flyway.password>
+      </properties>
+    </profile>
+  </profiles>
+
 </project>
