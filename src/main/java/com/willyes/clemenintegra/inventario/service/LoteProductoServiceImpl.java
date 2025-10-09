@@ -19,6 +19,7 @@ import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
@@ -305,6 +306,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         LoteProducto lote = loteRepo.findById(id)
                 .orElseThrow(() -> new java.util.NoSuchElementException("Lote no encontrado"));
         validarEvaluacionesExistentes(id);
+        validarNoConformidadesParaLiberacion(lote.getId());
 
         if (lote.getEstado() == EstadoLote.EN_CUARENTENA) {
             lote.setEstado(EstadoLote.DISPONIBLE);
@@ -400,6 +402,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         LoteProducto lote = loteRepo.findById(id)
                 .orElseThrow(() -> new java.util.NoSuchElementException("Lote no encontrado"));
         validarEvaluacionesExistentes(id);
+        validarNoConformidadesParaLiberacion(lote.getId());
         if (lote.getEstado() != EstadoLote.RETENIDO) {
             throw new IllegalStateException("El lote no está en estado RETENIDO");
         }
@@ -482,14 +485,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             validarEvaluacion(evaluaciones, TipoEvaluacion.MICROBIOLOGICO);
         }
 
-        boolean retencionNcActiva = retencionLoteService.obtenerRetencionesActivas(loteId).stream()
-                .anyMatch(r -> r.getMotivo() == MotivoRetencion.NO_CONFORMIDAD);
-        noConformidadService.obtenerActivaPorLote(loteId).ifPresent(nc -> {
-            if (retencionNcActiva) {
-                log.warn("LIBERACION_BLOQUEADA_RETENCION_NC loteId={} ncId={}", loteId, nc.getId());
-            }
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "NC_ABIERTA");
-        });
+        validarNoConformidadesParaLiberacion(loteId);
 
         Almacen origen = lote.getAlmacen();
         Almacen destino = almacenRepo.findById(destinoPrincipalId)
@@ -542,6 +538,41 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private void validarEvaluacionesExistentes(Long loteId) {
         if (evaluacionRepository.findByLoteProductoId(loteId).isEmpty()) {
             throw new IllegalStateException("El lote no cuenta con evaluaciones registradas");
+        }
+    }
+
+    private void validarNoConformidadesParaLiberacion(Long loteId) {
+        if (loteId == null) {
+            return;
+        }
+        var retenciones = retencionLoteService.obtenerRetencionesActivas(loteId);
+        boolean retencionNcActiva = false;
+        for (var retencion : retenciones) {
+            if (retencion.getMotivo() != MotivoRetencion.NO_CONFORMIDAD) {
+                continue;
+            }
+            retencionNcActiva = true;
+            var noConformidad = retencion.getNoConformidad();
+            if (noConformidad == null) {
+                log.warn("LIBERACION_BLOQUEADA_RETENCION_SIN_NC loteId={} retencionId={}", loteId, retencion.getId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "RETENCION_SIN_NC: Existe una retención activa por no conformidad sin NC asociada.");
+            }
+            if (noConformidad.getEstado() != EstadoNoConformidad.CERRADA) {
+                log.warn("LIBERACION_BLOQUEADA_NC_ABIERTA loteId={} ncId={}", loteId, noConformidad.getId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "NC_NO_CERRADA: Debe cerrar la no conformidad " + noConformidad.getCodigo()
+                                + " antes de liberar el lote.");
+            }
+        }
+        noConformidadService.obtenerActivaPorLote(loteId).ifPresent(nc -> {
+            log.warn("LIBERACION_BLOQUEADA_NC_ABIERTA loteId={} ncId={}", loteId, nc.getId());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "NC_NO_CERRADA: Debe cerrar la no conformidad " + nc.getCodigo()
+                            + " antes de liberar el lote.");
+        });
+        if (retencionNcActiva) {
+            log.debug("Retención por NC activa verificada con NC cerrada para lote {}", loteId);
         }
     }
 

@@ -78,6 +78,60 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
 
     @Override
     @Transactional
+    public RetencionLote retener(Long loteId,
+                                 MotivoRetencion motivo,
+                                 String descripcion,
+                                 NoConformidad noConformidad,
+                                 Usuario usuario) {
+        if (loteId == null) {
+            throw new IllegalArgumentException("Lote requerido");
+        }
+        if (motivo == null) {
+            throw new IllegalArgumentException("Motivo de retención requerido");
+        }
+        if (usuario == null || usuario.getId() == null) {
+            throw new IllegalArgumentException("Usuario requerido");
+        }
+
+        LoteProducto lote = loteRepository.findById(loteId)
+                .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + loteId));
+        Usuario aprobadoPor = usuarioRepository.findById(usuario.getId())
+                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + usuario.getId()));
+
+        Optional<RetencionLote> existente = repository.findFirstByLote_IdAndEstadoAndMotivo(
+                loteId, EstadoRetencion.RETENIDO, motivo);
+
+        RetencionLote resultado;
+        if (existente.isPresent()) {
+            RetencionLote retencion = existente.get();
+            if (descripcion != null && !descripcion.isBlank()) {
+                retencion.setCausa(descripcion);
+            }
+            if (noConformidad != null && (retencion.getNoConformidad() == null
+                    || (retencion.getNoConformidad().getId() != null
+                    && !retencion.getNoConformidad().getId().equals(noConformidad.getId())))) {
+                retencion.setNoConformidad(noConformidad);
+            }
+            resultado = repository.save(retencion);
+        } else {
+            RetencionLote nueva = RetencionLote.builder()
+                    .lote(lote)
+                    .causa(descripcion != null && !descripcion.isBlank() ? descripcion : "NC pendiente")
+                    .fechaRetencion(LocalDateTime.now())
+                    .estado(EstadoRetencion.RETENIDO)
+                    .motivo(motivo)
+                    .noConformidad(noConformidad)
+                    .aprobadoPor(aprobadoPor)
+                    .build();
+            resultado = repository.save(nueva);
+        }
+
+        asegurarEstadoRetenido(lote);
+        return resultado;
+    }
+
+    @Override
+    @Transactional
     public RetencionLote asegurarRetencionNoConformidad(LoteProducto lote,
                                                         String descripcion,
                                                         NoConformidad noConformidad,
@@ -85,40 +139,32 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         if (lote == null || lote.getId() == null) {
             throw new IllegalArgumentException("Lote requerido");
         }
-        if (usuario == null || usuario.getId() == null) {
-            throw new IllegalArgumentException("Usuario requerido");
+        return retener(lote.getId(), MotivoRetencion.NO_CONFORMIDAD, descripcion, noConformidad, usuario);
+    }
+
+    @Override
+    @Transactional
+    public RetencionLote levantar(Long retencionId, Usuario usuario) {
+        if (retencionId == null) {
+            throw new IllegalArgumentException("Retención requerida");
+        }
+        RetencionLote retencion = repository.findById(retencionId)
+                .orElseThrow(() -> new NoSuchElementException("Retención no encontrada con ID: " + retencionId));
+        if (retencion.getEstado() == EstadoRetencion.LIBERADO) {
+            return retencion;
         }
 
-        Optional<RetencionLote> existente = repository.findFirstByLote_IdAndEstadoAndMotivo(
-                lote.getId(), EstadoRetencion.RETENIDO, MotivoRetencion.NO_CONFORMIDAD);
-        if (existente.isPresent()) {
-            RetencionLote retencion = existente.get();
-            retencion.setCausa(descripcion != null ? descripcion : retencion.getCausa());
-            if (noConformidad != null) {
-                retencion.setNoConformidad(noConformidad);
-            }
-            return repository.save(retencion);
+        Usuario aprobador = retencion.getAprobadoPor();
+        if (usuario != null && usuario.getId() != null) {
+            aprobador = usuarioRepository.findById(usuario.getId())
+                    .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + usuario.getId()));
         }
-
-        Usuario aprobadoPor = usuarioRepository.findById(usuario.getId())
-                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + usuario.getId()));
-
-        RetencionLote nueva = RetencionLote.builder()
-                .lote(lote)
-                .causa(descripcion != null ? descripcion : "NC pendiente")
-                .fechaRetencion(LocalDateTime.now())
-                .estado(EstadoRetencion.RETENIDO)
-                .motivo(MotivoRetencion.NO_CONFORMIDAD)
-                .noConformidad(noConformidad)
-                .aprobadoPor(aprobadoPor)
-                .build();
-
-        RetencionLote guardada = repository.save(nueva);
-        if (lote.getEstado() != EstadoLote.RETENIDO) {
-            lote.setEstado(EstadoLote.RETENIDO);
-            loteRepository.save(lote);
+        if (aprobador != null) {
+            retencion.setAprobadoPor(aprobador);
         }
-        return guardada;
+        retencion.setEstado(EstadoRetencion.LIBERADO);
+        retencion.setFechaLiberacion(LocalDateTime.now());
+        return repository.save(retencion);
     }
 
     @Override
@@ -137,6 +183,13 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
             return List.of();
         }
         return repository.findByLote_IdAndEstado(loteId, EstadoRetencion.RETENIDO);
+    }
+
+    private void asegurarEstadoRetenido(LoteProducto lote) {
+        if (lote != null && lote.getEstado() != EstadoLote.RETENIDO) {
+            lote.setEstado(EstadoLote.RETENIDO);
+            loteRepository.save(lote);
+        }
     }
 }
 

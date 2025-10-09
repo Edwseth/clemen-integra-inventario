@@ -4,6 +4,8 @@ import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class NoConformidadController {
 
     private final NoConformidadService service;
+    private final UsuarioRepository usuarioRepository;
 
     @GetMapping
     public ResponseEntity<Page<NoConformidadDTO>> listar(
@@ -39,10 +42,12 @@ public class NoConformidadController {
     public ResponseEntity<NoConformidadDTO> crear(
             @RequestBody NoConformidadDTO dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Usuario authUser = null;
         if (userDetails != null) {
             dto.setUsuarioReportaId(userDetails.getId());
+            authUser = usuarioRepository.findById(userDetails.getId()).orElse(null);
         }
-        return ResponseEntity.ok(service.crear(dto));
+        return ResponseEntity.ok(service.crear(dto, authUser));
     }
 
     @PutMapping("/{id}")

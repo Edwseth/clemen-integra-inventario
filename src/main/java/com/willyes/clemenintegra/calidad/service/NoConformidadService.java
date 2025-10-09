@@ -17,7 +17,7 @@ public interface NoConformidadService {
                                   OrigenNoConformidad origen,
                                   Pageable pageable);
 
-    NoConformidadDTO crear(NoConformidadDTO dto);
+    NoConformidadDTO crear(NoConformidadDTO dto, Usuario authUser);
 
     NoConformidadDTO actualizar(Long id, NoConformidadDTO dto);
 

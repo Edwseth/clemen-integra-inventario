@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.calidad.dto.RetencionLoteDTO;
 import com.willyes.clemenintegra.calidad.model.RetencionLote;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
+import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.data.domain.Page;
@@ -23,10 +24,18 @@ public interface RetencionLoteService {
 
     void eliminar(Long id);
 
+    RetencionLote retener(Long loteId,
+                          MotivoRetencion motivo,
+                          String descripcion,
+                          NoConformidad noConformidad,
+                          Usuario usuario);
+
     RetencionLote asegurarRetencionNoConformidad(LoteProducto lote,
                                                   String descripcion,
                                                   NoConformidad noConformidad,
                                                   Usuario usuario);
+
+    RetencionLote levantar(Long retencionId, Usuario usuario);
 
     Optional<RetencionLote> obtenerActivaPorLote(Long loteId);
 
