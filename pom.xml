@@ -140,6 +140,27 @@
   </dependencies>
 
   <build>
+    <resources>
+      <!-- Bloque SIN filtro para application*.properties/yml -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <includes>
+          <include>**/application*.properties</include>
+          <include>**/application*.yml</include>
+        </includes>
+      </resource>
+      <!-- Bloque CON filtro para el resto de recursos (si lo necesitas) -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <excludes>
+          <exclude>**/application*.properties</exclude>
+          <exclude>**/application*.yml</exclude>
+        </excludes>
+      </resource>
+    </resources>
+
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -159,6 +180,14 @@
               <version>1.5.5.Final</version>
             </path>
           </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.3.1</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
 
