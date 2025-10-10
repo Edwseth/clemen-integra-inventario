@@ -75,7 +75,7 @@ public class EvaluacionCalidadMapper {
         if (lote == null) return null;
 
         return EvaluacionConsolidadaResponseDTO.builder()
-                .idLote(lote.getId())
+                .id(lote.getId())
                 .nombreLote(lote.getCodigoLote())
                 .nombreProducto(lote.getProducto().getNombre())
                 .estadoLote(lote.getEstado().name())

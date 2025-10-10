@@ -21,6 +21,8 @@ import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -404,7 +406,9 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         validarEvaluacionesExistentes(id);
         validarNoConformidadesParaLiberacion(lote.getId());
         if (lote.getEstado() != EstadoLote.RETENIDO) {
-            throw new IllegalStateException("El lote no está en estado RETENIDO");
+            throw new CustomBusinessException(ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA,
+                    "El lote debe estar en estado RETENIDO para liberarlo.",
+                    Map.of("loteId", id, "estadoActual", lote.getEstado() != null ? lote.getEstado().name() : null));
         }
         lote.setEstado(EstadoLote.LIBERADO);
         lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
@@ -416,7 +420,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     @Transactional(rollbackFor = Exception.class)
     public LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, Usuario usuarioActual) {
         if (usuarioActual == null || usuarioActual.getRol() != RolUsuario.ROL_JEFE_CALIDAD) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el Jefe de Calidad puede liberar lotes.");
+            throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
+                    "Solo el Jefe de Calidad puede liberar lotes.");
         }
 
         EstadoLote estadoLiberado;
@@ -460,7 +465,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         if (!almacenCuarentenaId.equals(lote.getAlmacen().getId().longValue()) || lote.getEstado() != EstadoLote.EN_CUARENTENA) {
             Long almacenId = Long.valueOf(lote.getAlmacen().getId());
             EstadoLote estadoLote = lote.getEstado();
-            log.warn("Intento de liberar lote {} fuera de cuarentena: almacenId={} estado={}", loteId, almacenId, estadoLote);
+            log.info("[INVENTARIO] intento de liberar lote fuera de cuarentena. loteId={} almacenId={} estado={}",
+                    loteId, almacenId, estadoLote);
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "LOTE_NO_EN_CUARENTENA (almacenId=" + almacenId + ", estado=" + estadoLote + ")");
         }
@@ -498,7 +504,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         lote.setAlmacen(destino);
         loteRepo.save(lote);
 
-        log.info("QC_LIBERACION destino={} tipoProducto={} loteId={}",
+        log.info("[INVENTARIO] liberación de lote completada destino={} tipoProducto={} loteId={}",
                 destinoPrincipalId,
                 producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getTipo() : null,
                 loteId);
@@ -526,18 +532,24 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .filter(e -> e.getTipoEvaluacion() == tipo)
                 .toList();
         if (filtradas.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta evaluación requerida");
+            throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
+                    "Falta registrar la evaluación requerida antes de liberar el lote.",
+                    Map.of("tipoEvaluacion", tipo.name()));
         }
         boolean aprobadas = filtradas.stream()
                 .allMatch(e -> e.getResultado() != ResultadoEvaluacion.NO_CONFORME);
         if (!aprobadas) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La evaluación requerida no está aprobada");
+            throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
+                    "La evaluación requerida no está aprobada.",
+                    Map.of("tipoEvaluacion", tipo.name()));
         }
     }
 
     private void validarEvaluacionesExistentes(Long loteId) {
         if (evaluacionRepository.findByLoteProductoId(loteId).isEmpty()) {
-            throw new IllegalStateException("El lote no cuenta con evaluaciones registradas");
+            throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
+                    "El lote no cuenta con evaluaciones registradas.",
+                    Map.of("loteId", loteId));
         }
     }
 
@@ -554,25 +566,27 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             retencionNcActiva = true;
             var noConformidad = retencion.getNoConformidad();
             if (noConformidad == null) {
-                log.warn("LIBERACION_BLOQUEADA_RETENCION_SIN_NC loteId={} retencionId={}", loteId, retencion.getId());
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                        "RETENCION_SIN_NC: Existe una retención activa por no conformidad sin NC asociada.");
+                log.info("[INVENTARIO] liberación bloqueada por retención sin NC asociada. loteId={} retencionId={}",
+                        loteId, retencion.getId());
+                throw new CustomBusinessException(ApiErrorCode.BLOQUEO_RETENCION_NC,
+                        "Existe una retención activa por no conformidad sin detalle asociado.",
+                        Map.of("loteId", loteId, "retencionId", retencion.getId()));
             }
             if (noConformidad.getEstado() != EstadoNoConformidad.CERRADA) {
-                log.warn("LIBERACION_BLOQUEADA_NC_ABIERTA loteId={} ncId={}", loteId, noConformidad.getId());
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                        "NC_NO_CERRADA: Debe cerrar la no conformidad " + noConformidad.getCodigo()
-                                + " antes de liberar el lote.");
+                log.info("[INVENTARIO] liberación bloqueada por NC abierta. loteId={} ncId={}", loteId, noConformidad.getId());
+                throw new CustomBusinessException(ApiErrorCode.NC_ABIERTA,
+                        "Debe cerrar la no conformidad " + noConformidad.getCodigo() + " antes de liberar el lote.",
+                        Map.of("loteId", loteId, "ncId", noConformidad.getId()));
             }
         }
         noConformidadService.obtenerActivaPorLote(loteId).ifPresent(nc -> {
-            log.warn("LIBERACION_BLOQUEADA_NC_ABIERTA loteId={} ncId={}", loteId, nc.getId());
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "NC_NO_CERRADA: Debe cerrar la no conformidad " + nc.getCodigo()
-                            + " antes de liberar el lote.");
+            log.info("[INVENTARIO] liberación bloqueada por NC abierta. loteId={} ncId={}", loteId, nc.getId());
+            throw new CustomBusinessException(ApiErrorCode.NC_ABIERTA,
+                    "Debe cerrar la no conformidad " + nc.getCodigo() + " antes de liberar el lote.",
+                    Map.of("loteId", loteId, "ncId", nc.getId()));
         });
         if (retencionNcActiva) {
-            log.debug("Retención por NC activa verificada con NC cerrada para lote {}", loteId);
+            log.debug("[INVENTARIO] retención por NC verificada con NC cerrada para lote {}", loteId);
         }
     }
 

@@ -13,9 +13,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -26,27 +25,23 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
-                                                                           HttpServletRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", Instant.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", ex.getClass().getSimpleName());
-        body.put("message", "Solicitud inválida");
-        body.put("path", request.getRequestURI());
-        body.put("errors", ex.getBindingResult().getFieldErrors().stream()
-                .map(err -> Map.of("field", err.getField(), "message", err.getDefaultMessage()))
-                .toList());
-        return ResponseEntity.badRequest().body(body);
+    public ResponseEntity<ErrorResponseDTO> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+                                                                         HttpServletRequest request) {
+        List<Map<String, String>> detalles = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> Map.of(
+                        "field", err.getField(),
+                        "message", err.getDefaultMessage()))
+                .toList();
+        return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA,
+                "Solicitud inválida",
+                detalles);
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, DateTimeParseException.class})
-    public ResponseEntity<Map<String, String>> handleInvalidDateFormat(Exception ex) {
-        Map<String, String> body = Map.of(
-                "error", "Formato de fecha inválido",
-                "detalle", "Use 'YYYY-MM-DDTHH:mm:ss', ej. '2025-09-10T00:00:00'."
-        );
-        return ResponseEntity.badRequest().body(body);
+    public ResponseEntity<ErrorResponseDTO> handleInvalidDateFormat(Exception ex) {
+        return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA,
+                "Formato de fecha inválido",
+                "Use 'YYYY-MM-DDTHH:mm:ss', ej. '2025-09-10T00:00:00'.");
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -55,61 +50,76 @@ public class GlobalExceptionHandler {
         String message = ex.getConstraintViolations().stream()
                 .map(v -> v.getPropertyPath() + ": " + v.getMessage())
                 .collect(Collectors.joining(", "));
-        return buildResponse(HttpStatus.BAD_REQUEST, ex, message, request.getRequestURI());
+        return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA, message, null);
     }
 
     @ExceptionHandler(CustomBusinessException.class)
     public ResponseEntity<ErrorResponseDTO> handleBusiness(CustomBusinessException ex,
                                                            HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex, ex.getMessage(), request.getRequestURI());
+        ApiErrorCode code = ex.getCode() != null ? ex.getCode() : ApiErrorCode.NEGOCIO_GENERICO;
+        return buildResponse(code, ex.getMessage(), ex.getDetails());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponseDTO> handleIllegalArgument(IllegalArgumentException ex,
-                                                                 HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex, ex.getMessage(), request.getRequestURI());
+                                                                  HttpServletRequest request) {
+        return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA, ex.getMessage(), null);
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponseDTO> handleIllegalState(IllegalStateException ex,
                                                                HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex, ex.getMessage(), request.getRequestURI());
+        return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA, ex.getMessage(), null);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponseDTO> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
                                                                HttpServletRequest request) {
         String message = "Valor inválido para el parámetro '" + ex.getName() + "'";
-        return buildResponse(HttpStatus.BAD_REQUEST, ex, message, request.getRequestURI());
+        return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA, message, null);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponseDTO> handleAccessDenied(AccessDeniedException ex,
                                                                HttpServletRequest request) {
-        return buildResponse(HttpStatus.FORBIDDEN, ex, "Acceso denegado", request.getRequestURI());
+        return buildResponse(ApiErrorCode.ROL_INSUFICIENTE,
+                "Acceso denegado. Contacte a un administrador para solicitar el rol adecuado.",
+                null);
     }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponseDTO> handleResponseStatus(ResponseStatusException ex,
-                                                                HttpServletRequest request) {
+                                                                 HttpServletRequest request) {
         HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
-        return buildResponse(status, ex, ex.getReason(), request.getRequestURI());
+        String code = ex.getReason() != null ? ex.getReason() : status.name();
+        String message = ex.getReason() != null ? ex.getReason() : status.getReasonPhrase();
+        return buildResponse(status, code, message, null);
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponseDTO> handleRuntime(RuntimeException ex,
                                                           HttpServletRequest request) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex, ex.getMessage(), request.getRequestURI());
+        return buildResponse(ApiErrorCode.ERROR_INTERNO,
+                "Ocurrió un error inesperado. Intente nuevamente o contacte soporte.",
+                null);
     }
 
-    private ResponseEntity<ErrorResponseDTO> buildResponse(HttpStatus status, Exception ex, String message, String path) {
-        ErrorResponseDTO dto = ErrorResponseDTO.builder()
-                .timestamp(Instant.now())
-                .status(status.value())
-                .error(ex.getClass().getSimpleName())
+    private ResponseEntity<ErrorResponseDTO> buildResponse(ApiErrorCode code, String message, Object details) {
+        ApiErrorCode effective = code != null ? code : ApiErrorCode.ERROR_INTERNO;
+        ErrorResponseDTO body = ErrorResponseDTO.builder()
+                .code(effective.getCode())
                 .message(message)
-                .path(path)
+                .details(details)
                 .build();
-        return ResponseEntity.status(status).body(dto);
+        return ResponseEntity.status(effective.getHttpStatus()).body(body);
+    }
+
+    private ResponseEntity<ErrorResponseDTO> buildResponse(HttpStatus status, String code, String message, Object details) {
+        ErrorResponseDTO body = ErrorResponseDTO.builder()
+                .code(code != null ? code : status.name())
+                .message(message)
+                .details(details)
+                .build();
+        return ResponseEntity.status(status).body(body);
     }
 }

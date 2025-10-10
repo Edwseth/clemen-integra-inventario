@@ -25,7 +25,9 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class EvaluacionCalidadRequestDTO {
 
-    @NotNull(message = "El resultado es obligatorio")
+    /**
+     * Resultado de la evaluación. Opcional para permitir evaluaciones en progreso.
+     */
     private ResultadoEvaluacion resultado;
 
     @NotNull(message = "El tipo de evaluación es obligatorio")
@@ -41,8 +43,14 @@ public class EvaluacionCalidadRequestDTO {
 
     private Long usuarioEvaluadorId;
 
+    /**
+     * Datos de la condición de uso en caso el resultado sea CONDICIONADO.
+     */
     private EvaluacionCondicionDTO condicion;
 
+    /**
+     * Severidad para la NC generada cuando el resultado es NO_CONFORME.
+     */
     private SeveridadNoConformidad severidadNc;
 }
 

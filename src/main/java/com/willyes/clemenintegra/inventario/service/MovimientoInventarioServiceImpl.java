@@ -27,6 +27,8 @@ import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -1363,19 +1365,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                                                            boolean devolucionInterna,
                                                                            SolicitudMovimiento solicitud) {
         if (dto.loteProductoId() == null) {
-            log.warn(
-                    "procesarMovimientoConLoteExistente: falta loteProductoId tipo={} productoId={} origenId={} destinoId={} cantidad={}",
+            log.info(
+                    "[INVENTARIO] movimiento con lote existente sin id de lote. tipo={} productoId={} origenId={} destinoId={} cantidad={}",
                     tipo, producto.getId(), origen != null ? origen.getId() : null,
                     destino != null ? destino.getId() : null, cantidad);
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ID_REQUERIDO");
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe seleccionar el lote a mover.");
         }
 
         LoteProducto loteOrigen = loteProductoRepository.findByIdForUpdate(dto.loteProductoId())
                 .orElseThrow(() -> {
-                    log.warn(
-                            "procesarMovimientoConLoteExistente: lote no encontrado loteId={} productoId={}",
+                    log.info(
+                            "[INVENTARIO] movimiento con lote inexistente. loteId={} productoId={}",
                             dto.loteProductoId(), producto.getId());
-                    return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
+                    return new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                            "No se encontró el lote indicado.",
+                            Map.of("loteId", dto.loteProductoId()));
                 });
 
         boolean esPorLote = solicitud != null;
@@ -1389,17 +1394,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 && producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO);
 
         if (estadoBloqueado) {
-            log.warn(
-                    "procesarMovimientoConLoteExistente: estado de lote inválido loteId={} estado={} productoId={}",
+            log.info(
+                    "[INVENTARIO] movimiento bloqueado por estado de lote. loteId={} estado={} productoId={}",
                     loteOrigen.getId(), loteOrigen.getEstado(), producto.getId());
             if (loteOrigen.getEstado() == EstadoLote.RETENIDO) {
                 retencionLoteService.obtenerActivaPorLote(loteOrigen.getId()).ifPresent(ret -> {
                     if (ret.getMotivo() == MotivoRetencion.NO_CONFORMIDAD) {
-                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "BLOQUEO_RETENCION_NC");
+                        throw new CustomBusinessException(ApiErrorCode.BLOQUEO_RETENCION_NC,
+                                "El lote está retenido por una no conformidad abierta.",
+                                Map.of("loteId", loteOrigen.getId(), "retencionId", ret.getId()));
                     }
                 });
             }
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ESTADO_INVALIDO");
+            throw new CustomBusinessException(ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA,
+                    "El lote no se encuentra en un estado válido para movimientos.",
+                    Map.of("loteId", loteOrigen.getId(), "estado", loteOrigen.getEstado().name()));
         }
 
         Almacen almacenOrigen = origen != null
@@ -1415,7 +1424,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (!esDevolucionInternaCalculada
                 && almacenOrigen != null
                 && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
-            log.warn("Almacén origen no coincide: loteId={} almacenLoteId={} almacenOrigenId={}",
+            log.debug("[INVENTARIO] almacén origen no coincide: loteId={} almacenLoteId={} almacenOrigenId={}",
                     loteOrigen.getId(), loteOrigen.getAlmacen().getId(), almacenOrigen.getId());
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
