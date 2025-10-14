@@ -37,6 +37,8 @@ public class NoConformidadDTO {
     @NotNull(message = "La fecha de registro es obligatoria")
     private LocalDateTime fechaRegistro;
 
+    private LocalDateTime fechaCierre;
+
     @NotNull(message = "El usuario que reporta es obligatorio")
     private Long usuarioReportaId;
 
@@ -51,5 +53,7 @@ public class NoConformidadDTO {
     private Long actualizadoPor;
 
     private LocalDateTime actualizadoEn;
+
+    private Boolean retener;
 }
 

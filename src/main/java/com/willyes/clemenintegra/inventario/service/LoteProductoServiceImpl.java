@@ -597,7 +597,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
 
         var retenciones = retencionLoteService.obtenerRetencionesActivas(loteId);
-        var retencion = retenciones.stream().findFirst().orElse(null);
+        var retencion = retenciones.stream()
+                .filter(r -> r.getMotivo() == MotivoRetencion.NO_CONFORMIDAD)
+                .findFirst()
+                .orElse(null);
         var ncOpt = noConformidadService.obtenerActivaPorLote(loteId);
         var condiciones = condicionUsoService.getActivasByLote(loteId);
 

@@ -21,6 +21,7 @@ public class NoConformidadMapper {
                 .descripcion(entity.getDescripcion())
                 .evidencia(entity.getEvidencia())
                 .fechaRegistro(entity.getFechaRegistro())
+                .fechaCierre(entity.getFechaCierre())
                 .usuarioReportaId(entity.getUsuarioReporta() != null ? entity.getUsuarioReporta().getId() : null)
                 .loteId(entity.getLote() != null ? entity.getLote().getId() : null)
                 .productoId(entity.getProducto() != null && entity.getProducto().getId() != null
@@ -48,6 +49,7 @@ public class NoConformidadMapper {
                 .descripcion(dto.getDescripcion())
                 .evidencia(dto.getEvidencia())
                 .fechaRegistro(dto.getFechaRegistro())
+                .fechaCierre(dto.getFechaCierre())
                 .usuarioReporta(usuarioReporta)
                 .lote(lote)
                 .producto(producto)
