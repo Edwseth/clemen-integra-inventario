@@ -12,6 +12,8 @@ import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
 import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -35,6 +38,7 @@ public class NoConformidadServiceImpl implements NoConformidadService {
 
     private final NoConformidadRepository repository;
     private final RetencionLoteRepository retencionLoteRepository;
+    private final RetencionLoteService retencionLoteService;
     private final UsuarioRepository usuarioRepository;
     private final NoConformidadMapper mapper;
 
@@ -65,6 +69,7 @@ public class NoConformidadServiceImpl implements NoConformidadService {
                 .orElseThrow(() -> new NoSuchElementException(
                         "Usuario no encontrado con ID: " + dto.getUsuarioReportaId()));
         Usuario usuarioActual = authUser != null ? authUser : usuarioReporta;
+        boolean solicitarRetencion = Boolean.TRUE.equals(dto.getRetener());
 
         Optional<NoConformidad> existente = buscarNoConformidadActiva(dto.getLoteId(), dto.getEvaluacionId());
         NoConformidad resultado;
@@ -99,6 +104,18 @@ public class NoConformidadServiceImpl implements NoConformidadService {
             resultado = repository.save(entity);
         }
 
+        if (solicitarRetencion
+                && resultado.getLote() != null
+                && resultado.getLote().getId() != null) {
+            Usuario aprobador = usuarioActual != null ? usuarioActual : usuarioReporta;
+            retencionLoteService.retener(
+                    resultado.getLote().getId(),
+                    MotivoRetencion.NO_CONFORMIDAD,
+                    "NC " + resultado.getCodigo(),
+                    resultado,
+                    aprobador);
+        }
+
         vincularRetencionConNoConformidad(resultado);
         return mapper.toDTO(resultado);
     }
@@ -118,6 +135,9 @@ public class NoConformidadServiceImpl implements NoConformidadService {
         existing.setDescripcion(dto.getDescripcion());
         existing.setEvidencia(dto.getEvidencia());
         existing.setFechaRegistro(dto.getFechaRegistro());
+        if (dto.getFechaCierre() != null) {
+            existing.setFechaCierre(dto.getFechaCierre());
+        }
         existing.setUsuarioReporta(usuario);
         existing.setActualizadoPor(usuario.getId());
         existing.setActualizadoEn(LocalDateTime.now());
@@ -132,6 +152,34 @@ public class NoConformidadServiceImpl implements NoConformidadService {
         return repository.findById(id)
                 .map(mapper::toDTO)
                 .orElseThrow(() -> new NoSuchElementException("No conformidad no encontrada con ID: " + id));
+    }
+
+    @Override
+    @Transactional
+    public NoConformidadDTO cerrar(Long id, Usuario authUser) {
+        NoConformidad noConformidad = repository.findById(id)
+                .orElseThrow(() -> new CustomBusinessException(
+                        ApiErrorCode.NC_NO_ENCONTRADA,
+                        "No conformidad no encontrada.",
+                        Map.of("ncId", id)));
+
+        if (noConformidad.getEstado() == EstadoNoConformidad.CERRADA) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.NC_YA_CERRADA,
+                    "La no conformidad ya se encuentra cerrada.",
+                    Map.of("ncId", id));
+        }
+
+        noConformidad.setEstado(EstadoNoConformidad.CERRADA);
+        noConformidad.setFechaCierre(LocalDateTime.now());
+        Long usuarioId = authUser != null ? authUser.getId() : noConformidad.getActualizadoPor();
+        if (usuarioId != null) {
+            noConformidad.setActualizadoPor(usuarioId);
+        }
+        noConformidad.setActualizadoEn(LocalDateTime.now());
+
+        NoConformidad guardada = repository.save(noConformidad);
+        return mapper.toDTO(guardada);
     }
 
     @Override

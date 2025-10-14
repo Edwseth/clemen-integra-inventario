@@ -25,6 +25,8 @@ public interface NoConformidadService {
 
     NoConformidadDTO obtenerPorId(Long id);
 
+    NoConformidadDTO cerrar(Long id, Usuario authUser);
+
     NoConformidad registrarDesdeEvaluacion(LoteProducto lote,
                                            EvaluacionCalidad evaluacion,
                                            SeveridadNoConformidad severidad,

@@ -51,6 +51,9 @@ public class NoConformidad {
     @Column(name = "fecha_registro", nullable = false)
     private LocalDateTime fechaRegistro;
 
+    @Column(name = "fecha_cierre")
+    private LocalDateTime fechaCierre;
+
     @ManyToOne
     @JoinColumn(name = "usuario_reporta_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_no_conf_usuario_reporta"))

@@ -50,6 +50,18 @@ public class NoConformidadController {
         return ResponseEntity.ok(service.crear(dto, authUser));
     }
 
+    @PatchMapping("/{id}/cerrar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<NoConformidadDTO> cerrar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Usuario authUser = null;
+        if (userDetails != null) {
+            authUser = usuarioRepository.findById(userDetails.getId()).orElse(null);
+        }
+        return ResponseEntity.ok(service.cerrar(id, authUser));
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<NoConformidadDTO> actualizar(
