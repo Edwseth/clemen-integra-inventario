@@ -1,9 +1,17 @@
 package com.willyes.clemenintegra.calidad.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionCondicionDTO;
+
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
 /**
@@ -14,9 +22,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class EvaluacionCalidadRequestDTO {
 
-    @NotNull(message = "El resultado es obligatorio")
+    /**
+     * Resultado de la evaluación. Opcional para permitir evaluaciones en progreso.
+     */
     private ResultadoEvaluacion resultado;
 
     @NotNull(message = "El tipo de evaluación es obligatorio")
@@ -31,6 +42,16 @@ public class EvaluacionCalidadRequestDTO {
     private Long loteProductoId;
 
     private Long usuarioEvaluadorId;
+
+    /**
+     * Datos de la condición de uso en caso el resultado sea CONDICIONADO.
+     */
+    private EvaluacionCondicionDTO condicion;
+
+    /**
+     * Severidad para la NC generada cuando el resultado es NO_CONFORME.
+     */
+    private SeveridadNoConformidad severidadNc;
 }
 
 

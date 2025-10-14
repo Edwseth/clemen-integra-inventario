@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.config.InventoryVencidosProperties;
 import com.willyes.clemenintegra.inventario.dto.AtencionDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
@@ -25,6 +26,10 @@ import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoReposi
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
+import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -107,6 +112,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final ReservaLoteService reservaLoteService;
     private final ReservaLoteRepository reservaLoteRepository;
     private final RecepcionOCService recepcionOCService;
+    private final RetencionLoteService retencionLoteService;
     //private final Long motivoSalidaProdId = catalogResolver.getMotivoSalidaProduccionId();
     //private final Long tipoDetSalidaProdId = catalogResolver.getTipoDetalleSalidaProduccionId();
 
@@ -1004,6 +1010,90 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return movimientos.map(mapper::safeToResponseDTO);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public MovimientoInventario registrarRetiroPorVencimiento(LoteProducto lote,
+                                                               InventoryVencidosProperties properties,
+                                                               LocalDateTime fechaMovimiento) {
+        if (lote == null) {
+            throw new IllegalArgumentException("El lote es requerido para registrar el retiro por vencimiento");
+        }
+        if (properties == null) {
+            throw new IllegalArgumentException("La configuración de vencidos es requerida");
+        }
+
+        InventoryVencidosProperties.Movimiento movimientoCfg = properties.getMovimiento();
+        if (!movimientoCfg.isEnabled()) {
+            throw new IllegalStateException("El registro de movimientos por vencimiento está deshabilitado");
+        }
+
+        Usuario usuario;
+        try {
+            usuario = usuarioService.obtenerUsuarioAutenticado();
+        } catch (AuthenticationCredentialsNotFoundException ex) {
+            usuario = usuarioService.obtenerUsuarioSistema();
+        }
+
+        if (usuario == null) {
+            throw new IllegalStateException("No se pudo resolver un usuario para registrar el movimiento por vencimiento");
+        }
+
+        Long motivoId = movimientoCfg.getMotivoId();
+        MotivoMovimiento motivoMovimiento = entityManager.getReference(MotivoMovimiento.class, motivoId);
+        ClasificacionMovimientoInventario clasificacion = movimientoCfg.resolveClasificacionEnum();
+
+        Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
+        if (tipoDetalleTransferenciaId == null) {
+            throw new IllegalStateException("No se configuró el tipo de detalle de transferencia para movimientos por vencimiento");
+        }
+        TipoMovimientoDetalle tipoDetalle = entityManager.getReference(TipoMovimientoDetalle.class, tipoDetalleTransferenciaId);
+
+        Almacen origen = lote.getAlmacen();
+        if (origen == null || origen.getId() == null) {
+            throw new IllegalStateException("El lote no tiene un almacén de origen asignado");
+        }
+
+        if (lote.getProducto() == null) {
+            throw new IllegalStateException("El lote no tiene un producto asociado");
+        }
+
+        Long destinoId = properties.requireAlmacenDestinoId();
+        Almacen destino = entityManager.getReference(Almacen.class, Math.toIntExact(destinoId));
+
+        LocalDateTime fecha = fechaMovimiento != null
+                ? fechaMovimiento
+                : ZonedDateTime.now(properties.resolveZoneId()).toLocalDateTime();
+
+        MovimientoInventario movimiento = MovimientoInventario.builder()
+                .cantidad(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO))
+                .tipoMovimiento(TipoMovimiento.TRANSFERENCIA)
+                .clasificacion(clasificacion)
+                .fechaIngreso(fecha)
+                .docReferencia("JOB_VENCIDOS")
+                .registradoPor(usuario)
+                .producto(lote.getProducto())
+                .lote(lote)
+                .almacenOrigen(origen)
+                .almacenDestino(destino)
+                .motivoMovimiento(motivoMovimiento)
+                .tipoMovimientoDetalle(tipoDetalle)
+                .build();
+
+        return repository.save(movimiento);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public boolean existeMovimientoVencimientoHoy(Long loteId,
+                                                  Long motivoId,
+                                                  LocalDateTime fechaInicio,
+                                                  LocalDateTime fechaFin) {
+        if (loteId == null || motivoId == null || fechaInicio == null || fechaFin == null) {
+            return false;
+        }
+        return repository.existsByLoteIdAndMotivoMovimientoIdAndFechaIngresoBetween(loteId, motivoId, fechaInicio, fechaFin);
+    }
+
     @Transactional(readOnly = true)
     @Override
     public Page<MovimientoInventarioResponseDTO> filtrar(
@@ -1360,19 +1450,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                                                            boolean devolucionInterna,
                                                                            SolicitudMovimiento solicitud) {
         if (dto.loteProductoId() == null) {
-            log.warn(
-                    "procesarMovimientoConLoteExistente: falta loteProductoId tipo={} productoId={} origenId={} destinoId={} cantidad={}",
+            log.info(
+                    "[INVENTARIO] movimiento con lote existente sin id de lote. tipo={} productoId={} origenId={} destinoId={} cantidad={}",
                     tipo, producto.getId(), origen != null ? origen.getId() : null,
                     destino != null ? destino.getId() : null, cantidad);
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ID_REQUERIDO");
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe seleccionar el lote a mover.");
         }
 
         LoteProducto loteOrigen = loteProductoRepository.findByIdForUpdate(dto.loteProductoId())
                 .orElseThrow(() -> {
-                    log.warn(
-                            "procesarMovimientoConLoteExistente: lote no encontrado loteId={} productoId={}",
+                    log.info(
+                            "[INVENTARIO] movimiento con lote inexistente. loteId={} productoId={}",
                             dto.loteProductoId(), producto.getId());
-                    return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
+                    return new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                            "No se encontró el lote indicado.",
+                            Map.of("loteId", dto.loteProductoId()));
                 });
 
         boolean esPorLote = solicitud != null;
@@ -1386,10 +1479,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 && producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO);
 
         if (estadoBloqueado) {
-            log.warn(
-                    "procesarMovimientoConLoteExistente: estado de lote inválido loteId={} estado={} productoId={}",
+            log.info(
+                    "[INVENTARIO] movimiento bloqueado por estado de lote. loteId={} estado={} productoId={}",
                     loteOrigen.getId(), loteOrigen.getEstado(), producto.getId());
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ESTADO_INVALIDO");
+            if (loteOrigen.getEstado() == EstadoLote.RETENIDO) {
+                retencionLoteService.obtenerActivaPorLote(loteOrigen.getId()).ifPresent(ret -> {
+                    if (ret.getMotivo() == MotivoRetencion.NO_CONFORMIDAD) {
+                        throw new CustomBusinessException(ApiErrorCode.BLOQUEO_RETENCION_NC,
+                                "El lote está retenido por una no conformidad abierta.",
+                                Map.of("loteId", loteOrigen.getId(), "retencionId", ret.getId()));
+                    }
+                });
+            }
+            throw new CustomBusinessException(ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA,
+                    "El lote no se encuentra en un estado válido para movimientos.",
+                    Map.of("loteId", loteOrigen.getId(), "estado", loteOrigen.getEstado().name()));
         }
 
         Almacen almacenOrigen = origen != null
@@ -1405,7 +1509,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (!esDevolucionInternaCalculada
                 && almacenOrigen != null
                 && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
-            log.warn("Almacén origen no coincide: loteId={} almacenLoteId={} almacenOrigenId={}",
+            log.debug("[INVENTARIO] almacén origen no coincide: loteId={} almacenLoteId={} almacenOrigenId={}",
                     loteOrigen.getId(), loteOrigen.getAlmacen().getId(), almacenOrigen.getId());
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }

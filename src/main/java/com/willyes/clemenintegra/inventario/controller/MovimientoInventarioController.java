@@ -59,7 +59,7 @@ public class MovimientoInventarioController {
     @ApiResponse(responseCode = "201", description = "Movimiento registrado correctamente")
     @ApiResponse(responseCode = "400", description = "Solicitud malformada o inválida")
     @ApiResponse(responseCode = "404", description = "Producto o lote no encontrado")
-    @ApiResponse(responseCode = "409", description = "No hay suficiente stock disponible")
+    @ApiResponse(responseCode = "409", description = "Conflictos funcionales (p. ej. BLOQUEO_RETENCION_NC, NC_ABIERTA, stock insuficiente)")
     @ApiResponse(responseCode = "500", description = "Error interno del servidor")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
     @PostMapping
@@ -67,7 +67,7 @@ public class MovimientoInventarioController {
         dto = normalizarMovimientoDto(dto);
         try {
             int atenciones = dto.atenciones() != null ? dto.atenciones().size() : 0;
-            log.debug("MOV-CONTROLLER registrar solicitudId={} atenciones={} tipo={} clasificacion={} producto={} lote={}",
+            log.debug("[INVENTARIO] registrar movimiento solicitudId={} atenciones={} tipo={} clasificacion={} producto={} lote={}",
                     dto.solicitudMovimientoId(), atenciones, dto.tipoMovimiento(),
                     dto.clasificacionMovimientoInventario(), dto.productoId(), dto.loteProductoId());
 
@@ -90,7 +90,7 @@ public class MovimientoInventarioController {
             SolicitudMovimiento solicitudMovimiento = null;
 
             if (isSalida && permitirLoteNulo) {
-                log.debug("MOV-CONTROLLER skip stock pre-check autoSplit={} atencionesVacias={} esSalidaPt={}",
+                log.debug("[INVENTARIO] omitir pre-validación de stock autoSplit={} atencionesVacias={} esSalidaPt={}",
                         autoSplitSolicitado, atencionesVacias, esSalidaPt);
             } else if (isSalida) {
                 Producto prod = productoRepo.findById(dto.productoId().longValue())
@@ -144,7 +144,7 @@ public class MovimientoInventarioController {
                     almacenesFiltrados = new ArrayList<>(new LinkedHashSet<>(almacenesFiltrados));
                 }
 
-                log.debug("MOV-CONTROLLER stock pre-check: solicitudId={} productoId={} loteId={} cant={} preBodegaId={} almacenesFiltrados={}",
+                log.debug("[INVENTARIO] stock pre-check solicitudId={} productoId={} loteId={} cant={} preBodegaId={} almacenesFiltrados={}",
                         dto.solicitudMovimientoId(), dto.productoId(), dto.loteProductoId(), dto.cantidad(),
                         preBodegaId, almacenesFiltrados);
 
@@ -197,7 +197,7 @@ public class MovimientoInventarioController {
                 BigDecimal stockProductoEvaluado = solicitudConReserva ? stockProductoConReserva : stockProd;
                 BigDecimal stockLoteEvaluado = solicitudConReserva ? disponibleConReserva : stockDisponibleNoNegativo;
 
-                log.debug("MOV-CONTROLLER stock eval: solicitudId={} estadoSol={} reservaPendiente={} stockProd={} stockLote={} stockReservado={} dispLote={} dispConReserva={} prodEval={} loteEval={} cant={}",
+                log.debug("[INVENTARIO] evaluación stock solicitudId={} estadoSol={} reservaPendiente={} stockProd={} stockLote={} stockReservado={} dispLote={} dispConReserva={} prodEval={} loteEval={} cant={}",
                         dto.solicitudMovimientoId(),
                         solicitudMovimiento != null ? solicitudMovimiento.getEstado() : null,
                         reservaPendiente, stockProd, stockActualLote, stockReservado, stockDisponibleNoNegativo,
@@ -224,36 +224,36 @@ public class MovimientoInventarioController {
 
             // 2) Registrar movimiento
             MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto);
-            log.info("Movimiento registrado correctamente: {}", creado.getId());
+            log.info("[INVENTARIO] movimiento registrado correctamente: {}", creado.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(creado);
 
         } catch (NoSuchElementException e) {
-            log.warn("Error de entidad no encontrada: {}", e.getMessage());
+            log.warn("[INVENTARIO] entidad no encontrada: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("message", e.getMessage()));
 
         } catch (IllegalArgumentException e) {
-            log.warn("Error de validación: {}", e.getMessage());
+            log.warn("[INVENTARIO] error de validación: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(Map.of("message", e.getMessage()));
 
         } catch (IllegalStateException e) {
-            log.warn("Estado inválido: {}", e.getMessage());
+            log.warn("[INVENTARIO] estado inválido: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("message", e.getMessage()));
 
         } catch (DataIntegrityViolationException e) {
-            log.error("Violación de integridad en la base de datos", e);
+            log.error("[INVENTARIO] violación de integridad en la base de datos", e);
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "Datos inválidos o faltantes"));
 
         } catch (AuthenticationCredentialsNotFoundException e) {
-            log.warn("Acceso no autorizado: {}", e.getMessage());
+            log.warn("[INVENTARIO] acceso no autorizado: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", e.getMessage()));
 
         } catch (Exception e) {
-            log.error("Error inesperado al registrar movimiento", e);
+            log.error("[INVENTARIO] error inesperado al registrar movimiento", e);
             return ResponseEntity.internalServerError()
                     .body(Map.of("message", "No se pudo registrar el movimiento"));
         }

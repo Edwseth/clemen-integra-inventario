@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,4 +33,6 @@ public interface LoteProductoService {
      * @return información del lote actualizado
      */
     LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, com.willyes.clemenintegra.shared.model.Usuario usuarioActual);
+
+    EstadoCalidadLoteResponseDTO obtenerEstadoCalidad(Long loteId);
 }
