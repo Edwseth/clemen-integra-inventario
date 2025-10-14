@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.config.InventoryVencidosProperties;
 import com.willyes.clemenintegra.inventario.dto.AtencionDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
@@ -1007,6 +1008,90 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         Page<MovimientoInventario> movimientos = repository.findAll(sortedPageable);
         return movimientos.map(mapper::safeToResponseDTO);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public MovimientoInventario registrarRetiroPorVencimiento(LoteProducto lote,
+                                                               InventoryVencidosProperties properties,
+                                                               LocalDateTime fechaMovimiento) {
+        if (lote == null) {
+            throw new IllegalArgumentException("El lote es requerido para registrar el retiro por vencimiento");
+        }
+        if (properties == null) {
+            throw new IllegalArgumentException("La configuración de vencidos es requerida");
+        }
+
+        InventoryVencidosProperties.Movimiento movimientoCfg = properties.getMovimiento();
+        if (!movimientoCfg.isEnabled()) {
+            throw new IllegalStateException("El registro de movimientos por vencimiento está deshabilitado");
+        }
+
+        Usuario usuario;
+        try {
+            usuario = usuarioService.obtenerUsuarioAutenticado();
+        } catch (AuthenticationCredentialsNotFoundException ex) {
+            usuario = usuarioService.obtenerUsuarioSistema();
+        }
+
+        if (usuario == null) {
+            throw new IllegalStateException("No se pudo resolver un usuario para registrar el movimiento por vencimiento");
+        }
+
+        Long motivoId = movimientoCfg.getMotivoId();
+        MotivoMovimiento motivoMovimiento = entityManager.getReference(MotivoMovimiento.class, motivoId);
+        ClasificacionMovimientoInventario clasificacion = movimientoCfg.resolveClasificacionEnum();
+
+        Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
+        if (tipoDetalleTransferenciaId == null) {
+            throw new IllegalStateException("No se configuró el tipo de detalle de transferencia para movimientos por vencimiento");
+        }
+        TipoMovimientoDetalle tipoDetalle = entityManager.getReference(TipoMovimientoDetalle.class, tipoDetalleTransferenciaId);
+
+        Almacen origen = lote.getAlmacen();
+        if (origen == null || origen.getId() == null) {
+            throw new IllegalStateException("El lote no tiene un almacén de origen asignado");
+        }
+
+        if (lote.getProducto() == null) {
+            throw new IllegalStateException("El lote no tiene un producto asociado");
+        }
+
+        Long destinoId = properties.requireAlmacenDestinoId();
+        Almacen destino = entityManager.getReference(Almacen.class, Math.toIntExact(destinoId));
+
+        LocalDateTime fecha = fechaMovimiento != null
+                ? fechaMovimiento
+                : ZonedDateTime.now(properties.resolveZoneId()).toLocalDateTime();
+
+        MovimientoInventario movimiento = MovimientoInventario.builder()
+                .cantidad(Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO))
+                .tipoMovimiento(TipoMovimiento.TRANSFERENCIA)
+                .clasificacion(clasificacion)
+                .fechaIngreso(fecha)
+                .docReferencia("JOB_VENCIDOS")
+                .registradoPor(usuario)
+                .producto(lote.getProducto())
+                .lote(lote)
+                .almacenOrigen(origen)
+                .almacenDestino(destino)
+                .motivoMovimiento(motivoMovimiento)
+                .tipoMovimientoDetalle(tipoDetalle)
+                .build();
+
+        return repository.save(movimiento);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public boolean existeMovimientoVencimientoHoy(Long loteId,
+                                                  Long motivoId,
+                                                  LocalDateTime fechaInicio,
+                                                  LocalDateTime fechaFin) {
+        if (loteId == null || motivoId == null || fechaInicio == null || fechaFin == null) {
+            return false;
+        }
+        return repository.existsByLoteIdAndMotivoMovimientoIdAndFechaIngresoBetween(loteId, motivoId, fechaInicio, fechaFin);
     }
 
     @Transactional(readOnly = true)

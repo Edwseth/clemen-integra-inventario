@@ -123,5 +123,17 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     List<com.willyes.clemenintegra.bom.dto.LoteResumenDTO> listarLotesPorProducto(@Param("productoId") Long productoId);
 
     List<LoteProducto> findAllByCodigoLoteAndProductoId(String codigoLote, Long productoId);
+
+    @Query("""
+        select l.id
+        from LoteProducto l
+        where l.fechaVencimiento is not null
+          and l.fechaVencimiento < :cutoff
+          and l.estado not in :estadosExcluidos
+        order by l.id asc
+    """)
+    List<Long> findIdsParaExpirar(@Param("cutoff") LocalDateTime cutoff,
+                                  @Param("estadosExcluidos") Collection<EstadoLote> estadosExcluidos,
+                                  org.springframework.data.domain.Pageable pageable);
 }
 
