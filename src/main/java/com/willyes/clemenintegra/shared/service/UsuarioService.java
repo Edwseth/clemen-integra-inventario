@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.shared.service;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,5 +37,10 @@ public class UsuarioService {
     public Usuario buscarPorNombreUsuario(String nombreUsuario) {
         return usuarioRepository.findByNombreUsuario(nombreUsuario)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+    }
+
+    public Usuario obtenerUsuarioSistema() {
+        return usuarioRepository.findFirstByRolAndActivoTrueOrderByIdAsc(RolUsuario.ROL_SUPER_ADMIN)
+                .orElseThrow(() -> new IllegalStateException("No se encontró un usuario activo con rol SUPER_ADMIN para tareas automáticas"));
     }
 }

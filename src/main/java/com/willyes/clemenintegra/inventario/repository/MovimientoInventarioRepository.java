@@ -11,9 +11,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.math.BigDecimal;
 
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
 
@@ -155,6 +155,11 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                      @Param("tipoMov") TipoMovimiento tipoMov,
                                      @Param("tipoDetalleId") Long tipoDetalleId,
                                      @Param("motivoId") Long motivoId);
+
+    boolean existsByLoteIdAndMotivoMovimientoIdAndFechaIngresoBetween(Long loteId,
+                                                                       Long motivoMovimientoId,
+                                                                       LocalDateTime fechaInicio,
+                                                                       LocalDateTime fechaFin);
 
 }
 

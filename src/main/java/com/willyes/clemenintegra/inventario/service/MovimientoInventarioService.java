@@ -1,10 +1,13 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.config.InventoryVencidosProperties;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,5 +31,14 @@ public interface MovimientoInventarioService {
     Workbook generarReporteMovimientosExcel();
 
     Page<MovimientoInventarioResponseDTO> listarTodos(Pageable pageable);
+
+    MovimientoInventario registrarRetiroPorVencimiento(LoteProducto lote,
+                                                       InventoryVencidosProperties properties,
+                                                       java.time.LocalDateTime fechaMovimiento);
+
+    boolean existeMovimientoVencimientoHoy(Long loteId,
+                                           Long motivoId,
+                                           java.time.LocalDateTime fechaInicio,
+                                           java.time.LocalDateTime fechaFin);
 
 }
