@@ -140,7 +140,7 @@ public class OrdenProduccionController {
     }
 
     @PatchMapping("/{ordenId}/etapas/{etapaId}/iniciar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> iniciarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         service.iniciarEtapa(ordenId, etapaId);
         return service.buscarPorId(ordenId)
@@ -150,7 +150,7 @@ public class OrdenProduccionController {
     }
 
     @PatchMapping("/{ordenId}/etapas/{etapaId}/finalizar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<EtapaProduccionResponse> finalizarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
         return ResponseEntity.ok(ProduccionMapper.toResponse(service.finalizarEtapa(ordenId, etapaId, usuario.getId())));
