@@ -26,6 +26,9 @@ public class Proveedor {
     @Column(name = "telefono_contacto", length = 20)
     private String telefono;
 
+    @Column(name = "ciudad", length = 120)
+    private String ciudad;
+
     @Column(name = "email", length = 100, unique = true)
     private String email;
 

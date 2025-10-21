@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.model;
 
+import com.willyes.clemenintegra.inventario.model.enums.CondicionesPago;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,6 +43,13 @@ public class OrdenCompra {
     @OneToMany(mappedBy = "ordenCompra", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrdenCompraDetalle> detalles;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "condiciones_pago", length = 20)
+    private CondicionesPago condicionesPago;   // NUEVO
+
+    @Column(name = "comprador", length = 100)
+    private String comprador;
+
 
     public OrdenCompra(Integer id) {
         this.id = id;
@@ -53,6 +61,10 @@ public class OrdenCompra {
     public EstadoOrdenCompra getEstado() {return estado;}
     public String getObservaciones() {return observaciones;}
     public List<OrdenCompraDetalle> getDetalles() {return detalles;}
+    public CondicionesPago getCondicionesPago() { return condicionesPago; }
+    public String getComprador() { return comprador; }
+    public void setCondicionesPago(CondicionesPago condicionesPago) { this.condicionesPago = condicionesPago; }
+    public void setComprador(String comprador) { this.comprador = comprador; }
     public void setDetalles(List<OrdenCompraDetalle> detalles) {this.detalles = detalles;}
     public void setId(Integer id) {this.id = id;}
     public void setCodigoOrden(String codigoOrden) {this.codigoOrden = codigoOrden;}
