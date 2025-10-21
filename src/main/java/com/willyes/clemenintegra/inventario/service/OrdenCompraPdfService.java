@@ -63,8 +63,8 @@ public class OrdenCompraPdfService {
         String provTelefono  = p != null && p.getTelefono() != null ? p.getTelefono() : "";
         String provPaginaWeb = p != null && p.getPaginaWeb() != null ? p.getPaginaWeb() : "";
 
-        String provTel = !provTelefono.isBlank() ? ", Teléfono: " + esc(provTelefono) : "";
-        String provWeb = !provPaginaWeb.isBlank() ? " &nbsp;Página Web: " + esc(provPaginaWeb) : "";
+        String provTel = !provTelefono.isBlank() ? "Teléfono: " + esc(provTelefono) : "";
+        String provWeb = !provPaginaWeb.isBlank() ? " &#160;Página Web: " + esc(provPaginaWeb) : "";
 
         html = html.replace("${proveedor.nombre}",    esc(provNombre))
                 .replace("${proveedor.nit}",       esc(provNit))
