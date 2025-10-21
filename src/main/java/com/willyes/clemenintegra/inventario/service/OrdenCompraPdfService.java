@@ -89,53 +89,63 @@ public class OrdenCompraPdfService {
         StringBuilder rows = new StringBuilder();
         BigDecimal sumSubtotal = BigDecimal.ZERO;
         BigDecimal sumIva      = BigDecimal.ZERO;
-        BigDecimal sumIcui     = BigDecimal.ZERO; // si no lo manejas, quedará en 0
-        BigDecimal sumTotal    = BigDecimal.ZERO;
+        BigDecimal sumIcui     = BigDecimal.ZERO;     // si no lo manejas, quedará en 0
+        BigDecimal descuento   = BigDecimal.ZERO;
 
         if (oc.getDetalles() != null) {
             for (OrdenCompraDetalle d : oc.getDetalles()) {
-                String codigo   = d.getProducto() != null ? nz(d.getProducto().getCodigoSku()) : "";
-                String desc     = d.getProducto() != null ? nz(d.getProducto().getNombre())    : "";
-                String udm      = d.getProducto() != null && d.getProducto().getUnidadMedida() != null
+                String codigo = d.getProducto() != null ? nz(d.getProducto().getCodigoSku()) : "";
+                String desc   = d.getProducto() != null ? nz(d.getProducto().getNombre())    : "";
+                String udm    = (d.getProducto() != null && d.getProducto().getUnidadMedida() != null)
                         ? nz(d.getProducto().getUnidadMedida().getSimbolo()) : "";
 
-                String cantStr  = d.getCantidad() != null ? d.getCantidad().toString() : "0";
-                BigDecimal pUnit= nbd(d.getValorUnitario());
-                BigDecimal iva  = nbd(d.getIva()); // porcentaje 0..100 o valor? Asumo porcentaje para mostrar
-                BigDecimal total= nbd(d.getValorTotal());
+                BigDecimal cant   = nbd(d.getCantidad());
+                BigDecimal pUnit  = nbd(d.getValorUnitario());
+                BigDecimal ivaPct = nbd(d.getIva());                // % (0..100) si así lo guardas
+                BigDecimal bdTot  = nbd(d.getValorTotal());
 
-                // Subtotal estimado si no lo tienes en BD: cantidad * pUnit
-                BigDecimal subtotal = nbd(d.getCantidad()).multiply(pUnit);
+                // Subtotal de la línea (base)
+                BigDecimal subtotal = cant.multiply(pUnit);
 
-                // Ajusta estas fórmulas si IVA/ICUI vienen como valores monetarios y no como %
-                BigDecimal ivaValor  = iva.compareTo(BigDecimal.ZERO) > 0
-                        ? subtotal.multiply(iva).divide(BigDecimal.valueOf(100))
+                // Valores de impuestos de la línea
+                BigDecimal ivaValor  = ivaPct.compareTo(BigDecimal.ZERO) > 0
+                        ? subtotal.multiply(ivaPct).divide(BigDecimal.valueOf(100))
                         : BigDecimal.ZERO;
+                BigDecimal icuiValor = BigDecimal.ZERO;
 
-                BigDecimal icuiValor = BigDecimal.ZERO; // si tienes ICUI, calcula aquí
+                // Total de la línea (si no traes total en BD, lo calculamos)
+                BigDecimal lineTotal = bdTot.compareTo(BigDecimal.ZERO) > 0
+                        ? bdTot
+                        : subtotal.add(ivaValor).add(icuiValor);
 
+                // Acumular
                 sumSubtotal = sumSubtotal.add(subtotal);
                 sumIva      = sumIva.add(ivaValor);
                 sumIcui     = sumIcui.add(icuiValor);
-                sumTotal    = sumTotal.add(total.compareTo(BigDecimal.ZERO) > 0 ? total : subtotal.add(ivaValor).add(icuiValor));
 
+                // Fila HTML
                 rows.append("<tr>")
                         .append("<td>").append(esc(codigo)).append("</td>")
                         .append("<td>").append(esc(desc)).append("</td>")
                         .append("<td>").append("") /* fecha necesidad si existe */ .append("</td>")
                         .append("<td>").append(esc(udm)).append("</td>")
-                        .append("<td class='right'>").append(esc(cantStr)).append("</td>")
+                        .append("<td class='right'>").append(formNum(cant)).append("</td>")
                         .append("<td class='right'>").append(formNum(pUnit)).append("</td>")
-                        .append("<td class='right'>").append(formNum(iva)).append("</td>")
+                        .append("<td class='right'>").append(formNum(ivaPct)).append("</td>")
                         .append("<td class='right'>").append("0").append("</td>") // ICUI %
-                        .append("<td class='right'>").append(formNum(total.compareTo(BigDecimal.ZERO) > 0 ? total : subtotal.add(ivaValor))).append("</td>")
+                        .append("<td class='right'>").append(formNum(lineTotal)).append("</td>")
                         .append("</tr>");
             }
         }
-        html = html.replace("${itemsRows}", rows.toString());
-        html = html.replace("${valorIva}",  formNum(sumIva));
-        html = html.replace("${valorIcui}", formNum(sumIcui));
-        html = html.replace("${total}",     formNum(sumTotal));
+        // Total general = subtotal - descuento + impuestos
+        BigDecimal sumTotal = sumSubtotal.subtract(descuento).add(sumIva).add(sumIcui);
+
+        html = html.replace("${itemsRows}", rows.toString())
+                .replace("${subtotal}",  formNum(sumSubtotal))
+                .replace("${descuento}", formNum(descuento))
+                .replace("${valorIva}",  formNum(sumIva))
+                .replace("${valorIcui}", formNum(sumIcui))
+                .replace("${total}",     formNum(sumTotal));
 
         return html;
     }
