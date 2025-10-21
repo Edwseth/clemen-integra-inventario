@@ -1,12 +1,19 @@
- <!DOCTYPE html
-   PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
- <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es" lang="es">
- <head>
-   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es" lang="es">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <style>
-    @page { size: A4; margin: 10mm 10mm 12mm 10mm; }
-    body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #000; }
+    @page {
+      size: A4;
+      /* margen superior mayor para el encabezado fijo */
+      margin: 18mm 10mm 12mm 10mm;
+      /* repetir encabezado en cada página */
+      @top-center { content: element(doc-header) }
+    }
+
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color:#000; }
     h1, h2, h3, p { margin: 0; padding: 0; }
     .w-100{width:100%}
     .mt-4{margin-top:4px} .mt-6{margin-top:6px} .mt-8{margin-top:8px}
@@ -14,7 +21,13 @@
     .pt-6{padding-top:6px} .pb-6{padding-bottom:6px} .pl-6{padding-left:6px} .pr-6{padding-right:6px}
     .small{font-size:10px}
 
-    .header { display: table; width: 100%; }
+    /* encabezado corporativo repetido */
+    .header { position: running(doc-header); }
+    .empresa { text-align:center; line-height:1.25; }
+    .empresa b { font-size:14px; }
+
+    /* fila superior: fecha + nro OC */
+    .top { display: table; width:100%; }
     .cell { display: table-cell; vertical-align: top; }
 
     .fecha-box { width: 38mm; border: 1px solid #000; padding: 6px; }
@@ -36,8 +49,8 @@
 
     .band { border: 1px solid #000; border-top: none; display: table; width: 100%; table-layout: fixed; }
     .band .col { display: table-cell; padding: 6px 8px; }
-    .band .col.title { width: 35%; font-weight: bold; }
-    .band .col.value { width: 40%; }
+    .band .col.title  { width: 35%; font-weight: bold; }
+    .band .col.value  { width: 40%; }
     .band .col.moneda { width: 25%; text-align: right; font-weight: bold; }
 
     table.detalle { width:100%; border-collapse: collapse; margin-top: 6px; }
@@ -68,7 +81,19 @@
   </style>
 </head>
 <body>
+
+  <!-- Encabezado que se repite en todas las páginas -->
   <div class="header">
+    <div class="empresa">
+      <b>${empresa.nombre}</b><br />
+      Nit: ${empresa.nit}<br />
+      ${empresa.direccion}<br />
+      ${empresa.telefono}
+    </div>
+  </div>
+
+  <!-- Fila superior: Fecha + Nro OC -->
+  <div class="top">
     <div class="cell">
       <div class="fecha-box">
         <div class="titulo">Fecha</div>
@@ -91,6 +116,7 @@
     </div>
   </div>
 
+  <!-- Proveedor / Despachar a -->
   <div class="bloques">
     <div class="bloque pr-6">
       <div class="card">
@@ -106,50 +132,53 @@
     <div class="bloque pl-6">
       <div class="card">
         <h3>Despachar a:</h3>
-            SEDE PRINCIPAL<br/>
-            Carrera 41 D # 46-40 Union de Vivienda, Cali Valle del Cauca<br/>
-            Colombia<br/>
-            Teléfono / Movil 3175081762
+        SEDE PRINCIPAL<br />
+        Carrera 41 D # 46-40 Union de Vivienda, Cali Valle del Cauca<br />
+        Colombia<br />
+        Teléfono / Movil 3175081762
       </div>
     </div>
   </div>
 
+  <!-- Condiciones de pago -->
   <div class="band">
     <div class="col title">Condiciones de Pago</div>
     <div class="col value">${condicionesPago}</div>
     <div class="col moneda">Moneda COP</div>
   </div>
 
+  <!-- Detalle -->
   <table class="detalle">
     <colgroup>
-      <col style="width:9%"/>   <!-- Código -->
-      <col style="width:31%"/>  <!-- Descripción -->
-      <col style="width:11%"/>  <!-- Fecha Necesidad -->
-      <col style="width:8%"/>   <!-- Udm -->
-      <col style="width:10%"/>  <!-- Cantidad -->
-      <col style="width:12%"/>  <!-- Precio Unitario -->
-      <col style="width:7%"/>   <!-- IVA% -->
-      <col style="width:6%"/>   <!-- ICUI% -->
-      <col style="width:12%"/>  <!-- Valor Total -->
+      <col style="width:9%" />   <!-- Código -->
+      <col style="width:31%" />  <!-- Descripción -->
+      <col style="width:11%" />  <!-- Fecha Necesidad -->
+      <col style="width:8%" />   <!-- Udm -->
+      <col style="width:10%" />  <!-- Cantidad -->
+      <col style="width:12%" />  <!-- Precio Unitario -->
+      <col style="width:7%" />   <!-- IVA% -->
+      <col style="width:6%" />   <!-- ICUI% -->
+      <col style="width:12%" />  <!-- Valor Total -->
     </colgroup>
     <thead>
       <tr>
         <th class="txt-center">Código</th>
         <th class="txt-center">Descripción</th>
-        <th class="txt-center">Fecha<br/>Necesidad</th>
+        <th class="txt-center">Fecha<br />Necesidad</th>
         <th class="txt-center">Udm</th>
         <th class="txt-center">Cantidad</th>
-        <th class="txt-center">Precio<br/>Unitario</th>
+        <th class="txt-center">Precio<br />Unitario</th>
         <th class="txt-center">IVA%</th>
         <th class="txt-center">ICUI%</th>
         <th class="txt-center">Valor Total</th>
       </tr>
     </thead>
     <tbody>
-        ${itemsRows}
+      ${itemsRows}
     </tbody>
   </table>
 
+  <!-- Condiciones + Totales -->
   <div class="terms-totals">
     <div class="terms">
       <h3 class="mb-6">Condiciones y/o especificaciones</h3>
@@ -159,7 +188,7 @@
         <li>La Factura o Cuenta de Cobro debe: (a) especificar NIT, razón social y dirección de la Compañía (ver encabezado de Orden de Compra), (b) relacionar número de este documento. No asociar más de una Orden de Compra en una sola Factura, (c) condiciones exactas de pedido (no se aceptan cambios), cantidad y precio.</li>
         <li>No se reciben Facturas o Cuentas de Cobro sin Orden de Compra. Los clientes de la Compañía deben estar notificados por la Compañía.</li>
         <li>La Compañía se reserva el derecho, sin obligación de dar un aviso, de tomar muestras de la mercancía y rechazar el material que no cumpla con las especificaciones.</li>
-        <li>No se aceptan sobrantes superiores al 10% de la cantidad aquí relacionada, y la Compañía se reserva el derecho de devolver excedentes.</li>
+        <li>No se reciben cantidades superiores a las consignadas en esta Orden de Compra. El sistema no permite su recepción; cualquier exceso será rechazado y, de requerirse, deberá tramitarse una nueva Orden de Compra.</li>
         <li>El pago de la Factura se realizará de acuerdo con la política de programación de pagos de la Compañía, y sólo al beneficiario relacionado en el encabezado de la misma.</li>
         <li>Para efectos de aplicar correctamente las retenciones de Industria y Comercio, se solicita indicar en la Factura la ciudad donde presta el servicio, o la contratación se aplica la retención en el municipio de su sede principal.</li>
       </ol>
@@ -173,17 +202,21 @@
     </div>
   </div>
 
+  <!-- Observaciones -->
   <div class="observ">
     <b>Observaciones:</b>
     <div class="mt-8">${observaciones}</div>
   </div>
 
+  <!-- Firma -->
   <div class="firmas">
     <div class="firma-line"></div>
     <div class="small">Comprador</div>
     <div class="small">${comprador}</div>
   </div>
+
 </body>
 </html>
+
 
 
