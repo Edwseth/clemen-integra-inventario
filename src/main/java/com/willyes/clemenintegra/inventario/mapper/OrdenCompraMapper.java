@@ -18,9 +18,14 @@ public interface OrdenCompraMapper {
     default OrdenCompra toEntity(OrdenCompraRequestDTO dto, Proveedor proveedor, EstadoOrdenCompra estado) {
         OrdenCompra entity = new OrdenCompra();
         entity.setProveedor(proveedor);
+        entity.setCondicionesPago(dto.getCondicionesPago());
+        entity.setComprador(dto.getComprador());
         entity.setEstado(estado);
         entity.setFechaOrden(java.time.LocalDateTime.now());
         entity.setObservaciones(dto.getObservaciones());
+        if (dto.getDescuento() != null) {
+            entity.setDescuento(dto.getDescuento());
+        }
         return entity;
     }
 
@@ -29,6 +34,7 @@ public interface OrdenCompraMapper {
     @Mapping(target = "estado", source = "estado", qualifiedByName = "enumName")
     @Mapping(target = "proveedorNombre", source = "proveedor.nombre")
     @Mapping(target = "fechaOrden", source = "fechaOrden")
+    @Mapping(target = "descuento", source = "descuento")
     OrdenCompraResponseDTO toDTO(OrdenCompra orden);
 
     @org.mapstruct.Named("enumName")
@@ -39,12 +45,14 @@ public interface OrdenCompraMapper {
     @Mapping(target = "proveedor", source = "proveedor")
     @Mapping(target = "detalles", source = "detalles")
     @Mapping(target = "fechaOrden", source = "fechaOrden")
+    @Mapping(target = "descuento", source = "descuento")
     OrdenCompraConDetallesResponse toOrdenCompraConDetallesResponse(OrdenCompra orden);
 
     ProveedorMinResponse toProveedorMin(Proveedor proveedor);
     ProveedorResponseDTO toProveedorDTO(Proveedor proveedor);
 
     @Mapping(target = "producto", source = "producto", qualifiedByName = "mapProductoMini")
+    @Mapping(target = "fechaNecesidad", source = "fechaNecesidad")
     OrdenCompraDetalleResponse toOrdenCompraDetalleResponse(OrdenCompraDetalle detalle);
 
     List<OrdenCompraDetalleResponse> toDetalleList(List<OrdenCompraDetalle> detalles);
@@ -72,7 +80,6 @@ public interface OrdenCompraMapper {
                 unidadDTO
         );
     }
-
 }
 
 

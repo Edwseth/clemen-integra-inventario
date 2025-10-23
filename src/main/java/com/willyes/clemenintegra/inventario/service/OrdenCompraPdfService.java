@@ -139,7 +139,8 @@ public class OrdenCompraPdfService {
                 sumIva      = sumIva.add(ivaValor);
                 sumIcui     = sumIcui.add(icuiValor);
 
-                // Fila HTML (con Fecha Necesidad y UDM reales)
+
+                // Fila HTML
                 rows.append("<tr>")
                         .append("<td>").append(esc(codigo)).append("</td>")
                         .append("<td>").append(esc(desc)).append("</td>")
@@ -155,6 +156,7 @@ public class OrdenCompraPdfService {
         }
 
         // Total general = subtotal - descuento + impuestos
+        descuento = nbd(oc.getDescuento());
         BigDecimal sumTotal = sumSubtotal.subtract(descuento).add(sumIva).add(sumIcui);
 
         html = html.replace("${itemsRows}", rows.toString())

@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,6 +41,9 @@ public class OrdenCompra {
     @Column(name = "observaciones", length = 255)
     private String observaciones;
 
+    @Column(name = "descuento", nullable = false, precision = 12, scale = 2)
+    private BigDecimal descuento = BigDecimal.ZERO;
+
     @OneToMany(mappedBy = "ordenCompra", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrdenCompraDetalle> detalles;
 
@@ -63,6 +67,8 @@ public class OrdenCompra {
     public List<OrdenCompraDetalle> getDetalles() {return detalles;}
     public CondicionesPago getCondicionesPago() { return condicionesPago; }
     public String getComprador() { return comprador; }
+    public BigDecimal getDescuento() { return descuento; }
+    public void setDescuento(BigDecimal descuento) { this.descuento = descuento; }
     public void setCondicionesPago(CondicionesPago condicionesPago) { this.condicionesPago = condicionesPago; }
     public void setComprador(String comprador) { this.comprador = comprador; }
     public void setDetalles(List<OrdenCompraDetalle> detalles) {this.detalles = detalles;}
