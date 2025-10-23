@@ -57,9 +57,15 @@ public interface OrdenCompraMapper {
     @Named("mapProductoMini")
     default ProductoMiniDTO mapProductoMini(Producto producto) {
         if (producto == null) return null;
-        UnidadMiniDTO unidadDTO = new UnidadMiniDTO(
-                producto.getUnidadMedida() != null ? producto.getUnidadMedida().getSimbolo() : null
-        );
+
+        String udmSimbolo = null;
+        if (producto.getUnidadMedida() != null) {
+            String imp = producto.getUnidadMedida().getSimboloImpresion(); // mL, kg, m...
+            String sim = producto.getUnidadMedida().getSimbolo();          // ML, KG, M...
+            udmSimbolo = (imp != null && !imp.isBlank()) ? imp : sim;
+        }
+
+        UnidadMiniDTO unidadDTO = new UnidadMiniDTO(udmSimbolo);
         return new ProductoMiniDTO(
                 producto.getId().longValue(),
                 producto.getNombre(),

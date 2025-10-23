@@ -12,20 +12,28 @@ import org.mapstruct.Named;
 public interface OrdenCompraDetalleMapper {
 
     @Mapping(target = "producto", source = "producto", qualifiedByName = "mapProductoMini")
+    @Mapping(target = "fechaNecesidad", source = "fechaNecesidad")
     OrdenCompraDetalleResponse toResponse(OrdenCompraDetalle entity);
 
     @Named("mapProductoMini")
     default ProductoMiniDTO mapProductoMini(com.willyes.clemenintegra.inventario.model.Producto producto) {
         if (producto == null) return null;
-        UnidadMiniDTO unidadDTO = new UnidadMiniDTO(
-                producto.getUnidadMedida() != null ? producto.getUnidadMedida().getSimbolo() : null
-        );
+
+        String udmSimbolo = null;
+        if (producto.getUnidadMedida() != null) {
+            String imp = producto.getUnidadMedida().getSimboloImpresion();
+            String sim = producto.getUnidadMedida().getSimbolo();
+            udmSimbolo = (imp != null && !imp.isBlank()) ? imp : sim;
+        }
+
+        UnidadMiniDTO unidadDTO = new UnidadMiniDTO(udmSimbolo);
         return new ProductoMiniDTO(
                 producto.getId().longValue(),
                 producto.getNombre(),
                 unidadDTO
         );
     }
+
 }
 
 

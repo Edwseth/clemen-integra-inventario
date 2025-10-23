@@ -96,24 +96,40 @@ public class OrdenCompraPdfService {
             for (OrdenCompraDetalle d : oc.getDetalles()) {
                 String codigo = d.getProducto() != null ? nz(d.getProducto().getCodigoSku()) : "";
                 String desc   = d.getProducto() != null ? nz(d.getProducto().getNombre())    : "";
-                String udm    = (d.getProducto() != null && d.getProducto().getUnidadMedida() != null)
-                        ? nz(d.getProducto().getUnidadMedida().getSimbolo()) : "";
+
+                // UDM: preferir símbolo de impresión (mL, kg, m...), fallback a símbolo (ML, KG, M)
+                String udm = "";
+                if (d.getProducto() != null && d.getProducto().getUnidadMedida() != null) {
+                    String imp = d.getProducto().getUnidadMedida().getSimboloImpresion();
+                    String sim = d.getProducto().getUnidadMedida().getSimbolo();
+                    udm = (imp != null && !imp.isBlank()) ? imp : nz(sim);
+                }
+
+                // Fecha Necesidad (dd-MMM-yyyy ES, mayúsculas y sin punto)
+                String fechaNecStr = "";
+                if (d.getFechaNecesidad() != null) {
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd-MMM-yyyy", ES_CO);
+                    String raw = d.getFechaNecesidad().format(fmt).replace(".", "");
+                    fechaNecStr = Normalizer.normalize(raw, Normalizer.Form.NFD)
+                            .replaceAll("\\p{InCombiningDiacriticalMarks}+","")
+                            .toUpperCase(ES_CO);
+                }
 
                 BigDecimal cant   = nbd(d.getCantidad());
                 BigDecimal pUnit  = nbd(d.getValorUnitario());
-                BigDecimal ivaPct = nbd(d.getIva());                // % (0..100) si así lo guardas
+                BigDecimal ivaPct = nbd(d.getIva());                // % (0..100)
                 BigDecimal bdTot  = nbd(d.getValorTotal());
 
                 // Subtotal de la línea (base)
                 BigDecimal subtotal = cant.multiply(pUnit);
 
-                // Valores de impuestos de la línea
+                // Impuestos de la línea
                 BigDecimal ivaValor  = ivaPct.compareTo(BigDecimal.ZERO) > 0
                         ? subtotal.multiply(ivaPct).divide(BigDecimal.valueOf(100))
                         : BigDecimal.ZERO;
-                BigDecimal icuiValor = BigDecimal.ZERO;
+                BigDecimal icuiValor = BigDecimal.ZERO; // ajusta si aplicas ICUI por ítem
 
-                // Total de la línea (si no traes total en BD, lo calculamos)
+                // Total de la línea (si no viene en BD, calcular)
                 BigDecimal lineTotal = bdTot.compareTo(BigDecimal.ZERO) > 0
                         ? bdTot
                         : subtotal.add(ivaValor).add(icuiValor);
@@ -123,12 +139,12 @@ public class OrdenCompraPdfService {
                 sumIva      = sumIva.add(ivaValor);
                 sumIcui     = sumIcui.add(icuiValor);
 
-                // Fila HTML
+                // Fila HTML (con Fecha Necesidad y UDM reales)
                 rows.append("<tr>")
                         .append("<td>").append(esc(codigo)).append("</td>")
                         .append("<td>").append(esc(desc)).append("</td>")
-                        .append("<td>").append("") /* fecha necesidad si existe */ .append("</td>")
-                        .append("<td>").append(esc(udm)).append("</td>")
+                        .append("<td class='txt-center nowrap'>").append(esc(fechaNecStr)).append("</td>")
+                        .append("<td class='txt-center nowrap'>").append(esc(udm)).append("</td>")
                         .append("<td class='right'>").append(formNum(cant)).append("</td>")
                         .append("<td class='right'>").append(formNum(pUnit)).append("</td>")
                         .append("<td class='right'>").append(formNum(ivaPct)).append("</td>")
@@ -137,6 +153,7 @@ public class OrdenCompraPdfService {
                         .append("</tr>");
             }
         }
+
         // Total general = subtotal - descuento + impuestos
         BigDecimal sumTotal = sumSubtotal.subtract(descuento).add(sumIva).add(sumIcui);
 
