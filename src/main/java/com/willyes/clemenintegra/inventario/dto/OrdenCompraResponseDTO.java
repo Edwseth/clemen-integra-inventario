@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -14,6 +15,7 @@ public class OrdenCompraResponseDTO {
     private String estado;
     private String proveedorNombre;
     private LocalDateTime fechaOrden;
+    private BigDecimal descuento;
 
     public String getEstado() {return estado;}
     public String getProveedorNombre() {return proveedorNombre;}
@@ -25,5 +27,7 @@ public class OrdenCompraResponseDTO {
     public void setEstado(String estado) {this.estado = estado;}
     public LocalDateTime getFechaOrden() {return fechaOrden;}
     public void setFechaOrden(LocalDateTime fechaOrden) {this.fechaOrden = fechaOrden;}
+    public BigDecimal getDescuento() {return descuento;}
+    public void setDescuento(BigDecimal descuento) {this.descuento = descuento;}
 }
 

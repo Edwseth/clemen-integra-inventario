@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -10,5 +11,6 @@ public class OrdenCompraConDetallesResponse {
     public LocalDateTime fechaOrden;
     public String observaciones;
     public ProveedorMinResponse proveedor;
+    private BigDecimal descuento;
     public List<OrdenCompraDetalleResponse> detalles;
 }
