@@ -194,11 +194,11 @@
       </ol>
     </div>
     <div class="totals">
-      <div class="row"><div class="label">Subtotal:</div><div class="val">${subtotal}</div></div>
-      <div class="row"><div class="label">Descuento:</div><div class="val">${descuento}</div></div>
-      <div class="row"><div class="label">Valor IVA:</div><div class="val">${valorIva}</div></div>
-      <div class="row"><div class="label">Valor ICUI:</div><div class="val">${valorIcui}</div></div>
-      <div class="row total"><div class="label">Total:</div><div class="val">${total}</div></div>
+      <div class="row"><div class="label">Subtotal:</div><div class="val">$${subtotal}</div></div>
+      <div class="row"><div class="label">Descuento:</div><div class="val">$${descuento}</div></div>
+      <div class="row"><div class="label">Valor IVA:</div><div class="val">$${valorIva}</div></div>
+      <div class="row"><div class="label">Valor ICUI:</div><div class="val">$${valorIcui}</div></div>
+      <div class="row total"><div class="label">Total:</div><div class="val">$${total}</div></div>
     </div>
   </div>
 
