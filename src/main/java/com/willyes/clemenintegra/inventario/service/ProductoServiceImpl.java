@@ -286,7 +286,12 @@ public class ProductoServiceImpl implements ProductoService {
         }
 
         UnidadMedida unidad = unidadMedidaRepository.findByNombre(dto.getNombre())
-                .orElseGet(() -> unidadMedidaRepository.save(new UnidadMedida(null, dto.getNombre(), dto.getSimbolo())));
+                .orElseGet(() -> {
+                    UnidadMedida u = new UnidadMedida();
+                    u.setNombre(dto.getNombre().trim());
+                    u.setSimbolo(dto.getSimbolo().trim());
+                    return unidadMedidaRepository.save(u);
+                });
 
         producto.setUnidadMedida(unidad);
         productoRepository.save(producto);
