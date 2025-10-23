@@ -5,8 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "unidades_medida", uniqueConstraints = {
-        @UniqueConstraint(name = "un_nombre_UNIQUE", columnNames = "nombre"),
-        @UniqueConstraint(name = "un_simbolo_UNIQUE", columnNames = "simbolo")
+        @UniqueConstraint(name = "un_nombre_UNIQUE",  columnNames = "nombre"),
+        @UniqueConstraint(name = "un_simbolo_UNIQUE", columnNames = "simbolo"),
+        @UniqueConstraint(name = "un_codigo_UNIQUE",  columnNames = "codigo")
 })
 @Data
 @NoArgsConstructor
@@ -24,16 +25,21 @@ public class UnidadMedida {
     @Column(name = "simbolo", nullable = false, length = 5)
     private String simbolo;
 
+    @Column(name="codigo", length=4)
+    private String codigo;
+
+    @Column(name="simbolo_impresion", length=10)
+    private String simboloImpresion;
+
     public UnidadMedida(Long id) {
         this.id = id;
     }
 
-    public Long getId() {return id;}
-    public String getNombre() {return nombre;}
-    public String getSimbolo() {return simbolo;}
-
-    public void setId(Long id) {this.id = id;}
-    public void setNombre(String nombre) {this.nombre = nombre;}
-    public void setSimbolo(String simbolo) {this.simbolo = simbolo;}
+    @PrePersist @PreUpdate
+    private void normalize() {
+        if (nombre != null) nombre = nombre.trim().toUpperCase();
+        if (simbolo != null) simbolo = simbolo.trim().toUpperCase();
+        if (codigo != null) codigo = codigo.trim().toUpperCase();
+    }
 }
 
