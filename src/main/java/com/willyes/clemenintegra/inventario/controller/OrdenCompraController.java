@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -153,7 +154,7 @@ public class OrdenCompraController {
 
     @GetMapping
     public ResponseEntity<Page<OrdenCompraResponseDTO>> listar(
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<OrdenCompraResponseDTO> page = ordenCompraService.listar(pageable);
         return ResponseEntity.ok(page);
     }
