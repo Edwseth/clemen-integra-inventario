@@ -11,6 +11,6 @@ public class OrdenCompraConDetallesResponse {
     public LocalDateTime fechaOrden;
     public String observaciones;
     public ProveedorMinResponse proveedor;
-    private BigDecimal descuento;
+    public BigDecimal descuento;
     public List<OrdenCompraDetalleResponse> detalles;
 }

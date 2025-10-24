@@ -302,6 +302,7 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable) {
+        // Mantén tu “safe sort”
         Sort sort = pageable.getSort();
         Sort safe = Sort.by(sort.stream()
                 .map(o -> switch (o.getProperty()) {
@@ -312,12 +313,33 @@ public class ProductoServiceImpl implements ProductoService {
         Pageable safePage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
 
         Page<Producto> page = productoRepository.buscarPorTexto(q, safePage);
-        return page.map(p -> ProductoOptionDTO.builder()
-                .id(p.getId() == null ? null : Long.valueOf(p.getId()))
-                .nombre(p.getNombre())
-                .sku(p.getCodigoSku())
-                .build()
-        );
+
+        // ✅ Ahora mapeamos también la unidad
+        return page.map(p -> {
+            ProductoOptionDTO.UnidadMiniDTO unidadDTO = null;
+            if (p.getUnidadMedida() != null) {
+                String simbolo = p.getUnidadMedida().getSimbolo();
+                String simboloImp;
+                try {
+                    // si tu entidad ya tiene getSimboloImpresion()
+                    simboloImp = p.getUnidadMedida().getSimboloImpresion();
+                } catch (Throwable t) {
+                    // tolerante si aún no existe el campo en el modelo
+                    simboloImp = null;
+                }
+                unidadDTO = ProductoOptionDTO.UnidadMiniDTO.builder()
+                        .simbolo(simbolo)
+                        .simboloImpresion((simboloImp != null && !simboloImp.isBlank()) ? simboloImp : simbolo)
+                        .build();
+            }
+
+            return ProductoOptionDTO.builder()
+                    .id(p.getId() == null ? null : Long.valueOf(p.getId()))
+                    .nombre(p.getNombre())
+                    .sku(p.getCodigoSku())
+                    .unidad(unidadDTO) // ✅ se envía al frontend
+                    .build();
+        });
     }
 
     @Override
