@@ -63,6 +63,11 @@ public class OrdenCompraController {
                 .estado(EstadoOrdenCompra.CREADA)
                 .fechaOrden(LocalDateTime.now())
                 .observaciones(dto.getObservaciones())
+                .comprador(dto.getComprador())
+                .condicionesPago(dto.getCondicionesPago())
+                .descuento(dto.getDescuento() != null
+                        ? dto.getDescuento()
+                        : BigDecimal.ZERO)
                 .build();
 
         orden.setCodigoOrden(ordenCompraService.generarCodigoOrdenCompra());
@@ -71,7 +76,15 @@ public class OrdenCompraController {
             Producto producto = productoRepository.findById(d.getProductoId())
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado"));
 
-            BigDecimal valorTotal = d.getValorUnitario().multiply(d.getCantidad());
+            // subtotal y total (si quieres incluir IVA en total de línea, descomenta el bloque)
+            BigDecimal subtotal  = d.getValorUnitario().multiply(d.getCantidad());
+            BigDecimal ivaPct    = d.getIva() != null ? d.getIva() : BigDecimal.ZERO;
+            BigDecimal ivaValor  = ivaPct.compareTo(BigDecimal.ZERO) > 0
+                    ? subtotal.multiply(ivaPct).divide(BigDecimal.valueOf(100))
+                    : BigDecimal.ZERO;
+            BigDecimal valorTotal = subtotal.add(ivaValor);
+            // si prefieres exactamente cantidad*unitario como tenías antes, usa:
+            // BigDecimal valorTotal = d.getValorUnitario().multiply(d.getCantidad());
 
             return OrdenCompraDetalle.builder()
                     .ordenCompra(orden)
@@ -81,6 +94,7 @@ public class OrdenCompraController {
                     .valorTotal(valorTotal)
                     .iva(d.getIva())
                     .cantidadRecibida(BigDecimal.ZERO)
+                    .fechaNecesidad(d.getFechaNecesidad())
                     .build();
         }).toList();
 
