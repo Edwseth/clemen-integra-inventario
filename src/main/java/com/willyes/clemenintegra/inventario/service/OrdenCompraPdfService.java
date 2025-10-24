@@ -4,6 +4,7 @@ import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.model.Proveedor;
+import com.willyes.clemenintegra.inventario.model.enums.CondicionesPago;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Optional;
 
 @Service
 public class OrdenCompraPdfService {
@@ -74,9 +76,9 @@ public class OrdenCompraPdfService {
                 .replace("${prov_web}",            provWeb);
 
         // Condiciones de pago y comprador
-        String condicionesPago = oc.getCondicionesPago() != null
-                ? formCondicion(oc.getCondicionesPago().name())
-                : "30 DÍAS NETO";
+        String condicionesPago = Optional.ofNullable(oc.getCondicionesPago())
+                .map(this::formCondicion)   // <— acepta el enum, no el .name()
+                .orElse("—");
         html = html.replace("${condicionesPago}", esc(condicionesPago));
 
         String comprador = oc.getComprador() != null ? oc.getComprador() : "";
@@ -221,13 +223,13 @@ public class OrdenCompraPdfService {
         return nf.format(v);
     }
 
-    private static String formCondicion(String enumName) {
-        switch (enumName) {
-            case "CONTADO":  return "CONTADO";
-            case "DIAS_30":  return "30 DÍAS NETO";
-            case "DIAS_60":  return "60 DÍAS NETO";
-            default:         return "30 DÍAS NETO";
-        }
+    private String formCondicion(CondicionesPago cp) {
+        return switch (cp) {
+            case ANTICIPADO -> "ANTICIPADO";
+            case CONTADO -> "CONTADO";
+            case DIAS_30 -> "30 DÍAS NETO";
+            case DIAS_60 -> "60 DÍAS NETO";
+        };
     }
 
     private static String monthUpper(LocalDate date) {
