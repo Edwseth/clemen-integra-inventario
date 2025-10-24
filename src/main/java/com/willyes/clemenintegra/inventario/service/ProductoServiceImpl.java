@@ -320,6 +320,8 @@ public class ProductoServiceImpl implements ProductoService {
             if (p.getUnidadMedida() != null) {
                 String simbolo = p.getUnidadMedida().getSimbolo();
                 String simboloImp;
+                String nombre = p.getUnidadMedida().getNombre();
+                String nombrePlural;
                 try {
                     // si tu entidad ya tiene getSimboloImpresion()
                     simboloImp = p.getUnidadMedida().getSimboloImpresion();
@@ -327,7 +329,14 @@ public class ProductoServiceImpl implements ProductoService {
                     // tolerante si aún no existe el campo en el modelo
                     simboloImp = null;
                 }
+                try {
+                    nombrePlural = p.getUnidadMedida().getNombrePlural();
+                } catch (Throwable t) {
+                    nombrePlural = null; // deja que el FE haga fallback a nombre+"S"
+                }
                 unidadDTO = ProductoOptionDTO.UnidadMiniDTO.builder()
+                        .nombre(nombre)
+                        .nombrePlural(nombrePlural)
                         .simbolo(simbolo)
                         .simboloImpresion((simboloImp != null && !simboloImp.isBlank()) ? simboloImp : simbolo)
                         .build();

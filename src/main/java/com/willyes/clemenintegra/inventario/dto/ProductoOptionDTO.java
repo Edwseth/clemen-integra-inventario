@@ -11,6 +11,7 @@ import lombok.*;
 public class ProductoOptionDTO {
     private Long id;
     private String nombre;
+    private String nombrePlural;
     @JsonProperty("sku")
     @JsonAlias("codigoSku")
     private String sku;
@@ -28,6 +29,8 @@ public class ProductoOptionDTO {
     /* ====== NUEVO: clase anidada para unidad ====== */
     @Data @NoArgsConstructor @AllArgsConstructor @Builder
     public static class UnidadMiniDTO {
+        private String nombre;            // p.ej. MILILITRO
+        private String nombrePlural;
         private String simbolo;            // ej. KG, ML, M...
         private String simboloImpresion;   // ej. kg, mL, m...
     }

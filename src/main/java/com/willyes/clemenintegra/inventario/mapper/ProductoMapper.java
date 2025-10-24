@@ -27,11 +27,8 @@ public interface ProductoMapper {
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
     @Mapping(target = "tipoAnalisisCalidad", expression = "java(producto.getTipoAnalisis() != null ? producto.getTipoAnalisis().name() : null)")
     @Mapping(target = "rendimiento", source = "rendimientoUnidad")
-
-    // PROD-DETAIL-IDS BEGIN
     @Mapping(target = "unidadMedidaId", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null)")
     @Mapping(target = "categoriaProductoId", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null)")
-        // PROD-DETAIL-IDS END
     ProductoResponseDTO toDto(Producto producto);
 
     UnidadMedidaResponseDTO toUnidadMedidaDto(UnidadMedida unidadMedida);
