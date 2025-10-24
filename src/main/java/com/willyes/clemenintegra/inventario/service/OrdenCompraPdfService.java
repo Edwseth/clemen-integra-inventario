@@ -100,11 +100,26 @@ public class OrdenCompraPdfService {
                 String desc   = d.getProducto() != null ? nz(d.getProducto().getNombre())    : "";
 
                 // UDM: preferir símbolo de impresión (mL, kg, m...), fallback a símbolo (ML, KG, M)
-                String udm = "";
+                String udmDisplay = "";
                 if (d.getProducto() != null && d.getProducto().getUnidadMedida() != null) {
-                    String imp = d.getProducto().getUnidadMedida().getSimboloImpresion();
-                    String sim = d.getProducto().getUnidadMedida().getSimbolo();
-                    udm = (imp != null && !imp.isBlank()) ? imp : nz(sim);
+                    var u = d.getProducto().getUnidadMedida();
+                    String imp = u.getSimboloImpresion();
+                    String sim = u.getSimbolo();
+                    String simboloPref = (imp != null && !imp.isBlank()) ? imp : nz(sim);
+
+                    String singular = nz(u.getNombre());         // p.ej. "GRAMO"
+                    String plural   = u.getNombrePlural();       // p.ej. "GRAMOS"
+
+                    BigDecimal cant = nbd(d.getCantidad());
+                    boolean esSingular = cant.compareTo(BigDecimal.ONE) == 0;
+
+                    String textoUnidad = esSingular
+                            ? (singular.isBlank() ? "UNIDAD" : singular)
+                            : (plural == null || plural.isBlank()
+                            ? (singular.isBlank() ? "UNIDADES" : singular + "S")
+                            : plural);
+
+                    udmDisplay = textoUnidad.toUpperCase(ES_CO) + " (" + simboloPref + ")";
                 }
 
                 // Fecha Necesidad (dd-MMM-yyyy ES, mayúsculas y sin punto)
@@ -147,7 +162,7 @@ public class OrdenCompraPdfService {
                         .append("<td>").append(esc(codigo)).append("</td>")
                         .append("<td>").append(esc(desc)).append("</td>")
                         .append("<td class='txt-center nowrap'>").append(esc(fechaNecStr)).append("</td>")
-                        .append("<td class='txt-center nowrap'>").append(esc(udm)).append("</td>")
+                        .append("<td class='txt-center nowrap'>").append(esc(udmDisplay)).append("</td>")
                         .append("<td class='right'>").append(formNum(cant)).append("</td>")
                         .append("<td class='right'>").append(formNum(pUnit)).append("</td>")
                         .append("<td class='right'>").append(formNum(ivaPct)).append("</td>")

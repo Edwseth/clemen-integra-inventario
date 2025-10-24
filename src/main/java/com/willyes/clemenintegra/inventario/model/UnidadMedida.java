@@ -22,6 +22,9 @@ public class UnidadMedida {
     @Column(name = "nombre", nullable = false, length = 50)
     private String nombre;
 
+    @Column(name = "nombre_plural", length = 60)
+    private String nombrePlural;
+
     @Column(name = "simbolo", nullable = false, length = 5)
     private String simbolo;
 
@@ -38,6 +41,7 @@ public class UnidadMedida {
     @PrePersist @PreUpdate
     private void normalize() {
         if (nombre != null) nombre = nombre.trim().toUpperCase();
+        if (nombrePlural != null) nombrePlural = nombrePlural.trim().toUpperCase();
         if (simbolo != null) simbolo = simbolo.trim().toUpperCase();
         if (codigo != null) codigo = codigo.trim().toUpperCase();
     }
