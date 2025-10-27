@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
+import com.willyes.clemenintegra.calidad.mapper.CondicionUsoMapper;
+import com.willyes.clemenintegra.calidad.model.CondicionUso;
 import com.willyes.clemenintegra.calidad.model.enums.*;
 import com.willyes.clemenintegra.calidad.repository.CondicionUsoRepository;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
@@ -15,7 +17,6 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
-import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
@@ -75,6 +76,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final NoConformidadService noConformidadService;
     private final CondicionUsoService condicionUsoService;
     private final CondicionUsoRepository condicionUsoRepository;
+    private final CondicionUsoMapper mapper;
 
     @Value("${inventory.lote.estadoLiberado}")
     private String estadoLiberadoConf;
@@ -167,10 +169,19 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public List<CondicionUsoResponseDTO> listarCondicionesUso(Long loteId, EstadoCondicionUso estado) {
-        List<CondicionUsoResponseDTO> items = condicionUsoRepository
-                .findByLote_IdAndEstado(loteId, estado);
-        return items == null ? Collections.emptyList() : items;
+        List<CondicionUso> entidades = (estado == null)
+                ? condicionUsoRepository.findByLote_Id(loteId)
+                : condicionUsoRepository.findByLote_IdAndEstado(loteId, estado);
+
+        if (entidades == null || entidades.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return entidades.stream()
+                .map(mapper::toResponseDTO)
+                .toList();
     }
 
     private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<TipoEvaluacion> evaluaciones) {

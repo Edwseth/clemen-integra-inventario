@@ -67,9 +67,8 @@ public class CondicionUsoServiceImpl implements CondicionUsoService {
     @Override
     @Transactional(readOnly = true)
     public List<CondicionUsoResponseDTO> getActivasByLote(Long loteId) {
-        return repository.findByLote_IdAndEstado(loteId, EstadoCondicionUso.ACTIVA)
-                .stream()
-                .map(mapper::toResponseDTO)
-                .toList();
+        var entidades = repository.findByLote_IdAndEstado(loteId, EstadoCondicionUso.ACTIVA);
+        if (entidades == null || entidades.isEmpty()) return java.util.Collections.emptyList();
+        return entidades.stream().map(mapper::toResponseDTO).toList();
     }
 }
