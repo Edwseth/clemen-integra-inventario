@@ -21,6 +21,7 @@ public class RetencionLoteController {
     private final RetencionLoteService service;
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<Page<RetencionLoteDTO>> listar(
             @RequestParam(required = false) EstadoRetencion estado,
             @PageableDefault(size = 10) Pageable pageable) {
@@ -28,12 +29,13 @@ public class RetencionLoteController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<RetencionLoteDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<RetencionLoteDTO> crear(
             @RequestBody RetencionLoteDTO dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -44,7 +46,7 @@ public class RetencionLoteController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN') or #dto.estado != T(com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion).LIBERADO")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<RetencionLoteDTO> actualizar(
             @PathVariable Long id,
             @RequestBody RetencionLoteDTO dto,
@@ -56,7 +58,7 @@ public class RetencionLoteController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();

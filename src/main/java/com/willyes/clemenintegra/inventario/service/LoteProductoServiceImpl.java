@@ -120,14 +120,17 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         List<LoteProducto> lotes;
         if (auth != null) {
-            boolean analista = auth.getAuthorities().stream()
+            java.util.Set<String> authorities = auth.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
-                    .anyMatch("ROL_ANALISTA_CALIDAD"::equals);
-            boolean micro = auth.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .anyMatch("ROL_MICROBIOLOGO"::equals);
+                    .collect(Collectors.toSet());
+            boolean jefe = authorities.contains("ROL_JEFE_CALIDAD");
+            boolean superAdmin = authorities.contains("ROL_SUPER_ADMIN");
+            boolean analista = authorities.contains("ROL_ANALISTA_CALIDAD");
+            boolean micro = authorities.contains("ROL_MICROBIOLOGO");
 
-            if (analista) {
+            if (jefe || superAdmin) {
+                lotes = loteRepo.findByEstadoIn(estados);
+            } else if (analista) {
                 lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
                         estados,
                         List.of(TipoAnalisisCalidad.FISICO_QUIMICO, TipoAnalisisCalidad.AMBOS)
@@ -419,9 +422,11 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, Usuario usuarioActual) {
-        if (usuarioActual == null || usuarioActual.getRol() != RolUsuario.ROL_JEFE_CALIDAD) {
+        if (usuarioActual == null
+                || (usuarioActual.getRol() != RolUsuario.ROL_JEFE_CALIDAD
+                && usuarioActual.getRol() != RolUsuario.ROL_SUPER_ADMIN)) {
             throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
-                    "Solo el Jefe de Calidad puede liberar lotes.");
+                    "Solo el Jefe de Calidad o Super Admin pueden liberar lotes.");
         }
 
         EstadoLote estadoLiberado;
