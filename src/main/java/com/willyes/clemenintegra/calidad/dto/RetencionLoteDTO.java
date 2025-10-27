@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class RetencionLoteDTO {
 
     private Long id;
+    private String codigoLote;
 
     @NotNull(message = "El lote es obligatorio")
     private Long loteId;
@@ -31,9 +32,10 @@ public class RetencionLoteDTO {
 
     @NotNull(message = "El aprobador es obligatorio")
     private Long aprobadoPorId;
-
+    private String aprobadoPorNombre;
     private MotivoRetencion motivo;
-
     private Long noConformidadId;
+
+
 }
 

@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 public class EstadoCalidadLoteResponseDTO {
 
     private Long loteId;
+    private String codigoLote;
     private String estadoLote;
     private boolean retencionActiva;
     private MotivoRetencion motivoRetencion;
@@ -33,6 +34,7 @@ public class EstadoCalidadLoteResponseDTO {
         private Long id;
         private SeveridadNoConformidad severidad;
         private EstadoNoConformidad estado;
+        private  String reportadoPorNombre;
     }
 
     @Data

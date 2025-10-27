@@ -631,6 +631,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .id(nc.getId())
                 .severidad(nc.getSeveridad())
                 .estado(nc.getEstado())
+                .reportadoPorNombre(nc.getUsuarioReporta() != null ? nc.getUsuarioReporta().getNombreCompleto() : null)
                 .build()).orElse(null);
 
         EstadoCalidadLoteResponseDTO.CondicionUsoResumen condicionResumen = condiciones.isEmpty() ? null
@@ -643,6 +644,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         return EstadoCalidadLoteResponseDTO.builder()
                 .loteId(loteId)
+                .codigoLote(lote.getCodigoLote())
                 .estadoLote(lote.getEstado() != null ? lote.getEstado().name() : null)
                 .retencionActiva(retencion != null)
                 .motivoRetencion(retencion != null ? retencion.getMotivo() : null)
