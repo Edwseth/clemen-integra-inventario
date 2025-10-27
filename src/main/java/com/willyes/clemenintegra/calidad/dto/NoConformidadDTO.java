@@ -48,6 +48,12 @@ public class NoConformidadDTO {
 
     private Long evaluacionId;
 
+    private String codigoLote;
+
+    private String reportadoPorNombre;
+
+    private String productoNombre;
+
     private Long creadoPor;
 
     private Long actualizadoPor;
