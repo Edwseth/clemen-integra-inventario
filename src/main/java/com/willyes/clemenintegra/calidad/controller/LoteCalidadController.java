@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.calidad.controller;
 
+import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoCondicionUso;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
@@ -10,6 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/calidad/lotes")
@@ -31,5 +36,15 @@ public class LoteCalidadController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<EstadoCalidadLoteResponseDTO> obtenerEstadoCalidad(@PathVariable Long loteId) {
         return ResponseEntity.ok(service.obtenerEstadoCalidad(loteId));
+    }
+
+    @GetMapping("/{loteId}/condiciones-uso")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    public ResponseEntity<List<CondicionUsoResponseDTO>> listarCondicionesUso(
+            @PathVariable Long loteId,
+            @RequestParam(name = "estado", required = false) EstadoCondicionUso estado) {
+
+        List<CondicionUsoResponseDTO> items = service.listarCondicionesUso(loteId, estado);
+        return ResponseEntity.ok(items == null ? Collections.emptyList() : items);
     }
 }

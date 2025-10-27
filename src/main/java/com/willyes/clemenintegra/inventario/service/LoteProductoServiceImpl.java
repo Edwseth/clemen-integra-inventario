@@ -1,5 +1,8 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
+import com.willyes.clemenintegra.calidad.model.enums.*;
+import com.willyes.clemenintegra.calidad.repository.CondicionUsoRepository;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
@@ -12,14 +15,10 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
-import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
-import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
-import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
-import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -38,6 +37,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Page;
@@ -74,6 +74,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final RetencionLoteService retencionLoteService;
     private final NoConformidadService noConformidadService;
     private final CondicionUsoService condicionUsoService;
+    private final CondicionUsoRepository condicionUsoRepository;
 
     @Value("${inventory.lote.estadoLiberado}")
     private String estadoLiberadoConf;
@@ -164,6 +165,12 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 })
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    public List<CondicionUsoResponseDTO> listarCondicionesUso(Long loteId, EstadoCondicionUso estado) {
+        List<CondicionUsoResponseDTO> items = condicionUsoRepository
+                .findByLote_IdAndEstado(loteId, estado);
+        return items == null ? Collections.emptyList() : items;
     }
 
     private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<TipoEvaluacion> evaluaciones) {

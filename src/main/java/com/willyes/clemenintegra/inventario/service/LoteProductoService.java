@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoCondicionUso;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
@@ -35,4 +37,7 @@ public interface LoteProductoService {
     LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, com.willyes.clemenintegra.shared.model.Usuario usuarioActual);
 
     EstadoCalidadLoteResponseDTO obtenerEstadoCalidad(Long loteId);
+
+    List<CondicionUsoResponseDTO> listarCondicionesUso(Long loteId, EstadoCondicionUso estado);
+
 }
