@@ -122,25 +122,25 @@ public class LoteProductoController {
     }
 
     @GetMapping("/{id}/evaluaciones")
-    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO')")
     public ResponseEntity<java.util.List<EvaluacionCalidadResponseDTO>> obtenerEvaluaciones(@PathVariable Long id) {
         return ResponseEntity.ok(evaluacionService.listarPorLote(id));
     }
 
     @PutMapping("/{id}/liberar")
-    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<LoteProductoResponseDTO> liberar(@PathVariable Long id) {
         return ResponseEntity.ok(service.liberarLote(id));
     }
 
     @PutMapping("/{id}/rechazar")
-    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<LoteProductoResponseDTO> rechazar(@PathVariable Long id) {
         return ResponseEntity.ok(service.rechazarLote(id));
     }
 
     @PutMapping("/{id}/liberar-retenido")
-    @PreAuthorize("hasAuthority('ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<LoteProductoResponseDTO> liberarRetenido(@PathVariable Long id) {
         return ResponseEntity.ok(service.liberarLoteRetenido(id));
     }
