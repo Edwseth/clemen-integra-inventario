@@ -19,4 +19,6 @@ public interface ReporteInventarioService {
     Workbook generarReporteNoConformidades(String tipo, String area, LocalDate desde, LocalDate hasta);
 
     Workbook generarReporteCapas(String estado, LocalDate desde, LocalDate hasta);
+
+    Workbook generarReporteProductosVencidosExcel(Long productoId, Long almacenId);
 }
