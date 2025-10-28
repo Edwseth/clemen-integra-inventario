@@ -18,7 +18,8 @@ public enum ApiErrorCode {
     RECURSO_NO_ENCONTRADO(HttpStatus.NOT_FOUND),
     OPERACION_NO_PERMITIDA(HttpStatus.CONFLICT),
     ERROR_INTERNO(HttpStatus.INTERNAL_SERVER_ERROR),
-    NEGOCIO_GENERICO(HttpStatus.BAD_REQUEST);
+    NEGOCIO_GENERICO(HttpStatus.BAD_REQUEST),
+    STOCK_INSUFICIENTE(HttpStatus.BAD_REQUEST);
 
     private final HttpStatus httpStatus;
 
