@@ -1,14 +1,21 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -20,6 +27,7 @@ public class ReporteInventarioServiceImpl implements ReporteInventarioService {
 
     private final MovimientoInventarioRepository movimientoRepo;
     private final OrdenCompraDetalleRepository ordenRepo;
+    private final LoteProductoRepository loteProductoRepository;
 
     @Override
     public Workbook generarReporteAltaRotacion(LocalDate fechaInicio, LocalDate fechaFin) {
@@ -133,6 +141,50 @@ public class ReporteInventarioServiceImpl implements ReporteInventarioService {
             sheet.autoSizeColumn(i);
         }
         return workbook;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Workbook generarReporteProductosVencidosExcel(Long productoId, Long almacenId) {
+        LocalDateTime corte = LocalDate.now().atStartOfDay();
+        List<LoteProducto> lotes = loteProductoRepository.findVencidosFetch(corte, productoId, almacenId);
+
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet("Productos vencidos");
+
+        CreationHelper ch = wb.getCreationHelper();
+        CellStyle num2 = wb.createCellStyle();
+        num2.setDataFormat(ch.createDataFormat().getFormat("#,##0.00"));
+
+        int r = 0;
+        Row header = sheet.createRow(r++);
+        header.createCell(0).setCellValue("Código Lote");
+        header.createCell(1).setCellValue("Producto");
+        header.createCell(2).setCellValue("Almacén");
+        header.createCell(3).setCellValue("Fecha vencimiento");
+        header.createCell(4).setCellValue("Stock Lote");
+
+        for (LoteProducto lp : lotes) {
+            Row row = sheet.createRow(r++);
+            row.createCell(0).setCellValue(lp.getCodigoLote());
+            row.createCell(1).setCellValue(lp.getProducto() != null ? lp.getProducto().getNombre() : "");
+            row.createCell(2).setCellValue(lp.getAlmacen() != null ? lp.getAlmacen().getNombre() : "");
+            Cell fechaCell = row.createCell(3);
+            if (lp.getFechaVencimiento() != null) {
+                fechaCell.setCellValue(java.sql.Timestamp.valueOf(lp.getFechaVencimiento()));
+            } else {
+                fechaCell.setCellValue("");
+            }
+            Cell cStock = row.createCell(4);
+            BigDecimal stock = lp.getStockLote() != null ? lp.getStockLote() : BigDecimal.ZERO;
+            cStock.setCellValue(stock.doubleValue());
+            cStock.setCellStyle(num2);
+        }
+
+        for (int i = 0; i <= 4; i++) {
+            sheet.autoSizeColumn(i);
+        }
+        return wb;
     }
 
     private Workbook crearExcelRotacion(List<Object[]> datos, String nombreHoja) {
