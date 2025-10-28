@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -80,10 +81,24 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
                                                                               @Param("codigoLote") String codigoLote,
                                                                               @Param("almacenId") Integer almacenId);
 
+    @EntityGraph(attributePaths = {"producto", "almacen"})
     List<LoteProducto> findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
             Long productoId,
             Integer almacenId,
             Collection<EstadoLote> estados);
+
+    @EntityGraph(attributePaths = {"producto", "almacen"})
+    List<LoteProducto> findByProductoIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+            Long productoId,
+            Collection<EstadoLote> estados);
+
+    @EntityGraph(attributePaths = {"producto", "almacen"})
+    List<LoteProducto> findByProductoIdAndEstadoIn(Long productoId, Collection<EstadoLote> estados);
+
+    @EntityGraph(attributePaths = {"producto", "almacen"})
+    List<LoteProducto> findByProductoIdAndAlmacenIdAndEstadoIn(Long productoId,
+                                                                Integer almacenId,
+                                                                Collection<EstadoLote> estados);
 
     @Query("""
       select l

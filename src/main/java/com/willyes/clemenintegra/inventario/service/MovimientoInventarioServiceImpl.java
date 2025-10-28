@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.config.InventoryVencidosProperties;
 import com.willyes.clemenintegra.inventario.dto.AtencionDTO;
+import com.willyes.clemenintegra.inventario.dto.LoteConsumoDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
@@ -67,7 +68,9 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -95,6 +98,31 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     static final record MovimientoLoteDetalle(LoteProducto lote, BigDecimal cantidad) { }
 
     static final record ParLoteCantidad(Long loteId, BigDecimal cantidad) { }
+
+    private static final record FefoSelection(LoteProducto lote,
+                                             BigDecimal disponibleAntes,
+                                             BigDecimal tomar,
+                                             BigDecimal disponibleDespues) {
+
+        LoteConsumoDTO toDto() {
+            return LoteConsumoDTO.builder()
+                    .loteId(lote != null ? lote.getId() : null)
+                    .codigoLote(lote != null ? lote.getCodigoLote() : null)
+                    .fechaVencimiento(lote != null ? lote.getFechaVencimiento() : null)
+                    .almacenId(lote != null && lote.getAlmacen() != null
+                            ? lote.getAlmacen().getId().longValue()
+                            : null)
+                    .disponibleAntes(disponibleAntes)
+                    .tomar(tomar)
+                    .disponibleDespues(disponibleDespues)
+                    .build();
+        }
+    }
+
+    private static final EnumSet<EstadoLote> ESTADOS_FEFO_ELEGIBLES =
+            EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+    private static final EnumSet<EstadoLote> ESTADOS_FEFO_NO_ELEGIBLES =
+            EnumSet.of(EstadoLote.VENCIDO, EstadoLote.RETENIDO, EstadoLote.EN_CUARENTENA);
     private final AlmacenRepository almacenRepository;
     private final ProductoRepository productoRepository;
     private final ProveedorRepository proveedorRepository;
@@ -1669,6 +1697,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
                     }
 
+                    BigDecimal disponibleActual = calcularDisponibleLote(loteAdicional);
+                    if (disponibleActual.compareTo(par.cantidad()) < 0) {
+                        log.warn("AUTO_SPLIT_DISPONIBLE_INSUFICIENTE loteId={} disponible={} requerido={}",
+                                loteAdicional.getId(), disponibleActual, par.cantidad());
+                        throw new CustomBusinessException(ApiErrorCode.STOCK_INSUFICIENTE,
+                                "Stock insuficiente en lote FEFO seleccionado",
+                                Map.of(
+                                        "loteId", loteAdicional.getId(),
+                                        "disponible", disponibleActual,
+                                        "requerido", par.cantidad()
+                                ));
+                    }
+
                     MovimientoLoteDetalle parcial = ejecutarTransferenciaDesdeLote(loteAdicional, destino, producto, par.cantidad(), solicitud);
                     detalles.add(parcial);
                     consumidos.add(new ParLoteCantidad(loteAdicional.getId(), par.cantidad()));
@@ -1900,46 +1941,20 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return List.of();
         }
 
-        List<LoteProducto> candidatos = loteProductoRepository
-                .findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
-                        productoId,
-                        almacenOrigenId,
-                        List.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO));
+        Long almacenIdLong = almacenOrigenId != null ? almacenOrigenId.longValue() : null;
+        Collection<Long> excluidos = loteInicialId != null
+                ? Set.of(loteInicialId)
+                : Collections.emptySet();
 
-        List<ParLoteCantidad> resultado = new ArrayList<>();
-        BigDecimal restante = objetivo;
+        List<FefoSelection> selecciones = calcularSeleccionesFefo(
+                productoId,
+                objetivo,
+                almacenIdLong,
+                excluidos);
 
-        for (LoteProducto lote : candidatos) {
-            if (Objects.equals(lote.getId(), loteInicialId)) {
-                continue;
-            }
-            if (lote.isAgotado()) {
-                continue;
-            }
-            BigDecimal stock = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
-            BigDecimal reservado = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO);
-            BigDecimal disponible = stock.subtract(reservado);
-            if (disponible.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
-            BigDecimal tomar = disponible.min(restante);
-            if (tomar.compareTo(BigDecimal.ZERO) > 0) {
-                resultado.add(new ParLoteCantidad(lote.getId(), tomar));
-                restante = restante.subtract(tomar);
-                if (restante.compareTo(BigDecimal.ZERO) <= 0) {
-                    break;
-                }
-            }
-        }
-
-        if (restante.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal disponibleTotal = objetivo.subtract(restante);
-            log.warn("AUTO_SPLIT_STOCK_INSUFICIENTE productoId={} almacenOrigenId={} requerido={} disponible={}",
-                    productoId, almacenOrigenId, objetivo, disponibleTotal);
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "STOCK_INSUFICIENTE_EN_ALMACEN");
-        }
-
-        return resultado;
+        return selecciones.stream()
+                .map(sel -> new ParLoteCantidad(sel.lote().getId(), sel.tomar()))
+                .toList();
     }
 
     private Long resolveTipoMovimientoDetalleId(MovimientoInventarioDTO dto, Producto producto) {
@@ -2213,6 +2228,175 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         solicitudMovimientoRepository.saveAndFlush(solicitud);
         return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LoteConsumoDTO> simulateFefo(Long productoId, BigDecimal cantidad, Long almacenId) {
+        if (productoId == null || productoId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "PRODUCTO_ID_REQUERIDO");
+        }
+        if (cantidad == null || cantidad.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CANTIDAD_INVALIDA");
+        }
+
+        Producto producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PRODUCTO_NO_ENCONTRADO"));
+
+        int escalaPermitida = catalogResolver.decimals(producto.getUnidadMedida());
+        int escalaCantidad = Math.max(0, cantidad.stripTrailingZeros().scale());
+        if (escalaCantidad > escalaPermitida) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_NO_COMPATIBLE_UDM");
+        }
+        BigDecimal normalizada = cantidad.setScale(Math.max(cantidad.scale(), escalaPermitida), RoundingMode.HALF_UP);
+
+        log.info("FEFO_PREVIEW productoId={} cantidad={} almacenId={}", productoId, normalizada, almacenId);
+
+        List<FefoSelection> selecciones = calcularSeleccionesFefo(
+                producto.getId().longValue(),
+                normalizada,
+                almacenId,
+                Collections.emptySet());
+
+        List<LoteConsumoDTO> consumos = selecciones.stream()
+                .map(FefoSelection::toDto)
+                .toList();
+
+        if (!consumos.isEmpty()) {
+            BigDecimal total = consumos.stream()
+                    .map(LoteConsumoDTO::getTomar)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            log.debug("FEFO_PREVIEW_LOTES productoId={} lotes={} total={}",
+                    productoId,
+                    consumos.stream().map(LoteConsumoDTO::getLoteId).toList(),
+                    total);
+        } else {
+            log.debug("FEFO_PREVIEW_LOTES productoId={} sin lotes elegibles", productoId);
+        }
+
+        return consumos;
+    }
+
+    private List<FefoSelection> calcularSeleccionesFefo(Long productoId,
+                                                         BigDecimal cantidad,
+                                                         Long almacenId,
+                                                         Collection<Long> lotesExcluidos) {
+        if (cantidad == null || cantidad.compareTo(BigDecimal.ZERO) <= 0) {
+            return List.of();
+        }
+
+        BigDecimal restante = cantidad;
+        List<LoteProducto> candidatos = cargarLotesFefo(productoId, almacenId);
+        if (candidatos.isEmpty()) {
+            if (hayLotesNoElegiblesConStock(productoId, almacenId)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTES_NO_ELEGIBLES");
+            }
+            return List.of();
+        }
+
+        List<FefoSelection> resultado = new ArrayList<>();
+        Collection<Long> excluidos = lotesExcluidos != null ? lotesExcluidos : Collections.emptySet();
+
+        for (LoteProducto lote : candidatos) {
+            if (excluidos.contains(lote.getId())) {
+                continue;
+            }
+            BigDecimal disponible = calcularDisponibleLote(lote);
+            if (disponible.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            BigDecimal tomar = disponible.min(restante);
+            if (tomar.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            BigDecimal despues = disponible.subtract(tomar);
+            if (despues.compareTo(BigDecimal.ZERO) < 0) {
+                despues = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+            }
+            resultado.add(new FefoSelection(lote, disponible, tomar, despues));
+            restante = restante.subtract(tomar);
+            if (restante.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+        }
+
+        if (resultado.isEmpty() && hayLotesNoElegiblesConStock(productoId, almacenId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTES_NO_ELEGIBLES");
+        }
+
+        if (restante.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal disponibleTotal = cantidad.subtract(restante);
+            log.warn("FEFO_STOCK_INSUFICIENTE productoId={} almacenId={} requerido={} disponible={}",
+                    productoId, almacenId, cantidad, disponibleTotal);
+            List<LoteConsumoDTO> detalle = resultado.stream()
+                    .map(FefoSelection::toDto)
+                    .toList();
+            Map<String, Object> details = new HashMap<>();
+            details.put("faltante", restante);
+            details.put("lotes", detalle);
+            throw new CustomBusinessException(ApiErrorCode.STOCK_INSUFICIENTE,
+                    "Stock insuficiente para consumo FEFO",
+                    details);
+        }
+
+        return resultado;
+    }
+
+    private List<LoteProducto> cargarLotesFefo(Long productoId, Long almacenId) {
+        List<LoteProducto> lotes;
+        if (almacenId != null) {
+            lotes = loteProductoRepository
+                    .findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+                            productoId,
+                            Math.toIntExact(almacenId),
+                            ESTADOS_FEFO_ELEGIBLES);
+        } else {
+            lotes = loteProductoRepository
+                    .findByProductoIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+                            productoId,
+                            ESTADOS_FEFO_ELEGIBLES);
+        }
+        if (lotes == null || lotes.isEmpty()) {
+            return List.of();
+        }
+        Comparator<LoteProducto> comparator = Comparator
+                .comparing((LoteProducto l) -> Optional.ofNullable(l.getFechaVencimiento())
+                        .orElse(LocalDateTime.MAX))
+                .thenComparing(l -> Optional.ofNullable(l.getFechaLiberacion())
+                        .orElse(LocalDateTime.MIN))
+                .thenComparing(LoteProducto::getId);
+        lotes.sort(comparator);
+        return lotes;
+    }
+
+    private boolean hayLotesNoElegiblesConStock(Long productoId, Long almacenId) {
+        List<LoteProducto> noElegibles;
+        if (almacenId != null) {
+            noElegibles = loteProductoRepository.findByProductoIdAndAlmacenIdAndEstadoIn(
+                    productoId,
+                    Math.toIntExact(almacenId),
+                    ESTADOS_FEFO_NO_ELEGIBLES);
+        } else {
+            noElegibles = loteProductoRepository.findByProductoIdAndEstadoIn(
+                    productoId,
+                    ESTADOS_FEFO_NO_ELEGIBLES);
+        }
+        if (noElegibles == null || noElegibles.isEmpty()) {
+            return false;
+        }
+        return noElegibles.stream()
+                .map(this::calcularDisponibleLote)
+                .anyMatch(disponible -> disponible.compareTo(BigDecimal.ZERO) > 0);
+    }
+
+    private BigDecimal calcularDisponibleLote(LoteProducto lote) {
+        BigDecimal stock = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+        BigDecimal reservado = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO);
+        BigDecimal disponible = stock.subtract(reservado);
+        if (disponible.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        }
+        return disponible.setScale(6, RoundingMode.HALF_UP);
     }
 
     // =====================================
