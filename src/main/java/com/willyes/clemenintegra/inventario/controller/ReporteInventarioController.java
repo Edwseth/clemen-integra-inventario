@@ -5,9 +5,11 @@ import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,16 +21,22 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @RestController
 @RequestMapping("/api/reportes")
 @RequiredArgsConstructor
+@Slf4j
 public class ReporteInventarioController {
 
     private final ReporteInventarioService service;
     private final ProductoService productoService;
     private final LoteProductoService loteProductoService;
     private final MovimientoInventarioService movimientoService;
+
+    private static final MediaType EXCEL =
+            MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
     @GetMapping("/alta-rotacion")
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
@@ -142,30 +150,50 @@ public class ReporteInventarioController {
                 .body(bos.toByteArray());
     }
 
-    @GetMapping("/stock-disponible")
+    @GetMapping(value = "/stock-disponible", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportarStockDisponible() throws IOException {
-        Workbook workbook = productoService.generarReporteStockDisponibleExcel();
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        workbook.write(bos);
-        workbook.close();
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=stock_disponible.xlsx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(bos.toByteArray());
+    public ResponseEntity<byte[]> exportarStockDisponible() {
+        log.info("Generando reporte de stock disponible");
+        try (Workbook workbook = productoService.generarReporteStockDisponibleExcel();
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            workbook.write(baos);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(EXCEL);
+            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=stock_disponible.xlsx");
+            return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Validación fallida al generar reporte de stock disponible", ex);
+            return ResponseEntity.badRequest().build();
+        } catch (Exception ex) {
+            log.error("Error generando reporte de stock disponible", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
-    @GetMapping("/productos-por-vencer")
+    @GetMapping(value = "/productos-por-vencer", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportarLotesPorVencer() throws IOException {
-        Workbook workbook = loteProductoService.generarReporteLotesPorVencerExcel();
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        workbook.write(bos);
-        workbook.close();
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=lotes_por_vencer.xlsx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(bos.toByteArray());
+    public ResponseEntity<byte[]> exportarLotesPorVencer(
+            @RequestParam(name = "fechaInicio", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(name = "fechaFin", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
+    ) {
+        LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
+        LocalDateTime fin = fechaFin != null ? fechaFin.atTime(LocalTime.MAX) : null;
+
+        log.info("Generando reporte de productos por vencer: inicio={}, fin={}", inicio, fin);
+        try (Workbook workbook = loteProductoService.generarReporteLotesPorVencerExcel(inicio, fin);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            workbook.write(baos);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(EXCEL);
+            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=lotes_por_vencer.xlsx");
+            return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Validación fallida al generar reporte de productos por vencer", ex);
+            return ResponseEntity.badRequest().build();
+        } catch (Exception ex) {
+            log.error("Error generando reporte de productos por vencer", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @GetMapping("/alertas-inventario")
@@ -178,19 +206,29 @@ public class ReporteInventarioController {
                 .body(stream.toByteArray());
     }
 
-    @GetMapping("/movimientos")
+    @GetMapping(value = "/movimientos", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportarReporteMovimientos() throws IOException {
-        byte[] contenido;
-        try (Workbook workbook = movimientoService.generarReporteMovimientosExcel();
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            workbook.write(bos);
-            contenido = bos.toByteArray();
-        }
+    public ResponseEntity<byte[]> exportarReporteMovimientos(
+            @RequestParam(name = "fechaInicio", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(name = "fechaFin", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
+    ) {
+        LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
+        LocalDateTime fin = fechaFin != null ? fechaFin.atTime(LocalTime.MAX) : null;
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=reporte_movimientos.xlsx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(contenido);
+        log.info("Generando reporte de movimientos: inicio={}, fin={}", inicio, fin);
+        try (Workbook workbook = movimientoService.generarReporteMovimientosExcel(inicio, fin);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            workbook.write(baos);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(EXCEL);
+            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=reporte_movimientos.xlsx");
+            return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Validación fallida al generar reporte de movimientos", ex);
+            return ResponseEntity.badRequest().build();
+        } catch (Exception ex) {
+            log.error("Error generando reporte de movimientos", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

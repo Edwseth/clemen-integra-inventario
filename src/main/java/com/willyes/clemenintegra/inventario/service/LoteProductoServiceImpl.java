@@ -219,14 +219,13 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return lotes.map(loteProductoMapper::toResponseDTO);
     }
 
-    public Workbook generarReporteLotesPorVencerExcel() {
+    @Transactional(readOnly = true)
+    public Workbook generarReporteLotesPorVencerExcel(LocalDateTime inicio, LocalDateTime fin) {
         LocalDate hoy = LocalDate.now();
-        LocalDate limite = hoy.plusDays(30); // Puedes parametrizar esto si lo deseas
+        LocalDateTime inicioEf = inicio != null ? inicio : hoy.atStartOfDay();
+        LocalDateTime finEf = fin != null ? fin : hoy.plusDays(30).atTime(java.time.LocalTime.MAX);
 
-        LocalDateTime inicio = hoy.atStartOfDay();
-        LocalDateTime fin = limite.atTime(23, 59, 59);
-
-        List<LoteProducto> lotes = loteRepo.findByFechaVencimientoBetween(inicio, fin);
+        List<LoteProducto> lotes = loteRepo.findByFechaVencimientoBetweenFetchProducto(inicioEf, finEf);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Lotes por Vencer");
