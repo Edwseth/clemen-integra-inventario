@@ -1118,9 +1118,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return lista.stream().map(mapper::safeToResponseDTO).toList();
     }
 
+    @Transactional(readOnly = true)
     @Override
-    public Workbook generarReporteMovimientosExcel() {
-        List<MovimientoInventario> movimientos = repository.findAll();
+    public Workbook generarReporteMovimientosExcel(LocalDateTime inicio, LocalDateTime fin) {
+        List<MovimientoInventario> movimientos = repository.findAllForReporte(inicio, fin);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Movimientos Inventario");

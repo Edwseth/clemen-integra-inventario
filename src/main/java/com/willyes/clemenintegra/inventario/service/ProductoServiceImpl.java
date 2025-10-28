@@ -14,7 +14,10 @@ import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.RichTextString;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -365,6 +368,10 @@ public class ProductoServiceImpl implements ProductoService {
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Stock Disponible");
+        CreationHelper creationHelper = workbook.getCreationHelper();
+        DataFormat dataFormat = creationHelper.createDataFormat();
+        CellStyle numericStyle = workbook.createCellStyle();
+        numericStyle.setDataFormat(dataFormat.getFormat("#,##0.00"));
 
         Row header = sheet.createRow(0);
         String[] columnas = {
@@ -382,9 +389,14 @@ public class ProductoServiceImpl implements ProductoService {
             row.createCell(1).setCellValue(producto.getCodigoSku());
             row.createCell(2).setCellValue(producto.getNombre());
             BigDecimal stock = stockMap.getOrDefault(producto.getId().longValue(), BigDecimal.ZERO);
-            row.createCell(3).setCellValue((RichTextString) stock);
+            Cell stockCell = row.createCell(3);
+            stockCell.setCellValue(stock != null ? stock.doubleValue() : 0d);
+            stockCell.setCellStyle(numericStyle);
             row.createCell(4).setCellValue(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : "");
-            row.createCell(5).setCellValue((RichTextString) (producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO));
+            BigDecimal stockMinimo = producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO;
+            Cell minimoCell = row.createCell(5);
+            minimoCell.setCellValue(stockMinimo.doubleValue());
+            minimoCell.setCellStyle(numericStyle);
             row.createCell(6).setCellValue(producto.isActivo());
             row.createCell(7).setCellValue(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : "");
         }

@@ -28,7 +28,7 @@ public interface MovimientoInventarioService {
 
     List<MovimientoInventarioResponseDTO> consultarMovimientos(MovimientoInventarioFiltroDTO filtro);
 
-    Workbook generarReporteMovimientosExcel();
+    Workbook generarReporteMovimientosExcel(LocalDateTime inicio, LocalDateTime fin);
 
     Page<MovimientoInventarioResponseDTO> listarTodos(Pageable pageable);
 

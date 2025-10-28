@@ -19,7 +19,7 @@ public interface LoteProductoService {
     LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto);
     List<LoteProductoResponseDTO> obtenerLotesPorEstado(String estado);
     List<LoteProductoResponseDTO> obtenerLotesPorEvaluar();
-    Workbook generarReporteLotesPorVencerExcel();
+    Workbook generarReporteLotesPorVencerExcel(LocalDateTime inicio, LocalDateTime fin);
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
     Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen, Boolean vencidos, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);
 
