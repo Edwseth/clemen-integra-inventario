@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.produccion.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,4 +20,7 @@ public class ResultadoValidacionOrdenDTO {
     private List<InsumoFaltanteDTO> insumosFaltantes;
     private OrdenProduccionResponseDTO orden;
     private BigDecimal unidadesProducidas;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String code;
 }
