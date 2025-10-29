@@ -9,6 +9,8 @@ import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,6 +24,8 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class FormulaProductoServiceImpl implements FormulaProductoService {
+
+    private static final Logger log = LoggerFactory.getLogger(FormulaProductoServiceImpl.class);
 
     private final FormulaProductoRepository formulaRepository;
     private final BomMapper bomMapper;
@@ -152,6 +156,11 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                     } else {
                         motivo = "SIN_STOCK";
                     }
+                    log.info("FORMULA_DISPONIBILIDAD insumoId={} requerido={} disponible={} motivo={}",
+                            insumoId,
+                            totalNecesaria,
+                            disponibilidad.getDisponible(),
+                            motivo);
                 }
 
                 dto.stockDisponible = disponibilidad.getDisponible();

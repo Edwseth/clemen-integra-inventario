@@ -309,6 +309,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 maxProducible = producibleConEste;
             }
 
+            log.debug("OP-VALIDACION insumoId={} requerido={} disponible={} maxProducible={}",
+                    insumoId,
+                    cantidadRequerida,
+                    stockDisponible,
+                    maxProducible);
+
             if (stockDisponible.compareTo(cantidadRequerida) < 0) {
                 stockSuficiente = false;
                 faltantes.add(InsumoFaltanteDTO.builder()
@@ -789,6 +795,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
 
         if (lotesSeleccionados.isEmpty()) {
+            log.warn("OP-RESERVA sin lotes elegibles ordenId={} insumoId={} requerida={}",
+                    ordenId,
+                    insumoId,
+                    requerida);
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "STOCK_INSUFICIENTE: faltan " + requerida);
         }
@@ -874,6 +884,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 detallesSolicitud = new ArrayList<>();
                 solicitud.setDetalles(detallesSolicitud);
             } else {
+                log.debug("OP-RESERVA antes limpiar: detallesPrevios={} ordenId={} insumoId={}",
+                        detallesSolicitud.size(),
+                        ordenId,
+                        insumoId);
                 detallesSolicitud.clear();
             }
 

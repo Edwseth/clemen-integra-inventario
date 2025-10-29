@@ -75,6 +75,9 @@ public class OrdenProduccionController {
     public ResponseEntity<ResultadoValidacionOrdenDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {
         ResultadoValidacionOrdenDTO resultado = service.crearOrden(request);
         HttpStatus status = resultado.isEsValida() ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
+        if (!resultado.isEsValida()) {
+            resultado.setCode("STOCK_INSUFICIENTE");
+        }
         return new ResponseEntity<>(resultado, status);
     }
 
