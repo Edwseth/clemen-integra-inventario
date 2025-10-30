@@ -5,6 +5,7 @@ public enum TipoCategoria {
     PRODUCTO_TERMINADO,
     MATERIAL_EMPAQUE,
     SUMINISTROS,
+    REPUESTOS,
     OBSOLETOS
 }
 
