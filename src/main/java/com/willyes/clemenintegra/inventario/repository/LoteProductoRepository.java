@@ -120,7 +120,8 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
                (lp.stock_lote - lp.stock_reservado) AS stockLote,
                lp.fecha_vencimiento AS fechaVencimiento,
                lp.almacenes_id AS almacenId,
-               a.nombre AS nombreAlmacen
+               a.nombre AS nombreAlmacen,
+               lp.estado AS estado
         FROM lotes_productos lp
         LEFT JOIN almacenes a ON lp.almacenes_id = a.id
         WHERE lp.productos_id = :productoId

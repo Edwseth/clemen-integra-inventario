@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,9 +18,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,7 @@ public class ReservaLoteService {
 
     private final ReservaLoteRepository reservaLoteRepository;
     private final LoteProductoRepository loteProductoRepository;
+    private final SolicitudMovimientoRepository solicitudMovimientoRepository;
 
     @Transactional
     public void sincronizarReservasSolicitud(SolicitudMovimiento solicitud) {
@@ -170,6 +174,62 @@ public class ReservaLoteService {
         ReservaLote guardada = reservaLoteRepository.save(reserva);
         recalcularStockReservado(lote);
         return guardada;
+    }
+
+    @Transactional
+    public void liberarReservasPorOrden(Long ordenProduccionId) {
+        if (ordenProduccionId == null) {
+            return;
+        }
+        List<SolicitudMovimiento> solicitudes = Optional.ofNullable(
+                solicitudMovimientoRepository.findWithDetalles(ordenProduccionId, null, null, null)
+        ).orElse(List.of());
+        if (solicitudes.isEmpty()) {
+            return;
+        }
+
+        Set<Long> lotesARecalcular = new HashSet<>();
+        for (SolicitudMovimiento solicitud : solicitudes) {
+            if (solicitud.getDetalles() == null) {
+                continue;
+            }
+            for (SolicitudMovimientoDetalle detalle : solicitud.getDetalles()) {
+                if (detalle.getId() == null) {
+                    continue;
+                }
+                List<ReservaLote> reservas = reservaLoteRepository.findBySolicitudMovimientoDetalleId(detalle.getId());
+                for (ReservaLote reserva : reservas) {
+                    if (reserva.getEstado() == EstadoReservaLote.CONSUMIDA) {
+                        continue;
+                    }
+                    BigDecimal reservada = Optional.ofNullable(reserva.getCantidadReservada())
+                            .orElse(BigDecimal.ZERO)
+                            .setScale(6, RoundingMode.HALF_UP);
+                    BigDecimal consumida = Optional.ofNullable(reserva.getCantidadConsumida())
+                            .orElse(BigDecimal.ZERO)
+                            .setScale(6, RoundingMode.HALF_UP);
+                    if (consumida.compareTo(reservada) > 0) {
+                        consumida = reservada;
+                    }
+                    reserva.setCantidadReservada(reservada);
+                    reserva.setCantidadConsumida(consumida);
+                    reserva.setEstado(EstadoReservaLote.CANCELADA);
+                    reservaLoteRepository.save(reserva);
+                    if (reserva.getLote() != null && reserva.getLote().getId() != null) {
+                        lotesARecalcular.add(reserva.getLote().getId());
+                    }
+                }
+            }
+        }
+
+        for (Long loteId : lotesARecalcular) {
+            loteProductoRepository.findByIdForUpdate(loteId)
+                    .ifPresent(this::recalcularStockReservado);
+        }
+
+        if (!lotesARecalcular.isEmpty()) {
+            log.info("Reservas liberadas para orden {} en {} lotes", ordenProduccionId, lotesARecalcular.size());
+        }
     }
 
     private BigDecimal calcularPendiente(ReservaLote reserva) {

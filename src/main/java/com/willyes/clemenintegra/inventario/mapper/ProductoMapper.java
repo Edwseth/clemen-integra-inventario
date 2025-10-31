@@ -8,15 +8,20 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.mapstruct.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProductoMapper {
 
+    Logger LOG = LoggerFactory.getLogger(ProductoMapper.class);
+
     default ProductoResponseDTO safeToDto(Producto producto) {
         if (producto == null) {
-            System.out.println("❌ Producto nulo detectado");
+            LOG.warn("Producto nulo detectado al mapear a DTO");
             return null;
         }
         return toDto(producto);

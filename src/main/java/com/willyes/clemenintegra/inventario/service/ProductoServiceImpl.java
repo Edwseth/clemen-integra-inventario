@@ -102,7 +102,8 @@ public class ProductoServiceImpl implements ProductoService {
     @Transactional(readOnly = true)
     public Page<ProductoResponseDTO> listarTodos(String nombre, String sku, Long categoriaProductoId, Boolean activo, Pageable pageable) {
 
-        System.out.println("🟢 Entró correctamente a ProductoServiceImpl.listarTodos()");
+        log.debug("Listando productos con filtros nombre={}, sku={}, categoriaId={}, activo={}",
+                nombre, sku, categoriaProductoId, activo);
 
         Specification<Producto> spec = Specification
                 .where(nombreContains(nombre))
@@ -111,7 +112,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .and(activoEquals(activo));
 
         Page<Producto> productos = productoRepository.findAll(spec, pageable);
-        System.out.println("▶️ Total productos devueltos: " + productos.getTotalElements());
+        log.debug("Total de productos devueltos: {}", productos.getTotalElements());
 
         List<Long> ids = productos.getContent().stream()
                 .map(p -> p.getId().longValue())
@@ -120,9 +121,9 @@ public class ProductoServiceImpl implements ProductoService {
 
         productos.forEach(p -> {
             if (p == null) {
-                System.out.println("⚠️ Producto nulo detectado");
+                log.warn("Producto nulo detectado durante listado");
             } else {
-                System.out.println("📦 Producto cargado: " + p.getId() + " - " + p.getNombre());
+                log.debug("Producto cargado en listado: id={} nombre={}", p.getId(), p.getNombre());
             }
         });
 

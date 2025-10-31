@@ -18,20 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
-
-import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.shared.service.UsuarioService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +53,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
                 .map(ProduccionMapper::toResponse)

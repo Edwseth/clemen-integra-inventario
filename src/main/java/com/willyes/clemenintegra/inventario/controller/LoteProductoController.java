@@ -44,6 +44,7 @@ public class LoteProductoController {
     }
 
     @GetMapping("/estado/{estado}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<List<LoteProductoResponseDTO>> listarPorEstado(@PathVariable String estado) {
         List<LoteProductoResponseDTO> lotes = service.obtenerLotesPorEstado(estado);
         return ResponseEntity.ok(lotes);
