@@ -876,7 +876,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal requerida = insumo.getCantidadNecesaria()
                     .multiply(orden.getCantidadProgramada())
                     .setScale(8, RoundingMode.HALF_UP);
-            BigDecimal requeridaSolicitud = requerida.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
 
             List<LoteFefoDisponibleProjection> lotesSeleccionados = seleccionarLotesFefo(

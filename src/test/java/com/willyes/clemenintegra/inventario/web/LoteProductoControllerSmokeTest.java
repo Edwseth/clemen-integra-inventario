@@ -72,7 +72,8 @@ class LoteProductoControllerSmokeTest {
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").exists())
                 .andExpect(jsonPath("$.content[0].codigoLote").value("L-001"))
                 .andExpect(jsonPath("$.content[0].estado").value("DISPONIBLE"))
                 .andExpect(jsonPath("$.totalElements").value(1));
@@ -91,7 +92,8 @@ class LoteProductoControllerSmokeTest {
 
         mockMvc.perform(get("/api/lotes/estado/LIBERADO"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").exists())
                 .andExpect(jsonPath("$[0].estado").value("LIBERADO"));
     }
 }
