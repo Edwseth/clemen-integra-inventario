@@ -75,4 +75,11 @@ class OrdenProduccionControllerSecurityTest {
         mockMvc.perform(get("/api/produccion/ordenes/{id}", 1L))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @DisplayName("GET /api/produccion/ordenes/{id} sin autenticación devuelve 403")
+    void obtenerOrden_sinAutenticacion_devuelve403() throws Exception {
+        mockMvc.perform(get("/api/produccion/ordenes/{id}", 1L))
+                .andExpect(status().isForbidden());
+    }
 }

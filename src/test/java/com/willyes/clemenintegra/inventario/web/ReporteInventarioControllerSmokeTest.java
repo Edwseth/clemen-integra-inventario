@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.service.ReporteInventarioService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +24,7 @@ import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ReporteInventarioController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -58,6 +58,7 @@ class ReporteInventarioControllerSmokeTest {
                         .param("fechaInicio", "2024-01-01")
                         .param("fechaFin", "2024-01-31"))
                 .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", Matchers.containsString("attachment")))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=alta_rotacion.xlsx"))
                 .andExpect(header().string("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
     }
@@ -73,6 +74,7 @@ class ReporteInventarioControllerSmokeTest {
                         .param("fechaInicio", "2024-02-01")
                         .param("fechaFin", "2024-02-10"))
                 .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", Matchers.containsString("attachment")))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=lotes_por_vencer.xlsx"))
                 .andExpect(header().string("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
     }
