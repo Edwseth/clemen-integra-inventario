@@ -13,4 +13,5 @@ public interface LoteFefoDisponibleProjection {
     LocalDateTime getFechaVencimiento();
     Long getAlmacenId();
     String getNombreAlmacen();
+    String getEstado();
 }

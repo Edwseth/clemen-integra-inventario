@@ -1,0 +1,1 @@
+-- placeholder script for proveedor tests

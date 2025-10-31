@@ -1,8 +1,10 @@
 package com.willyes.clemenintegra;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+@Slf4j
 public class PasswordEncoderUtil {
 
     public static void main(String[] args) {
@@ -12,8 +14,8 @@ public class PasswordEncoderUtil {
         PasswordEncoder encoder = new BCryptPasswordEncoder();
         String encodedPassword = encoder.encode(rawPassword);
 
-        System.out.println("Contraseña original: " + rawPassword);
-        System.out.println("Contraseña codificada: " + encodedPassword);
+        log.info("Contraseña original: {}", rawPassword);
+        log.info("Contraseña codificada: {}", encodedPassword);
     }
 }
 
