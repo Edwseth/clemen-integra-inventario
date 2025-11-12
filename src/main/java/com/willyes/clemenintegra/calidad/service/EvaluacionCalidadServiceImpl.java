@@ -98,16 +98,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         String operacion = buildOperacion("registrarEvaluacion", dto.getTipoEvaluacion());
         auditarYRestaurarCuarentena(lote, cuarentenaId, operacion, user);
 
-        if (dto.getTipoEvaluacion() == TipoEvaluacion.FISICO_QUIMICO
-                && !java.util.Set.of(RolUsuario.ROL_ANALISTA_CALIDAD, RolUsuario.ROL_JEFE_CALIDAD).contains(user.getRol())) {
-            throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
-                    "Solo un analista o el jefe de calidad puede registrar evaluaciones físico-químicas.");
-        }
-        if (dto.getTipoEvaluacion() == TipoEvaluacion.MICROBIOLOGICO
-                && !java.util.Set.of(RolUsuario.ROL_MICROBIOLOGO, RolUsuario.ROL_JEFE_CALIDAD).contains(user.getRol())) {
-            throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
-                    "Solo un microbiólogo o el jefe de calidad puede registrar evaluaciones microbiológicas.");
-        }
+        validarRolEvaluador(user, dto.getTipoEvaluacion());
 
         if (repository.existsByLoteProductoIdAndTipoEvaluacion(lote.getId(), dto.getTipoEvaluacion())) {
             throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
@@ -157,6 +148,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         entidad = repository.save(entidad);
 
+        validarRolEvaluador(entidad.getUsuarioEvaluador(), entidad.getTipoEvaluacion());
         manejarResultadoEvaluacion(entidad, dto, lote, user);
 
         verificarAlmacenPostOperacion(lote.getId(), cuarentenaId, operacion, user);
@@ -191,6 +183,8 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         String operacion = buildOperacion("actualizarEvaluacion", dto.getTipoEvaluacion());
         auditarYRestaurarCuarentena(lote, cuarentenaId, operacion, user);
 
+        validarRolEvaluador(user, dto.getTipoEvaluacion());
+
         existing.setResultado(dto.getResultado());
         existing.setTipoEvaluacion(dto.getTipoEvaluacion());
         existing.setObservaciones(dto.getObservaciones());
@@ -214,6 +208,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         if (actor == null) {
             actor = user;
         }
+        validarRolEvaluador(existing.getUsuarioEvaluador(), existing.getTipoEvaluacion());
         manejarResultadoEvaluacion(existing, dto, lote, actor);
 
         verificarAlmacenPostOperacion(lote.getId(), cuarentenaId, operacion, user);
@@ -330,6 +325,33 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         if (lote == null || lote.getEstado() == null) return false;
         String nombre = lote.getEstado().name();
         return "EN_CUARENTENA".equals(nombre) || "RETENIDO".equals(nombre);
+    }
+
+    private void validarRolEvaluador(Usuario evaluador, TipoEvaluacion tipoEvaluacion) {
+        if (evaluador == null || tipoEvaluacion == null) {
+            return;
+        }
+        RolUsuario rol = evaluador.getRol();
+        if (rol == null) {
+            throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
+                    "El usuario evaluador no posee un rol asignado para esta evaluación.");
+        }
+        switch (tipoEvaluacion) {
+            case FISICO -> {
+                if (!java.util.Set.of(RolUsuario.ROL_ANALISTA_CALIDAD, RolUsuario.ROL_SUPER_ADMIN).contains(rol)) {
+                    throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
+                            "Solo un analista de calidad o un super admin puede registrar evaluaciones físicas.");
+                }
+            }
+            case QUIMICO_MICROBIOLOGICO -> {
+                if (!java.util.Set.of(RolUsuario.ROL_MICROBIOLOGO, RolUsuario.ROL_SUPER_ADMIN).contains(rol)) {
+                    throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
+                            "Solo un microbiólogo o un super admin puede registrar evaluaciones químico-microbiológicas.");
+                }
+            }
+            default -> {
+            }
+        }
     }
 
     private void manejarResultadoEvaluacion(EvaluacionCalidad evaluacion,

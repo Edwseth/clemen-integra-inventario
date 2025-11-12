@@ -31,7 +31,7 @@ public class EvaluacionCalidad {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_evaluacion", nullable = false,
-            columnDefinition = "ENUM('FISICO_QUIMICO','MICROBIOLOGICO')")
+            columnDefinition = "ENUM('FISICO','QUIMICO_MICROBIOLOGICO')")
     private TipoEvaluacion tipoEvaluacion;
 
     @Column(name = "fecha_evaluacion", nullable = false)

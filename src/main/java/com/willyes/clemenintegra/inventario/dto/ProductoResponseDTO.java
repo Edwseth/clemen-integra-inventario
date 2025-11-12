@@ -47,7 +47,9 @@ public class ProductoResponseDTO {
         this.stockMinimo = producto.getStockMinimo();
         this.stockMinimoProveedor = producto.getStockMinimoProveedor();
         this.activo = producto.isActivo();
-        this.tipoAnalisisCalidad = producto.getTipoAnalisis() != null ? producto.getTipoAnalisis().name() : null;
+        this.tipoAnalisisCalidad = producto.getTipoAnalisisCalidad() != null
+                ? producto.getTipoAnalisisCalidad().name()
+                : null;
         this.rendimiento = producto.getRendimientoUnidad() != null ? producto.getRendimientoUnidad() : BigDecimal.ZERO;
         this.unidadMedida = producto.getUnidadMedida() != null
                 ? new UnidadMedidaResponseDTO(

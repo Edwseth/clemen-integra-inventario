@@ -38,7 +38,7 @@ Todas las respuestas de error siguen la estructura:
 ```json
 {
   "loteProductoId": 15,
-  "tipoEvaluacion": "FISICO_QUIMICO",
+  "tipoEvaluacion": "QUIMICO_MICROBIOLOGICO",
   "resultado": "CONDICIONADO",
   "observaciones": "Se requiere seguimiento",
   "condicion": {
@@ -56,7 +56,7 @@ Todas las respuestas de error siguen la estructura:
 {
   "id": 1204,
   "resultado": "CONDICIONADO",
-  "tipoEvaluacion": "FISICO_QUIMICO",
+  "tipoEvaluacion": "FISICO",
   "fechaEvaluacion": "2024-09-01T09:14:22",
   "observaciones": "Se requiere seguimiento",
   "archivosAdjuntos": [

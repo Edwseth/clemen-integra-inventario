@@ -95,7 +95,12 @@ public class ProductoServiceImpl implements ProductoService {
         if (valor == null || valor.isBlank()) {
             return TipoAnalisisCalidad.NINGUNO;
         }
-        return TipoAnalisisCalidad.valueOf(valor);
+        String normalizado = valor.trim().toUpperCase();
+        return switch (normalizado) {
+            case "FISICO_QUIMICO" -> TipoAnalisisCalidad.AMBOS;
+            case "MICROBIOLOGICO" -> TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO;
+            default -> TipoAnalisisCalidad.valueOf(normalizado);
+        };
     }
 
     @Override

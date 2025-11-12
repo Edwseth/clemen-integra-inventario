@@ -136,12 +136,12 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             } else if (analista) {
                 lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
                         estados,
-                        List.of(TipoAnalisisCalidad.FISICO_QUIMICO, TipoAnalisisCalidad.AMBOS)
+                        List.of(TipoAnalisisCalidad.FISICO, TipoAnalisisCalidad.AMBOS)
                 );
             } else if (micro) {
                 lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
                         estados,
-                        List.of(TipoAnalisisCalidad.MICROBIOLOGICO, TipoAnalisisCalidad.AMBOS)
+                        List.of(TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO, TipoAnalisisCalidad.AMBOS)
                 );
             } else {
                 lotes = loteRepo.findByEstadoIn(estados);
@@ -186,10 +186,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
     private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<TipoEvaluacion> evaluaciones) {
         return switch (requerido) {
-            case FISICO_QUIMICO -> evaluaciones.contains(TipoEvaluacion.FISICO_QUIMICO);
-            case MICROBIOLOGICO -> evaluaciones.contains(TipoEvaluacion.MICROBIOLOGICO);
-            case AMBOS -> evaluaciones.contains(TipoEvaluacion.FISICO_QUIMICO)
-                    && evaluaciones.contains(TipoEvaluacion.MICROBIOLOGICO);
+            case FISICO -> evaluaciones.contains(TipoEvaluacion.FISICO);
+            case QUIMICO_MICROBIOLOGICO -> evaluaciones.contains(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
+            case AMBOS -> evaluaciones.contains(TipoEvaluacion.FISICO)
+                    && evaluaciones.contains(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
             default -> false;
         };
     }
@@ -506,11 +506,11 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         TipoAnalisisCalidad tipo = producto.getTipoAnalisisCalidad();
 
-        if (tipo == TipoAnalisisCalidad.FISICO_QUIMICO || tipo == TipoAnalisisCalidad.AMBOS) {
-            validarEvaluacion(evaluaciones, TipoEvaluacion.FISICO_QUIMICO);
+        if (tipo == TipoAnalisisCalidad.FISICO || tipo == TipoAnalisisCalidad.AMBOS) {
+            validarEvaluacion(evaluaciones, TipoEvaluacion.FISICO);
         }
-        if (tipo == TipoAnalisisCalidad.MICROBIOLOGICO || tipo == TipoAnalisisCalidad.AMBOS) {
-            validarEvaluacion(evaluaciones, TipoEvaluacion.MICROBIOLOGICO);
+        if (tipo == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || tipo == TipoAnalisisCalidad.AMBOS) {
+            validarEvaluacion(evaluaciones, TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
         }
 
         validarNoConformidadesParaLiberacion(loteId);
