@@ -114,7 +114,7 @@ public class LoteProductoController {
         return ResponseEntity.ok(lotes);
     }
 
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping("/por-evaluar")
     public ResponseEntity<List<LoteProductoResponseDTO>> obtenerLotesPorEvaluar() {
         List<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar();
@@ -123,7 +123,7 @@ public class LoteProductoController {
     }
 
     @GetMapping("/{id}/evaluaciones")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN', 'ROL_ANALISTA_CALIDAD', 'ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<java.util.List<EvaluacionCalidadResponseDTO>> obtenerEvaluaciones(@PathVariable Long id) {
         return ResponseEntity.ok(evaluacionService.listarPorLote(id));
     }

@@ -620,7 +620,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     destino = almacenPt;
                     estadoLote = EstadoLote.DISPONIBLE;
                 }
-                case FISICO_QUIMICO, MICROBIOLOGICO, AMBOS -> {
+                case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
                     destino = almacenCuarentena;
                     estadoLote = EstadoLote.EN_CUARENTENA;
                 }
@@ -1005,7 +1005,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     destino = almacenPt;
                     estadoLote = EstadoLote.DISPONIBLE;
                 }
-                case FISICO_QUIMICO, MICROBIOLOGICO, AMBOS -> {
+                case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
                     destino = almacenCuarentena;
                     estadoLote = EstadoLote.EN_CUARENTENA;
                 }
