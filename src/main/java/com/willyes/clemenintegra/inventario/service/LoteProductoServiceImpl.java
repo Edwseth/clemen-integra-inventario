@@ -5,9 +5,11 @@ import com.willyes.clemenintegra.calidad.mapper.CondicionUsoMapper;
 import com.willyes.clemenintegra.calidad.model.CondicionUso;
 import com.willyes.clemenintegra.calidad.model.enums.*;
 import com.willyes.clemenintegra.calidad.repository.CondicionUsoRepository;
+import com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
@@ -39,6 +41,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Page;
@@ -77,6 +80,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final CondicionUsoService condicionUsoService;
     private final CondicionUsoRepository condicionUsoRepository;
     private final CondicionUsoMapper mapper;
+    private final BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
 
     @Value("${inventory.lote.estadoLiberado}")
     private String estadoLiberadoConf;
@@ -181,6 +185,71 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return entidades.stream()
                 .map(mapper::toResponseDTO)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public LoteProductoResponseDTO reabrirParaReevaluacion(Long loteId,
+                                                           ReaperturaLoteRequestDTO dto,
+                                                           Usuario usuarioActual) {
+        if (usuarioActual == null || usuarioActual.getId() == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Se requiere un usuario autenticado para reabrir el lote.");
+        }
+
+        String motivo = dto != null ? dto.getMotivo() : null;
+        if (motivo == null || motivo.isBlank()) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe indicar el motivo de la reapertura.");
+        }
+
+        LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
+
+        EstadoLote estadoActual = lote.getEstado();
+        if (estadoActual == null) {
+            throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
+                    "El lote carece de estado asignado.",
+                    Map.of("loteId", loteId));
+        }
+
+        if (EnumSet.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO).contains(estadoActual)) {
+            throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
+                    "El lote ya se encuentra en evaluación de calidad.",
+                    Map.of("loteId", loteId, "estadoActual", estadoActual.name()));
+        }
+
+        if (!EnumSet.of(EstadoLote.LIBERADO, EstadoLote.RECHAZADO, EstadoLote.DISPONIBLE).contains(estadoActual)) {
+            throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
+                    "El lote no puede reabrirse desde su estado actual.",
+                    Map.of("loteId", loteId, "estadoActual", estadoActual.name()));
+        }
+
+        Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+        if (cuarentenaId == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_CUARENTENA_NO_CONFIGURADO");
+        }
+
+        Almacen almacenPrevio = lote.getAlmacen();
+        Almacen almacenCuarentena = almacenRepo.findById(cuarentenaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_CUARENTENA_INEXISTENTE"));
+
+        lote.setEstado(EstadoLote.RETENIDO);
+        lote.setAlmacen(almacenCuarentena);
+        lote = loteRepo.save(lote);
+
+        registrarBitacoraReapertura(lote,
+                estadoActual,
+                almacenPrevio,
+                motivo.trim(),
+                dto != null ? dto.getComentarios() : null,
+                usuarioActual);
+
+        log.info("[CALIDAD] lote reabierto para reevaluación. loteId={} estadoAnterior={} almacenPrevio={} usuario={}",
+                lote.getId(), estadoActual, almacenPrevio != null ? almacenPrevio.getId() : null,
+                usuarioActual.getId());
+
+        return loteProductoMapper.toResponseDTO(lote);
     }
 
     private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<EvaluacionCalidad> evaluaciones) {
@@ -563,6 +632,53 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         movimientoInventarioRepository.save(mov);
 
         return loteProductoMapper.toResponseDTO(lote);
+    }
+
+    private void registrarBitacoraReapertura(LoteProducto lote,
+                                             EstadoLote estadoAnterior,
+                                             Almacen almacenAnterior,
+                                             String motivo,
+                                             String comentarios,
+                                             Usuario usuarioActual) {
+        if (lote == null || usuarioActual == null || usuarioActual.getId() == null) {
+            return;
+        }
+        LocalDateTime ahora = LocalDateTime.now();
+        bitacoraCambiosInventarioService.crear(BitacoraCambiosInventarioDTO.builder()
+                .tablaAfectada("lotes_productos")
+                .registroId(lote.getId())
+                .campoModificado("estado")
+                .valorAnt(estadoAnterior != null ? estadoAnterior.name() : "N/A")
+                .valorNuevo(EstadoLote.RETENIDO.name())
+                .fechaCambio(ahora)
+                .usuarioId(usuarioActual.getId())
+                .build());
+
+        bitacoraCambiosInventarioService.crear(BitacoraCambiosInventarioDTO.builder()
+                .tablaAfectada("lotes_productos")
+                .registroId(lote.getId())
+                .campoModificado("motivo_reapertura")
+                .valorAnt("N/A")
+                .valorNuevo(construirDetalleReapertura(motivo, comentarios, almacenAnterior))
+                .fechaCambio(ahora)
+                .usuarioId(usuarioActual.getId())
+                .build());
+    }
+
+    private String construirDetalleReapertura(String motivo,
+                                              String comentarios,
+                                              Almacen almacenAnterior) {
+        StringBuilder detalle = new StringBuilder("motivo=").append(motivo);
+        if (comentarios != null && !comentarios.isBlank()) {
+            detalle.append(" | comentarios=").append(comentarios.trim());
+        }
+        if (almacenAnterior != null && almacenAnterior.getNombre() != null) {
+            detalle.append(" | almacenAnterior=").append(almacenAnterior.getNombre());
+        }
+        if (detalle.length() > 255) {
+            return detalle.substring(0, 255);
+        }
+        return detalle.toString();
     }
 
     private void validarEvaluacion(List<EvaluacionCalidad> evaluaciones, TipoEvaluacion tipo) {

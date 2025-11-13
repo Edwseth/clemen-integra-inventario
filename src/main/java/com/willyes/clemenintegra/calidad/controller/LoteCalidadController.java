@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoCondicionUso;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
@@ -12,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 
 import java.util.Collections;
 import java.util.List;
@@ -46,5 +49,15 @@ public class LoteCalidadController {
 
         List<CondicionUsoResponseDTO> items = service.listarCondicionesUso(loteId, estado);
         return ResponseEntity.ok(items == null ? Collections.emptyList() : items);
+    }
+
+    @PatchMapping("/{loteId}/reabrir")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<LoteProductoResponseDTO> reabrirParaReevaluacion(
+            @PathVariable Long loteId,
+            @RequestBody @Valid ReaperturaLoteRequestDTO dto,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Usuario usuario = userDetails != null ? userDetails.getUsuario() : null;
+        return ResponseEntity.ok(service.reabrirParaReevaluacion(loteId, dto, usuario));
     }
 }
