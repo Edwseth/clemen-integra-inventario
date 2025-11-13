@@ -18,6 +18,11 @@ public class EvaluacionConsolidadaResponseDTO {
     private String nombreProducto;
     private String estadoLote;
     private String tipoAnalisisCalidad;
+    private String tipoAnalisisRequerido;
+    private boolean fisicoQuimicoCargado;
+    private boolean microbiologicoCargado;
+    private boolean evaluacionesRequeridasCompletas;
+    private String resultadoGlobal;
     private List<EvaluacionSimpleDTO> evaluaciones;
 
     /**
