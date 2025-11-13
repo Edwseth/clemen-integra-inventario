@@ -152,17 +152,16 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         return lotes.stream()
                 .map(lote -> {
-                    List<TipoEvaluacion> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId())
-                            .stream()
-                            .map(EvaluacionCalidad::getTipoEvaluacion)
-                            .collect(Collectors.toList());
+                    List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId());
 
                     if (tieneEvaluacionesRequeridas(lote.getProducto().getTipoAnalisis(), evaluaciones)) {
                         return null;
                     }
 
                     LoteProductoResponseDTO dto = loteProductoMapper.toDto(lote);
-                    dto.setEvaluaciones(evaluaciones);
+                    dto.setEvaluaciones(evaluaciones.stream()
+                            .map(EvaluacionCalidad::getTipoEvaluacion)
+                            .toList());
                     return dto;
                 })
                 .filter(java.util.Objects::nonNull)
@@ -184,12 +183,29 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .toList();
     }
 
-    private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<TipoEvaluacion> evaluaciones) {
+    private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<EvaluacionCalidad> evaluaciones) {
+        if (requerido == null) {
+            return false;
+        }
+        if (requerido == TipoAnalisisCalidad.NINGUNO) {
+            return true;
+        }
+        List<EvaluacionCalidad> seguras = evaluaciones == null ? List.of() : evaluaciones;
+
+        boolean fisicoOk = seguras.stream().anyMatch(e ->
+                e.getTipoEvaluacion() == TipoEvaluacion.FISICO &&
+                        (e.getResultado() == ResultadoEvaluacion.CONFORME
+                                || e.getResultado() == ResultadoEvaluacion.CONDICIONADO));
+
+        boolean microOk = seguras.stream().anyMatch(e ->
+                e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO &&
+                        (e.getResultado() == ResultadoEvaluacion.CONFORME
+                                || e.getResultado() == ResultadoEvaluacion.CONDICIONADO));
+
         return switch (requerido) {
-            case FISICO -> evaluaciones.contains(TipoEvaluacion.FISICO);
-            case QUIMICO_MICROBIOLOGICO -> evaluaciones.contains(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
-            case AMBOS -> evaluaciones.contains(TipoEvaluacion.FISICO)
-                    && evaluaciones.contains(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
+            case FISICO -> fisicoOk;
+            case QUIMICO_MICROBIOLOGICO -> microOk;
+            case AMBOS -> fisicoOk && microOk;
             default -> false;
         };
     }
@@ -558,11 +574,19 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                     "Falta registrar la evaluación requerida antes de liberar el lote.",
                     Map.of("tipoEvaluacion", tipo.name()));
         }
-        boolean aprobadas = filtradas.stream()
-                .allMatch(e -> e.getResultado() != ResultadoEvaluacion.NO_CONFORME);
-        if (!aprobadas) {
+        boolean existeNoConforme = filtradas.stream()
+                .anyMatch(e -> e.getResultado() == ResultadoEvaluacion.NO_CONFORME);
+        if (existeNoConforme) {
             throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
-                    "La evaluación requerida no está aprobada.",
+                    "Existe al menos una evaluación NO_CONFORME.",
+                    Map.of("tipoEvaluacion", tipo.name()));
+        }
+        boolean existeOk = filtradas.stream()
+                .anyMatch(e -> e.getResultado() == ResultadoEvaluacion.CONFORME
+                        || e.getResultado() == ResultadoEvaluacion.CONDICIONADO);
+        if (!existeOk) {
+            throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
+                    "Se requiere evaluación CONFORME o CONDICIONADO para liberar el lote.",
                     Map.of("tipoEvaluacion", tipo.name()));
         }
     }
