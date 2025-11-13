@@ -18,20 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
-
-import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.shared.service.UsuarioService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +53,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
                 .map(ProduccionMapper::toResponse)
@@ -75,6 +66,9 @@ public class OrdenProduccionController {
     public ResponseEntity<ResultadoValidacionOrdenDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {
         ResultadoValidacionOrdenDTO resultado = service.crearOrden(request);
         HttpStatus status = resultado.isEsValida() ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
+        if (!resultado.isEsValida()) {
+            resultado.setCode("STOCK_INSUFICIENTE");
+        }
         return new ResponseEntity<>(resultado, status);
     }
 
@@ -140,7 +134,7 @@ public class OrdenProduccionController {
     }
 
     @PatchMapping("/{ordenId}/etapas/{etapaId}/iniciar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> iniciarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         service.iniciarEtapa(ordenId, etapaId);
         return service.buscarPorId(ordenId)
@@ -150,7 +144,7 @@ public class OrdenProduccionController {
     }
 
     @PatchMapping("/{ordenId}/etapas/{etapaId}/finalizar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<EtapaProduccionResponse> finalizarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
         return ResponseEntity.ok(ProduccionMapper.toResponse(service.finalizarEtapa(ordenId, etapaId, usuario.getId())));

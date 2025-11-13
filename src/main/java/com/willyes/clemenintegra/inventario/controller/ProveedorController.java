@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.ProveedorRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProveedorResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.ProveedorMapper;
 import com.willyes.clemenintegra.inventario.model.Proveedor;
+import com.willyes.clemenintegra.inventario.proveedor.dto.ProveedorAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.repository.ProveedorRepository;
 import com.willyes.clemenintegra.inventario.service.ProveedorService;
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
@@ -20,6 +21,9 @@ import io.swagger.v3.oas.annotations.media.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/proveedores")
@@ -55,6 +59,23 @@ public class ProveedorController {
     public ResponseEntity<Page<ProveedorResponseDTO>> listar(
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(proveedorService.listar(pageable));
+    }
+
+    @GetMapping("/autocomplete")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    public ResponseEntity<Page<ProveedorAutocompleteDTO>> autocomplete(
+            @RequestParam("term") String term,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+
+        String sanitizedTerm = term != null ? term.trim() : "";
+        if (sanitizedTerm.length() < 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El término de búsqueda debe tener al menos 2 caracteres");
+        }
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("nombre").ascending());
+        return ResponseEntity.ok(proveedorService.buscarAutocomplete(sanitizedTerm, pageable));
     }
 
 }

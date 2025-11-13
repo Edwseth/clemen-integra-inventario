@@ -1,5 +1,10 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
+import com.willyes.clemenintegra.calidad.mapper.CondicionUsoMapper;
+import com.willyes.clemenintegra.calidad.model.CondicionUso;
+import com.willyes.clemenintegra.calidad.model.enums.*;
+import com.willyes.clemenintegra.calidad.repository.CondicionUsoRepository;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
@@ -12,14 +17,9 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
-import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
-import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
-import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
-import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
-import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Page;
@@ -74,6 +75,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final RetencionLoteService retencionLoteService;
     private final NoConformidadService noConformidadService;
     private final CondicionUsoService condicionUsoService;
+    private final CondicionUsoRepository condicionUsoRepository;
+    private final CondicionUsoMapper mapper;
 
     @Value("${inventory.lote.estadoLiberado}")
     private String estadoLiberadoConf;
@@ -120,22 +123,25 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         List<LoteProducto> lotes;
         if (auth != null) {
-            boolean analista = auth.getAuthorities().stream()
+            java.util.Set<String> authorities = auth.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
-                    .anyMatch("ROL_ANALISTA_CALIDAD"::equals);
-            boolean micro = auth.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .anyMatch("ROL_MICROBIOLOGO"::equals);
+                    .collect(Collectors.toSet());
+            boolean jefe = authorities.contains("ROL_JEFE_CALIDAD");
+            boolean superAdmin = authorities.contains("ROL_SUPER_ADMIN");
+            boolean analista = authorities.contains("ROL_ANALISTA_CALIDAD");
+            boolean micro = authorities.contains("ROL_MICROBIOLOGO");
 
-            if (analista) {
+            if (jefe || superAdmin) {
+                lotes = loteRepo.findByEstadoIn(estados);
+            } else if (analista) {
                 lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
                         estados,
-                        List.of(TipoAnalisisCalidad.FISICO_QUIMICO, TipoAnalisisCalidad.AMBOS)
+                        List.of(TipoAnalisisCalidad.FISICO, TipoAnalisisCalidad.AMBOS)
                 );
             } else if (micro) {
                 lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
                         estados,
-                        List.of(TipoAnalisisCalidad.MICROBIOLOGICO, TipoAnalisisCalidad.AMBOS)
+                        List.of(TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO, TipoAnalisisCalidad.AMBOS)
                 );
             } else {
                 lotes = loteRepo.findByEstadoIn(estados);
@@ -146,29 +152,60 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         return lotes.stream()
                 .map(lote -> {
-                    List<TipoEvaluacion> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId())
-                            .stream()
-                            .map(EvaluacionCalidad::getTipoEvaluacion)
-                            .collect(Collectors.toList());
+                    List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId());
 
                     if (tieneEvaluacionesRequeridas(lote.getProducto().getTipoAnalisis(), evaluaciones)) {
                         return null;
                     }
 
                     LoteProductoResponseDTO dto = loteProductoMapper.toDto(lote);
-                    dto.setEvaluaciones(evaluaciones);
+                    dto.setEvaluaciones(evaluaciones.stream()
+                            .map(EvaluacionCalidad::getTipoEvaluacion)
+                            .toList());
                     return dto;
                 })
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
-    private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<TipoEvaluacion> evaluaciones) {
+    @Override
+    @Transactional(readOnly = true)
+    public List<CondicionUsoResponseDTO> listarCondicionesUso(Long loteId, EstadoCondicionUso estado) {
+        List<CondicionUso> entidades = (estado == null)
+                ? condicionUsoRepository.findByLote_Id(loteId)
+                : condicionUsoRepository.findByLote_IdAndEstado(loteId, estado);
+
+        if (entidades == null || entidades.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return entidades.stream()
+                .map(mapper::toResponseDTO)
+                .toList();
+    }
+
+    private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<EvaluacionCalidad> evaluaciones) {
+        if (requerido == null) {
+            return false;
+        }
+        if (requerido == TipoAnalisisCalidad.NINGUNO) {
+            return true;
+        }
+        List<EvaluacionCalidad> seguras = evaluaciones == null ? List.of() : evaluaciones;
+
+        boolean fisicoOk = seguras.stream().anyMatch(e ->
+                e.getTipoEvaluacion() == TipoEvaluacion.FISICO &&
+                        (e.getResultado() == ResultadoEvaluacion.CONFORME
+                                || e.getResultado() == ResultadoEvaluacion.CONDICIONADO));
+
+        boolean microOk = seguras.stream().anyMatch(e ->
+                e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO &&
+                        (e.getResultado() == ResultadoEvaluacion.CONFORME
+                                || e.getResultado() == ResultadoEvaluacion.CONDICIONADO));
+
         return switch (requerido) {
-            case FISICO_QUIMICO -> evaluaciones.contains(TipoEvaluacion.FISICO_QUIMICO);
-            case MICROBIOLOGICO -> evaluaciones.contains(TipoEvaluacion.MICROBIOLOGICO);
-            case AMBOS -> evaluaciones.contains(TipoEvaluacion.FISICO_QUIMICO)
-                    && evaluaciones.contains(TipoEvaluacion.MICROBIOLOGICO);
+            case FISICO -> fisicoOk;
+            case QUIMICO_MICROBIOLOGICO -> microOk;
+            case AMBOS -> fisicoOk && microOk;
             default -> false;
         };
     }
@@ -198,14 +235,13 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return lotes.map(loteProductoMapper::toResponseDTO);
     }
 
-    public Workbook generarReporteLotesPorVencerExcel() {
+    @Transactional(readOnly = true)
+    public Workbook generarReporteLotesPorVencerExcel(LocalDateTime inicio, LocalDateTime fin) {
         LocalDate hoy = LocalDate.now();
-        LocalDate limite = hoy.plusDays(30); // Puedes parametrizar esto si lo deseas
+        LocalDateTime inicioEf = inicio != null ? inicio : hoy.atStartOfDay();
+        LocalDateTime finEf = fin != null ? fin : hoy.plusDays(30).atTime(java.time.LocalTime.MAX);
 
-        LocalDateTime inicio = hoy.atStartOfDay();
-        LocalDateTime fin = limite.atTime(23, 59, 59);
-
-        List<LoteProducto> lotes = loteRepo.findByFechaVencimientoBetween(inicio, fin);
+        List<LoteProducto> lotes = loteRepo.findByFechaVencimientoBetweenFetchProducto(inicioEf, finEf);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Lotes por Vencer");
@@ -419,9 +455,11 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, Usuario usuarioActual) {
-        if (usuarioActual == null || usuarioActual.getRol() != RolUsuario.ROL_JEFE_CALIDAD) {
+        if (usuarioActual == null
+                || (usuarioActual.getRol() != RolUsuario.ROL_JEFE_CALIDAD
+                && usuarioActual.getRol() != RolUsuario.ROL_SUPER_ADMIN)) {
             throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
-                    "Solo el Jefe de Calidad puede liberar lotes.");
+                    "Solo el Jefe de Calidad o Super Admin pueden liberar lotes.");
         }
 
         EstadoLote estadoLiberado;
@@ -484,11 +522,11 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         TipoAnalisisCalidad tipo = producto.getTipoAnalisisCalidad();
 
-        if (tipo == TipoAnalisisCalidad.FISICO_QUIMICO || tipo == TipoAnalisisCalidad.AMBOS) {
-            validarEvaluacion(evaluaciones, TipoEvaluacion.FISICO_QUIMICO);
+        if (tipo == TipoAnalisisCalidad.FISICO || tipo == TipoAnalisisCalidad.AMBOS) {
+            validarEvaluacion(evaluaciones, TipoEvaluacion.FISICO);
         }
-        if (tipo == TipoAnalisisCalidad.MICROBIOLOGICO || tipo == TipoAnalisisCalidad.AMBOS) {
-            validarEvaluacion(evaluaciones, TipoEvaluacion.MICROBIOLOGICO);
+        if (tipo == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || tipo == TipoAnalisisCalidad.AMBOS) {
+            validarEvaluacion(evaluaciones, TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
         }
 
         validarNoConformidadesParaLiberacion(loteId);
@@ -536,11 +574,19 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                     "Falta registrar la evaluación requerida antes de liberar el lote.",
                     Map.of("tipoEvaluacion", tipo.name()));
         }
-        boolean aprobadas = filtradas.stream()
-                .allMatch(e -> e.getResultado() != ResultadoEvaluacion.NO_CONFORME);
-        if (!aprobadas) {
+        boolean existeNoConforme = filtradas.stream()
+                .anyMatch(e -> e.getResultado() == ResultadoEvaluacion.NO_CONFORME);
+        if (existeNoConforme) {
             throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
-                    "La evaluación requerida no está aprobada.",
+                    "Existe al menos una evaluación NO_CONFORME.",
+                    Map.of("tipoEvaluacion", tipo.name()));
+        }
+        boolean existeOk = filtradas.stream()
+                .anyMatch(e -> e.getResultado() == ResultadoEvaluacion.CONFORME
+                        || e.getResultado() == ResultadoEvaluacion.CONDICIONADO);
+        if (!existeOk) {
+            throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
+                    "Se requiere evaluación CONFORME o CONDICIONADO para liberar el lote.",
                     Map.of("tipoEvaluacion", tipo.name()));
         }
     }
@@ -608,6 +654,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .id(nc.getId())
                 .severidad(nc.getSeveridad())
                 .estado(nc.getEstado())
+                .reportadoPorNombre(nc.getUsuarioReporta() != null ? nc.getUsuarioReporta().getNombreCompleto() : null)
                 .build()).orElse(null);
 
         EstadoCalidadLoteResponseDTO.CondicionUsoResumen condicionResumen = condiciones.isEmpty() ? null
@@ -620,6 +667,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         return EstadoCalidadLoteResponseDTO.builder()
                 .loteId(loteId)
+                .codigoLote(lote.getCodigoLote())
                 .estadoLote(lote.getEstado() != null ? lote.getEstado().name() : null)
                 .retencionActiva(retencion != null)
                 .motivoRetencion(retencion != null ? retencion.getMotivo() : null)

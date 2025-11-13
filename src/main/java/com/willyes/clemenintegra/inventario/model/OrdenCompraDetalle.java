@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "orden_compra_detalle")
@@ -40,10 +41,16 @@ public class OrdenCompraDetalle {
     @JoinColumn(name = "productos_id")
     private Producto producto;
 
+    @Column(name = "fecha_necesidad")
+    private LocalDate fechaNecesidad;
+
     public OrdenCompraDetalle(Long id) {
         this.id = id;
     }
 
     public Producto getProducto() {return producto;}
+    public LocalDate getFechaNecesidad() {return fechaNecesidad;}
+
+    public void setFechaNecesidad(LocalDate fechaNecesidad) {this.fechaNecesidad = fechaNecesidad;}
 }
 

@@ -6,7 +6,10 @@ import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionSimpleDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
+import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.stereotype.Component;
 
@@ -74,16 +77,93 @@ public class EvaluacionCalidadMapper {
                                                              java.util.List<EvaluacionCalidad> evaluaciones) {
         if (lote == null) return null;
 
+        java.util.List<EvaluacionCalidad> evals = (evaluaciones == null)
+                ? java.util.List.of()
+                : evaluaciones;
+
+        java.util.Map<TipoEvaluacion, java.util.List<EvaluacionCalidad>> agrupado = evals.stream()
+                .collect(java.util.stream.Collectors.groupingBy(EvaluacionCalidad::getTipoEvaluacion));
+
+        java.util.List<EvaluacionCalidad> fisicos = agrupado.getOrDefault(TipoEvaluacion.FISICO, java.util.List.of());
+        java.util.List<EvaluacionCalidad> micros = agrupado.getOrDefault(TipoEvaluacion.QUIMICO_MICROBIOLOGICO, java.util.List.of());
+
+        boolean fisicoCargado = !fisicos.isEmpty();
+        boolean microCargado = !micros.isEmpty();
+
+        boolean fisicoConforme = fisicos.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.CONFORME);
+        boolean microConforme = micros.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.CONFORME);
+
+        boolean fisicoAnyOk = fisicos.stream().anyMatch(e ->
+                e.getResultado() == ResultadoEvaluacion.CONFORME ||
+                        e.getResultado() == ResultadoEvaluacion.CONDICIONADO);
+
+        boolean microAnyOk = micros.stream().anyMatch(e ->
+                e.getResultado() == ResultadoEvaluacion.CONFORME ||
+                        e.getResultado() == ResultadoEvaluacion.CONDICIONADO);
+
+        boolean algunNoConforme = evals.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.NO_CONFORME);
+
+        TipoAnalisisCalidad tipoAnalisis = lote.getProducto().getTipoAnalisisCalidad();
+
+        boolean completas;
+        if (tipoAnalisis == null) {
+            completas = false;
+        } else {
+            completas = switch (tipoAnalisis) {
+                case NINGUNO -> true;
+                case FISICO -> fisicoAnyOk;
+                case QUIMICO_MICROBIOLOGICO -> microAnyOk;
+                case AMBOS -> fisicoAnyOk && microAnyOk;
+            };
+        }
+
+        String resultadoGlobal;
+        if (tipoAnalisis == null) {
+            resultadoGlobal = "DESCONOCIDO";
+        } else if (tipoAnalisis == TipoAnalisisCalidad.NINGUNO) {
+            resultadoGlobal = "NO_REQUERIDO";
+        } else if (algunNoConforme) {
+            resultadoGlobal = ResultadoEvaluacion.NO_CONFORME.name();
+        } else if (switch (tipoAnalisis) {
+            case FISICO -> fisicoConforme;
+            case QUIMICO_MICROBIOLOGICO -> microConforme;
+            case AMBOS -> fisicoConforme && microConforme;
+            default -> false;
+        }) {
+            resultadoGlobal = ResultadoEvaluacion.CONFORME.name();
+        } else if (completas) {
+            resultadoGlobal = ResultadoEvaluacion.CONDICIONADO.name();
+        } else {
+            boolean avances = ((tipoAnalisis == TipoAnalisisCalidad.FISICO || tipoAnalisis == TipoAnalisisCalidad.AMBOS) && fisicoCargado)
+                    || ((tipoAnalisis == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || tipoAnalisis == TipoAnalisisCalidad.AMBOS) && microCargado);
+            resultadoGlobal = avances ? "EN_PROCESO" : "PENDIENTE";
+        }
+
         return EvaluacionConsolidadaResponseDTO.builder()
                 .id(lote.getId())
                 .nombreLote(lote.getCodigoLote())
                 .nombreProducto(lote.getProducto().getNombre())
                 .estadoLote(lote.getEstado().name())
-                .tipoAnalisisCalidad(lote.getProducto().getTipoAnalisisCalidad().name())
-                .evaluaciones(evaluaciones == null ? java.util.List.of() :
-                        evaluaciones.stream()
-                                .map(this::toSimpleDTO)
-                                .toList())
+                .tipoAnalisisCalidad(tipoAnalisis != null ? tipoAnalisis.name() : null)
+                .tipoAnalisisRequerido(mapearAnalisisRequerido(tipoAnalisis))
+                .fisicoQuimicoCargado(fisicoCargado)
+                .microbiologicoCargado(microCargado)
+                .evaluacionesRequeridasCompletas(completas)
+                .resultadoGlobal(resultadoGlobal)
+                .evaluaciones(evals.stream()
+                        .map(this::toSimpleDTO)
+                        .toList())
                 .build();
+    }
+
+    private String mapearAnalisisRequerido(TipoAnalisisCalidad tipoAnalisis) {
+        if (tipoAnalisis == null) {
+            return null;
+        }
+        return switch (tipoAnalisis) {
+            case FISICO -> "FISICO_QUIMICO";
+            case QUIMICO_MICROBIOLOGICO -> "MICROBIOLOGICO";
+            default -> tipoAnalisis.name();
+        };
     }
 }

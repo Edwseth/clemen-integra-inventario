@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -28,9 +29,27 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     boolean existsByCodigoLote(String codigoLote);
     List<LoteProducto> findByEstado(EstadoLote estado);
     Optional<LoteProducto> findByCodigoLote(String codigoLote);
-    @Query("SELECT lp FROM LoteProducto lp JOIN FETCH lp.almacen a WHERE lp.fechaVencimiento BETWEEN :inicio AND :fin")
-    List<LoteProducto> findByFechaVencimientoBetween(@Param("inicio") LocalDateTime inicio,
-                                                     @Param("fin") LocalDateTime fin);
+    @Query("""
+       SELECT lp
+         FROM LoteProducto lp
+         JOIN FETCH lp.producto p
+         JOIN FETCH lp.almacen a
+        WHERE lp.fechaVencimiento BETWEEN :inicio AND :fin
+    """)
+    List<LoteProducto> findByFechaVencimientoBetweenFetchProducto(@Param("inicio") LocalDateTime inicio,
+                                                                  @Param("fin") LocalDateTime fin);
+    @Query("""
+       SELECT lp
+         FROM LoteProducto lp
+         JOIN FETCH lp.producto p
+         JOIN FETCH lp.almacen a
+        WHERE lp.fechaVencimiento < :corte
+          AND (:productoId IS NULL OR p.id = :productoId)
+          AND (:almacenId  IS NULL OR a.id = :almacenId)
+    """)
+    List<LoteProducto> findVencidosFetch(@Param("corte") LocalDateTime corte,
+                                         @Param("productoId") Long productoId,
+                                         @Param("almacenId") Long almacenId);
     Optional<LoteProducto> findByCodigoLoteAndProductoIdAndAlmacenId(String codigoLote, Integer productoId, Integer almacenId);
     List<LoteProducto> findByEstadoIn(List<EstadoLote> estados);
     List<LoteProducto> findByEstadoInAndProducto_TipoAnalisisIn(List<EstadoLote> estados, List<TipoAnalisisCalidad> tipos);
@@ -62,10 +81,24 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
                                                                               @Param("codigoLote") String codigoLote,
                                                                               @Param("almacenId") Integer almacenId);
 
+    @EntityGraph(attributePaths = {"producto", "almacen"})
     List<LoteProducto> findByProductoIdAndAlmacenIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
             Long productoId,
             Integer almacenId,
             Collection<EstadoLote> estados);
+
+    @EntityGraph(attributePaths = {"producto", "almacen"})
+    List<LoteProducto> findByProductoIdAndEstadoInOrderByFechaVencimientoAscIdAsc(
+            Long productoId,
+            Collection<EstadoLote> estados);
+
+    @EntityGraph(attributePaths = {"producto", "almacen"})
+    List<LoteProducto> findByProductoIdAndEstadoIn(Long productoId, Collection<EstadoLote> estados);
+
+    @EntityGraph(attributePaths = {"producto", "almacen"})
+    List<LoteProducto> findByProductoIdAndAlmacenIdAndEstadoIn(Long productoId,
+                                                                Integer almacenId,
+                                                                Collection<EstadoLote> estados);
 
     @Query("""
       select l
@@ -87,7 +120,8 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
                (lp.stock_lote - lp.stock_reservado) AS stockLote,
                lp.fecha_vencimiento AS fechaVencimiento,
                lp.almacenes_id AS almacenId,
-               a.nombre AS nombreAlmacen
+               a.nombre AS nombreAlmacen,
+               lp.estado AS estado
         FROM lotes_productos lp
         LEFT JOIN almacenes a ON lp.almacenes_id = a.id
         WHERE lp.productos_id = :productoId

@@ -11,9 +11,11 @@ import lombok.*;
 public class ProductoOptionDTO {
     private Long id;
     private String nombre;
+    private String nombrePlural;
     @JsonProperty("sku")
     @JsonAlias("codigoSku")
     private String sku;
+    private UnidadMiniDTO unidad;
     // Texto listo para pintar en el autocomplete (NOMBRE (SKU))
     public String getEtiqueta() {
         return (sku == null || sku.isBlank())
@@ -23,4 +25,13 @@ public class ProductoOptionDTO {
 
     @JsonProperty("codigoSku")
     public String getCodigoSku() {return sku;}
+
+    /* ====== NUEVO: clase anidada para unidad ====== */
+    @Data @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class UnidadMiniDTO {
+        private String nombre;            // p.ej. MILILITRO
+        private String nombrePlural;
+        private String simbolo;            // ej. KG, ML, M...
+        private String simboloImpresion;   // ej. kg, mL, m...
+    }
 }

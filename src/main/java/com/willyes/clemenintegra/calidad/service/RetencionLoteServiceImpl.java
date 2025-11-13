@@ -13,9 +13,13 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
@@ -61,6 +65,12 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         existing.setCausa(dto.getCausa());
         existing.setFechaRetencion(dto.getFechaRetencion());
         existing.setFechaLiberacion(dto.getFechaLiberacion());
+        if (existing.getEstado() != EstadoRetencion.LIBERADO
+                && dto.getEstado() == EstadoRetencion.LIBERADO
+                && !esJefeOSuper()) {
+            throw new AccessDeniedException("Solo Jefe de Calidad o Super Admin pueden liberar retenciones");
+        }
+
         existing.setEstado(dto.getEstado());
         existing.setAprobadoPor(user);
         return mapper.toDTO(repository.save(existing));
@@ -145,6 +155,9 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
     @Override
     @Transactional
     public RetencionLote levantar(Long retencionId, Usuario usuario) {
+        if (!esJefeOSuper()) {
+            throw new AccessDeniedException("Solo Jefe de Calidad o Super Admin pueden levantar retenciones");
+        }
         if (retencionId == null) {
             throw new IllegalArgumentException("Retención requerida");
         }
@@ -190,6 +203,24 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
             lote.setEstado(EstadoLote.RETENIDO);
             loteRepository.save(lote);
         }
+    }
+
+    private boolean esJefeOSuper() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return tieneAlgunaAuthority(authentication, "ROL_JEFE_CALIDAD", "ROL_SUPER_ADMIN");
+    }
+
+    private boolean tieneAlgunaAuthority(Authentication authentication, String... authorities) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        java.util.Set<String> requeridas = java.util.Set.of(authorities);
+        for (GrantedAuthority authority : authentication.getAuthorities()) {
+            if (requeridas.contains(authority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 

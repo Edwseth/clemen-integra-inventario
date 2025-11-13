@@ -106,6 +106,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -118,9 +119,9 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/calidad/**",
                             "/api/calidad/evaluaciones/archivo/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name(),
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            RolUsuario.ROL_MICROBIOLOGO.name()
                     );
 
                     auth.requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(

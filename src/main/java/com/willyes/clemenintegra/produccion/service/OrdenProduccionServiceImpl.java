@@ -77,6 +77,7 @@ import org.springframework.http.ProblemDetail;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -134,6 +135,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             TipoCategoria.MATERIA_PRIMA, InventoryCatalogResolver::getAlmacenOrigenMateriaPrimaId,
             TipoCategoria.MATERIAL_EMPAQUE, InventoryCatalogResolver::getAlmacenOrigenMaterialEmpaqueId,
             TipoCategoria.SUMINISTROS, InventoryCatalogResolver::getAlmacenOrigenSuministrosId);
+
+    private static final EnumSet<EstadoLote> ESTADOS_FEFO_PERMITIDOS = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
 
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -308,6 +311,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             if (maxProducible == null || producibleConEste < maxProducible) {
                 maxProducible = producibleConEste;
             }
+
+            log.debug("OP-VALIDACION insumoId={} requerido={} disponible={} maxProducible={}",
+                    insumoId,
+                    cantidadRequerida,
+                    stockDisponible,
+                    maxProducible);
 
             if (stockDisponible.compareTo(cantidadRequerida) < 0) {
                 stockSuficiente = false;
@@ -547,6 +556,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 if (lotesConReserva > 0) {
                     log.warn("OP-cierre stock_reservado sin solicitud pendiente op={}, lotes={}", orden.getId(), lotesConReserva);
                 }
+                if (dto.getTipo() == TipoCierre.TOTAL) {
+                    reservaLoteService.liberarReservasPorOrden(orden.getId());
+                }
             }
 
             Long motivoEntradaId = catalogResolver.getMotivoIdEntradaProductoTerminado();
@@ -608,7 +620,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     destino = almacenPt;
                     estadoLote = EstadoLote.DISPONIBLE;
                 }
-                case FISICO_QUIMICO, MICROBIOLOGICO, AMBOS -> {
+                case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
                     destino = almacenCuarentena;
                     estadoLote = EstadoLote.EN_CUARENTENA;
                 }
@@ -789,9 +801,24 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
 
         if (lotesSeleccionados.isEmpty()) {
+            log.warn("OP-RESERVA sin lotes elegibles ordenId={} insumoId={} requerida={}",
+                    ordenId,
+                    insumoId,
+                    requerida);
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "STOCK_INSUFICIENTE: faltan " + requerida);
         }
+
+        lotesSeleccionados.stream()
+                .map(LoteFefoDisponibleProjection::getEstado)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(this::parseEstadoLoteSafe)
+                .filter(Objects::nonNull)
+                .filter(estado -> !ESTADOS_FEFO_PERMITIDOS.contains(estado))
+                .findFirst()
+                .ifPresent(estado -> log.warn("OP-reserva detectó lote en estado no permitido: {}", estado));
 
         Long primerLoteId = lotesSeleccionados.get(0).getLoteProductoId();
         if (primerLoteId == null) {
@@ -800,6 +827,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
 
         return lotesSeleccionados;
+    }
+
+    private EstadoLote parseEstadoLoteSafe(String valor) {
+        try {
+            return EstadoLote.valueOf(valor.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            log.warn("Estado de lote desconocido recibido en FEFO: {}", valor);
+            return null;
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -837,7 +873,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         for (DetalleFormula insumo : formula.getDetalles()) {
             Long insumoId = insumo.getInsumo().getId().longValue();
-            BigDecimal requerida = insumo.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
+            BigDecimal requerida = insumo.getCantidadNecesaria()
+                    .multiply(orden.getCantidadProgramada())
+                    .setScale(8, RoundingMode.HALF_UP);
+            BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
             List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
 
             List<LoteFefoDisponibleProjection> lotesSeleccionados = seleccionarLotesFefo(
@@ -849,7 +888,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .tipoMovimiento(TipoMovimiento.SALIDA)
                     .productoId(insumoId)
                     .loteId(primerLoteId)
-                    .cantidad(requerida)
+                    .cantidad(requeridaSolicitud)
                     .ordenProduccionId(orden.getId())
                     .usuarioSolicitanteId(usuario.getId())
                     .motivoMovimientoId(motivo.getId())
@@ -874,6 +913,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 detallesSolicitud = new ArrayList<>();
                 solicitud.setDetalles(detallesSolicitud);
             } else {
+                log.debug("OP-RESERVA antes limpiar: detallesPrevios={} ordenId={} insumoId={}",
+                        detallesSolicitud.size(),
+                        ordenId,
+                        insumoId);
                 detallesSolicitud.clear();
             }
 
@@ -883,22 +926,25 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 if (restante.compareTo(BigDecimal.ZERO) <= 0) {
                     break;
                 }
-                BigDecimal disponible = lote.getStockLote();
+                BigDecimal disponible = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
                 BigDecimal usar = disponible.min(restante);
                 if (usar.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
 
+                BigDecimal usarCalculo = usar.setScale(8, RoundingMode.HALF_UP);
+                BigDecimal usarDetalle = usarCalculo.setScale(6, RoundingMode.HALF_UP);
+
                 SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
                         .solicitudMovimiento(solicitud)
                         .lote(new LoteProducto(lote.getLoteProductoId()))
-                        .cantidad(usar)
+                        .cantidad(usarDetalle)
                         .almacenOrigen(lote.getAlmacenId() != null ? new Almacen(Math.toIntExact(lote.getAlmacenId())) : null)
                         .almacenDestino(solicitud.getAlmacenDestino())
                         .build();
                 detallesSolicitud.add(detSolicitud);
 
-                restante = restante.subtract(usar);
+                restante = restante.subtract(usarCalculo).setScale(8, RoundingMode.HALF_UP);
             }
 
             if (restante.compareTo(BigDecimal.ZERO) > 0) {
@@ -959,7 +1005,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     destino = almacenPt;
                     estadoLote = EstadoLote.DISPONIBLE;
                 }
-                case FISICO_QUIMICO, MICROBIOLOGICO, AMBOS -> {
+                case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
                     destino = almacenCuarentena;
                     estadoLote = EstadoLote.EN_CUARENTENA;
                 }

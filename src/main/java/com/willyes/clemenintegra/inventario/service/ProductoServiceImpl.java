@@ -14,7 +14,10 @@ import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.RichTextString;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -92,14 +95,20 @@ public class ProductoServiceImpl implements ProductoService {
         if (valor == null || valor.isBlank()) {
             return TipoAnalisisCalidad.NINGUNO;
         }
-        return TipoAnalisisCalidad.valueOf(valor);
+        String normalizado = valor.trim().toUpperCase();
+        return switch (normalizado) {
+            case "FISICO_QUIMICO" -> TipoAnalisisCalidad.AMBOS;
+            case "MICROBIOLOGICO" -> TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO;
+            default -> TipoAnalisisCalidad.valueOf(normalizado);
+        };
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductoResponseDTO> listarTodos(String nombre, String sku, Long categoriaProductoId, Boolean activo, Pageable pageable) {
 
-        System.out.println("🟢 Entró correctamente a ProductoServiceImpl.listarTodos()");
+        log.debug("Listando productos con filtros nombre={}, sku={}, categoriaId={}, activo={}",
+                nombre, sku, categoriaProductoId, activo);
 
         Specification<Producto> spec = Specification
                 .where(nombreContains(nombre))
@@ -108,7 +117,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .and(activoEquals(activo));
 
         Page<Producto> productos = productoRepository.findAll(spec, pageable);
-        System.out.println("▶️ Total productos devueltos: " + productos.getTotalElements());
+        log.debug("Total de productos devueltos: {}", productos.getTotalElements());
 
         List<Long> ids = productos.getContent().stream()
                 .map(p -> p.getId().longValue())
@@ -117,9 +126,9 @@ public class ProductoServiceImpl implements ProductoService {
 
         productos.forEach(p -> {
             if (p == null) {
-                System.out.println("⚠️ Producto nulo detectado");
+                log.warn("Producto nulo detectado durante listado");
             } else {
-                System.out.println("📦 Producto cargado: " + p.getId() + " - " + p.getNombre());
+                log.debug("Producto cargado en listado: id={} nombre={}", p.getId(), p.getNombre());
             }
         });
 
@@ -286,7 +295,12 @@ public class ProductoServiceImpl implements ProductoService {
         }
 
         UnidadMedida unidad = unidadMedidaRepository.findByNombre(dto.getNombre())
-                .orElseGet(() -> unidadMedidaRepository.save(new UnidadMedida(null, dto.getNombre(), dto.getSimbolo())));
+                .orElseGet(() -> {
+                    UnidadMedida u = new UnidadMedida();
+                    u.setNombre(dto.getNombre().trim());
+                    u.setSimbolo(dto.getSimbolo().trim());
+                    return unidadMedidaRepository.save(u);
+                });
 
         producto.setUnidadMedida(unidad);
         productoRepository.save(producto);
@@ -297,6 +311,7 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable) {
+        // Mantén tu “safe sort”
         Sort sort = pageable.getSort();
         Sort safe = Sort.by(sort.stream()
                 .map(o -> switch (o.getProperty()) {
@@ -307,12 +322,42 @@ public class ProductoServiceImpl implements ProductoService {
         Pageable safePage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
 
         Page<Producto> page = productoRepository.buscarPorTexto(q, safePage);
-        return page.map(p -> ProductoOptionDTO.builder()
-                .id(p.getId() == null ? null : Long.valueOf(p.getId()))
-                .nombre(p.getNombre())
-                .sku(p.getCodigoSku())
-                .build()
-        );
+
+        // ✅ Ahora mapeamos también la unidad
+        return page.map(p -> {
+            ProductoOptionDTO.UnidadMiniDTO unidadDTO = null;
+            if (p.getUnidadMedida() != null) {
+                String simbolo = p.getUnidadMedida().getSimbolo();
+                String simboloImp;
+                String nombre = p.getUnidadMedida().getNombre();
+                String nombrePlural;
+                try {
+                    // si tu entidad ya tiene getSimboloImpresion()
+                    simboloImp = p.getUnidadMedida().getSimboloImpresion();
+                } catch (Throwable t) {
+                    // tolerante si aún no existe el campo en el modelo
+                    simboloImp = null;
+                }
+                try {
+                    nombrePlural = p.getUnidadMedida().getNombrePlural();
+                } catch (Throwable t) {
+                    nombrePlural = null; // deja que el FE haga fallback a nombre+"S"
+                }
+                unidadDTO = ProductoOptionDTO.UnidadMiniDTO.builder()
+                        .nombre(nombre)
+                        .nombrePlural(nombrePlural)
+                        .simbolo(simbolo)
+                        .simboloImpresion((simboloImp != null && !simboloImp.isBlank()) ? simboloImp : simbolo)
+                        .build();
+            }
+
+            return ProductoOptionDTO.builder()
+                    .id(p.getId() == null ? null : Long.valueOf(p.getId()))
+                    .nombre(p.getNombre())
+                    .sku(p.getCodigoSku())
+                    .unidad(unidadDTO) // ✅ se envía al frontend
+                    .build();
+        });
     }
 
     @Override
@@ -329,6 +374,10 @@ public class ProductoServiceImpl implements ProductoService {
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Stock Disponible");
+        CreationHelper creationHelper = workbook.getCreationHelper();
+        DataFormat dataFormat = creationHelper.createDataFormat();
+        CellStyle numericStyle = workbook.createCellStyle();
+        numericStyle.setDataFormat(dataFormat.getFormat("#,##0.00"));
 
         Row header = sheet.createRow(0);
         String[] columnas = {
@@ -346,9 +395,14 @@ public class ProductoServiceImpl implements ProductoService {
             row.createCell(1).setCellValue(producto.getCodigoSku());
             row.createCell(2).setCellValue(producto.getNombre());
             BigDecimal stock = stockMap.getOrDefault(producto.getId().longValue(), BigDecimal.ZERO);
-            row.createCell(3).setCellValue((RichTextString) stock);
+            Cell stockCell = row.createCell(3);
+            stockCell.setCellValue(stock != null ? stock.doubleValue() : 0d);
+            stockCell.setCellStyle(numericStyle);
             row.createCell(4).setCellValue(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getNombre() : "");
-            row.createCell(5).setCellValue((RichTextString) (producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO));
+            BigDecimal stockMinimo = producto.getStockMinimo() != null ? producto.getStockMinimo() : BigDecimal.ZERO;
+            Cell minimoCell = row.createCell(5);
+            minimoCell.setCellValue(stockMinimo.doubleValue());
+            minimoCell.setCellStyle(numericStyle);
             row.createCell(6).setCellValue(producto.isActivo());
             row.createCell(7).setCellValue(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : "");
         }

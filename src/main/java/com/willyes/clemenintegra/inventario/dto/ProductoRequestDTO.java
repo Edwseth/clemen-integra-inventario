@@ -33,7 +33,7 @@ public class ProductoRequestDTO {
     private BigDecimal stockMinimoProveedor;
 
     @Builder.Default
-    @Pattern(regexp = "NINGUNO|FISICO_QUIMICO|MICROBIOLOGICO|AMBOS")
+    @Pattern(regexp = "NINGUNO|FISICO|QUIMICO_MICROBIOLOGICO|AMBOS")
     private String tipoAnalisisCalidad = TipoAnalisisCalidad.NINGUNO.name();
 
     @NotNull

@@ -140,9 +140,15 @@ public class ProductoController {
                     .body(Map.of("message", "No se puede modificar la unidad de medida: existen movimientos asociados"));
         }
 
-        // Buscar la nueva unidad o crearla si no existe
+        // Buscar la unidad por nombre o crearla si no existe
         UnidadMedida unidad = unidadMedidaRepository.findByNombre(dto.getNombre())
-                .orElseGet(() -> unidadMedidaRepository.save(new UnidadMedida(null, dto.getNombre(), dto.getSimbolo())));
+                .orElseGet(() -> {
+                    UnidadMedida u = new UnidadMedida();          // ctor válido
+                    u.setNombre(dto.getNombre().trim());          // setea campos con setters
+                    u.setSimbolo(dto.getSimbolo().trim());
+                    // Si tu entidad tiene 'codigo' o 'descripcion', puedes setearlos aquí.
+                    return unidadMedidaRepository.save(u);
+                });
 
         producto.setUnidadMedida(unidad);
         productoRepository.save(producto);

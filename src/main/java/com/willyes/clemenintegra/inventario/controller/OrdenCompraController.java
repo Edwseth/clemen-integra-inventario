@@ -6,8 +6,11 @@ import com.willyes.clemenintegra.inventario.mapper.HistorialEstadoOrdenMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +24,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 
+import java.nio.charset.StandardCharsets;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StreamUtils;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -36,6 +43,7 @@ public class OrdenCompraController {
     private final ProveedorRepository proveedorRepository;
     private final ProductoRepository productoRepository;
     private final OrdenCompraService ordenCompraService;
+    private final OrdenCompraPdfService ordenCompraPdfService;
     private final OrdenCompraMapper mapper;
 
     @PostMapping
@@ -56,6 +64,11 @@ public class OrdenCompraController {
                 .estado(EstadoOrdenCompra.CREADA)
                 .fechaOrden(LocalDateTime.now())
                 .observaciones(dto.getObservaciones())
+                .comprador(dto.getComprador())
+                .condicionesPago(dto.getCondicionesPago())
+                .descuento(dto.getDescuento() != null
+                        ? dto.getDescuento()
+                        : BigDecimal.ZERO)
                 .build();
 
         orden.setCodigoOrden(ordenCompraService.generarCodigoOrdenCompra());
@@ -64,7 +77,15 @@ public class OrdenCompraController {
             Producto producto = productoRepository.findById(d.getProductoId())
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado"));
 
-            BigDecimal valorTotal = d.getValorUnitario().multiply(d.getCantidad());
+            // subtotal y total (si quieres incluir IVA en total de línea, descomenta el bloque)
+            BigDecimal subtotal  = d.getValorUnitario().multiply(d.getCantidad());
+            BigDecimal ivaPct    = d.getIva() != null ? d.getIva() : BigDecimal.ZERO;
+            BigDecimal ivaValor  = ivaPct.compareTo(BigDecimal.ZERO) > 0
+                    ? subtotal.multiply(ivaPct).divide(BigDecimal.valueOf(100))
+                    : BigDecimal.ZERO;
+            BigDecimal valorTotal = subtotal.add(ivaValor);
+            // si prefieres exactamente cantidad*unitario como tenías antes, usa:
+            // BigDecimal valorTotal = d.getValorUnitario().multiply(d.getCantidad());
 
             return OrdenCompraDetalle.builder()
                     .ordenCompra(orden)
@@ -74,6 +95,7 @@ public class OrdenCompraController {
                     .valorTotal(valorTotal)
                     .iva(d.getIva())
                     .cantidadRecibida(BigDecimal.ZERO)
+                    .fechaNecesidad(d.getFechaNecesidad())
                     .build();
         }).toList();
 
@@ -132,7 +154,7 @@ public class OrdenCompraController {
 
     @GetMapping
     public ResponseEntity<Page<OrdenCompraResponseDTO>> listar(
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<OrdenCompraResponseDTO> page = ordenCompraService.listar(pageable);
         return ResponseEntity.ok(page);
     }
@@ -164,5 +186,45 @@ public class OrdenCompraController {
                 request.observaciones);
         return ResponseEntity.ok(HistorialEstadoOrdenMapper.toResponse(historial));
     }
+
+    @GetMapping("/{id}/pdf")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    public ResponseEntity<byte[]> pdf(@PathVariable("id") Long id) {   // <-- Long
+        // 1) Cargar OC con detalles
+        var ocOpt = ordenCompraService.buscarPorIdConDetalles(id);
+        if (ocOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        var oc = ocOpt.get(); // <-- desenvolver Optional
+
+        // 2) Generar PDF con la entidad (no Optional)
+        byte[] pdf = ordenCompraPdfService.generarPdf(oc);
+
+        // 3) Nombre de archivo seguro
+        String nombre = "OC-" + (oc.getCodigoOrden() != null ? oc.getCodigoOrden() : oc.getId()) + ".pdf";
+
+        // 4) Respuesta
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, "application/pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombre + "\"")
+                .body(pdf);
+    }
+
+    private String loadTemplate(String classpathLocation) {        // <- sin guion bajo
+        try (InputStream is = new ClassPathResource(classpathLocation).getInputStream()) {
+            return StreamUtils.copyToString(is, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("No se encontró la plantilla: " + classpathLocation, e);
+        }
+    }
+
+    private static java.math.BigDecimal bd(Number n) {
+        return n == null ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(n.toString());
+    }
+    private static String nullSafe(String s) { return s == null ? "" : s; }
+    private static String esc(String s) {
+        return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
+    }
+
 }
 

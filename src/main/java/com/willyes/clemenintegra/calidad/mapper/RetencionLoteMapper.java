@@ -12,14 +12,18 @@ import org.springframework.stereotype.Component;
 public class RetencionLoteMapper {
 
     public RetencionLoteDTO toDTO(RetencionLote entity) {
+        LoteProducto lote = entity.getLote();
+        Usuario aprobador = entity.getAprobadoPor();
         return RetencionLoteDTO.builder()
                 .id(entity.getId())
-                .loteId(entity.getLote().getId())
+                .loteId(lote != null ? lote.getId() : null)
+                .codigoLote(lote != null ? lote.getCodigoLote() : null)
                 .causa(entity.getCausa())
                 .fechaRetencion(entity.getFechaRetencion())
                 .fechaLiberacion(entity.getFechaLiberacion())
                 .estado(entity.getEstado())
-                .aprobadoPorId(entity.getAprobadoPor().getId())
+                .aprobadoPorId(aprobador != null ? aprobador.getId() : null)
+                .aprobadoPorNombre(aprobador != null ? aprobador.getNombreCompleto() : null)
                 .motivo(entity.getMotivo())
                 .noConformidadId(entity.getNoConformidad() != null ? entity.getNoConformidad().getId() : null)
                 .build();

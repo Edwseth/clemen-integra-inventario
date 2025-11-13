@@ -12,6 +12,10 @@ import org.springframework.stereotype.Component;
 public class NoConformidadMapper {
 
     public NoConformidadDTO toDTO(NoConformidad entity) {
+        var lote = entity.getLote();
+        var usuario = entity.getUsuarioReporta();
+        var producto = entity.getProducto();
+
         return NoConformidadDTO.builder()
                 .id(entity.getId())
                 .codigo(entity.getCodigo())
@@ -22,11 +26,13 @@ public class NoConformidadMapper {
                 .evidencia(entity.getEvidencia())
                 .fechaRegistro(entity.getFechaRegistro())
                 .fechaCierre(entity.getFechaCierre())
-                .usuarioReportaId(entity.getUsuarioReporta() != null ? entity.getUsuarioReporta().getId() : null)
-                .loteId(entity.getLote() != null ? entity.getLote().getId() : null)
-                .productoId(entity.getProducto() != null && entity.getProducto().getId() != null
-                        ? entity.getProducto().getId().longValue() : null)
+                .usuarioReportaId(usuario != null ? usuario.getId() : null)
+                .loteId(lote != null ? lote.getId() : null)
+                .productoId(producto != null && producto.getId() != null ? producto.getId().longValue() : null)
                 .evaluacionId(entity.getEvaluacion() != null ? entity.getEvaluacion().getId() : null)
+                .codigoLote(lote != null ? lote.getCodigoLote() : null)
+                .reportadoPorNombre(usuario != null ? usuario.getNombreCompleto() : null)
+                .productoNombre(producto != null ? producto.getNombre() : null)
                 .creadoPor(entity.getCreadoPor())
                 .actualizadoPor(entity.getActualizadoPor())
                 .actualizadoEn(entity.getActualizadoEn())

@@ -100,6 +100,19 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                              @Param("productoId") Long productoId,
                                              @Param("detalleId") Long detalleId);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "almacenOrigen", "almacenDestino",
+            "proveedor", "ordenCompra", "motivoMovimiento", "tipoMovimientoDetalle", "registradoPor"
+    })
+    @Query("""
+        select m
+          from MovimientoInventario m
+         where (:inicio is null or m.fechaIngreso >= :inicio)
+           and (:fin    is null or m.fechaIngreso <= :fin)
+    """)
+    List<MovimientoInventario> findAllForReporte(@Param("inicio") LocalDateTime inicio,
+                                                 @Param("fin") LocalDateTime fin);
+
     boolean existsByOrdenProduccionIdAndClasificacion(Long ordenProduccionId, ClasificacionMovimientoInventario clasificacion);
 
     java.util.Optional<MovimientoInventario> findByTipoMovimientoAndMotivoMovimientoIdAndOrdenProduccionIdAndProductoIdAndLoteId(

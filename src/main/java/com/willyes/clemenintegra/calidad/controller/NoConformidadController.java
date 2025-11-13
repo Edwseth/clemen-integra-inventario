@@ -25,6 +25,7 @@ public class NoConformidadController {
     private final UsuarioRepository usuarioRepository;
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<Page<NoConformidadDTO>> listar(
             @RequestParam(required = false) SeveridadNoConformidad severidad,
             @RequestParam(required = false) OrigenNoConformidad origen,
@@ -33,12 +34,13 @@ public class NoConformidadController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<NoConformidadDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<NoConformidadDTO> crear(
             @RequestBody NoConformidadDTO dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -63,7 +65,7 @@ public class NoConformidadController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<NoConformidadDTO> actualizar(
             @PathVariable Long id,
             @RequestBody NoConformidadDTO dto,
@@ -75,7 +77,7 @@ public class NoConformidadController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();

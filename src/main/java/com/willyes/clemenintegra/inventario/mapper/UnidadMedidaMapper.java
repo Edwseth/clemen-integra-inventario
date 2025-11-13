@@ -10,5 +10,7 @@ public interface UnidadMedidaMapper {
     @Mapping(target = "id", source = "id")
     @Mapping(target = "nombre", source = "nombre")
     @Mapping(target = "simbolo", source = "simbolo")
+    @Mapping(target = "nombrePlural", source = "nombrePlural")
+    @Mapping(target = "simboloImpresion", source = "simboloImpresion")
     UnidadMedidaResponseDTO toDto(UnidadMedida unidad);
 }

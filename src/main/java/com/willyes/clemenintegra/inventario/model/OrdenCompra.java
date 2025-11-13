@@ -1,9 +1,11 @@
 package com.willyes.clemenintegra.inventario.model;
 
+import com.willyes.clemenintegra.inventario.model.enums.CondicionesPago;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -39,8 +41,18 @@ public class OrdenCompra {
     @Column(name = "observaciones", length = 255)
     private String observaciones;
 
+    @Column(name = "descuento", nullable = false, precision = 12, scale = 2)
+    private BigDecimal descuento = BigDecimal.ZERO;
+
     @OneToMany(mappedBy = "ordenCompra", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrdenCompraDetalle> detalles;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "condiciones_pago", length = 20)
+    private CondicionesPago condicionesPago;   // NUEVO
+
+    @Column(name = "comprador", length = 100)
+    private String comprador;
 
 
     public OrdenCompra(Integer id) {
@@ -53,6 +65,12 @@ public class OrdenCompra {
     public EstadoOrdenCompra getEstado() {return estado;}
     public String getObservaciones() {return observaciones;}
     public List<OrdenCompraDetalle> getDetalles() {return detalles;}
+    public CondicionesPago getCondicionesPago() { return condicionesPago; }
+    public String getComprador() { return comprador; }
+    public BigDecimal getDescuento() { return descuento; }
+    public void setDescuento(BigDecimal descuento) { this.descuento = descuento; }
+    public void setCondicionesPago(CondicionesPago condicionesPago) { this.condicionesPago = condicionesPago; }
+    public void setComprador(String comprador) { this.comprador = comprador; }
     public void setDetalles(List<OrdenCompraDetalle> detalles) {this.detalles = detalles;}
     public void setId(Integer id) {this.id = id;}
     public void setCodigoOrden(String codigoOrden) {this.codigoOrden = codigoOrden;}

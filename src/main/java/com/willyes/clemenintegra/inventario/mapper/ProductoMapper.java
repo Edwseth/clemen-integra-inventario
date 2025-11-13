@@ -8,15 +8,20 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import org.mapstruct.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProductoMapper {
 
+    Logger LOG = LoggerFactory.getLogger(ProductoMapper.class);
+
     default ProductoResponseDTO safeToDto(Producto producto) {
         if (producto == null) {
-            System.out.println("❌ Producto nulo detectado");
+            LOG.warn("Producto nulo detectado al mapear a DTO");
             return null;
         }
         return toDto(producto);
@@ -25,13 +30,10 @@ public interface ProductoMapper {
     @Mapping(source = "codigoSku", target = "sku")
     @Mapping(target = "unidadMedida", source = "unidadMedida")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
-    @Mapping(target = "tipoAnalisisCalidad", expression = "java(producto.getTipoAnalisis() != null ? producto.getTipoAnalisis().name() : null)")
+    @Mapping(target = "tipoAnalisisCalidad", expression = "java(producto.getTipoAnalisisCalidad() != null ? producto.getTipoAnalisisCalidad().name() : null)")
     @Mapping(target = "rendimiento", source = "rendimientoUnidad")
-
-    // PROD-DETAIL-IDS BEGIN
     @Mapping(target = "unidadMedidaId", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null)")
     @Mapping(target = "categoriaProductoId", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null)")
-        // PROD-DETAIL-IDS END
     ProductoResponseDTO toDto(Producto producto);
 
     UnidadMedidaResponseDTO toUnidadMedidaDto(UnidadMedida unidadMedida);
@@ -46,7 +48,12 @@ public interface ProductoMapper {
         if (valor == null || valor.isBlank()) {
             return TipoAnalisisCalidad.NINGUNO;
         }
-        return TipoAnalisisCalidad.valueOf(valor);
+        String normalizado = valor.trim().toUpperCase();
+        return switch (normalizado) {
+            case "FISICO_QUIMICO" -> TipoAnalisisCalidad.AMBOS;
+            case "MICROBIOLOGICO" -> TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO;
+            default -> TipoAnalisisCalidad.valueOf(normalizado);
+        };
     }
 
     @Named("mapTipoAnalisisCalidadString")
