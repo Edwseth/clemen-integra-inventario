@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.calidad.model.enums.EstadoCondicionUso;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,5 +40,7 @@ public interface LoteProductoService {
     EstadoCalidadLoteResponseDTO obtenerEstadoCalidad(Long loteId);
 
     List<CondicionUsoResponseDTO> listarCondicionesUso(Long loteId, EstadoCondicionUso estado);
+
+    LoteProductoResponseDTO reabrirParaReevaluacion(Long loteId, ReaperturaLoteRequestDTO dto, com.willyes.clemenintegra.shared.model.Usuario usuarioActual);
 
 }
