@@ -88,7 +88,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                     user != null ? user.getId() : null);
             throw new CustomBusinessException(
                     ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA,
-                    "El lote debe permanecer en CUARENTENA o RETENIDO para registrar evaluaciones.",
+                    "El lote debe permanecer en CUARENTENA o RETENIDO para registrar evaluaciones. Reabra el lote desde calidad antes de continuar.",
                     Map.of(
                             "loteId", lote.getId(),
                             "estadoActual", lote.getEstado() != null ? lote.getEstado().name() : null));
@@ -99,11 +99,6 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         auditarYRestaurarCuarentena(lote, cuarentenaId, operacion, user);
 
         validarRolEvaluador(user, dto.getTipoEvaluacion());
-
-        if (repository.existsByLoteProductoIdAndTipoEvaluacion(lote.getId(), dto.getTipoEvaluacion())) {
-            throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
-                    "Ya existe una evaluación de este tipo para el lote.");
-        }
 
         if (archivos == null || archivos.isEmpty()) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
@@ -173,7 +168,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                     user != null ? user.getId() : null);
             throw new CustomBusinessException(
                     ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA,
-                    "El lote debe permanecer en CUARENTENA o RETENIDO para actualizar evaluaciones.",
+                    "El lote debe permanecer en CUARENTENA o RETENIDO para actualizar evaluaciones. Reabra el lote desde calidad antes de continuar.",
                     Map.of(
                             "loteId", lote.getId(),
                             "estadoActual", lote.getEstado() != null ? lote.getEstado().name() : null));
@@ -338,15 +333,19 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         }
         switch (tipoEvaluacion) {
             case FISICO -> {
-                if (!java.util.Set.of(RolUsuario.ROL_ANALISTA_CALIDAD, RolUsuario.ROL_SUPER_ADMIN).contains(rol)) {
+                if (!java.util.Set.of(RolUsuario.ROL_ANALISTA_CALIDAD,
+                        RolUsuario.ROL_JEFE_CALIDAD,
+                        RolUsuario.ROL_SUPER_ADMIN).contains(rol)) {
                     throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
-                            "Solo un analista de calidad o un super admin puede registrar evaluaciones físicas.");
+                            "Solo un analista, jefe de calidad o super admin puede registrar evaluaciones físicas.");
                 }
             }
             case QUIMICO_MICROBIOLOGICO -> {
-                if (!java.util.Set.of(RolUsuario.ROL_MICROBIOLOGO, RolUsuario.ROL_SUPER_ADMIN).contains(rol)) {
+                if (!java.util.Set.of(RolUsuario.ROL_MICROBIOLOGO,
+                        RolUsuario.ROL_JEFE_CALIDAD,
+                        RolUsuario.ROL_SUPER_ADMIN).contains(rol)) {
                     throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
-                            "Solo un microbiólogo o un super admin puede registrar evaluaciones químico-microbiológicas.");
+                            "Solo un microbiólogo, jefe de calidad o super admin puede registrar evaluaciones químico-microbiológicas.");
                 }
             }
             default -> {
