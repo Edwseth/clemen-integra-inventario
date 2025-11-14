@@ -143,7 +143,7 @@ public class FormulaProductoController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> actualizar(@PathVariable Long id, @RequestBody FormulaProductoRequest request) {
         return formulaService.buscarPorId(id)
                 .map(existente -> {
@@ -183,7 +183,7 @@ public class FormulaProductoController {
     }
 
     @GetMapping("/producto/{productoId}/formula-activa")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaActivaProduccionDTO> obtenerFormulaActivaProduccion(@PathVariable Long productoId) {
         return ResponseEntity.ok(formulaService.obtenerFormulaActivaProduccion(productoId));
     }
