@@ -39,8 +39,13 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FormulaProductoResumenDTO> listarResumen() {
-        return formulaRepository.findAllForResumen().stream()
+    public List<FormulaProductoResumenDTO> listarResumen(EstadoFormula estado, String producto) {
+        String filtroProducto = producto != null ? producto.trim() : null;
+        if (filtroProducto != null && filtroProducto.isEmpty()) {
+            filtroProducto = null;
+        }
+
+        return formulaRepository.findAllForResumen(estado, filtroProducto).stream()
                 .map(bomMapper::toResumenDTO)
                 .collect(Collectors.toList());
     }
