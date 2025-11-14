@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,14 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     private final BomMapper bomMapper;
     private final LoteProductoRepository loteProductoRepository;
     private final UsuarioRepository usuarioRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FormulaProductoResumenDTO> listarResumen() {
+        return formulaRepository.findAllForResumen().stream()
+                .map(bomMapper::toResumenDTO)
+                .collect(Collectors.toList());
+    }
 
     public List<FormulaProducto> listarTodas() {
         return formulaRepository.findAll();

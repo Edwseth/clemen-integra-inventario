@@ -29,6 +29,14 @@ public interface BomMapper {
     @Mapping(target = "actualizadoPorNombre", source = "actualizadoPor", qualifiedByName = "mapNombreUsuario")
     FormulaProductoResponse toResponseDTO(FormulaProducto formula);
 
+    @Mapping(target = "productoId", source = "producto", qualifiedByName = "mapProductoId")
+    @Mapping(target = "codigoProducto", source = "producto", qualifiedByName = "mapProductoCodigo")
+    @Mapping(target = "nombreProducto", source = "producto", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "estado", source = "estado", qualifiedByName = "mapEstadoFormula")
+    @Mapping(target = "fechaActualizacion", expression = "java(mapFechaActualizacion(formula))")
+    @Mapping(target = "usuarioResponsable", expression = "java(mapUsuarioResponsable(formula))")
+    FormulaProductoResumenDTO toResumenDTO(FormulaProducto formula);
+
     @Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
     //@Mapping(target = "insumo", source = "insumo")
@@ -54,6 +62,16 @@ public interface BomMapper {
         return (producto != null) ? producto.getNombre() : null;
     }
 
+    @Named("mapProductoId")
+    default Long mapProductoId(Producto producto) {
+        return (producto != null && producto.getId() != null) ? producto.getId().longValue() : null;
+    }
+
+    @Named("mapProductoCodigo")
+    default String mapProductoCodigo(Producto producto) {
+        return (producto != null) ? producto.getCodigoSku() : null;
+    }
+
     @Named("mapUnidadNombre")
     default String mapUnidadNombre(UnidadMedida unidad) {
         return (unidad != null) ? unidad.getNombre() : null;
@@ -77,5 +95,20 @@ public interface BomMapper {
     @Named("mapTipoDocumento")
     default String mapTipoDocumento(TipoDocumento tipoDocumento) {
         return (tipoDocumento != null) ? tipoDocumento.name() : null;
+    }
+
+    default java.time.LocalDateTime mapFechaActualizacion(FormulaProducto formula) {
+        if (formula == null) {
+            return null;
+        }
+        return formula.getFechaActualizacion() != null ? formula.getFechaActualizacion() : formula.getFechaCreacion();
+    }
+
+    default String mapUsuarioResponsable(FormulaProducto formula) {
+        if (formula == null) {
+            return null;
+        }
+        Usuario responsable = formula.getActualizadoPor() != null ? formula.getActualizadoPor() : formula.getCreadoPor();
+        return mapNombreUsuario(responsable);
     }
 }

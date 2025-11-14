@@ -4,7 +4,9 @@ import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface FormulaProductoRepository extends JpaRepository<FormulaProducto, Long> {
@@ -13,4 +15,11 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
 
     @EntityGraph(attributePaths = "detalles")
     Optional<FormulaProducto> findByProductoIdAndEstadoAndActivoTrue(Long productoId, EstadoFormula estado);
+
+    @Query("select f from FormulaProducto f " +
+            "join fetch f.producto p " +
+            "left join fetch f.actualizadoPor ap " +
+            "left join fetch f.creadoPor cp " +
+            "order by coalesce(f.fechaActualizacion, f.fechaCreacion) desc, f.id desc")
+    List<FormulaProducto> findAllForResumen();
 }
