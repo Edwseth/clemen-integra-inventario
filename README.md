@@ -9,6 +9,9 @@ Clemen-Integra es un ERP para laboratorios de productos homeopáticos y suplemen
 - **Fórmulas (BOM):** definición de recetas e insumos por producto.
 - **Seguridad:** control de usuarios, roles y autenticación con JWT y código 2FA.
 
+### Documentación específica
+- [Módulo BOM](docs/bom/README_BOM.md): fórmulas de producto, reglas de aprobación y contratos API para Producción y Calidad.
+
 ## Arquitectura Técnica
 El proyecto sigue una arquitectura **monolito modular evolutivo**. Cada dominio funcional se implementa en paquetes independientes bajo `com.willyes.clemenintegra`:
 
