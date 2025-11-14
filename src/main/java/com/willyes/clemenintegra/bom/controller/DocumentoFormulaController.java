@@ -31,13 +31,13 @@ public class DocumentoFormulaController {
     private final DocumentoFormulaService documentoService;
 
     @GetMapping("/{formulaId}/documentos")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public List<DocumentoFormulaResponseDTO> listarDocumentos(@PathVariable Long formulaId) {
         return documentoService.listarDocumentos(formulaId);
     }
 
     @PostMapping(value = "/{formulaId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<DocumentoFormulaResponseDTO> subirDocumento(
             @PathVariable Long formulaId,
             @RequestPart("archivo") MultipartFile archivo,
@@ -52,7 +52,7 @@ public class DocumentoFormulaController {
     }
 
     @GetMapping("/documentos/{documentoId}/descargar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Resource> descargarDocumento(@PathVariable Long documentoId) {
         DocumentoFormulaDescargaDTO descarga = documentoService.descargarDocumento(documentoId);
         return ResponseEntity.ok()
@@ -62,7 +62,7 @@ public class DocumentoFormulaController {
     }
 
     @DeleteMapping("/documentos/{documentoId}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminarDocumento(
             @PathVariable Long documentoId,
             @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
