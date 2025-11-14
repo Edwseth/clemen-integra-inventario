@@ -13,10 +13,8 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
@@ -66,27 +64,47 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     }
 
     @Override
-    public FormulaProductoResponse actualizarEstado(Long id, EstadoFormula nuevoEstado, String observacion, Long usuarioId) {
-        FormulaProducto formula = formulaRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fórmula no encontrada"));
+    @Transactional
+    public FormulaProducto cambiarEstado(Long formulaId, EstadoFormula nuevoEstado, Long usuarioId) {
+        FormulaProducto formula = formulaRepository.findById(formulaId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "La fórmula solicitada no existe"));
 
-        EstadoFormula actual = formula.getEstado();
-        if (actual == EstadoFormula.APROBADA || actual == EstadoFormula.RECHAZADA
-                || nuevoEstado == EstadoFormula.BORRADOR || nuevoEstado == EstadoFormula.EN_REVISION) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "INVALID_STATE_TRANSITION");
+        if (nuevoEstado == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe proporcionar el nuevo estado de la fórmula");
+        }
+
+        EstadoFormula estadoActual = formula.getEstado();
+        boolean transicionValida =
+                (estadoActual == EstadoFormula.BORRADOR && nuevoEstado == EstadoFormula.EN_REVISION) ||
+                (estadoActual == EstadoFormula.EN_REVISION && (nuevoEstado == EstadoFormula.APROBADA || nuevoEstado == EstadoFormula.RECHAZADA));
+
+        if (!transicionValida) {
+            throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
+                    String.format("Transición de estado no permitida de %s a %s", estadoActual, nuevoEstado));
         }
 
         Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Usuario no encontrado para actualizar la fórmula"));
+
+        if (nuevoEstado == EstadoFormula.APROBADA) {
+            if (formula.getProducto() == null) {
+                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "La fórmula aprobada debe contar con un producto asociado");
+            }
+            formulaRepository.desactivarOtrasFormulasDelProducto(formula.getProducto(), formula.getId());
+            formula.setActivo(true);
+        } else {
+            formula.setActivo(false);
+        }
 
         formula.setEstado(nuevoEstado);
-        formula.setActivo(nuevoEstado == EstadoFormula.APROBADA);
-        formula.setObservacion(observacion);
         formula.setFechaActualizacion(LocalDateTime.now());
         formula.setActualizadoPor(usuario);
 
-        FormulaProducto guardado = formulaRepository.save(formula);
-        return bomMapper.toResponseDTO(guardado);
+        return formulaRepository.save(formula);
     }
 
     @Override
