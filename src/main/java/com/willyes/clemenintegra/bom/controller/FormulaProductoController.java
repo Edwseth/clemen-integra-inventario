@@ -43,10 +43,8 @@ public class FormulaProductoController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public List<FormulaProductoResponse> listarTodas() {
-        return formulaService.listarTodas().stream()
-                .map(formula -> bomMapper.toResponseDTO(formula))
-                .collect(Collectors.toList());
+    public List<FormulaProductoResumenDTO> listarTodas() {
+        return formulaService.listarResumen();
     }
 
     @GetMapping("/{id}")
