@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.bom.service;
 
+import com.willyes.clemenintegra.bom.dto.FormulaActivaProduccionDTO;
 import com.willyes.clemenintegra.bom.dto.FormulaProductoResponse;
 import com.willyes.clemenintegra.bom.dto.FormulaProductoResumenDTO;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
@@ -17,6 +18,8 @@ public interface FormulaProductoService {
     void eliminar(Long id);
 
     FormulaProductoResponse obtenerFormulaActivaPorProducto(Long productoId, BigDecimal cantidad);
+
+    FormulaActivaProduccionDTO obtenerFormulaActivaProduccion(Long productoId);
 
     FormulaProducto cambiarEstado(Long formulaId, EstadoFormula nuevoEstado, Long usuarioId);
 

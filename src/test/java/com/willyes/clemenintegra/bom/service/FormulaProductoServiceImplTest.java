@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.bom.service;
 
+import com.willyes.clemenintegra.bom.dto.DetalleFormulaProduccionDTO;
+import com.willyes.clemenintegra.bom.dto.FormulaActivaProduccionDTO;
 import com.willyes.clemenintegra.bom.dto.FormulaProductoResumenDTO;
 import com.willyes.clemenintegra.bom.mapper.BomMapper;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
@@ -197,6 +199,84 @@ class FormulaProductoServiceImplTest {
         assertThat(Arrays.stream(FormulaProductoResumenDTO.class.getDeclaredFields())
                 .map(java.lang.reflect.Field::getName))
                 .doesNotContain("detalles", "documentos");
+    }
+
+    @Test
+    @DisplayName("obtenerFormulaActivaProduccion devuelve la fórmula aprobada activa con detalles mapeados")
+    void obtenerFormulaActivaProduccionOk() {
+        Producto producto = new Producto();
+        producto.setId(1);
+        producto.setCodigoSku("PR-001");
+        producto.setNombre("Producto Terminado");
+
+        Producto insumo = new Producto();
+        insumo.setId(2);
+        insumo.setCodigoSku("INS-001");
+        insumo.setNombre("Insumo Principal");
+
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(10L);
+        unidad.setNombre("Kilogramo");
+        unidad.setSimbolo("KG");
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setId(5L);
+        detalle.setInsumo(insumo);
+        detalle.setUnidadMedida(unidad);
+        detalle.setCantidadNecesaria(new BigDecimal("2.5000"));
+        detalle.setObligatorio(true);
+
+        Usuario responsable = new Usuario();
+        responsable.setNombreCompleto("Responsable Producción");
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(3L);
+        formula.setProducto(producto);
+        formula.setVersion("v2");
+        formula.setEstado(EstadoFormula.APROBADA);
+        formula.setActivo(true);
+        formula.setFechaActualizacion(LocalDateTime.of(2024, 5, 1, 12, 0));
+        formula.setActualizadoPor(responsable);
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaRepository.findByProductoIdAndEstadoAndActivoTrue(1L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        FormulaActivaProduccionDTO resultado = service.obtenerFormulaActivaProduccion(1L);
+
+        assertThat(resultado.formulaId).isEqualTo(3L);
+        assertThat(resultado.productoId).isEqualTo(1L);
+        assertThat(resultado.codigoProducto).isEqualTo("PR-001");
+        assertThat(resultado.nombreProducto).isEqualTo("Producto Terminado");
+        assertThat(resultado.version).isEqualTo("v2");
+        assertThat(resultado.estado).isEqualTo(EstadoFormula.APROBADA);
+        assertThat(resultado.activo).isTrue();
+        assertThat(resultado.fechaActualizacion).isEqualTo(LocalDateTime.of(2024, 5, 1, 12, 0));
+        assertThat(resultado.usuarioResponsable).isEqualTo("Responsable Producción");
+        assertThat(resultado.detalles).hasSize(1);
+
+        DetalleFormulaProduccionDTO detalleDTO = resultado.detalles.get(0);
+        assertThat(detalleDTO.detalleId).isEqualTo(5L);
+        assertThat(detalleDTO.productoInsumoId).isEqualTo(2L);
+        assertThat(detalleDTO.codigoInsumo).isEqualTo("INS-001");
+        assertThat(detalleDTO.nombreInsumo).isEqualTo("Insumo Principal");
+        assertThat(detalleDTO.unidadMedidaId).isEqualTo(10L);
+        assertThat(detalleDTO.nombreUnidadMedida).isEqualTo("Kilogramo");
+        assertThat(detalleDTO.simboloUnidadMedida).isEqualTo("KG");
+        assertThat(detalleDTO.cantidadNecesaria).isEqualByComparingTo(new BigDecimal("2.5000"));
+        assertThat(detalleDTO.obligatorio).isTrue();
+    }
+
+    @Test
+    @DisplayName("obtenerFormulaActivaProduccion lanza excepción cuando no existe fórmula activa aprobada")
+    void obtenerFormulaActivaProduccionSinFormulaActiva() {
+        when(formulaRepository.findByProductoIdAndEstadoAndActivoTrue(1L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.obtenerFormulaActivaProduccion(1L))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasFieldOrPropertyWithValue("code", ApiErrorCode.OPERACION_NO_PERMITIDA)
+                .hasMessage("El producto seleccionado no tiene una fórmula activa aprobada.");
     }
 
     @Test

@@ -181,5 +181,11 @@ public class FormulaProductoController {
         // LÍNEA CODEx: endpoint consultado por Producción para validar disponibilidad de insumos
         return ResponseEntity.ok(formulaService.obtenerFormulaActivaPorProducto(productoId, cantidad));
     }
+
+    @GetMapping("/producto/{productoId}/formula-activa")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<FormulaActivaProduccionDTO> obtenerFormulaActivaProduccion(@PathVariable Long productoId) {
+        return ResponseEntity.ok(formulaService.obtenerFormulaActivaProduccion(productoId));
+    }
 }
 

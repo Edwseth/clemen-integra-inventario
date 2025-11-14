@@ -37,6 +37,14 @@ public interface BomMapper {
     @Mapping(target = "usuarioResponsable", expression = "java(mapUsuarioResponsable(formula))")
     FormulaProductoResumenDTO toResumenDTO(FormulaProducto formula);
 
+    @Mapping(target = "formulaId", source = "id")
+    @Mapping(target = "productoId", source = "producto", qualifiedByName = "mapProductoId")
+    @Mapping(target = "codigoProducto", source = "producto", qualifiedByName = "mapProductoCodigo")
+    @Mapping(target = "nombreProducto", source = "producto", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "fechaActualizacion", expression = "java(mapFechaActualizacion(formula))")
+    @Mapping(target = "usuarioResponsable", expression = "java(mapUsuarioResponsable(formula))")
+    FormulaActivaProduccionDTO toFormulaActivaProduccionDTO(FormulaProducto formula);
+
     @Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
     //@Mapping(target = "insumo", source = "insumo")
@@ -48,6 +56,16 @@ public interface BomMapper {
     @Mapping(target = "unidad", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
     @Mapping(target = "unidadSimbolo", source = "unidadMedida", qualifiedByName = "mapUnidadSimbolo")
     DetalleFormulaResponse toResponseDTO(DetalleFormula detalle);
+
+    @Mapping(target = "detalleId", source = "id")
+    @Mapping(target = "productoInsumoId", source = "insumo", qualifiedByName = "mapProductoId")
+    @Mapping(target = "codigoInsumo", source = "insumo", qualifiedByName = "mapProductoCodigo")
+    @Mapping(target = "nombreInsumo", source = "insumo", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "unidadMedidaId", source = "unidadMedida", qualifiedByName = "mapUnidadId")
+    @Mapping(target = "nombreUnidadMedida", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
+    @Mapping(target = "simboloUnidadMedida", source = "unidadMedida", qualifiedByName = "mapUnidadSimbolo")
+    @Mapping(target = "obligatorio", expression = "java(mapObligatorio(detalle.getObligatorio()))")
+    DetalleFormulaProduccionDTO toDetalleFormulaProduccionDTO(DetalleFormula detalle);
 
     //@Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
@@ -75,6 +93,11 @@ public interface BomMapper {
     @Named("mapUnidadNombre")
     default String mapUnidadNombre(UnidadMedida unidad) {
         return (unidad != null) ? unidad.getNombre() : null;
+    }
+
+    @Named("mapUnidadId")
+    default Long mapUnidadId(UnidadMedida unidad) {
+        return (unidad != null && unidad.getId() != null) ? unidad.getId().longValue() : null;
     }
 
     @Named("mapUnidadSimbolo")
@@ -110,5 +133,9 @@ public interface BomMapper {
         }
         Usuario responsable = formula.getActualizadoPor() != null ? formula.getActualizadoPor() : formula.getCreadoPor();
         return mapNombreUsuario(responsable);
+    }
+
+    default boolean mapObligatorio(Boolean obligatorio) {
+        return Boolean.TRUE.equals(obligatorio);
     }
 }
