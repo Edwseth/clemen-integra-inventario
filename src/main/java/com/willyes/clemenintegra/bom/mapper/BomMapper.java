@@ -69,10 +69,12 @@ public interface BomMapper {
 
     //@Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
-    //@Mapping(target = "tipoDocumento", expression = "java(TipoDocumento.valueOf(dto.getTipoDocumento()))")
-    DocumentoFormula toEntity(DocumentoFormulaRequestDTO dto, FormulaProducto formula);
-
+    @Mapping(target = "formulaId", source = "formula.id")
     @Mapping(target = "tipoDocumento", source = "tipoDocumento", qualifiedByName = "mapTipoDocumento")
+    @Mapping(target = "nombreArchivo", source = ".", qualifiedByName = "mapNombreArchivoInterno")
+    @Mapping(target = "nombreVisible", source = "nombreArchivo")
+    @Mapping(target = "fechaRegistro", source = "fechaSubida")
+    @Mapping(target = "usuarioCreador", source = "usuario", qualifiedByName = "mapNombreUsuario")
     DocumentoFormulaResponseDTO toResponseDTO(DocumentoFormula documento);
 
     @Named("mapProductoNombre")
@@ -118,6 +120,24 @@ public interface BomMapper {
     @Named("mapTipoDocumento")
     default String mapTipoDocumento(TipoDocumento tipoDocumento) {
         return (tipoDocumento != null) ? tipoDocumento.name() : null;
+    }
+
+    @Named("mapNombreArchivoInterno")
+    default String mapNombreArchivoInterno(DocumentoFormula documento) {
+        if (documento == null) {
+            return null;
+        }
+        String ruta = documento.getRutaArchivo();
+        if (ruta == null) {
+            return null;
+        }
+        try {
+            java.nio.file.Path path = java.nio.file.Paths.get(ruta);
+            java.nio.file.Path fileName = path.getFileName();
+            return fileName != null ? fileName.toString() : ruta;
+        } catch (Exception ex) {
+            return ruta;
+        }
     }
 
     default java.time.LocalDateTime mapFechaActualizacion(FormulaProducto formula) {
