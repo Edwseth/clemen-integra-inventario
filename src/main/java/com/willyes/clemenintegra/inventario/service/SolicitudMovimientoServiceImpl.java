@@ -591,19 +591,31 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     }
 
     private SolicitudMovimientoResponseDTO toResponse(SolicitudMovimiento s) {
+        SolicitudMovimientoDetalle primerDetalle = Optional.ofNullable(s.getDetalles())
+                .filter(detalles -> !detalles.isEmpty())
+                .map(detalles -> detalles.get(0))
+                .orElse(null);
+
+        LoteProducto loteCabecera = s.getLote() != null ? s.getLote()
+                : primerDetalle != null ? primerDetalle.getLote() : null;
+        Almacen origenCabecera = s.getAlmacenOrigen() != null ? s.getAlmacenOrigen()
+                : primerDetalle != null ? primerDetalle.getAlmacenOrigen() : null;
+        Almacen destinoCabecera = s.getAlmacenDestino() != null ? s.getAlmacenDestino()
+                : primerDetalle != null ? primerDetalle.getAlmacenDestino() : null;
+
         return SolicitudMovimientoResponseDTO.builder()
                 .id(s.getId())
                 .tipoMovimiento(s.getTipoMovimiento())
                 .productoId(s.getProducto() != null ? s.getProducto().getId() : null)
                 .nombreProducto(s.getProducto() != null ? s.getProducto().getNombre() : null)
                 .codigoSku(s.getProducto() != null ? s.getProducto().getCodigoSku() : null)
-                .loteProductoId(s.getLote() != null ? s.getLote().getId() : null)
-                .nombreLote(s.getLote() != null ? s.getLote().getCodigoLote() : null)
+                .loteProductoId(loteCabecera != null ? loteCabecera.getId() : null)
+                .nombreLote(loteCabecera != null ? loteCabecera.getCodigoLote() : null)
                 .cantidad(s.getCantidad())
-                .almacenOrigenId(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getId() : null)
-                .nombreAlmacenOrigen(s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : null)
-                .almacenDestinoId(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getId() : null)
-                .nombreAlmacenDestino(s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : null)
+                .almacenOrigenId(origenCabecera != null ? origenCabecera.getId() : null)
+                .nombreAlmacenOrigen(origenCabecera != null ? origenCabecera.getNombre() : null)
+                .almacenDestinoId(destinoCabecera != null ? destinoCabecera.getId() : null)
+                .nombreAlmacenDestino(destinoCabecera != null ? destinoCabecera.getNombre() : null)
                 .ordenProduccionId(s.getOrdenProduccion() != null ? s.getOrdenProduccion().getId() : null)
                 .codigoOrden(s.getOrdenProduccion() != null ? s.getOrdenProduccion().getCodigoOrden() : null)
                 .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
