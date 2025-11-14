@@ -1,52 +1,72 @@
 package com.willyes.clemenintegra.bom.controller;
 
-import com.willyes.clemenintegra.bom.dto.*;
-import com.willyes.clemenintegra.bom.service.*;
+import com.willyes.clemenintegra.bom.dto.DocumentoFormulaDescargaDTO;
+import com.willyes.clemenintegra.bom.dto.DocumentoFormulaMetadataDTO;
+import com.willyes.clemenintegra.bom.dto.DocumentoFormulaResponseDTO;
+import com.willyes.clemenintegra.bom.service.DocumentoFormulaService;
+import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
+import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/bom/documentos")
+@RequestMapping("/api/bom/formulas")
 @RequiredArgsConstructor
 public class DocumentoFormulaController {
 
-    private final DocumentoFormulaApplicationService documentoService;
+    private final DocumentoFormulaService documentoService;
 
-    @GetMapping
+    @GetMapping("/{formulaId}/documentos")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    public List<DocumentoFormulaResponseDTO> listarDocumentos(@PathVariable Long formulaId) {
+        return documentoService.listarDocumentos(formulaId);
+    }
+
+    @PostMapping(value = "/{formulaId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public List<DocumentoFormulaResponseDTO> listarTodas() {
-        return documentoService.listarTodas();
+    public ResponseEntity<DocumentoFormulaResponseDTO> subirDocumento(
+            @PathVariable Long formulaId,
+            @RequestPart("archivo") MultipartFile archivo,
+            @RequestPart(value = "metadata", required = false) DocumentoFormulaMetadataDTO metadata,
+            @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
+        DocumentoFormulaResponseDTO respuesta = documentoService.guardarDocumento(
+                formulaId,
+                archivo,
+                metadata,
+                usuarioAutenticado != null ? usuarioAutenticado.getId() : null);
+        return ResponseEntity.ok(respuesta);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/documentos/{documentoId}/descargar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    public ResponseEntity<Resource> descargarDocumento(@PathVariable Long documentoId) {
+        DocumentoFormulaDescargaDTO descarga = documentoService.descargarDocumento(documentoId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(descarga.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + descarga.getNombreArchivo() + "\"")
+                .body(descarga.getRecurso());
+    }
+
+    @DeleteMapping("/documentos/{documentoId}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<DocumentoFormulaResponseDTO> obtenerPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(documentoService.buscarPorId(id));
-    }
-
-
-    @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<DocumentoFormulaResponseDTO> crear(@RequestBody DocumentoFormulaRequestDTO request) {
-        return ResponseEntity.ok(documentoService.guardar(request));
-    }
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<DocumentoFormulaResponseDTO> actualizar(@PathVariable Long id, @RequestBody DocumentoFormulaRequestDTO request) {
-        DocumentoFormulaResponseDTO actualizado = documentoService.actualizar(id, request);
-        return ResponseEntity.ok(actualizado);
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        documentoService.eliminar(id);
+    public ResponseEntity<Void> eliminarDocumento(
+            @PathVariable Long documentoId,
+            @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
+        documentoService.eliminarDocumento(documentoId, usuarioAutenticado != null ? usuarioAutenticado.getId() : null);
         return ResponseEntity.noContent().build();
     }
 }
-
