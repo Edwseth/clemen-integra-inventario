@@ -151,7 +151,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}/insumos")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public List<InsumoOPDTO> listarInsumos(@PathVariable Long id) {
         return service.listarInsumos(id);
     }
