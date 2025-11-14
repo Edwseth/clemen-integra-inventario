@@ -1,63 +1,80 @@
-# Módulo BOM (Fórmulas de Producto)
+# Módulo BOM (Backend)
 
-## Resumen funcional
-El módulo BOM gestiona las fórmulas o listas de materiales asociadas a cada producto terminado. Cada fórmula define los insumos y cantidades requeridas desde Inventarios, es el insumo técnico que las órdenes de Producción consumen cuando existe una versión **APROBADA** y **activa**, y concentra la documentación y el flujo de aprobación liderado por Calidad.
+El módulo de fórmulas o **Bill of Materials (BOM)** gestiona las recetas de producción de los productos terminados. Mantiene la estructura técnica de insumos provenientes de Inventarios, articula el flujo de revisión y aprobación liderado por Calidad y expone a Producción la versión aprobada que consumen las órdenes de fabricación.
 
-## Entidades BOM
-- **FormulaProducto**: referencia al `Producto`, maneja `version`, `estado`, indicador `activo` y registra usuario/fechas de creación y actualización.
-- **DetalleFormula**: pertenece a una `FormulaProducto`, vincula el producto insumo con su `unidadMedida`, `cantidadNecesaria` y si es `obligatorio`.
-- **DocumentoFormula**: archivo asociado a la fórmula con `ruta`, `tipoDocumento`, `nombreVisible`, `fechaRegistro` y usuario que lo cargó.
-- **EstadoFormula**: enum con los estados `BORRADOR`, `EN_REVISION`, `APROBADA`, `RECHAZADA`.
+## Entidades
+- **FormulaProducto**: asociada a un Producto. Administra versión, estado (`EstadoFormula`), indicador `activo`, bitácora de creación/actualización y colecciones de detalles y documentos vinculados.
+- **DetalleFormula**: perteneciente a una `FormulaProducto`. Relaciona el producto insumo y su `UnidadMedida` con la `cantidadNecesaria`, así como el flag `obligatorio` para consumos indispensables.
+- **DocumentoFormula**: documento técnico ligado a la fórmula. Registra `tipoDocumento`, `nombreVisible`, `nombreArchivo`, ubicación en disco, `fechaRegistro` y usuario responsable.
+- **EstadoFormula**: enumeración con los valores `BORRADOR`, `EN_REVISION`, `APROBADA`, `RECHAZADA` que determinan el ciclo de vida.
 
-## Ciclo de vida de la fórmula
-```
-BORRADOR → EN_REVISION → APROBADA
-                      ↘
-                       RECHAZADA
-```
-- Transiciones válidas: `BORRADOR → EN_REVISION`, `EN_REVISION → APROBADA`, `EN_REVISION → RECHAZADA`.
-- Al aprobar una fórmula se marca como activa y se desactivan las demás versiones del mismo producto.
-- Solo en `BORRADOR` o `EN_REVISION` se pueden editar detalles y documentos.
-- Producción siempre consume una única fórmula `APROBADA` y `activa` por producto.
+## Ciclo de vida
+- Transiciones permitidas:
+  - `BORRADOR → EN_REVISION`
+  - `EN_REVISION → APROBADA`
+  - `EN_REVISION → RECHAZADA`
+- Edición de detalles y documentos habilitada únicamente mientras la fórmula se encuentra en `BORRADOR` o `EN_REVISION`.
+- Al aprobar una fórmula:
+  - se marca con `estado = APROBADA` y `activo = true`;
+  - todas las demás fórmulas del mismo producto se desactivan (`activo = false`).
+- Producción consume exclusivamente fórmulas con estado `APROBADA` y `activo = true`.
 
-## Contratos de API
+## API BOM
+
 ### Fórmulas
-| Método y ruta | Descripción | DTO principal | Roles |
-| --- | --- | --- | --- |
-| `GET /api/bom/formulas` | Listado maestro de fórmulas. | `FormulaProductoResumenDTO` | Jefe Producción, Jefe Calidad, Super Admin |
-| `GET /api/bom/formulas/{id}` | Detalle completo de una fórmula. | `FormulaProductoResponse` | Jefe Producción, Jefe Calidad, Super Admin |
-| `POST /api/bom/formulas` | Crear nueva fórmula (multipart con datos y documento opcional). | `FormulaProductoResponse` | Jefe Calidad, Super Admin |
-| `PUT /api/bom/formulas/{id}` | Actualizar fórmula existente. | `FormulaProductoResponse` | Jefe Calidad, Super Admin |
-| `POST /api/bom/formulas/{id}/clonar` | Clonar o generar nueva versión. | `FormulaProductoResumenDTO` | Jefe Calidad, Super Admin |
-| `POST /api/bom/formulas/{id}/cambiar-estado` | Cambiar estado según flujo. | `FormulaProductoResumenDTO` | Jefe Calidad, Super Admin |
-| `DELETE /api/bom/formulas/{id}` | Eliminar fórmula. | — | Jefe Calidad, Super Admin |
+- `GET /api/bom/formulas`
+  - Lista el maestro de fórmulas con filtros opcionales por estado (`EstadoFormula`) y producto.
+  - Respuesta: lista de `FormulaProductoResumenDTO`.
+  - Roles: ROL_JEFE_PRODUCCION, ROL_JEFE_CALIDAD, ROL_SUPER_ADMIN.
+- `POST /api/bom/formulas/{id}/clonar`
+  - Genera una nueva versión copiando una fórmula existente respetando las reglas de edición.
+  - Respuesta: `FormulaProductoResumenDTO` de la nueva versión.
+  - Roles: ROL_JEFE_CALIDAD, ROL_SUPER_ADMIN.
+- `POST /api/bom/formulas/{id}/cambiar-estado`
+  - Aplica las transiciones del ciclo de vida y valida activaciones exclusivas.
+  - Respuesta: `FormulaProductoResumenDTO` actualizado.
+  - Roles: ROL_JEFE_CALIDAD, ROL_SUPER_ADMIN.
 
-### Producción
-| Método y ruta | Descripción | DTO principal | Roles |
-| --- | --- | --- | --- |
-| `GET /api/bom/formulas/activa?productoId=&cantidad=` | Devuelve la fórmula activa validando insumos para una cantidad solicitada. | `FormulaProductoResponse` | Jefe Producción, Jefe Calidad, Super Admin |
-| `GET /api/bom/formulas/producto/{productoId}/formula-activa` | Fórmula aprobada y activa expuesta a Producción. | `FormulaActivaProduccionDTO` | Jefe Producción, Jefe Calidad, Super Admin |
+### Fórmula activa para Producción
+- `GET /api/bom/formulas/producto/{productoId}/formula-activa`
+  - Obtiene la fórmula aprobada y activa para el producto solicitado.
+  - Respuesta: `FormulaActivaProduccionDTO` con los `DetalleFormulaProduccionDTO` requeridos.
+  - Roles: ROL_JEFE_PRODUCCION, ROL_JEFE_CALIDAD, ROL_SUPER_ADMIN.
 
 ### Documentos
-| Método y ruta | Descripción | DTO principal | Roles |
-| --- | --- | --- | --- |
-| `GET /api/bom/formulas/{formulaId}/documentos` | Listar documentos asociados a la fórmula. | `DocumentoFormulaResponseDTO` | Jefe Producción, Jefe Calidad, Super Admin |
-| `POST /api/bom/formulas/{formulaId}/documentos` | Subir documento (multipart). | `DocumentoFormulaResponseDTO` | Jefe Calidad, Super Admin |
-| `GET /api/bom/formulas/documentos/{documentoId}/descargar` | Descargar documento autorizado. | `DocumentoFormulaDescargaDTO` | Jefe Producción, Jefe Calidad, Super Admin |
-| `DELETE /api/bom/formulas/documentos/{documentoId}` | Eliminar documento de una fórmula. | — | Jefe Calidad, Super Admin |
+- `GET /api/bom/formulas/{formulaId}/documentos`
+  - Lista los documentos asociados a la fórmula.
+  - Respuesta: colección de `DocumentoFormulaResponseDTO`.
+  - Roles: ROL_JEFE_PRODUCCION, ROL_JEFE_CALIDAD, ROL_SUPER_ADMIN.
+- `POST /api/bom/formulas/{formulaId}/documentos`
+  - Carga un nuevo documento (multipart) cuando la fórmula está editable.
+  - Respuesta: `DocumentoFormulaResponseDTO` del archivo almacenado.
+  - Roles: ROL_JEFE_CALIDAD, ROL_SUPER_ADMIN.
+- `GET /api/bom/formulas/documentos/{documentoId}/descargar`
+  - Permite la descarga segura del documento.
+  - Respuesta: `DocumentoFormulaDescargaDTO`.
+  - Roles: ROL_JEFE_PRODUCCION, ROL_JEFE_CALIDAD, ROL_SUPER_ADMIN.
+- `DELETE /api/bom/formulas/documentos/{documentoId}`
+  - Elimina un documento autorizado mientras la fórmula sigue editable.
+  - Roles: ROL_JEFE_CALIDAD, ROL_SUPER_ADMIN.
 
 ## Seguridad y roles
 - **Lectura:** `ROL_JEFE_PRODUCCION`, `ROL_JEFE_CALIDAD`, `ROL_SUPER_ADMIN`.
 - **Edición:** `ROL_JEFE_CALIDAD`, `ROL_SUPER_ADMIN`.
-Las restricciones se aplican con `@PreAuthorize` en los controladores y cuentan con cobertura en `FormulaProductoControllerSecurityTest`.
+Las restricciones se aplican vía anotaciones `@PreAuthorize` en los controladores BOM y se validan mediante las pruebas de seguridad (`FormulaProductoControllerSecurityTest`).
 
-## Almacenamiento de archivos
-- Directorio raíz: `uploads/bom/formulas` dentro del directorio de la aplicación.
-- Cada fórmula almacena sus documentos en una subcarpeta con su `formulaId`.
-- La descarga pasa por el endpoint protegido; no se exponen rutas directas al sistema de archivos.
+## Almacenamiento de documentos
+- Estructura física: `uploads/bom/formulas/{formulaId}` dentro del servidor de archivos de la aplicación.
+- Cada archivo conserva su `nombreArchivo` sanitizado y metadatos asociados antes de persistir en disco.
+- Los documentos recopilan especificaciones técnicas, instructivos y registros de calidad vinculados a la fórmula.
 
-## Pruebas relevantes
-- `FormulaProductoServiceImplTest`: reglas de negocio del servicio de fórmulas.
-- `DetalleFormulaServiceImplTest`: validaciones de detalles e insumos requeridos.
-- `DocumentoFormulaServiceImplTest`: carga, descarga y borrado de documentos.
-- `FormulaProductoControllerSecurityTest`: matriz de roles y anotaciones de seguridad.
+## Pruebas
+- `FormulaProductoServiceImplTest`: flujo de versiones, activación exclusiva y transiciones de estado.
+- `DetalleFormulaServiceImplTest`: validaciones de insumos y restricciones de edición según estado.
+- `DocumentoFormulaServiceImplTest`: carga, listado y eliminación de documentos con control de estados.
+- `FormulaProductoControllerSecurityTest`: verificación de roles permitidos (200/403/401) para cada endpoint BOM.
+
+## Integración con otros módulos
+- **Inventarios:** provee los productos insumo y sus unidades para `DetalleFormula`.
+- **Producción:** consume la fórmula `APROBADA` y `activa` en la preparación de órdenes.
+- **Calidad:** lidera la revisión, aprobación/rechazo y la documentación regulatoria asociada a cada fórmula.
