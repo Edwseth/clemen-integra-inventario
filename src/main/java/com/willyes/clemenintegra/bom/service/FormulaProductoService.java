@@ -12,7 +12,7 @@ import java.util.Optional;
 
 public interface FormulaProductoService {
     List<FormulaProducto> listarTodas();
-    List<FormulaProductoResumenDTO> listarResumen();
+    List<FormulaProductoResumenDTO> listarResumen(EstadoFormula estado, String producto);
     Optional<FormulaProducto> buscarPorId(Long id);
     FormulaProducto guardar(FormulaProducto formula);
     void eliminar(Long id);

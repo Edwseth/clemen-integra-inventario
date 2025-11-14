@@ -134,7 +134,7 @@ class FormulaProductoControllerSecurityTest {
         FormulaProducto formula = new FormulaProducto();
         formula.setId(3L);
 
-        when(formulaProductoService.listarResumen()).thenReturn(List.of(resumenDTO));
+        when(formulaProductoService.listarResumen(any(), any())).thenReturn(List.of(resumenDTO));
         when(formulaProductoService.obtenerFormulaActivaProduccion(anyLong())).thenReturn(formulaActiva);
         when(formulaProductoService.clonarFormula(anyLong(), anyLong())).thenReturn(formula);
         when(formulaProductoService.cambiarEstado(anyLong(), any(EstadoFormula.class), anyLong())).thenReturn(formula);

@@ -44,8 +44,10 @@ public class FormulaProductoController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public List<FormulaProductoResumenDTO> listarTodas() {
-        return formulaService.listarResumen();
+    public List<FormulaProductoResumenDTO> listarTodas(
+            @RequestParam(required = false) EstadoFormula estado,
+            @RequestParam(required = false) String producto) {
+        return formulaService.listarResumen(estado, producto);
     }
 
     @GetMapping("/{id}")

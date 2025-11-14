@@ -22,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -34,6 +35,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -180,9 +182,9 @@ class FormulaProductoServiceImplTest {
         formula.setFechaActualizacion(LocalDateTime.of(2024, 1, 15, 10, 30));
         formula.setActualizadoPor(responsable);
 
-        when(formulaRepository.findAllForResumen()).thenReturn(List.of(formula));
+        when(formulaRepository.findAllForResumen(null, null)).thenReturn(List.of(formula));
 
-        List<FormulaProductoResumenDTO> resultado = service.listarResumen();
+        List<FormulaProductoResumenDTO> resultado = service.listarResumen(null, null);
 
         assertThat(resultado).hasSize(1);
         FormulaProductoResumenDTO dto = resultado.get(0);
@@ -199,6 +201,71 @@ class FormulaProductoServiceImplTest {
         assertThat(Arrays.stream(FormulaProductoResumenDTO.class.getDeclaredFields())
                 .map(java.lang.reflect.Field::getName))
                 .doesNotContain("detalles", "documentos");
+    }
+
+    @Test
+    @DisplayName("listarResumen filtra por estado cuando se proporciona")
+    void listarResumenFiltraPorEstado() {
+        Producto producto = new Producto();
+        producto.setId(2);
+        producto.setCodigoSku("PR-002");
+        producto.setNombre("Producto Borrador");
+
+        Usuario responsable = new Usuario();
+        responsable.setNombreCompleto("Responsable Borrador");
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(20L);
+        formula.setProducto(producto);
+        formula.setVersion("v3");
+        formula.setEstado(EstadoFormula.BORRADOR);
+        formula.setActivo(false);
+        formula.setFechaActualizacion(LocalDateTime.of(2024, 2, 20, 9, 15));
+        formula.setActualizadoPor(responsable);
+
+        when(formulaRepository.findAllForResumen(EstadoFormula.BORRADOR, null)).thenReturn(List.of(formula));
+
+        List<FormulaProductoResumenDTO> resultado = service.listarResumen(EstadoFormula.BORRADOR, null);
+
+        assertThat(resultado).hasSize(1);
+        FormulaProductoResumenDTO dto = resultado.get(0);
+        assertThat(dto.estado).isEqualTo(EstadoFormula.BORRADOR.name());
+        assertThat(dto.codigoProducto).isEqualTo("PR-002");
+        verify(formulaRepository).findAllForResumen(EstadoFormula.BORRADOR, null);
+    }
+
+    @Test
+    @DisplayName("listarResumen normaliza el filtro de producto antes de consultar el repositorio")
+    void listarResumenFiltraPorTextoProducto() {
+        Producto producto = new Producto();
+        producto.setId(3);
+        producto.setCodigoSku("PT-0311");
+        producto.setNombre("CVC-COMPRIMIDO VITAMINA C 500 MG");
+
+        Usuario responsable = new Usuario();
+        responsable.setNombreCompleto("Responsable Texto");
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(30L);
+        formula.setProducto(producto);
+        formula.setVersion("v5");
+        formula.setEstado(EstadoFormula.APROBADA);
+        formula.setActivo(true);
+        formula.setFechaActualizacion(LocalDateTime.of(2024, 3, 10, 8, 45));
+        formula.setActualizadoPor(responsable);
+
+        when(formulaRepository.findAllForResumen(any(), any())).thenReturn(List.of(formula));
+
+        List<FormulaProductoResumenDTO> resultado = service.listarResumen(null, "  vitamina c   ");
+
+        assertThat(resultado).hasSize(1);
+        FormulaProductoResumenDTO dto = resultado.get(0);
+        assertThat(dto.codigoProducto).isEqualTo("PT-0311");
+        assertThat(dto.nombreProducto).contains("VITAMINA C");
+
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(formulaRepository).findAllForResumen(isNull(), captor.capture());
+        assertThat(captor.getValue()).isEqualTo("vitamina c");
     }
 
     @Test

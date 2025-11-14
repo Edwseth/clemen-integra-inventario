@@ -32,8 +32,11 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
             "join fetch f.producto p " +
             "left join fetch f.actualizadoPor ap " +
             "left join fetch f.creadoPor cp " +
+            "where (:estado is null or f.estado = :estado) " +
+            "and (:producto is null or lower(p.codigoSku) like lower(concat('%', :producto, '%')) " +
+            "or lower(p.nombre) like lower(concat('%', :producto, '%'))) " +
             "order by coalesce(f.fechaActualizacion, f.fechaCreacion) desc, f.id desc")
-    List<FormulaProducto> findAllForResumen();
+    List<FormulaProducto> findAllForResumen(@Param("estado") EstadoFormula estado, @Param("producto") String producto);
 
     @Modifying(clearAutomatically = true)
     @Query("update FormulaProducto f set f.activo = false where f.producto = :producto and f.id <> :id")
