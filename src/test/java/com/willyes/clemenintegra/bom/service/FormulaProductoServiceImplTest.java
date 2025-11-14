@@ -32,7 +32,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class FormulaProductoServiceImplTest {
@@ -54,6 +54,108 @@ class FormulaProductoServiceImplTest {
     void setUp() {
         bomMapper = Mappers.getMapper(BomMapper.class);
         service = new FormulaProductoServiceImpl(formulaRepository, bomMapper, loteProductoRepository, usuarioRepository);
+    }
+
+    @Test
+    @DisplayName("cambiarEstado permite transición de BORRADOR a EN_REVISION")
+    void cambiarEstadoDeBorradorARevision() {
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(1L);
+        formula.setEstado(EstadoFormula.BORRADOR);
+        formula.setActivo(false);
+        formula.setProducto(new Producto());
+
+        Usuario usuario = new Usuario();
+        usuario.setId(5L);
+
+        when(formulaRepository.findById(1L)).thenReturn(Optional.of(formula));
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
+        when(formulaRepository.save(formula)).thenReturn(formula);
+
+        FormulaProducto resultado = service.cambiarEstado(1L, EstadoFormula.EN_REVISION, 5L);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoFormula.EN_REVISION);
+        assertThat(resultado.isActivo()).isFalse();
+        assertThat(resultado.getActualizadoPor()).isEqualTo(usuario);
+        assertThat(resultado.getFechaActualizacion()).isNotNull();
+        verify(formulaRepository, never()).desactivarOtrasFormulasDelProducto(any(), any());
+        verify(formulaRepository).save(formula);
+    }
+
+    @Test
+    @DisplayName("cambiarEstado aprueba fórmula y desactiva otras del producto")
+    void cambiarEstadoApruebaFormula() {
+        Producto producto = new Producto();
+        producto.setId(2);
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(3L);
+        formula.setEstado(EstadoFormula.EN_REVISION);
+        formula.setActivo(false);
+        formula.setProducto(producto);
+
+        Usuario usuario = new Usuario();
+        usuario.setId(7L);
+
+        when(formulaRepository.findById(3L)).thenReturn(Optional.of(formula));
+        when(usuarioRepository.findById(7L)).thenReturn(Optional.of(usuario));
+        when(formulaRepository.save(formula)).thenReturn(formula);
+
+        FormulaProducto resultado = service.cambiarEstado(3L, EstadoFormula.APROBADA, 7L);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoFormula.APROBADA);
+        assertThat(resultado.isActivo()).isTrue();
+        verify(formulaRepository).desactivarOtrasFormulasDelProducto(producto, 3L);
+        verify(formulaRepository).save(formula);
+    }
+
+    @Test
+    @DisplayName("cambiarEstado permite rechazar fórmula en revisión")
+    void cambiarEstadoRechazaFormula() {
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(4L);
+        formula.setEstado(EstadoFormula.EN_REVISION);
+        formula.setActivo(true);
+        formula.setProducto(new Producto());
+
+        Usuario usuario = new Usuario();
+        usuario.setId(8L);
+
+        when(formulaRepository.findById(4L)).thenReturn(Optional.of(formula));
+        when(usuarioRepository.findById(8L)).thenReturn(Optional.of(usuario));
+        when(formulaRepository.save(formula)).thenReturn(formula);
+
+        FormulaProducto resultado = service.cambiarEstado(4L, EstadoFormula.RECHAZADA, 8L);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoFormula.RECHAZADA);
+        assertThat(resultado.isActivo()).isFalse();
+        verify(formulaRepository, never()).desactivarOtrasFormulasDelProducto(any(), any());
+    }
+
+    @Test
+    @DisplayName("cambiarEstado rechaza transiciones inválidas")
+    void cambiarEstadoTransicionInvalida() {
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(10L);
+        formula.setEstado(EstadoFormula.BORRADOR);
+        formula.setProducto(new Producto());
+
+        when(formulaRepository.findById(10L)).thenReturn(Optional.of(formula));
+
+        assertThatThrownBy(() -> service.cambiarEstado(10L, EstadoFormula.APROBADA, 1L))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasFieldOrPropertyWithValue("code", ApiErrorCode.OPERACION_NO_PERMITIDA);
+        verify(formulaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cambiarEstado falla cuando la fórmula no existe")
+    void cambiarEstadoFormulaNoExiste() {
+        when(formulaRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.cambiarEstado(999L, EstadoFormula.EN_REVISION, 1L))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasFieldOrPropertyWithValue("code", ApiErrorCode.RECURSO_NO_ENCONTRADO);
     }
 
     @Test

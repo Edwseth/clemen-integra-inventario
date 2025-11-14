@@ -1,8 +1,8 @@
 package com.willyes.clemenintegra.bom.service;
 
-import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.dto.FormulaProductoResponse;
 import com.willyes.clemenintegra.bom.dto.FormulaProductoResumenDTO;
+import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 
 import java.math.BigDecimal;
@@ -18,7 +18,7 @@ public interface FormulaProductoService {
 
     FormulaProductoResponse obtenerFormulaActivaPorProducto(Long productoId, BigDecimal cantidad);
 
-    FormulaProductoResponse actualizarEstado(Long id, EstadoFormula nuevoEstado, String observacion, Long usuarioId);
+    FormulaProducto cambiarEstado(Long formulaId, EstadoFormula nuevoEstado, Long usuarioId);
 
     FormulaProducto clonarFormula(Long formulaId, Long usuarioId);
 }

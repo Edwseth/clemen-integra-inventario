@@ -157,13 +157,13 @@ public class FormulaProductoController {
     }
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    @PutMapping("/{id}/estado")
-    public ResponseEntity<FormulaProductoResponse> actualizarEstado(
+    @PostMapping("/{id}/cambiar-estado")
+    public ResponseEntity<FormulaProductoResumenDTO> cambiarEstado(
             @PathVariable Long id,
-            @RequestBody @Valid ActualizarEstadoFormulaRequest request,
+            @RequestBody @Valid CambiarEstadoFormulaRequest request,
             @AuthenticationPrincipal com.willyes.clemenintegra.shared.security.service.CustomUserDetails usuario) {
-        FormulaProductoResponse dto = formulaService.actualizarEstado(
-                id, request.estado(), request.observacion(), usuario.getId());
+        FormulaProducto formulaActualizada = formulaService.cambiarEstado(id, request.nuevoEstado(), usuario.getId());
+        FormulaProductoResumenDTO dto = bomMapper.toResumenDTO(formulaActualizada);
         return ResponseEntity.ok(dto);
     }
 
