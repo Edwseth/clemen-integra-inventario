@@ -7,6 +7,8 @@ import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.*;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.slf4j.Logger;
@@ -21,6 +23,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -83,6 +87,108 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
 
         FormulaProducto guardado = formulaRepository.save(formula);
         return bomMapper.toResponseDTO(guardado);
+    }
+
+    @Override
+    @Transactional
+    public FormulaProducto clonarFormula(Long formulaId, Long usuarioId) {
+        FormulaProducto origen = formulaRepository.findById(formulaId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "La fórmula solicitada no existe"));
+
+        if (origen.getProducto() == null || origen.getProducto().getId() == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "La fórmula no cuenta con un producto asociado válido para clonar");
+        }
+
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Usuario no encontrado para clonar la fórmula"));
+
+        Long productoId = origen.getProducto().getId().longValue();
+        List<FormulaProducto> formulasProducto = formulaRepository.findAllByProductoId(productoId);
+
+        int nuevaVersionNumerica = formulasProducto.stream()
+                .map(FormulaProducto::getVersion)
+                .map(this::parseNumeroVersion)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
+
+        String nuevaVersion = construirValorVersion(origen.getVersion(), nuevaVersionNumerica);
+        LocalDateTime ahora = LocalDateTime.now();
+
+        FormulaProducto clon = new FormulaProducto();
+        clon.setProducto(origen.getProducto());
+        clon.setVersion(nuevaVersion);
+        clon.setEstado(EstadoFormula.BORRADOR);
+        clon.setActivo(false);
+        clon.setObservacion(origen.getObservacion());
+        clon.setFechaCreacion(ahora);
+        clon.setFechaActualizacion(ahora);
+        clon.setCreadoPor(usuario);
+        clon.setActualizadoPor(usuario);
+
+        if (origen.getDetalles() != null && !origen.getDetalles().isEmpty()) {
+            List<DetalleFormula> detallesClonados = origen.getDetalles().stream()
+                    .map(detalle -> {
+                        DetalleFormula copia = new DetalleFormula();
+                        copia.setFormula(clon);
+                        copia.setInsumo(detalle.getInsumo());
+                        copia.setUnidadMedida(detalle.getUnidadMedida());
+                        copia.setCantidadNecesaria(detalle.getCantidadNecesaria());
+                        copia.setObligatorio(detalle.getObligatorio());
+                        return copia;
+                    })
+                    .collect(Collectors.toList());
+            clon.setDetalles(detallesClonados);
+        }
+
+        if (origen.getDocumentos() != null && !origen.getDocumentos().isEmpty()) {
+            List<DocumentoFormula> documentosClonados = origen.getDocumentos().stream()
+                    .map(documento -> DocumentoFormula.builder()
+                            .tipoDocumento(documento.getTipoDocumento())
+                            .nombreArchivo(documento.getNombreArchivo())
+                            .rutaArchivo(documento.getRutaArchivo())
+                            .fechaSubida(documento.getFechaSubida())
+                            .usuario(documento.getUsuario())
+                            .formula(clon)
+                            .build())
+                    .collect(Collectors.toList());
+            clon.setDocumentos(documentosClonados);
+        }
+
+        return formulaRepository.save(clon);
+    }
+
+    private int parseNumeroVersion(String version) {
+        if (version == null || version.isBlank()) {
+            return 0;
+        }
+        String digitos = version.replaceAll("[^0-9]", "");
+        if (digitos.isEmpty()) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "La versión registrada no contiene componentes numéricos");
+        }
+        try {
+            return Integer.parseInt(digitos);
+        } catch (NumberFormatException ex) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Formato de versión inválido para la fórmula");
+        }
+    }
+
+    private String construirValorVersion(String versionBase, int numeroVersion) {
+        if (versionBase == null || versionBase.isBlank()) {
+            return String.valueOf(numeroVersion);
+        }
+        Pattern patron = Pattern.compile("^(\\D*)(\\d+)(.*)$");
+        Matcher matcher = patron.matcher(versionBase);
+        if (matcher.matches()) {
+            String prefijo = matcher.group(1);
+            String sufijo = matcher.group(3);
+            return prefijo + numeroVersion + (sufijo != null ? sufijo : "");
+        }
+        return String.valueOf(numeroVersion);
     }
 
     @Override

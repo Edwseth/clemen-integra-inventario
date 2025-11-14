@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -129,6 +130,16 @@ public class FormulaProductoController {
 
         FormulaProducto guardado = formulaService.guardar(formula);
         return ResponseEntity.ok(bomMapper.toResponseDTO(guardado));
+    }
+
+    @PostMapping("/{id}/clonar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<FormulaProductoResumenDTO> clonar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal com.willyes.clemenintegra.shared.security.service.CustomUserDetails usuario) {
+        FormulaProducto nuevaFormula = formulaService.clonarFormula(id, usuario.getId());
+        FormulaProductoResumenDTO dto = bomMapper.toResumenDTO(nuevaFormula);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     @PutMapping("/{id}")
