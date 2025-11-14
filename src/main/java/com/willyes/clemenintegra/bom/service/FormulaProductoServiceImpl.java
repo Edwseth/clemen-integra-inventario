@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -306,6 +307,23 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
         }
 
         return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FormulaActivaProduccionDTO obtenerFormulaActivaProduccion(Long productoId) {
+        FormulaProducto formula = formulaRepository
+                .findByProductoIdAndEstadoAndActivoTrue(productoId, EstadoFormula.APROBADA)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
+                        "El producto seleccionado no tiene una fórmula activa aprobada."));
+
+        if (formula.getDetalles() == null) {
+            formula.setDetalles(Collections.emptyList());
+        } else {
+            formula.getDetalles().size();
+        }
+
+        return bomMapper.toFormulaActivaProduccionDTO(formula);
     }
 }
 
