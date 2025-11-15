@@ -3,7 +3,6 @@ package com.willyes.clemenintegra.produccion.service;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
-import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.Almacen;
@@ -46,6 +45,8 @@ import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepositor
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
+import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -71,6 +72,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
@@ -105,6 +107,7 @@ class OrdenProduccionServiceReservaTest {
     @Mock private UmValidator umValidator;
     @Mock private VidaUtilProductoRepository vidaUtilProductoRepository;
     @Mock private ReservaLoteService reservaLoteService;
+    @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
 
     @InjectMocks
     private OrdenProduccionServiceImpl service;
@@ -132,9 +135,13 @@ class OrdenProduccionServiceReservaTest {
 
         productoInsumo = new Producto();
         productoInsumo.setId(50);
+        productoInsumo.setCodigoSku("MP-COLRO");
         productoInsumo.setNombre("INSUMO-X");
         productoInsumo.setCategoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto());
         productoInsumo.getCategoriaProducto().setTipo(TipoCategoria.MATERIA_PRIMA);
+        UnidadMedida unidadInsumo = new UnidadMedida();
+        unidadInsumo.setNombre("MILILITRO");
+        productoInsumo.setUnidadMedida(unidadInsumo);
 
         when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
@@ -143,6 +150,8 @@ class OrdenProduccionServiceReservaTest {
                 .thenReturn(List.of());
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(99L);
         when(catalogResolver.getAlmacenOrigenMateriaPrimaId()).thenReturn(5L);
+        lenient().when(disponibilidadInsumoService.resolverAlmacenesPreferidos(productoInsumo))
+                .thenReturn(List.of(5L));
         Usuario usuario = new Usuario();
         usuario.setId(7L);
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
@@ -167,17 +176,42 @@ class OrdenProduccionServiceReservaTest {
     void reservarInsumosParaOp_creaDetallesMultiLote() {
         when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
                 .thenReturn(SolicitudMovimientoResponseDTO.builder().id(100L).build());
-        when(loteProductoRepository.findFefoDisponibles(50L, Integer.MAX_VALUE))
-                .thenReturn(List.of(
-                        loteFefo(200L, new BigDecimal("3.123456"), "DISPONIBLE"),
-                        loteFefo(201L, new BigDecimal("10.000000"), "LIBERADO")
-                ));
+        DistribucionFefoResult resultado = DistribucionFefoResult.builder()
+                .productoInsumoId(50L)
+                .requerido(new BigDecimal("6.790123"))
+                .stockFisicoTotal(new BigDecimal("13.123456"))
+                .stockReservadoTotal(BigDecimal.ZERO)
+                .stockLibreTotal(new BigDecimal("13.123456"))
+                .faltante(BigDecimal.ZERO)
+                .suficiente(true)
+                .detalles(List.of(
+                        DistribucionFefoDetalle.builder()
+                                .loteProductoId(200L)
+                                .almacenId(5L)
+                                .cantidadCalculo(new BigDecimal("3.12345600"))
+                                .cantidadReserva(new BigDecimal("3.123456"))
+                                .disponible(new BigDecimal("3.123456"))
+                                .estado("DISPONIBLE")
+                                .build(),
+                        DistribucionFefoDetalle.builder()
+                                .loteProductoId(201L)
+                                .almacenId(5L)
+                                .cantidadCalculo(new BigDecimal("3.66666700"))
+                                .cantidadReserva(new BigDecimal("3.666667"))
+                                .disponible(new BigDecimal("10.000000"))
+                                .estado("LIBERADO")
+                                .build()
+                ))
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(50L), any(BigDecimal.class), anyList(), eq(false)))
+                .thenReturn(resultado);
 
         service.reservarInsumosParaOP(1L);
 
         ArgumentCaptor<SolicitudMovimientoRequestDTO> dtoCaptor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
         verify(solicitudMovimientoService).registrarSolicitud(dtoCaptor.capture());
-        assertThat(dtoCaptor.getValue().getCantidad()).isEqualByComparingTo(new BigDecimal("6.79"));
+        assertThat(dtoCaptor.getValue().getCantidad()).isEqualByComparingTo(new BigDecimal("6.790123"));
 
         ArgumentCaptor<SolicitudMovimiento> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimiento.class);
         verify(solicitudMovimientoRepository).saveAndFlush(solicitudCaptor.capture());
@@ -195,9 +229,26 @@ class OrdenProduccionServiceReservaTest {
     @Test
     @DisplayName("reservarInsumosParaOP falla con 422 cuando no hay lotes elegibles")
     void reservarInsumosParaOp_sinLotesLanzaError() {
-        when(loteProductoRepository.findFefoDisponibles(50L, Integer.MAX_VALUE)).thenReturn(List.of());
+        DistribucionFefoResult insuficiente = DistribucionFefoResult.builder()
+                .productoInsumoId(50L)
+                .requerido(new BigDecimal("6.790123"))
+                .stockFisicoTotal(BigDecimal.ZERO)
+                .stockReservadoTotal(BigDecimal.ZERO)
+                .stockLibreTotal(BigDecimal.ZERO)
+                .faltante(new BigDecimal("6.790123"))
+                .suficiente(false)
+                .detalles(List.of())
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(50L), any(BigDecimal.class), anyList(), eq(false)))
+                .thenReturn(insuficiente);
+
         assertThatThrownBy(() -> service.reservarInsumosParaOP(1L))
                 .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("MP-COLRO")
+                .hasMessageContaining("INSUMO-X")
+                .hasMessageContaining("6.790123")
+                .hasMessageContaining("MILILITRO")
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
                 .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
         verify(reservaLoteService, never()).sincronizarReservasSolicitud(any());
@@ -287,42 +338,4 @@ class OrdenProduccionServiceReservaTest {
         return solicitud;
     }
 
-    private LoteFefoDisponibleProjection loteFefo(Long id, BigDecimal stock, String estado) {
-        return new LoteFefoDisponibleProjection() {
-            @Override
-            public Long getLoteProductoId() {
-                return id;
-            }
-
-            @Override
-            public String getCodigoLote() {
-                return "L" + id;
-            }
-
-            @Override
-            public BigDecimal getStockLote() {
-                return stock;
-            }
-
-            @Override
-            public LocalDateTime getFechaVencimiento() {
-                return LocalDateTime.now().plusDays(30);
-            }
-
-            @Override
-            public Long getAlmacenId() {
-                return 5L;
-            }
-
-            @Override
-            public String getNombreAlmacen() {
-                return "MP";
-            }
-
-            @Override
-            public String getEstado() {
-                return estado;
-            }
-        };
-    }
 }

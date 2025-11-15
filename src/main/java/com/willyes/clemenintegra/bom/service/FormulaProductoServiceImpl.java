@@ -7,6 +7,8 @@ import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.*;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.produccion.service.DisponibilidadInsumoService;
+import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -35,6 +37,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     private final FormulaProductoRepository formulaRepository;
     private final BomMapper bomMapper;
     private final LoteProductoRepository loteProductoRepository;
+    private final DisponibilidadInsumoService disponibilidadInsumoService;
     private final UsuarioRepository usuarioRepository;
 
     @Override
@@ -282,7 +285,17 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                         .add(disponibilidad.getVencido());
                 disponibilidad.setTotalProducto(totalProducto);
 
-                boolean insuficiente = disponibilidad.getDisponible().compareTo(totalNecesaria) < 0;
+                List<Long> almacenesPreferidos = disponibilidadInsumoService
+                        .resolverAlmacenesPreferidos(entidad.getInsumo());
+                DistribucionFefoResult fefoResult = disponibilidadInsumoService.calcularDisponibilidad(
+                        insumoId,
+                        totalNecesaria,
+                        almacenesPreferidos,
+                        true);
+
+                BigDecimal stockLibre = Optional.ofNullable(fefoResult.getStockLibreTotal())
+                        .orElse(disponibilidad.getDisponible());
+                boolean insuficiente = !fefoResult.isSuficiente();
                 String motivo = "OK";
                 if (insuficiente) {
                     if (disponibilidad.getEnCuarentena().compareTo(BigDecimal.ZERO) > 0) {
@@ -299,12 +312,12 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                     log.info("FORMULA_DISPONIBILIDAD insumoId={} requerido={} disponible={} motivo={}",
                             insumoId,
                             totalNecesaria,
-                            disponibilidad.getDisponible(),
+                            stockLibre,
                             motivo);
                 }
 
-                dto.stockDisponible = disponibilidad.getDisponible();
-                dto.estadoStock = disponibilidad.getDisponible().compareTo(totalNecesaria) >= 0 ? "SUFICIENTE" : "INSUFICIENTE";
+                dto.stockDisponible = stockLibre;
+                dto.estadoStock = fefoResult.isSuficiente() ? "SUFICIENTE" : "INSUFICIENTE";
                 dto.disponibilidad = disponibilidad;
                 dto.bloqueante = new BloqueanteDTO(insuficiente, motivo);
                 dto.lotes = lotes;

@@ -17,6 +17,7 @@ import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import com.willyes.clemenintegra.produccion.service.DisponibilidadInsumoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ class FormulaProductoServiceImplTest {
     @Mock
     private UsuarioRepository usuarioRepository;
 
+    @Mock
+    private DisponibilidadInsumoService disponibilidadInsumoService;
+
     private BomMapper bomMapper;
 
     private FormulaProductoServiceImpl service;
@@ -57,7 +61,7 @@ class FormulaProductoServiceImplTest {
     @BeforeEach
     void setUp() {
         bomMapper = Mappers.getMapper(BomMapper.class);
-        service = new FormulaProductoServiceImpl(formulaRepository, bomMapper, loteProductoRepository, usuarioRepository);
+        service = new FormulaProductoServiceImpl(formulaRepository, bomMapper, loteProductoRepository, disponibilidadInsumoService, usuarioRepository);
     }
 
     @Test

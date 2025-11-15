@@ -59,6 +59,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private UmValidator umValidator;
     @Mock private VidaUtilProductoRepository vidaUtilProductoRepository;
     @Mock private ReservaLoteService reservaLoteService;
+    @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
 
     @InjectMocks
     private OrdenProduccionServiceImpl service;
@@ -97,8 +98,7 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(Optional.of(formula));
         when(productoRepository.findAllById(any()))
                 .thenReturn(List.of(insumo));
-        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(99L);
-        when(catalogResolver.getAlmacenOrigenMateriaPrimaId()).thenReturn(5L);
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of(5L));
         when(stockQueryService.obtenerStockDisponible(eq(List.of(2L)), eq(List.of(5L))))
                 .thenReturn(Map.of(2L, new BigDecimal("8")));
 
