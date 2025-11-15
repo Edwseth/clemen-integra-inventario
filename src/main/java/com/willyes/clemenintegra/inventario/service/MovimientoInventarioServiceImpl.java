@@ -1724,8 +1724,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
 
-        BigDecimal stockActual = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO);
-        BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
+        BigDecimal stockActual = Optional.ofNullable(loteOrigen.getStockLote())
+                .orElse(BigDecimal.ZERO)
+                .setScale(6, RoundingMode.HALF_UP);
+        BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado())
+                .orElse(BigDecimal.ZERO)
+                .setScale(6, RoundingMode.HALF_UP);
 
         boolean esSolicitudOp = solicitud != null && solicitud.getOrdenProduccion() != null;
 
@@ -1820,29 +1824,34 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 solicitudOpProcesada.set(true);
             }
 
-            stockActual = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO);
-            reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
+            stockActual = Optional.ofNullable(loteOrigen.getStockLote())
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado())
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
             cantidad = pendienteDetalle;
         }
 
-        BigDecimal reservaPendiente = BigDecimal.ZERO;
-        if (solicitud != null) {
-            reservaPendiente = calcularReservaPendiente(solicitud, loteOrigen);
+        BigDecimal reservaPendiente = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        if (solicitud != null && loteOrigen != null && loteOrigen.getId() != null) {
+            BigDecimal reservaDb = Optional.ofNullable(
+                            solicitudMovimientoDetalleRepository.calcularReservaPendientePorSolicitudYLote(
+                                    solicitud.getId(), loteOrigen.getId()))
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
             BigDecimal reservadoPositivo = reservadoActual.compareTo(BigDecimal.ZERO) > 0
                     ? reservadoActual
-                    : BigDecimal.ZERO;
-            if (reservaPendiente.compareTo(reservadoPositivo) > 0) {
-                reservaPendiente = reservadoPositivo;
-            }
-            log.debug("VAL-LOTE-RESERVA loteId={} estadoSolicitud={} reservaPendiente={} stockLote={} stockReservado={}",
-                    loteOrigen.getId(), solicitud.getEstado(), reservaPendiente, stockActual, reservadoActual);
+                    : BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+            reservaPendiente = reservaDb.min(reservadoPositivo).setScale(6, RoundingMode.HALF_UP);
+            log.debug("VAL-LOTE-RESERVA solicitudId={} loteId={} estadoSolicitud={} stockLote={} stockReservado={} reservaPendiente={}",
+                    solicitud.getId(), loteOrigen.getId(), solicitud.getEstado(), stockActual, reservadoActual, reservaPendiente);
         }
 
-        BigDecimal stockDisponibleBase = stockActual.subtract(reservadoActual);
-        if (stockDisponibleBase.compareTo(BigDecimal.ZERO) < 0) {
-            stockDisponibleBase = BigDecimal.ZERO;
-        }
-        BigDecimal stockDisponibleEfectivo = stockDisponibleBase.add(reservaPendiente);
+        BigDecimal stockDisponibleBase = stockActual.subtract(reservadoActual)
+                .setScale(6, RoundingMode.HALF_UP);
+        BigDecimal stockDisponibleEfectivo = stockDisponibleBase.add(reservaPendiente)
+                .setScale(6, RoundingMode.HALF_UP);
 
         log.debug("VAL-LOTE loteId={} estadoSolicitud={} stockLote={} reservadoTotal={} pendienteSolicitud={} disponibleBase={} disponibleEfectivo={} req={}",
                 loteOrigen.getId(), solicitud != null ? solicitud.getEstado() : null, stockActual, reservadoActual,
