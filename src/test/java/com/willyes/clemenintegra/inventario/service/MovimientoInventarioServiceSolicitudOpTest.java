@@ -20,10 +20,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -31,7 +29,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -70,8 +67,6 @@ class MovimientoInventarioServiceSolicitudOpTest {
     @Mock
     private ReservaLoteService reservaLoteService;
     @Mock
-    private ReservaLoteRepository reservaLoteRepository;
-    @Mock
     private RecepcionOCService recepcionOCService;
     @Mock
     private RetencionLoteService retencionLoteService;
@@ -94,7 +89,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
     }
 
     @Test
-    void registrarMovimiento_solicitudOp_aplicaUnaSolaVez() {
+    void registrarMovimiento_solicitudOp_consumeReservaYEsIdempotente() {
         Producto producto = new Producto();
         producto.setId(1);
         UnidadMedida unidad = new UnidadMedida();
@@ -105,13 +100,13 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lote.setId(100L);
         lote.setProducto(producto);
         lote.setAlmacen(new Almacen(10));
-        lote.setStockLote(new BigDecimal("10"));
-        lote.setStockReservado(new BigDecimal("5"));
+        lote.setStockLote(new BigDecimal("1000"));
+        lote.setStockReservado(new BigDecimal("1000"));
         lote.setEstado(EstadoLote.DISPONIBLE);
 
         SolicitudMovimientoDetalle detalle = new SolicitudMovimientoDetalle();
         detalle.setId(300L);
-        detalle.setCantidad(new BigDecimal("5"));
+        detalle.setCantidad(new BigDecimal("1000"));
         detalle.setEstado(EstadoSolicitudMovimientoDetalle.PENDIENTE);
         detalle.setCantidadAtendida(BigDecimal.ZERO);
         detalle.setLote(lote);
@@ -122,7 +117,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         solicitud.setLote(lote);
         solicitud.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
         solicitud.setEstado(EstadoSolicitudMovimiento.PENDIENTE);
-        solicitud.setCantidad(new BigDecimal("5"));
+        solicitud.setCantidad(new BigDecimal("1000"));
         solicitud.setDetalles(List.of(detalle));
         detalle.setSolicitudMovimiento(solicitud);
 
@@ -148,13 +143,13 @@ class MovimientoInventarioServiceSolicitudOpTest {
         AtencionDTO atencion = new AtencionDTO();
         atencion.setDetalleId(detalle.getId());
         atencion.setLoteId(lote.getId());
-        atencion.setCantidad(new BigDecimal("5"));
+        atencion.setCantidad(new BigDecimal("1000"));
         atencion.setAlmacenOrigenId(10);
         atencion.setAlmacenDestinoId(20);
 
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null,
-                new BigDecimal("5"),
+                new BigDecimal("1000"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
                 "DOC-1",
@@ -201,33 +196,45 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
                 .willReturn(MovimientoInventarioResponseDTO.builder().id(900L).build());
         given(catalogResolver.decimals(any())).willReturn(2);
-        given(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), any())).willReturn(BigDecimal.ZERO);
 
         MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
 
         assertThat(respuesta).isNotNull();
         assertThat(respuesta.getId()).isEqualTo(900L);
-        assertThat(detalle.getCantidadAtendida()).isEqualByComparingTo(new BigDecimal("5.000000"));
+        assertThat(detalle.getCantidadAtendida()).isEqualByComparingTo(new BigDecimal("1000.000000"));
         assertThat(detalle.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
         assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitudMovimiento.CERRADA);
         assertThat(solicitud.getFechaResolucion()).isNotNull();
-        assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("5.00"));
+        assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
         assertThat(lote.getStockReservado()).isEqualByComparingTo(BigDecimal.ZERO);
 
         BigDecimal stockTrasPrimeraAprobacion = lote.getStockLote();
+        BigDecimal reservaTrasPrimeraAprobacion = lote.getStockReservado();
+        BigDecimal cantidadAtendidaTrasPrimeraAprobacion = detalle.getCantidadAtendida();
 
-        assertThatThrownBy(() -> service.registrarMovimiento(dto))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(ex -> {
-                    ResponseStatusException rse = (ResponseStatusException) ex;
-                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-                    assertThat(rse.getReason()).isEqualTo("SOLICITUD_OP_YA_ATENDIDA");
-                });
+        MovimientoInventarioResponseDTO respuestaIdempotente = service.registrarMovimiento(dto);
+
+        assertThat(respuestaIdempotente).isNotNull();
+        assertThat(respuestaIdempotente.getId()).isNull();
+        assertThat(respuestaIdempotente.getSolicitudId()).isEqualTo(solicitud.getId());
+        assertThat(respuestaIdempotente.getEstadoSolicitud()).isEqualTo(EstadoSolicitudMovimiento.CERRADA);
+        assertThat(respuestaIdempotente.getOrdenProduccionId()).isEqualTo(ordenProduccion.getId());
+        assertThat(respuestaIdempotente.getDetallesSolicitud()).hasSize(1);
+        MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO detalleRespuesta =
+                respuestaIdempotente.getDetallesSolicitud().get(0);
+        assertThat(detalleRespuesta.getDetalleId()).isEqualTo(detalle.getId());
+        assertThat(detalleRespuesta.getCantidadAtendida()).isEqualByComparingTo(new BigDecimal("1000.000000"));
+        assertThat(detalleRespuesta.getEstadoDetalle()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
 
         assertThat(lote.getStockLote()).isEqualByComparingTo(stockTrasPrimeraAprobacion);
-        assertThat(lote.getStockReservado()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(lote.getStockReservado()).isEqualByComparingTo(reservaTrasPrimeraAprobacion);
+        assertThat(detalle.getCantidadAtendida()).isEqualByComparingTo(cantidadAtendidaTrasPrimeraAprobacion);
+        assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitudMovimiento.CERRADA);
+
         verify(movimientoInventarioRepository, times(1)).save(any(MovimientoInventario.class));
         verify(solicitudMovimientoRepository, times(1)).saveAndFlush(solicitud);
+        verify(reservaLoteService, times(1)).consumirReserva(eq(solicitud), eq(detalle), eq(lote), eq(new BigDecimal("1000.000000")));
+        verify(mapper, times(1)).safeToResponseDTO(any(MovimientoInventario.class));
     }
 }
 
