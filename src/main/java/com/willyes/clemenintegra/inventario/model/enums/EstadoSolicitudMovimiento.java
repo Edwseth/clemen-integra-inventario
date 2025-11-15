@@ -8,5 +8,6 @@ public enum EstadoSolicitudMovimiento {
     EJECUTADA,
     RESERVADA,
     ATENDIDA,
+    CERRADA,
     CANCELADA
 }
