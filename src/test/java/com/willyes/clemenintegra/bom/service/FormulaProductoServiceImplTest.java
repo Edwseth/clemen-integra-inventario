@@ -1,8 +1,11 @@
 package com.willyes.clemenintegra.bom.service;
 
 import com.willyes.clemenintegra.bom.dto.DetalleFormulaProduccionDTO;
+import com.willyes.clemenintegra.bom.dto.DetalleFormulaResponse;
 import com.willyes.clemenintegra.bom.dto.FormulaActivaProduccionDTO;
+import com.willyes.clemenintegra.bom.dto.FormulaProductoResponse;
 import com.willyes.clemenintegra.bom.dto.FormulaProductoResumenDTO;
+import com.willyes.clemenintegra.bom.dto.LoteResumenDTO;
 import com.willyes.clemenintegra.bom.mapper.BomMapper;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import com.willyes.clemenintegra.bom.model.DocumentoFormula;
@@ -12,12 +15,14 @@ import com.willyes.clemenintegra.bom.model.enums.TipoDocumento;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.service.DisponibilidadInsumoService;
+import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -270,6 +276,135 @@ class FormulaProductoServiceImplTest {
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(formulaRepository).findAllForResumen(isNull(), captor.capture());
         assertThat(captor.getValue()).isEqualTo("vitamina c");
+    }
+
+    @Test
+    @DisplayName("obtenerFormulaActivaPorProducto refleja faltante FEFO cuando reservas reducen stock libre")
+    void obtenerFormulaActivaPorProducto_reflejaFaltanteFefo() {
+        Producto producto = new Producto();
+        producto.setId(100);
+        producto.setNombre("JVC-JARABE VITAMINA C 200ML");
+        UnidadMedida umProducto = new UnidadMedida();
+        umProducto.setSimbolo("UND");
+        producto.setUnidadMedida(umProducto);
+
+        Producto insumo = new Producto();
+        insumo.setId(200);
+        insumo.setNombre("COLORANTE NATURAL ROJO");
+        insumo.setCodigoSku("MP-COLRO");
+        UnidadMedida umInsumo = new UnidadMedida();
+        umInsumo.setSimbolo("MILILITRO");
+        insumo.setUnidadMedida(umInsumo);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("0.5"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(50L);
+        formula.setProducto(producto);
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaRepository.findByProductoIdAndEstadoAndActivoTrue(100L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        when(loteProductoRepository.sumarPorEstado(200L)).thenReturn(List.of(
+                new Object[]{EstadoLote.DISPONIBLE, new BigDecimal("1012.500000")},
+                new Object[]{EstadoLote.RETENIDO, new BigDecimal("1500.000000")},
+                new Object[]{EstadoLote.VENCIDO, new BigDecimal("1047.500000")}
+        ));
+
+        LocalDateTime futuro = LocalDateTime.now().plusMonths(6);
+        when(loteProductoRepository.listarLotesPorProducto(200L)).thenReturn(List.of(
+                new LoteResumenDTO(1L, "L-170925-3", EstadoLote.DISPONIBLE, "Principal MP", new BigDecimal("125.000000"), futuro, null, null),
+                new LoteResumenDTO(2L, "L-271025-02", EstadoLote.DISPONIBLE, "Principal MP", new BigDecimal("130.000000"), futuro, null, null),
+                new LoteResumenDTO(3L, "L-060825-3", EstadoLote.DISPONIBLE, "Principal MP", new BigDecimal("47.500000"), futuro, null, null)
+        ));
+
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of(5L));
+
+        DistribucionFefoResult preview = DistribucionFefoResult.builder()
+                .productoInsumoId(200L)
+                .requerido(new BigDecimal("350.000000"))
+                .stockFisicoTotal(new BigDecimal("775.000000"))
+                .stockReservadoTotal(new BigDecimal("472.500000"))
+                .stockLibreTotal(new BigDecimal("302.500000"))
+                .faltante(new BigDecimal("47.500000"))
+                .suficiente(false)
+                .almacenesPreferidos(List.of(5L))
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(true)))
+                .thenReturn(preview);
+
+        FormulaProductoResponse respuesta = service.obtenerFormulaActivaPorProducto(100L, new BigDecimal("700"));
+
+        assertThat(respuesta.disponibilidadSuficiente).isFalse();
+        assertThat(respuesta.detalles).hasSize(1);
+
+        DetalleFormulaResponse detalleDto = respuesta.detalles.get(0);
+        assertThat(detalleDto.cantidadTotalNecesaria).isEqualByComparingTo(new BigDecimal("350.0"));
+        assertThat(detalleDto.estadoStock).isEqualTo("INSUFICIENTE");
+        assertThat(detalleDto.stockLibreFefo).isEqualByComparingTo(new BigDecimal("302.500000"));
+        assertThat(detalleDto.stockDisponible).isEqualByComparingTo(detalleDto.stockLibreFefo);
+        assertThat(detalleDto.faltanteFefo).isEqualByComparingTo(new BigDecimal("47.500000"));
+        assertThat(detalleDto.maxProducible).isEqualTo(605);
+        assertThat(detalleDto.bloqueante.isInsuficiente()).isTrue();
+        assertThat(detalleDto.bloqueante.getMotivo()).isEqualTo("RETENIDO");
+    }
+
+    @Test
+    @DisplayName("obtenerFormulaActivaPorProducto marca suficiente cuando stock libre FEFO cubre requerimiento")
+    void obtenerFormulaActivaPorProducto_stockSuficiente() {
+        Producto producto = new Producto();
+        producto.setId(101);
+        UnidadMedida um = new UnidadMedida();
+        um.setSimbolo("UND");
+        producto.setUnidadMedida(um);
+
+        Producto insumo = new Producto();
+        insumo.setId(300);
+        insumo.setNombre("ACIDO ASCORBICO");
+        UnidadMedida umInsumo = new UnidadMedida();
+        umInsumo.setSimbolo("MILILITRO");
+        insumo.setUnidadMedida(umInsumo);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("1.0"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(51L);
+        formula.setProducto(producto);
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaRepository.findByProductoIdAndEstadoAndActivoTrue(101L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(loteProductoRepository.sumarPorEstado(300L)).thenReturn(List.of());
+        when(loteProductoRepository.listarLotesPorProducto(300L)).thenReturn(List.of());
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of());
+
+        DistribucionFefoResult preview = DistribucionFefoResult.builder()
+                .productoInsumoId(300L)
+                .requerido(new BigDecimal("50.000000"))
+                .stockFisicoTotal(new BigDecimal("120.000000"))
+                .stockReservadoTotal(BigDecimal.ZERO)
+                .stockLibreTotal(new BigDecimal("120.000000"))
+                .faltante(BigDecimal.ZERO)
+                .suficiente(true)
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(300L), any(BigDecimal.class), eq(List.of()), eq(true)))
+                .thenReturn(preview);
+
+        FormulaProductoResponse respuesta = service.obtenerFormulaActivaPorProducto(101L, new BigDecimal("50"));
+
+        assertThat(respuesta.disponibilidadSuficiente).isTrue();
+        DetalleFormulaResponse detalleDto = respuesta.detalles.get(0);
+        assertThat(detalleDto.estadoStock).isEqualTo("SUFICIENTE");
+        assertThat(detalleDto.stockLibreFefo).isEqualByComparingTo(new BigDecimal("120.000000"));
+        assertThat(detalleDto.maxProducible).isEqualTo(120);
+        assertThat(detalleDto.bloqueante.isInsuficiente()).isFalse();
     }
 
     @Test

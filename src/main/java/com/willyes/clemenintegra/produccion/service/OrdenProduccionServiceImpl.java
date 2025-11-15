@@ -8,7 +8,6 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
-import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
@@ -100,7 +99,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     private final FormulaProductoRepository formulaProductoRepository;
     private final ProductoRepository productoRepository;
-    private final StockQueryService stockQueryService;
     private final UsuarioRepository usuarioRepository;
     private final SolicitudMovimientoService solicitudMovimientoService;
     private final OrdenProduccionRepository repository;
@@ -259,41 +257,39 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         insumoId, tipoCategoria);
             }
 
-            BigDecimal stockDisponible = stockQueryService
-                    .obtenerStockDisponible(List.of(insumoId),
-                            almacenesValidos.isEmpty() ? Collections.emptyList() : almacenesValidos)
-                    .getOrDefault(insumoId, BigDecimal.ZERO);
+            DistribucionFefoResult distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
+                    insumoId,
+                    cantidadRequerida,
+                    almacenesValidos,
+                    true);
 
-            if (!almacenesValidos.isEmpty() && stockDisponible.compareTo(BigDecimal.ZERO) == 0) {
-                BigDecimal stockGlobal = stockQueryService
-                        .obtenerStockDisponible(List.of(insumoId))
-                        .getOrDefault(insumoId, BigDecimal.ZERO);
-                stockDisponible = stockGlobal;
-                log.info("OP-validacion fallback stock insumo={} almacenes={} stockGlobal={}",
-                        insumoId, almacenesValidos, stockDisponible);
-            }
+            BigDecimal stockLibreFefo = Optional.ofNullable(distribucionPreview.getStockLibreTotal())
+                    .orElse(BigDecimal.ZERO);
+            BigDecimal faltanteFefo = Optional.ofNullable(distribucionPreview.getFaltante())
+                    .orElse(BigDecimal.ZERO);
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
-                producibleConEste = stockDisponible.divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
+                producibleConEste = stockLibreFefo.divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
             }
             if (maxProducible == null || producibleConEste < maxProducible) {
                 maxProducible = producibleConEste;
             }
 
-            log.debug("OP-VALIDACION insumoId={} requerido={} disponible={} maxProducible={}",
+            log.debug("OP-VALIDACION insumoId={} requerido={} stockLibreFefo={} faltanteFefo={} maxProducible={}",
                     insumoId,
                     cantidadRequerida,
-                    stockDisponible,
+                    stockLibreFefo,
+                    faltanteFefo,
                     maxProducible);
 
-            if (stockDisponible.compareTo(cantidadRequerida) < 0) {
+            if (!distribucionPreview.isSuficiente()) {
                 stockSuficiente = false;
                 faltantes.add(InsumoFaltanteDTO.builder()
                         .productoId(insumoId)
                         .nombre(productoInsumo.getNombre())
                         .requerido(cantidadRequerida)
-                        .disponible(stockDisponible)
+                        .disponible(stockLibreFefo)
                         .unidadSimbolo(productoInsumo.getUnidadMedida() != null
                                 ? productoInsumo.getUnidadMedida().getSimbolo()
                                 : null)

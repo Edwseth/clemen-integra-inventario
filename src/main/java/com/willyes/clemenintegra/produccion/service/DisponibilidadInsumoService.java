@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
@@ -30,6 +31,7 @@ public class DisponibilidadInsumoService {
 
     private final LoteProductoRepository loteProductoRepository;
     private final InventoryCatalogResolver catalogResolver;
+    private final ProductoRepository productoRepository;
 
     private static final EnumSet<EstadoLote> ESTADOS_FEFO_PERMITIDOS = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
     private static final Map<TipoCategoria, Function<InventoryCatalogResolver, Long>> ALMACENES_ORIGEN_POR_CATEGORIA = Map.of(
@@ -145,6 +147,23 @@ public class DisponibilidadInsumoService {
 
         BigDecimal faltante = restante.setScale(6, RoundingMode.HALF_UP);
         boolean suficiente = faltante.compareTo(BigDecimal.ZERO) <= 0;
+
+        if (productoInsumoId != null
+                && stockFisicoTotal.compareTo(requerida) >= 0
+                && stockLibreTotal.compareTo(requerida) < 0) {
+            String codigo = productoRepository.findById(productoInsumoId)
+                    .map(Producto::getCodigoSku)
+                    .orElse(null);
+            log.warn("Disponibilidad FEFO detectó stock libre insuficiente pese a stock físico: insumoId={} codigo={} requerido={} stockFisicoTotal={} stockReservadoTotal={} stockLibreFefo={} faltante={} almacenes={}",
+                    productoInsumoId,
+                    codigo,
+                    requerida,
+                    stockFisicoTotal,
+                    stockReservadoTotal,
+                    stockLibreTotal,
+                    faltante,
+                    preferidos);
+        }
 
         return DistribucionFefoResult.builder()
                 .productoInsumoId(productoInsumoId)
