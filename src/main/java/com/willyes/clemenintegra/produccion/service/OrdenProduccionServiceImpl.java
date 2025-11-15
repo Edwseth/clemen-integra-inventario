@@ -767,13 +767,23 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal requerida = insumo.getCantidadNecesaria()
                     .multiply(orden.getCantidadProgramada())
                     .setScale(8, RoundingMode.HALF_UP);
+            if (requerida.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
             BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
 
             DistribucionFefoResult distribucion = disponibilidadInsumoService.calcularDisponibilidad(
                     insumoId, requerida, almacenesValidos, false);
 
-            if (!distribucion.isSuficiente() || distribucion.getDetalles().isEmpty()) {
+            BigDecimal faltanteDistribucion = Optional.ofNullable(distribucion.getFaltante())
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal totalAsignado = calcularTotalDistribuido(distribucion.getDetalles());
+            BigDecimal requeridaComparacion = requeridaSolicitud.setScale(8, RoundingMode.HALF_UP);
+            boolean sinAsignacion = totalAsignado.compareTo(requeridaComparacion) < 0;
+
+            if (faltanteDistribucion.compareTo(BigDecimal.ZERO) > 0 || sinAsignacion) {
                 manejarStockInsuficiente(insumo.getInsumo(), distribucion);
             }
 
@@ -882,6 +892,17 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         nombre,
                         faltante.toPlainString(),
                         unidad));
+    }
+
+    private BigDecimal calcularTotalDistribuido(List<DistribucionFefoDetalle> detalles) {
+        if (detalles == null || detalles.isEmpty()) {
+            return BigDecimal.ZERO.setScale(8, RoundingMode.HALF_UP);
+        }
+        return detalles.stream()
+                .map(DistribucionFefoDetalle::getCantidadCalculo)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(8, RoundingMode.HALF_UP);
     }
 
 
