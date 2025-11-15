@@ -204,6 +204,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
 
         List<MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO> detalleRespuesta = List.of();
+        boolean detallesProcesadosPorPartidas = false;
 
         // 1. Cargar entidades principales
         Producto producto = productoRepository.findById(dto.productoId().longValue())
@@ -587,6 +588,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     tipoMovimiento,
                     devolucionInterna
             );
+            detallesProcesadosPorPartidas = true;
 
         } else {
             // Comportamiento anterior (un solo lote desde DTO)
@@ -598,6 +600,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (lotesProcesados == null || lotesProcesados.isEmpty()) {
             throw new IllegalStateException("No se generaron lotes para el movimiento");
+        }
+
+        if (solicitud != null
+                && esContextoOrdenProduccion(dto, solicitud)
+                && !detallesProcesadosPorPartidas) {
+            detalleRespuesta = aplicarContraSolicitudMovimiento(dto, solicitud);
         }
 
         MovimientoLoteDetalle principal = lotesProcesados.get(0);
@@ -632,7 +640,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         MovimientoInventario guardado = repository.save(movimiento);
 
         if (solicitud != null) {
-            detalleRespuesta = solicitud.getDetalles().stream()
+            if (detalleRespuesta == null || detalleRespuesta.isEmpty()) {
+                detalleRespuesta = solicitud.getDetalles().stream()
                     .map(d -> {
                         BigDecimal atendidaBD = d.getCantidadAtendida() != null
                                 ? d.getCantidadAtendida()
@@ -653,6 +662,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                 .build();
                     })
                     .collect(java.util.stream.Collectors.toList());
+            }
         }
 
         if (lotesProcesados.size() > 1) {
@@ -675,6 +685,100 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             respuesta.setDetallesSolicitud(detalles);
         }
         return respuesta;
+    }
+
+    private boolean esContextoOrdenProduccion(MovimientoInventarioDTO dto, SolicitudMovimiento solicitud) {
+        if (dto != null && dto.ordenProduccionId() != null) {
+            return true;
+        }
+        return solicitud != null && solicitud.getOrdenProduccion() != null;
+    }
+
+    private List<MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO> aplicarContraSolicitudMovimiento(
+            MovimientoInventarioDTO dto,
+            SolicitudMovimiento solicitud
+    ) {
+        entityManager.lock(solicitud, LockModeType.PESSIMISTIC_WRITE);
+
+        EstadoSolicitudMovimiento estadoActual = solicitud.getEstado();
+        if (estadoActual != null && !EnumSet.of(
+                EstadoSolicitudMovimiento.PENDIENTE,
+                EstadoSolicitudMovimiento.AUTORIZADA,
+                EstadoSolicitudMovimiento.PARCIAL,
+                EstadoSolicitudMovimiento.RESERVADA
+        ).contains(estadoActual)) {
+            log.warn("SOLICITUD_YA_ATENDIDA: solId={} estado={}", solicitud.getId(), estadoActual);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "SOLICITUD_YA_ATENDIDA");
+        }
+
+        List<AtencionDTO> atenciones = obtenerAtencionesParaSolicitud(dto, solicitud);
+        if (atenciones.isEmpty()) {
+            actualizarEstadoSolicitud(solicitud);
+            solicitudMovimientoRepository.saveAndFlush(solicitud);
+            return construirRespuestaSolicitud(solicitud);
+        }
+
+        for (AtencionDTO atencion : atenciones) {
+            BigDecimal cantidad = normalizarCantidad(atencion.getCantidad());
+            if (cantidad == null || cantidad.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_CANTIDAD_INVALIDA");
+            }
+
+            Long loteId = atencion.getLoteId();
+            if (loteId == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_LOTE_REQUERIDO");
+            }
+
+            SolicitudMovimientoDetalle detalle = obtenerDetalleParaAtencion(solicitud, atencion);
+            if (detalle == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_NO_COMPATIBLE");
+            }
+
+            EstadoSolicitudMovimientoDetalle estadoDetalle = detalle.getEstado();
+            if (estadoDetalle != null && !EnumSet.of(
+                    EstadoSolicitudMovimientoDetalle.PENDIENTE,
+                    EstadoSolicitudMovimientoDetalle.PARCIAL
+            ).contains(estadoDetalle)) {
+                log.warn("DETALLE_YA_ATENDIDO: solicitudId={} detalleId={} estado={}",
+                        solicitud.getId(), detalle.getId(), estadoDetalle);
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "DETALLE_YA_ATENDIDO");
+            }
+
+            BigDecimal solicitada = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal atendidaPrev = Optional.ofNullable(detalle.getCantidadAtendida()).orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal pendienteDetalle = solicitada.subtract(atendidaPrev);
+            if (pendienteDetalle.compareTo(BigDecimal.ZERO) <= 0) {
+                log.warn("DETALLE_SIN_PENDIENTE solicitudId={} detalleId={}", solicitud.getId(), detalle.getId());
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "DETALLE_YA_ATENDIDO");
+            }
+            if (cantidad.compareTo(pendienteDetalle) > 0) {
+                log.warn("ATENCION_EXCEDE_PENDIENTE solicitudId={} detalleId={} aprobado={} pendiente={}",
+                        solicitud.getId(), detalle.getId(), cantidad, pendienteDetalle);
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
+            }
+
+            LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
+                    .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+
+            reservaLoteService.consumirReserva(solicitud, detalle, lote, cantidad);
+
+            BigDecimal stockAntes = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+            BigDecimal reservadoAntes = Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO);
+            log.debug("VAL-ACTUALIZA (OP) antes actualizarStockLote loteId={} stockAntes={} reservadoAntes={} req={}",
+                    lote.getId(), stockAntes, reservadoAntes, cantidad);
+
+            actualizarStockLote(lote, cantidad, lote.getProducto());
+            loteProductoRepository.save(lote);
+
+            actualizarDetalleSolicitud(detalle, cantidad);
+            solicitudMovimientoDetalleRepository.save(detalle);
+        }
+
+        actualizarEstadoSolicitud(solicitud);
+        solicitudMovimientoRepository.saveAndFlush(solicitud);
+        return construirRespuestaSolicitud(solicitud);
     }
 
     private List<MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO> atenderSolicitudMovimiento(
