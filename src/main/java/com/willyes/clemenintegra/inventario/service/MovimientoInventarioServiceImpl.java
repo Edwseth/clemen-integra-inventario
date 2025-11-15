@@ -1946,7 +1946,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             List<MovimientoLoteDetalle> detalles = new ArrayList<>();
             List<ParLoteCantidad> consumidos = new ArrayList<>();
 
-            BigDecimal cantidadInicial = cantidad.min(disponibleNoNegativo);
+            BigDecimal cantidadInicial = cantidad.min(stockDisponibleEfectivo);
             if (cantidadInicial.compareTo(BigDecimal.ZERO) > 0) {
                 detalles.add(ejecutarTransferenciaDesdeLote(loteOrigen, destino, producto, cantidadInicial, solicitud));
                 consumidos.add(new ParLoteCantidad(loteOrigen.getId(), cantidadInicial));
