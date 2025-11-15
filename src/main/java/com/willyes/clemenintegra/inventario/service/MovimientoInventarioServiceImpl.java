@@ -1835,15 +1835,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         BigDecimal reservaPendiente = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
         if (solicitud != null && loteOrigen != null && loteOrigen.getId() != null) {
-            BigDecimal reservaDb = Optional.ofNullable(
-                            solicitudMovimientoDetalleRepository.calcularReservaPendientePorSolicitudYLote(
-                                    solicitud.getId(), loteOrigen.getId()))
-                    .orElse(BigDecimal.ZERO)
+            BigDecimal reservaDetalle = calcularReservaPendienteParaDetalle(solicitud, detalleOp, loteOrigen)
                     .setScale(6, RoundingMode.HALF_UP);
-            BigDecimal reservadoPositivo = reservadoActual.compareTo(BigDecimal.ZERO) > 0
-                    ? reservadoActual
-                    : BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
-            reservaPendiente = reservaDb.min(reservadoPositivo).setScale(6, RoundingMode.HALF_UP);
+            if (reservaDetalle.compareTo(BigDecimal.ZERO) > 0) {
+                reservaPendiente = reservaDetalle;
+            } else {
+                BigDecimal reservaDb = Optional.ofNullable(
+                                solicitudMovimientoDetalleRepository.calcularReservaPendientePorSolicitudYLote(
+                                        solicitud.getId(), loteOrigen.getId()))
+                        .orElse(BigDecimal.ZERO)
+                        .setScale(6, RoundingMode.HALF_UP);
+                BigDecimal reservadoPositivo = reservadoActual.compareTo(BigDecimal.ZERO) > 0
+                        ? reservadoActual
+                        : BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+                reservaPendiente = reservaDb.min(reservadoPositivo).setScale(6, RoundingMode.HALF_UP);
+            }
             log.debug("VAL-LOTE-RESERVA solicitudId={} loteId={} estadoSolicitud={} stockLote={} stockReservado={} reservaPendiente={}",
                     solicitud.getId(), loteOrigen.getId(), solicitud.getEstado(), stockActual, reservadoActual, reservaPendiente);
         }
@@ -2691,6 +2697,36 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return noElegibles.stream()
                 .map(this::calcularDisponibleLote)
                 .anyMatch(disponible -> disponible.compareTo(BigDecimal.ZERO) > 0);
+    }
+
+    private BigDecimal calcularReservaPendienteParaDetalle(SolicitudMovimiento solicitud,
+                                                           SolicitudMovimientoDetalle detalleSolicitud,
+                                                           LoteProducto loteOrigen) {
+        if (solicitud == null || detalleSolicitud == null || loteOrigen == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if (detalleSolicitud.getLote() == null
+                || !Objects.equals(detalleSolicitud.getLote().getId(), loteOrigen.getId())) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal cantidad = Optional.ofNullable(detalleSolicitud.getCantidad()).orElse(BigDecimal.ZERO);
+        BigDecimal atendida = Optional.ofNullable(detalleSolicitud.getCantidadAtendida()).orElse(BigDecimal.ZERO);
+
+        BigDecimal pendiente = cantidad.subtract(atendida);
+        if (pendiente.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
+
+        BigDecimal reservaPendiente = pendiente.min(reservadoActual);
+        if (reservaPendiente.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return reservaPendiente;
     }
 
     private BigDecimal calcularDisponibleLote(LoteProducto lote) {
