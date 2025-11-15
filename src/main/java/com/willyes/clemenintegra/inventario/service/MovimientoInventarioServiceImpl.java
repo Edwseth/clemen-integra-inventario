@@ -1825,34 +1825,28 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             cantidad = pendienteDetalle;
         }
 
-        BigDecimal disponible = stockActual.subtract(reservadoActual);
-        BigDecimal disponibleNoNegativo = disponible.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : disponible;
-
-        boolean solicitudAutorizadaOParcial = solicitud != null
-                && (solicitud.getEstado() == EstadoSolicitudMovimiento.AUTORIZADA
-                || solicitud.getEstado() == EstadoSolicitudMovimiento.PARCIAL
-                || solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA);
-
         BigDecimal reservaPendiente = BigDecimal.ZERO;
-
-        if (solicitudAutorizadaOParcial) {
+        if (solicitud != null) {
             reservaPendiente = calcularReservaPendiente(solicitud, loteOrigen);
-
             BigDecimal reservadoPositivo = reservadoActual.compareTo(BigDecimal.ZERO) > 0
                     ? reservadoActual
                     : BigDecimal.ZERO;
-
             if (reservaPendiente.compareTo(reservadoPositivo) > 0) {
                 reservaPendiente = reservadoPositivo;
             }
+            log.debug("VAL-LOTE-RESERVA loteId={} estadoSolicitud={} reservaPendiente={} stockLote={} stockReservado={}",
+                    loteOrigen.getId(), solicitud.getEstado(), reservaPendiente, stockActual, reservadoActual);
         }
 
-        BigDecimal disponibleConReserva = solicitudAutorizadaOParcial
-                ? disponibleNoNegativo.add(reservaPendiente)
-                : disponibleNoNegativo;
+        BigDecimal stockDisponibleBase = stockActual.subtract(reservadoActual);
+        if (stockDisponibleBase.compareTo(BigDecimal.ZERO) < 0) {
+            stockDisponibleBase = BigDecimal.ZERO;
+        }
+        BigDecimal stockDisponibleEfectivo = stockDisponibleBase.add(reservaPendiente);
 
-        log.debug("VAL-LOTE loteId={} stockLote={} reservadoTotal={} pendienteSolicitud={} disponible={} req={}",
-                loteOrigen.getId(), stockActual, reservadoActual, reservaPendiente, disponibleConReserva, cantidad);
+        log.debug("VAL-LOTE loteId={} estadoSolicitud={} stockLote={} reservadoTotal={} pendienteSolicitud={} disponibleBase={} disponibleEfectivo={} req={}",
+                loteOrigen.getId(), solicitud != null ? solicitud.getEstado() : null, stockActual, reservadoActual,
+                reservaPendiente, stockDisponibleBase, stockDisponibleEfectivo, cantidad);
 
         boolean esTransferenciaInternaProduccion = tipo == TipoMovimiento.TRANSFERENCIA
                 && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
@@ -1860,7 +1854,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean requiereAutoSplit = tipo == TipoMovimiento.TRANSFERENCIA
                 && esTransferenciaInternaProduccion
                 && autoSplitSolicitado
-                && cantidad.compareTo(disponibleNoNegativo) > 0;
+                && cantidad.compareTo(stockDisponibleBase) > 0;
 
         if (EnumSet.of(TipoMovimiento.SALIDA, TipoMovimiento.TRANSFERENCIA,
                 TipoMovimiento.DEVOLUCION, TipoMovimiento.AJUSTE).contains(tipo)) {
@@ -1875,9 +1869,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_INSUFICIENTE");
                 }
             } else if (!requiereAutoSplit) {
-                if (disponibleConReserva.compareTo(cantidad) < 0) {
+                if (stockDisponibleEfectivo.compareTo(cantidad) < 0) {
                     log.warn("Stock insuficiente en lote: loteId={} disponible={} reservaPendiente={} solicitado={} productoId={}",
-                            loteOrigen.getId(), disponibleNoNegativo, reservaPendiente, cantidad, producto.getId());
+                            loteOrigen.getId(), stockDisponibleEfectivo, reservaPendiente, cantidad, producto.getId());
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
                 }
             }
