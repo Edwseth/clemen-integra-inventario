@@ -1827,19 +1827,26 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         BigDecimal disponible = stockActual.subtract(reservadoActual);
         BigDecimal disponibleNoNegativo = disponible.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : disponible;
+
         boolean solicitudAutorizadaOParcial = solicitud != null
                 && (solicitud.getEstado() == EstadoSolicitudMovimiento.AUTORIZADA
-                || solicitud.getEstado() == EstadoSolicitudMovimiento.PARCIAL);
+                || solicitud.getEstado() == EstadoSolicitudMovimiento.PARCIAL
+                || solicitud.getEstado() == EstadoSolicitudMovimiento.RESERVADA);
+
         BigDecimal reservaPendiente = BigDecimal.ZERO;
-        if (!esOpAtencion && solicitudAutorizadaOParcial) {
+
+        if (solicitudAutorizadaOParcial) {
             reservaPendiente = calcularReservaPendiente(solicitud, loteOrigen);
+
             BigDecimal reservadoPositivo = reservadoActual.compareTo(BigDecimal.ZERO) > 0
                     ? reservadoActual
                     : BigDecimal.ZERO;
+
             if (reservaPendiente.compareTo(reservadoPositivo) > 0) {
                 reservaPendiente = reservadoPositivo;
             }
         }
+
         BigDecimal disponibleConReserva = solicitudAutorizadaOParcial
                 ? disponibleNoNegativo.add(reservaPendiente)
                 : disponibleNoNegativo;
