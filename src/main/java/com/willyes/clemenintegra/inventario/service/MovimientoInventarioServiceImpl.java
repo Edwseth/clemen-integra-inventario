@@ -1728,15 +1728,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado()).orElse(BigDecimal.ZERO);
 
         boolean esSolicitudOp = solicitud != null && solicitud.getOrdenProduccion() != null;
-        boolean esOpAtencion = esSolicitudOp && (tipo == TipoMovimiento.SALIDA
-                || (tipo == TipoMovimiento.TRANSFERENCIA
-                && dto != null
-                && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION));
+
+        boolean esOpAtencion = esSolicitudOp;
+
         SolicitudMovimientoDetalle detalleOp = esOpAtencion
                 ? resolverDetalleSolicitudOp(dto, solicitud, loteOrigen)
                 : null;
         boolean detalleOpGestionado = false;
         LoteProducto loteProcesadoOp = null;
+
 
         if (esOpAtencion && detalleOp != null) {
             BigDecimal solicitadaDetalle = Optional.ofNullable(detalleOp.getCantidad())
