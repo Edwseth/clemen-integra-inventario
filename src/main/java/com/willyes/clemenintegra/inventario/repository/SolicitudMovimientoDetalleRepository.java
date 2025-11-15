@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -57,5 +58,22 @@ public interface SolicitudMovimientoDetalleRepository extends JpaRepository<Soli
     );
 
     long countBySolicitudMovimientoIdAndEstadoNot(Long solicitudId, EstadoSolicitudMovimientoDetalle estado);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select coalesce(sum(
+                       case
+                           when d.cantidad is null then 0
+                           when d.cantidadAtendida is null then d.cantidad
+                           when d.cantidad - d.cantidadAtendida < 0 then 0
+                           else d.cantidad - d.cantidadAtendida
+                       end
+                   ), 0)
+            from SolicitudMovimientoDetalle d
+            where d.solicitudMovimiento.id = :solicitudId
+              and d.lote.id = :loteId
+            """)
+    BigDecimal calcularReservaPendientePorSolicitudYLote(@Param("solicitudId") Long solicitudId,
+                                                         @Param("loteId") Long loteId);
 }
 
