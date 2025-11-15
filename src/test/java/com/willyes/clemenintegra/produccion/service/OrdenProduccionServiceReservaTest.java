@@ -70,6 +70,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -276,6 +277,50 @@ class OrdenProduccionServiceReservaTest {
     }
 
     @Test
+    @DisplayName("reservarInsumosParaOP no lanza error cuando Jarabe Base tiene stock FEFO suficiente")
+    void reservarInsumosParaOp_jarabeBaseSinErrores() {
+        Producto jarabe = new Producto();
+        jarabe.setId(60);
+        jarabe.setCodigoSku("MP-JARBA");
+        jarabe.setNombre("JARABE BASE");
+        jarabe.setCategoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto());
+        jarabe.getCategoriaProducto().setTipo(TipoCategoria.MATERIA_PRIMA);
+        UnidadMedida unidadMl = new UnidadMedida();
+        unidadMl.setNombre("MILILITRO");
+        jarabe.setUnidadMedida(unidadMl);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(jarabe);
+        detalle.setCantidadNecesaria(new BigDecimal("199.5"));
+
+        FormulaProducto formulaJarabe = new FormulaProducto();
+        formulaJarabe.setProducto(orden.getProducto());
+        formulaJarabe.setDetalles(List.of(detalle));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaJarabe));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(jarabe)).thenReturn(List.of(5L));
+        when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().id(100L).build());
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(60L), any(BigDecimal.class), eq(List.of(5L)), eq(false)))
+                .thenReturn(crearDistribucionJarabeResult(60L));
+
+        orden.setCantidadProgramada(new BigDecimal("700"));
+
+        assertThatCode(() -> service.reservarInsumosParaOP(1L)).doesNotThrowAnyException();
+
+        ArgumentCaptor<SolicitudMovimiento> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimiento.class);
+        verify(solicitudMovimientoRepository).saveAndFlush(solicitudCaptor.capture());
+        List<SolicitudMovimientoDetalle> detalles = solicitudCaptor.getValue().getDetalles();
+        assertThat(detalles).hasSize(7);
+        BigDecimal total = detalles.stream()
+                .map(SolicitudMovimientoDetalle::getCantidad)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(total).isEqualByComparingTo(new BigDecimal("139650.000000"));
+        verify(reservaLoteService).sincronizarReservasSolicitud(solicitudCaptor.getValue());
+    }
+
+    @Test
     @DisplayName("reservarInsumosParaOP falla con 422 cuando no hay lotes elegibles")
     void reservarInsumosParaOp_sinLotesLanzaError() {
         DistribucionFefoResult insuficiente = DistribucionFefoResult.builder()
@@ -375,6 +420,39 @@ class OrdenProduccionServiceReservaTest {
         FormulaProducto formula = new FormulaProducto();
         formula.setDetalles(List.of(detalle));
         return formula;
+    }
+
+    private DistribucionFefoResult crearDistribucionJarabeResult(Long productoId) {
+        return DistribucionFefoResult.builder()
+                .productoInsumoId(productoId)
+                .requerido(new BigDecimal("139650.000000"))
+                .stockFisicoTotal(new BigDecimal("204150.000000"))
+                .stockReservadoTotal(BigDecimal.ZERO)
+                .stockLibreTotal(new BigDecimal("199150.000000"))
+                .faltante(BigDecimal.ZERO.setScale(6))
+                .suficiente(true)
+                .detalles(List.of(
+                        detalleJarabe(117L, "10000.000000", "10000"),
+                        detalleJarabe(92L, "30000.000000", "30000"),
+                        detalleJarabe(118L, "10000.000000", "10000"),
+                        detalleJarabe(85L, "25000.000000", "25000"),
+                        detalleJarabe(103L, "59500.000000", "59500"),
+                        detalleJarabe(119L, "5000.000000", "5000"),
+                        detalleJarabe(156L, "150.000000", "59650")
+                ))
+                .build();
+    }
+
+    private DistribucionFefoDetalle detalleJarabe(Long loteId, String cantidad, String disponible) {
+        BigDecimal reserva = new BigDecimal(cantidad).setScale(6, RoundingMode.HALF_UP);
+        return DistribucionFefoDetalle.builder()
+                .loteProductoId(loteId)
+                .almacenId(5L)
+                .cantidadCalculo(reserva.setScale(8, RoundingMode.HALF_UP))
+                .cantidadReserva(reserva)
+                .disponible(new BigDecimal(disponible))
+                .estado("DISPONIBLE")
+                .build();
     }
 
     private SolicitudMovimiento crearSolicitudBase() {

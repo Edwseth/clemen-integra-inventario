@@ -65,27 +65,31 @@ public class DisponibilidadInsumoService {
         List<LoteFefoDisponibleProjection> lotesDisponibles = loteProductoRepository
                 .findFefoDisponibles(productoInsumoId, Integer.MAX_VALUE);
 
+        List<LoteFefoDisponibleProjection> lotesElegibles = lotesDisponibles.stream()
+                .filter(this::esLotePermitido)
+                .toList();
+
         List<Long> preferidos = almacenesPreferidos == null ? List.of() : List.copyOf(almacenesPreferidos);
-        List<LoteFefoDisponibleProjection> lotesSeleccionados = new ArrayList<>(lotesDisponibles);
+        List<LoteFefoDisponibleProjection> lotesSeleccionados = new ArrayList<>(lotesElegibles);
         boolean usoFallback = false;
         String motivoFallback = null;
 
         if (!preferidos.isEmpty()) {
-            lotesSeleccionados = lotesDisponibles.stream()
+            lotesSeleccionados = lotesElegibles.stream()
                     .filter(lote -> lote.getAlmacenId() != null && preferidos.contains(lote.getAlmacenId()))
                     .toList();
 
             BigDecimal cubierto = lotesSeleccionados.stream()
-                    .map(LoteFefoDisponibleProjection::getStockLote)
+                    .map(this::calcularStockLibre)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             if (lotesSeleccionados.isEmpty() || cubierto.compareTo(requerida) < 0) {
                 usoFallback = true;
                 motivoFallback = lotesSeleccionados.isEmpty() ? "SIN_ALMACEN_CONFIGURADO" : "STOCK_NO_DISPONIBLE_EN_ORIGEN";
-                lotesSeleccionados = lotesDisponibles;
+                lotesSeleccionados = lotesElegibles;
             }
-        } else if (!lotesDisponibles.isEmpty()) {
+        } else if (!lotesElegibles.isEmpty()) {
             usoFallback = true;
             motivoFallback = "SIN_ALMACEN_CONFIGURADO";
         }
@@ -95,7 +99,7 @@ public class DisponibilidadInsumoService {
                     productoInsumoId, requerida, motivoFallback, preferidos);
         }
 
-        lotesSeleccionados.stream()
+        lotesDisponibles.stream()
                 .map(LoteFefoDisponibleProjection::getEstado)
                 .filter(Objects::nonNull)
                 .map(String::trim)
@@ -106,9 +110,12 @@ public class DisponibilidadInsumoService {
                 .findFirst()
                 .ifPresent(estado -> log.warn("Disponibilidad FEFO detectó lote en estado no permitido: {}", estado));
 
-        BigDecimal stockFisicoTotal = sumar(lotesDisponibles, LoteFefoDisponibleProjection::getStockFisico);
-        BigDecimal stockReservadoTotal = sumar(lotesDisponibles, LoteFefoDisponibleProjection::getStockReservado);
-        BigDecimal stockLibreTotal = sumar(lotesDisponibles, LoteFefoDisponibleProjection::getStockLote);
+        BigDecimal stockFisicoTotal = sumar(lotesElegibles, LoteFefoDisponibleProjection::getStockFisico);
+        BigDecimal stockReservadoTotal = sumar(lotesElegibles, LoteFefoDisponibleProjection::getStockReservado);
+        BigDecimal stockLibreTotal = lotesElegibles.stream()
+                .map(this::calcularStockLibre)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(6, RoundingMode.HALF_UP);
 
         List<DistribucionFefoDetalle> detalles = new ArrayList<>();
         BigDecimal restante = requerida;
@@ -116,7 +123,7 @@ public class DisponibilidadInsumoService {
             if (restante.compareTo(BigDecimal.ZERO) <= 0) {
                 break;
             }
-            BigDecimal disponible = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
+            BigDecimal disponible = calcularStockLibre(lote);
             if (disponible.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
@@ -145,8 +152,8 @@ public class DisponibilidadInsumoService {
             restante = BigDecimal.ZERO;
         }
 
-        BigDecimal faltante = restante.setScale(6, RoundingMode.HALF_UP);
-        boolean suficiente = faltante.compareTo(BigDecimal.ZERO) <= 0;
+        BigDecimal faltante = restante.max(BigDecimal.ZERO).setScale(6, RoundingMode.HALF_UP);
+        boolean suficiente = faltante.compareTo(BigDecimal.ZERO) == 0;
 
         if (productoInsumoId != null
                 && stockFisicoTotal.compareTo(requerida) >= 0
@@ -181,10 +188,25 @@ public class DisponibilidadInsumoService {
 
     private BigDecimal sumar(List<LoteFefoDisponibleProjection> lotes,
                               Function<LoteFefoDisponibleProjection, BigDecimal> extractor) {
-        return lotes.stream()
+        BigDecimal total = lotes.stream()
                 .map(extractor)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return total.setScale(6, RoundingMode.HALF_UP);
+    }
+
+    private boolean esLotePermitido(LoteFefoDisponibleProjection lote) {
+        EstadoLote estado = parseEstadoLoteSafe(lote.getEstado());
+        return estado != null && ESTADOS_FEFO_PERMITIDOS.contains(estado);
+    }
+
+    private BigDecimal calcularStockLibre(LoteFefoDisponibleProjection lote) {
+        BigDecimal stockBase = Optional.ofNullable(lote.getStockLote())
+                .orElse(Optional.ofNullable(lote.getStockFisico()).orElse(BigDecimal.ZERO));
+        if (stockBase.compareTo(BigDecimal.ZERO) < 0) {
+            stockBase = BigDecimal.ZERO;
+        }
+        return stockBase.setScale(8, RoundingMode.HALF_UP);
     }
 
     private EstadoLote parseEstadoLoteSafe(String valor) {

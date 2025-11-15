@@ -101,6 +101,33 @@ class DisponibilidadInsumoServiceTest {
         assertThat(resultado.getFaltante()).isEqualByComparingTo(new BigDecimal("47.500000"));
     }
 
+    @Test
+    @DisplayName("calcularDisponibilidad mantiene stock suficiente para Jarabe Base excluyendo cuarentena")
+    void calcularDisponibilidad_jarabeBaseSinFaltantes() {
+        when(loteProductoRepository.findFefoDisponibles(38L, Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        lote(117L, "L-120925-3", new BigDecimal("10000"), new BigDecimal("10000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
+                        lote(92L, "L-110925-3", new BigDecimal("30000"), new BigDecimal("30000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
+                        lote(118L, "L-120925-2", new BigDecimal("10000"), new BigDecimal("10000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
+                        lote(85L, "L-160925-2", new BigDecimal("25000"), new BigDecimal("25000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
+                        lote(103L, "L-180925-8", new BigDecimal("59500"), new BigDecimal("59500"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
+                        lote(119L, "L-050825-3", new BigDecimal("5000"), new BigDecimal("5000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
+                        lote(156L, "L-151125-2", new BigDecimal("59650"), new BigDecimal("59650"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
+                        lote(148L, "L-271025-00", new BigDecimal("5000"), new BigDecimal("5000"), BigDecimal.ZERO, EstadoLote.EN_CUARENTENA)
+                ));
+
+        DistribucionFefoResult resultado = service.calcularDisponibilidad(38L, new BigDecimal("139650"), List.of(), true);
+
+        assertThat(resultado.isSuficiente()).isTrue();
+        assertThat(resultado.getStockLibreTotal()).isEqualByComparingTo(new BigDecimal("199150.000000"));
+        assertThat(resultado.getFaltante()).isEqualByComparingTo(BigDecimal.ZERO.setScale(6));
+        assertThat(resultado.getDetalles()).hasSize(7);
+        BigDecimal totalDistribuido = resultado.getDetalles().stream()
+                .map(det -> det.getCantidadReserva() == null ? BigDecimal.ZERO : det.getCantidadReserva())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(totalDistribuido).isEqualByComparingTo(new BigDecimal("139650.000000"));
+    }
+
     private LoteFefoDisponibleProjection lote(Long id, String codigo, BigDecimal stockLibre,
                                                BigDecimal stockFisico, BigDecimal stockReservado,
                                                EstadoLote estado) {
