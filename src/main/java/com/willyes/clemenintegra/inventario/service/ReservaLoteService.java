@@ -156,8 +156,35 @@ public class ReservaLoteService {
 
         if (pendienteNuevo.compareTo(disponible) > 0) {
             BigDecimal faltante = pendienteNuevo.subtract(disponible).setScale(6, RoundingMode.HALF_UP);
+            String codigo = lote.getProducto() != null && lote.getProducto().getCodigoSku() != null
+                    ? lote.getProducto().getCodigoSku()
+                    : String.valueOf(loteId);
+            String nombre = lote.getProducto() != null && lote.getProducto().getNombre() != null
+                    ? lote.getProducto().getNombre()
+                    : "Insumo";
+            String unidad = lote.getProducto() != null && lote.getProducto().getUnidadMedida() != null
+                    && lote.getProducto().getUnidadMedida().getNombre() != null
+                    ? lote.getProducto().getUnidadMedida().getNombre()
+                    : "";
+
+            log.warn(
+                    "STOCK_INSUFICIENTE en reserva de lote: loteId={} codigoLote={} insumo {} - {}, requerido={}, stockLote={}, stockReservado={}, stockLibre={}, faltante={}",
+                    lote.getId(),
+                    lote.getCodigoLote(),
+                    codigo,
+                    nombre,
+                    pendienteNuevo,
+                    Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO),
+                    Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO),
+                    disponible,
+                    faltante);
+
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "STOCK_INSUFICIENTE: faltan " + faltante);
+                    String.format("STOCK_INSUFICIENTE: insumo %s - %s, faltan %s %s",
+                            codigo,
+                            nombre,
+                            faltante.toPlainString(),
+                            unidad));
         }
 
         ReservaLote reserva = existenteOpt.orElseGet(() -> ReservaLote.builder()

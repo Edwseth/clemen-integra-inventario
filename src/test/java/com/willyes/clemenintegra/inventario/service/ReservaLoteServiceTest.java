@@ -9,6 +9,8 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,12 +18,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -103,5 +107,42 @@ class ReservaLoteServiceTest {
         assertThat(actualizado.getEstado()).isEqualTo(EstadoReservaLote.CANCELADA);
         assertThat(actualizado.getCantidadConsumida()).isEqualByComparingTo(BigDecimal.ZERO.setScale(6));
         verify(loteProductoRepository).findByIdForUpdate(8L);
+    }
+
+    @Test
+    @DisplayName("crearOActualizarDesdeDetalle insuficiente expone mensaje enriquecido")
+    void crearOActualizarDesdeDetalle_insuficienteMensaje() {
+        SolicitudMovimientoDetalle detalle = SolicitudMovimientoDetalle.builder()
+                .id(30L)
+                .cantidad(new BigDecimal("6"))
+                .lote(LoteProducto.builder().id(15L).build())
+                .build();
+
+        Producto producto = new Producto();
+        producto.setCodigoSku("MP-COLRO");
+        producto.setNombre("Colorante Rojo");
+        UnidadMedida unidadMedida = new UnidadMedida();
+        unidadMedida.setNombre("MILILITRO");
+        producto.setUnidadMedida(unidadMedida);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(15L)
+                .codigoLote("L-15")
+                .producto(producto)
+                .stockLote(new BigDecimal("5"))
+                .stockReservado(new BigDecimal("2"))
+                .almacen(new Almacen())
+                .build();
+
+        when(loteProductoRepository.findByIdForUpdate(15L)).thenReturn(Optional.of(lote));
+        when(reservaLoteRepository.findByDetalleIdAndLoteIdForUpdate(30L, 15L)).thenReturn(Optional.empty());
+        when(reservaLoteRepository.sumPendienteByLoteId(eq(15L), any())).thenReturn(new BigDecimal("2"));
+
+        assertThatThrownBy(() -> service.crearOActualizarDesdeDetalle(detalle))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("MP-COLRO")
+                .hasMessageContaining("Colorante Rojo")
+                .hasMessageContaining("MILILITRO")
+                .hasMessageContaining("3.000000");
     }
 }
