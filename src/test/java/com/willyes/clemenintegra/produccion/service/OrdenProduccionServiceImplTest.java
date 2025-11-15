@@ -16,6 +16,7 @@ import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.*;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +26,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +38,6 @@ class OrdenProduccionServiceImplTest {
 
     @Mock private FormulaProductoRepository formulaProductoRepository;
     @Mock private ProductoRepository productoRepository;
-    @Mock private StockQueryService stockQueryService;
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private SolicitudMovimientoService solicitudMovimientoService;
     @Mock private OrdenProduccionRepository ordenProduccionRepository;
@@ -99,8 +98,20 @@ class OrdenProduccionServiceImplTest {
         when(productoRepository.findAllById(any()))
                 .thenReturn(List.of(insumo));
         when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of(5L));
-        when(stockQueryService.obtenerStockDisponible(eq(List.of(2L)), eq(List.of(5L))))
-                .thenReturn(Map.of(2L, new BigDecimal("8")));
+
+        DistribucionFefoResult preview = DistribucionFefoResult.builder()
+                .productoInsumoId(2L)
+                .requerido(new BigDecimal("10.000000"))
+                .stockFisicoTotal(new BigDecimal("12.000000"))
+                .stockReservadoTotal(new BigDecimal("4.000000"))
+                .stockLibreTotal(new BigDecimal("8.000000"))
+                .faltante(new BigDecimal("2.000000"))
+                .suficiente(false)
+                .almacenesPreferidos(List.of(5L))
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(2L), any(BigDecimal.class), eq(List.of(5L)), eq(true)))
+                .thenReturn(preview);
 
         ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
 
@@ -109,6 +120,6 @@ class OrdenProduccionServiceImplTest {
         assertThat(resultado.getInsumosFaltantes()).hasSize(1);
         assertThat(resultado.getInsumosFaltantes().get(0).getProductoId()).isEqualTo(2L);
         assertThat(resultado.getInsumosFaltantes().get(0).getRequerido()).isEqualByComparingTo(new BigDecimal("10"));
-        assertThat(resultado.getInsumosFaltantes().get(0).getDisponible()).isEqualByComparingTo(new BigDecimal("8"));
+        assertThat(resultado.getInsumosFaltantes().get(0).getDisponible()).isEqualByComparingTo(new BigDecimal("8.000000"));
     }
 }

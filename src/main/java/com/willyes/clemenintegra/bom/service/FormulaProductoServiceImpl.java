@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -234,6 +235,8 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                 ? cantidad
                 : BigDecimal.ONE;
 
+        boolean todosSuficientes = true;
+
         if (response.detalles != null && formula.getDetalles() != null) {
             List<DetalleFormula> detallesEntidad = formula.getDetalles();
             for (int i = 0; i < detallesEntidad.size(); i++) {
@@ -243,7 +246,6 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                 BigDecimal totalNecesaria = entidad.getCantidadNecesaria().multiply(cantidadProduccion);
                 dto.cantidadTotalNecesaria = totalNecesaria;
 
-                // LÍNEA CODEx: antes se tomaba el stock del producto sin discriminar lotes
                 Long insumoId = entidad.getInsumo().getId().longValue();
                 DisponibilidadInsumoDTO disponibilidad = new DisponibilidadInsumoDTO();
 
@@ -294,10 +296,20 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                         true);
 
                 BigDecimal stockLibre = Optional.ofNullable(fefoResult.getStockLibreTotal())
-                        .orElse(disponibilidad.getDisponible());
-                boolean insuficiente = !fefoResult.isSuficiente();
+                        .orElse(BigDecimal.ZERO);
+                BigDecimal faltanteFefo = Optional.ofNullable(fefoResult.getFaltante())
+                        .orElse(BigDecimal.ZERO);
+                boolean suficiente = fefoResult.isSuficiente();
+
+                Integer maxProducible = null;
+                if (entidad.getCantidadNecesaria() != null
+                        && entidad.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
+                    maxProducible = stockLibre.divide(entidad.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
+                }
+
                 String motivo = "OK";
-                if (insuficiente) {
+                if (!suficiente) {
+                    motivo = "STOCK_LIBRE_INSUFICIENTE";
                     if (disponibilidad.getEnCuarentena().compareTo(BigDecimal.ZERO) > 0) {
                         motivo = "CUARENTENA";
                     } else if (disponibilidad.getRetenido().compareTo(BigDecimal.ZERO) > 0) {
@@ -306,24 +318,30 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                         motivo = "VENCIDO";
                     } else if (disponibilidad.getRechazado().compareTo(BigDecimal.ZERO) > 0) {
                         motivo = "RECHAZADO";
-                    } else {
-                        motivo = "SIN_STOCK";
                     }
-                    log.info("FORMULA_DISPONIBILIDAD insumoId={} requerido={} disponible={} motivo={}",
+                    log.info("FORMULA_DISPONIBILIDAD insumoId={} requerido={} stockLibreFefo={} faltanteFefo={} motivo={} almacenesPreferidos={}",
                             insumoId,
                             totalNecesaria,
                             stockLibre,
-                            motivo);
+                            faltanteFefo,
+                            motivo,
+                            almacenesPreferidos);
                 }
 
                 dto.stockDisponible = stockLibre;
-                dto.estadoStock = fefoResult.isSuficiente() ? "SUFICIENTE" : "INSUFICIENTE";
+                dto.stockLibreFefo = stockLibre;
+                dto.faltanteFefo = faltanteFefo;
+                dto.maxProducible = maxProducible;
+                dto.estadoStock = suficiente ? "SUFICIENTE" : "INSUFICIENTE";
                 dto.disponibilidad = disponibilidad;
-                dto.bloqueante = new BloqueanteDTO(insuficiente, motivo);
+                dto.bloqueante = new BloqueanteDTO(!suficiente, motivo);
                 dto.lotes = lotes;
+
+                todosSuficientes = todosSuficientes && suficiente;
             }
         }
 
+        response.disponibilidadSuficiente = todosSuficientes;
         return response;
     }
 

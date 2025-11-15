@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -28,6 +30,8 @@ class DisponibilidadInsumoServiceTest {
     private LoteProductoRepository loteProductoRepository;
     @Mock
     private InventoryCatalogResolver catalogResolver;
+    @Mock
+    private ProductoRepository productoRepository;
 
     @InjectMocks
     private DisponibilidadInsumoService service;
@@ -76,6 +80,25 @@ class DisponibilidadInsumoServiceTest {
         DistribucionFefoResult resultado = service.calcularDisponibilidad(20L, new BigDecimal("5"), preferidos, true);
         assertThat(resultado.isSuficiente()).isFalse();
         assertThat(resultado.getFaltante()).isEqualByComparingTo(new BigDecimal("2.500000"));
+    }
+
+    @Test
+    @DisplayName("calcularDisponibilidad detecta faltante por reservas aun con stock físico suficiente")
+    void calcularDisponibilidad_detectaFaltantePorReservas() {
+        when(loteProductoRepository.findFefoDisponibles(30L, Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        lote(10L, "L-170925-3", new BigDecimal("125.000000"), new BigDecimal("125.000000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
+                        lote(11L, "L-271025-02", new BigDecimal("130.000000"), new BigDecimal("500.000000"), new BigDecimal("370.000000"), EstadoLote.DISPONIBLE),
+                        lote(12L, "L-060825-3", new BigDecimal("47.500000"), new BigDecimal("150.000000"), new BigDecimal("102.500000"), EstadoLote.DISPONIBLE)
+                ));
+        when(productoRepository.findById(30L)).thenReturn(Optional.empty());
+
+        DistribucionFefoResult resultado = service.calcularDisponibilidad(30L, new BigDecimal("350"), List.of(5L), true);
+
+        assertThat(resultado.isSuficiente()).isFalse();
+        assertThat(resultado.getStockFisicoTotal()).isEqualByComparingTo(new BigDecimal("775.000000"));
+        assertThat(resultado.getStockLibreTotal()).isEqualByComparingTo(new BigDecimal("302.500000"));
+        assertThat(resultado.getFaltante()).isEqualByComparingTo(new BigDecimal("47.500000"));
     }
 
     private LoteFefoDisponibleProjection lote(Long id, String codigo, BigDecimal stockLibre,

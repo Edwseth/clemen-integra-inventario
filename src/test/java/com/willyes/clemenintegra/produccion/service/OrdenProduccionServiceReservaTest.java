@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
@@ -136,7 +137,7 @@ class OrdenProduccionServiceReservaTest {
         productoInsumo = new Producto();
         productoInsumo.setId(50);
         productoInsumo.setCodigoSku("MP-COLRO");
-        productoInsumo.setNombre("INSUMO-X");
+        productoInsumo.setNombre("COLORANTE NATURAL ROJO");
         productoInsumo.setCategoriaProducto(new com.willyes.clemenintegra.inventario.model.CategoriaProducto());
         productoInsumo.getCategoriaProducto().setTipo(TipoCategoria.MATERIA_PRIMA);
         UnidadMedida unidadInsumo = new UnidadMedida();
@@ -227,6 +228,54 @@ class OrdenProduccionServiceReservaTest {
     }
 
     @Test
+    @DisplayName("flujo FEFO detecta faltante por reservas y al reservar lanza STOCK_INSUFICIENTE")
+    void flujoFefoDetectaFaltantePorReservas() {
+        FormulaProducto formulaEscenario = new FormulaProducto();
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(productoInsumo);
+        detalle.setCantidadNecesaria(new BigDecimal("0.5"));
+        formulaEscenario.setDetalles(List.of(detalle));
+        formulaEscenario.setProducto(orden.getProducto());
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaEscenario));
+        when(productoRepository.findAllById(any()))
+                .thenReturn(List.of(productoInsumo));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(productoInsumo)).thenReturn(List.of(5L));
+        when(productoRepository.findById(50L)).thenReturn(Optional.of(productoInsumo));
+
+        DistribucionFefoResult preview = DistribucionFefoResult.builder()
+                .productoInsumoId(50L)
+                .requerido(new BigDecimal("350.000000"))
+                .stockFisicoTotal(new BigDecimal("775.000000"))
+                .stockReservadoTotal(new BigDecimal("472.500000"))
+                .stockLibreTotal(new BigDecimal("302.500000"))
+                .faltante(new BigDecimal("47.500000"))
+                .suficiente(false)
+                .almacenesPreferidos(List.of(5L))
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(50L), any(BigDecimal.class), eq(List.of(5L)), eq(true)))
+                .thenReturn(preview);
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(50L), any(BigDecimal.class), eq(List.of(5L)), eq(false)))
+                .thenReturn(preview);
+
+        orden.setCantidadProgramada(new BigDecimal("700"));
+
+        ResultadoValidacionOrdenDTO validacion = service.guardarConValidacionStock(orden);
+
+        assertThat(validacion.isEsValida()).isFalse();
+        assertThat(validacion.getUnidadesMaximasProducibles()).isEqualTo(605);
+        assertThat(validacion.getInsumosFaltantes()).hasSize(1);
+        assertThat(validacion.getInsumosFaltantes().get(0).getDisponible())
+                .isEqualByComparingTo(new BigDecimal("302.500000"));
+
+        assertThatThrownBy(() -> service.reservarInsumosParaOP(orden.getId()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessage("422 UNPROCESSABLE_ENTITY \"STOCK_INSUFICIENTE: insumo MP-COLRO - COLORANTE NATURAL ROJO, faltan 47.500000 MILILITRO\"");
+    }
+
+    @Test
     @DisplayName("reservarInsumosParaOP falla con 422 cuando no hay lotes elegibles")
     void reservarInsumosParaOp_sinLotesLanzaError() {
         DistribucionFefoResult insuficiente = DistribucionFefoResult.builder()
@@ -246,7 +295,7 @@ class OrdenProduccionServiceReservaTest {
         assertThatThrownBy(() -> service.reservarInsumosParaOP(1L))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("MP-COLRO")
-                .hasMessageContaining("INSUMO-X")
+                .hasMessageContaining("COLORANTE NATURAL ROJO")
                 .hasMessageContaining("6.790123")
                 .hasMessageContaining("MILILITRO")
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
