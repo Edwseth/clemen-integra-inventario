@@ -8,6 +8,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * DTO utilizado para exponer solicitudes de movimiento. Los campos de cabecera relacionados con
+ * producto, lote y almacenes pueden provenir del primer detalle cuando la entidad original tiene
+ * cabecera vacía (caso habitual en solicitudes generadas desde Producción). El frontend puede
+ * apoyarse en estos identificadores para precargar formularios de movimientos asociados a una OP.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

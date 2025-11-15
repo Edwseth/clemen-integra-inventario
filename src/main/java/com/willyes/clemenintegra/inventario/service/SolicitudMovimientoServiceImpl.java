@@ -590,6 +590,15 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         return "MIXTO";
     }
 
+    /**
+     * Convierte una {@link SolicitudMovimiento} en su DTO de respuesta asegurando que el frontend
+     * reciba siempre los identificadores necesarios para precargar el formulario de movimientos.
+     * <p>
+     * Las solicitudes ligadas a producción suelen persistir la información de lote y almacenes en
+     * el primer detalle (multi-lote) y dejar vacía la cabecera. Por ello se toma ese detalle como
+     * fuente de verdad cuando los campos principales vienen nulos.
+     * </p>
+     */
     private SolicitudMovimientoResponseDTO toResponse(SolicitudMovimiento s) {
         SolicitudMovimientoDetalle primerDetalle = Optional.ofNullable(s.getDetalles())
                 .filter(detalles -> !detalles.isEmpty())
