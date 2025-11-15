@@ -106,7 +106,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lote.setProducto(producto);
         lote.setAlmacen(new Almacen(10));
         lote.setStockLote(new BigDecimal("10"));
-        lote.setStockReservado(BigDecimal.ZERO);
+        lote.setStockReservado(new BigDecimal("5"));
         lote.setEstado(EstadoLote.DISPONIBLE);
 
         SolicitudMovimientoDetalle detalle = new SolicitudMovimientoDetalle();
@@ -209,19 +209,25 @@ class MovimientoInventarioServiceSolicitudOpTest {
         assertThat(respuesta.getId()).isEqualTo(900L);
         assertThat(detalle.getCantidadAtendida()).isEqualByComparingTo(new BigDecimal("5.000000"));
         assertThat(detalle.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
-        assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitudMovimiento.ATENDIDA);
+        assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitudMovimiento.CERRADA);
         assertThat(solicitud.getFechaResolucion()).isNotNull();
         assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("5.00"));
+        assertThat(lote.getStockReservado()).isEqualByComparingTo(BigDecimal.ZERO);
 
         BigDecimal stockTrasPrimeraAprobacion = lote.getStockLote();
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(ResponseStatusException.class)
-                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
-                .isEqualTo(HttpStatus.CONFLICT);
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(rse.getReason()).isEqualTo("SOLICITUD_OP_YA_ATENDIDA");
+                });
 
         assertThat(lote.getStockLote()).isEqualByComparingTo(stockTrasPrimeraAprobacion);
+        assertThat(lote.getStockReservado()).isEqualByComparingTo(BigDecimal.ZERO);
         verify(movimientoInventarioRepository, times(1)).save(any(MovimientoInventario.class));
+        verify(solicitudMovimientoRepository, times(1)).saveAndFlush(solicitud);
     }
 }
 
