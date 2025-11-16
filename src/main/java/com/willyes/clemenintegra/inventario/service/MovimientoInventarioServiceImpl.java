@@ -602,9 +602,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 && clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION) {
 
             // Consumir directamente del lote (ya en Pre-Bodega).
-            // OJO: ignoramos la 'solicitud' para el cálculo de stock (pasamos null),
-            // pero el movimiento seguirá quedando LIGADO a la solicitud más abajo
-            // cuando se setea movimiento.setSolicitudMovimiento(solicitud).
             lotesProcesados = procesarMovimientoConLoteExistente(
                     dto,
                     tipoMovimiento,
@@ -613,7 +610,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     producto,
                     cantidadSolicitada,
                     devolucionInterna,
-                    /* solicitud */ null, // <- clave para evitar el early-return que no descuenta stock
+                    /* solicitud */ solicitud,
                     solicitudOpProcesadaEnLote
             );
 
@@ -1898,9 +1895,29 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         BigDecimal stockDisponibleEfectivo = stockDisponibleBase.add(reservaPendiente)
                 .setScale(6, RoundingMode.HALF_UP);
 
-        log.debug("VAL-LOTE loteId={} estadoSolicitud={} stockLote={} reservadoTotal={} pendienteSolicitud={} disponibleBase={} disponibleEfectivo={} req={}",
+        SolicitudMovimiento solicitudContexto = solicitud != null
+                ? solicitud
+                : (detalleSolicitudRelacionado != null ? detalleSolicitudRelacionado.getSolicitudMovimiento() : null);
+        SolicitudMovimientoDetalle detalleContexto = detalleSolicitudRelacionado;
+
+        BigDecimal stockReservadoTotal = nvl(loteOrigen.getStockReservado()).setScale(6, RoundingMode.HALF_UP);
+        BigDecimal reservadoPropio = obtenerCantidadReservadaPorEsteDetalle(detalleContexto);
+        if (reservadoPropio.compareTo(stockReservadoTotal) > 0) {
+            reservadoPropio = stockReservadoTotal;
+        }
+        BigDecimal reservaAjena = stockReservadoTotal.subtract(reservadoPropio);
+        if (reservaAjena.compareTo(BigDecimal.ZERO) < 0) {
+            reservaAjena = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        }
+        BigDecimal stockDisponibleEfectivoContextual = stockActual.subtract(reservaAjena)
+                .setScale(6, RoundingMode.HALF_UP);
+        BigDecimal cantidadSolicitadaContextual = obtenerCantidadSolicitadaDelDetalle(detalleContexto, cantidad);
+
+        log.debug("VAL-LOTE loteId={} estadoSolicitud={} stockLote={} reservadoTotal={} pendienteSolicitud={} disponibleBase={}disponibleEfectivo={} req={}",
                 loteOrigen.getId(), solicitud != null ? solicitud.getEstado() : null, stockActual, reservadoActual,
                 reservaPendiente, stockDisponibleBase, stockDisponibleEfectivo, cantidad);
+
+        boolean hayContextoSolicitud = solicitudContexto != null || detalleContexto != null;
 
         boolean esTransferenciaInternaProduccion = tipo == TipoMovimiento.TRANSFERENCIA
                 && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
@@ -1923,29 +1940,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_INSUFICIENTE");
                 }
             } else if (!requiereAutoSplit) {
-                if (solicitud != null) {
-                    BigDecimal stockLoteTotal = nvl(loteOrigen.getStockLote()).setScale(6, RoundingMode.HALF_UP);
-                    BigDecimal stockReservadoTotal = nvl(loteOrigen.getStockReservado()).setScale(6, RoundingMode.HALF_UP);
-                    BigDecimal reservadoPorEsteDetalle = obtenerCantidadReservadaPorEsteDetalle(detalleSolicitudRelacionado);
-                    if (reservadoPorEsteDetalle.compareTo(stockReservadoTotal) > 0) {
-                        reservadoPorEsteDetalle = stockReservadoTotal;
-                    }
-                    BigDecimal reservadoPorOtros = stockReservadoTotal.subtract(reservadoPorEsteDetalle);
-                    if (reservadoPorOtros.compareTo(BigDecimal.ZERO) < 0) {
-                        reservadoPorOtros = BigDecimal.ZERO;
-                    }
-                    BigDecimal disponibleParaSolicitud = stockLoteTotal.subtract(reservadoPorOtros);
-                    if (disponibleParaSolicitud.compareTo(BigDecimal.ZERO) < 0) {
-                        disponibleParaSolicitud = BigDecimal.ZERO;
-                    }
-                    BigDecimal cantidadSolicitadaDetalle = obtenerCantidadSolicitadaDelDetalle(detalleSolicitudRelacionado, cantidad);
-                    if (disponibleParaSolicitud.compareTo(cantidadSolicitadaDetalle) < 0) {
+                log.debug("VAL-LOTE-CONTEXTO solicitudIdDto={} solicitudCtxId={} detalleCtxId={} stockLote={} reservadoTotal={} reservadoPropio={} reservaAjena={} disponibleCtx={} solicitadoCtx={}",
+                        dto.solicitudMovimientoId(),
+                        solicitudContexto != null ? solicitudContexto.getId() : null,
+                        detalleContexto != null ? detalleContexto.getId() : null,
+                        stockActual, stockReservadoTotal, reservadoPropio, reservaAjena, stockDisponibleEfectivoContextual,
+                        cantidadSolicitadaContextual);
+
+                if (hayContextoSolicitud) {
+                    if (stockDisponibleEfectivoContextual.compareTo(cantidadSolicitadaContextual) < 0) {
                         log.warn(
                                 "Stock insuficiente en lote (CON_SOLICITUD): solicitudId={} detalleId={} loteId={} disponible={} reservadoTotal={} reservadoOtros={} reservadoDetalle={} solicitado={} productoId={}",
-                                solicitud.getId(),
-                                detalleSolicitudRelacionado != null ? detalleSolicitudRelacionado.getId() : null,
-                                loteOrigen.getId(), disponibleParaSolicitud, stockReservadoTotal,
-                                reservadoPorOtros, reservadoPorEsteDetalle, cantidadSolicitadaDetalle, producto.getId());
+                                solicitudContexto != null ? solicitudContexto.getId() : null,
+                                detalleContexto != null ? detalleContexto.getId() : null,
+                                loteOrigen.getId(), stockDisponibleEfectivoContextual, stockReservadoTotal,
+                                reservaAjena, reservadoPropio, cantidadSolicitadaContextual, producto.getId());
                         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
                     }
                 } else if (stockDisponibleEfectivo.compareTo(cantidad) < 0) {
