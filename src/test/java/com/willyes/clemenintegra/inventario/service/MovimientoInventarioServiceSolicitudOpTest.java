@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -235,6 +237,239 @@ class MovimientoInventarioServiceSolicitudOpTest {
         verify(solicitudMovimientoRepository, times(1)).saveAndFlush(solicitud);
         verify(reservaLoteService, times(1)).consumirReserva(eq(solicitud), eq(detalle), eq(lote), eq(new BigDecimal("1000.000000")));
         verify(mapper, times(1)).safeToResponseDTO(any(MovimientoInventario.class));
+    }
+
+    @Test
+    void transferenciaInterna_consumoTotalReservaPropia_noGeneraError() {
+        Producto producto = new Producto();
+        producto.setId(34);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(12L);
+        producto.setUnidadMedida(unidad);
+
+        LoteProducto loteOrigen = new LoteProducto();
+        loteOrigen.setId(55L);
+        loteOrigen.setProducto(producto);
+        loteOrigen.setCodigoLote("LOT-55");
+        loteOrigen.setAlmacen(new Almacen(10));
+        loteOrigen.setStockLote(new BigDecimal("250"));
+        loteOrigen.setStockReservado(new BigDecimal("250"));
+        loteOrigen.setEstado(EstadoLote.DISPONIBLE);
+
+        LoteProducto loteDestino = new LoteProducto();
+        loteDestino.setId(75L);
+        loteDestino.setProducto(producto);
+        loteDestino.setCodigoLote("LOT-55");
+        loteDestino.setAlmacen(new Almacen(20));
+        loteDestino.setEstado(EstadoLote.DISPONIBLE);
+        loteDestino.setStockLote(BigDecimal.ZERO);
+        loteDestino.setStockReservado(BigDecimal.ZERO);
+
+        SolicitudMovimientoDetalle detalle = new SolicitudMovimientoDetalle();
+        detalle.setId(701L);
+        detalle.setCantidad(new BigDecimal("250"));
+        detalle.setCantidadAtendida(BigDecimal.ZERO);
+        detalle.setEstado(EstadoSolicitudMovimientoDetalle.PENDIENTE);
+        detalle.setLote(loteOrigen);
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(501L);
+        solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
+        solicitud.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        solicitud.setDetalles(List.of(detalle));
+        detalle.setSolicitudMovimiento(solicitud);
+
+        Usuario usuario = Usuario.builder()
+                .id(80L)
+                .rol(RolUsuario.ROL_SUPER_ADMIN)
+                .nombreUsuario("tester")
+                .clave("secret")
+                .nombreCompleto("Tester")
+                .correo("tester@example.com")
+                .activo(true)
+                .bloqueado(false)
+                .build();
+
+        AtencionDTO atencion = new AtencionDTO();
+        atencion.setDetalleId(detalle.getId());
+        atencion.setLoteId(loteOrigen.getId());
+        atencion.setCantidad(new BigDecimal("250"));
+        atencion.setAlmacenOrigenId(10);
+        atencion.setAlmacenDestinoId(20);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("250"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                "DOC-55",
+                null,
+                producto.getId(),
+                loteOrigen.getId(),
+                10,
+                20,
+                null,
+                null,
+                null,
+                70L,
+                solicitud.getId(),
+                usuario.getId(),
+                999L,
+                null,
+                loteOrigen.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                List.of(atencion)
+        );
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+
+        prepararEscenarioComun(dto, producto, solicitud, detalle, loteOrigen, loteDestino, movimientoEntidad, usuario);
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        assertThat(respuesta).isNotNull();
+        assertThat(respuesta.getId()).isEqualTo(900L);
+        assertThat(loteOrigen.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
+        assertThat(loteOrigen.getStockReservado()).isEqualByComparingTo(BigDecimal.ZERO.setScale(6));
+    }
+
+    @Test
+    void transferenciaInterna_bloqueadaCuandoReservaEsDeOtros() {
+        Producto producto = new Producto();
+        producto.setId(34);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(12L);
+        producto.setUnidadMedida(unidad);
+
+        LoteProducto loteOrigen = new LoteProducto();
+        loteOrigen.setId(55L);
+        loteOrigen.setProducto(producto);
+        loteOrigen.setCodigoLote("LOT-55");
+        loteOrigen.setAlmacen(new Almacen(10));
+        loteOrigen.setStockLote(new BigDecimal("250"));
+        loteOrigen.setStockReservado(new BigDecimal("250"));
+        loteOrigen.setEstado(EstadoLote.DISPONIBLE);
+
+        LoteProducto loteDestino = new LoteProducto();
+        loteDestino.setId(80L);
+        loteDestino.setProducto(producto);
+        loteDestino.setCodigoLote("LOT-55");
+        loteDestino.setAlmacen(new Almacen(20));
+        loteDestino.setEstado(EstadoLote.DISPONIBLE);
+
+        LoteProducto loteReservaAjena = new LoteProducto();
+        loteReservaAjena.setId(500L);
+        loteReservaAjena.setProducto(producto);
+
+        SolicitudMovimientoDetalle detalle = new SolicitudMovimientoDetalle();
+        detalle.setId(702L);
+        detalle.setCantidad(new BigDecimal("100"));
+        detalle.setCantidadAtendida(BigDecimal.ZERO);
+        detalle.setEstado(EstadoSolicitudMovimientoDetalle.PENDIENTE);
+        detalle.setLote(loteReservaAjena);
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(777L);
+        solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
+        solicitud.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        solicitud.setDetalles(List.of(detalle));
+        detalle.setSolicitudMovimiento(solicitud);
+
+        Usuario usuario = Usuario.builder()
+                .id(81L)
+                .rol(RolUsuario.ROL_SUPER_ADMIN)
+                .nombreUsuario("tester")
+                .clave("secret")
+                .nombreCompleto("Tester")
+                .correo("tester@example.com")
+                .activo(true)
+                .bloqueado(false)
+                .build();
+
+        AtencionDTO atencion = new AtencionDTO();
+        atencion.setDetalleId(detalle.getId());
+        atencion.setLoteId(loteOrigen.getId());
+        atencion.setCantidad(new BigDecimal("10"));
+        atencion.setAlmacenOrigenId(10);
+        atencion.setAlmacenDestinoId(20);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("10"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                "DOC-56",
+                null,
+                producto.getId(),
+                loteOrigen.getId(),
+                10,
+                20,
+                null,
+                null,
+                null,
+                71L,
+                solicitud.getId(),
+                usuario.getId(),
+                999L,
+                null,
+                loteOrigen.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                List.of(atencion)
+        );
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+
+        prepararEscenarioComun(dto, producto, solicitud, detalle, loteOrigen, loteDestino, movimientoEntidad, usuario);
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("LOTE_STOCK_INSUFICIENTE");
+    }
+
+    private void prepararEscenarioComun(MovimientoInventarioDTO dto,
+                                        Producto producto,
+                                        SolicitudMovimiento solicitud,
+                                        SolicitudMovimientoDetalle detalle,
+                                        LoteProducto loteOrigen,
+                                        LoteProducto loteDestino,
+                                        MovimientoInventario movimientoEntidad,
+                                        Usuario usuario) {
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        given(tipoMovimientoDetalleRepository.findById(dto.tipoMovimientoDetalleId())).willReturn(Optional.of(new TipoMovimientoDetalle()));
+        given(solicitudMovimientoRepository.findByIdWithLock(solicitud.getId())).willReturn(Optional.of(solicitud));
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
+        OrdenProduccion opReferencia = new OrdenProduccion();
+        opReferencia.setId(dto.ordenProduccionId());
+        given(entityManager.getReference(eq(OrdenProduccion.class), eq(dto.ordenProduccionId()))).willReturn(opReferencia);
+        given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
+            Number id = invocation.getArgument(1);
+            return new Almacen(id.intValue());
+        });
+        given(loteProductoRepository.findByIdForUpdate(loteOrigen.getId())).willReturn(Optional.of(loteOrigen));
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                eq(loteOrigen.getCodigoLote()), eq(producto.getId()), eq(dto.almacenDestinoId()))).willReturn(Optional.of(loteDestino));
+        given(loteProductoRepository.save(any(LoteProducto.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(solicitudMovimientoDetalleRepository.findById(detalle.getId())).willReturn(Optional.of(detalle));
+        given(solicitudMovimientoDetalleRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
+        given(solicitudMovimientoDetalleRepository.countBySolicitudMovimientoIdAndEstadoNot(anyLong(), any())).willReturn(0L);
+        given(solicitudMovimientoDetalleRepository.calcularReservaPendientePorSolicitudYLote(anyLong(), anyLong()))
+                .willReturn(BigDecimal.ZERO);
+        given(solicitudMovimientoRepository.saveAndFlush(solicitud)).willReturn(solicitud);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(900L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(900L).build());
+        given(catalogResolver.decimals(any())).willReturn(2);
     }
 }
 
