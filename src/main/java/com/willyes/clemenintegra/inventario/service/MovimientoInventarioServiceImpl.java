@@ -196,12 +196,25 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
        // IMPORTANTe: si es ENTRADA de PT, NO tocar tipo/clasificación aquí
 
-         List<AtencionDTO> atenciones = dto.atenciones() != null
+        List<AtencionDTO> atenciones = dto.atenciones() != null
                 ? dto.atenciones().stream().filter(Objects::nonNull).collect(Collectors.toList())
                 : List.of();
         if (!atenciones.isEmpty()) {
             log.debug("MOV-SERVICE atenciones recibidas: {}", atenciones.size());
         }
+        /*
+         * Ganchos disponibles para enlazar un movimiento con su solicitud/detalle:
+         *  - dto.solicitudMovimientoId(): vínculo directo a la cabecera.
+         *  - AtencionDTO.detalleId: cada atención mantiene el id del
+         *    SolicitudMovimientoDetalle que originó la reserva.
+         *  - dto.ordenProduccionId() y dto.loteProductoId(): referencias de contexto
+         *    que permiten validar compatibilidad cuando se resuelve la solicitud.
+         */
+        Long detalleSolicitudGanchoId = atenciones.stream()
+                .map(AtencionDTO::getDetalleId)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
         boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
 
         List<MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO> detalleRespuesta = List.of();
@@ -254,14 +267,34 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         log.debug("MOV-REQ (pre-solicitud) tipo={}, clasificacion={}, prod={}, qty={}, opIdDTO={}",
                 tipoMovimiento, clasificacion, dto.productoId(), dto.cantidad(), dto.ordenProduccionId());
 
+        Long solicitudIdReferencia = dto.solicitudMovimientoId();
         SolicitudMovimiento solicitud = null;
-        if (dto.solicitudMovimientoId() != null) {
-            solicitud = solicitudMovimientoRepository.findByIdWithLock(dto.solicitudMovimientoId())
-                    .orElseGet(() -> solicitudMovimientoRepository.findWithDetalles(dto.solicitudMovimientoId())
+        if (solicitudIdReferencia == null && detalleSolicitudGanchoId != null) {
+            SolicitudMovimientoDetalle detalleGancho = solicitudMovimientoDetalleRepository
+                    .findById(detalleSolicitudGanchoId)
+                    .orElse(null);
+            if (detalleGancho != null && detalleGancho.getSolicitudMovimiento() != null) {
+                solicitudIdReferencia = detalleGancho.getSolicitudMovimiento().getId();
+                log.info("FALLBACK_SOLICITUD_DESDE_DETALLE: detalleId={} solicitudId={}",
+                        detalleSolicitudGanchoId, solicitudIdReferencia);
+            } else {
+                log.warn("FALLBACK_SOLICITUD_NO_DISPONIBLE: detalleId={} detalleEncontrado={} solicitudEnDetalle={}",
+                        detalleSolicitudGanchoId,
+                        detalleGancho != null,
+                        detalleGancho != null && detalleGancho.getSolicitudMovimiento() != null);
+            }
+        }
+        if (solicitudIdReferencia != null) {
+            final Long solicitudIdCarga = solicitudIdReferencia;
+            solicitud = solicitudMovimientoRepository.findByIdWithLock(solicitudIdCarga)
+                    .orElseGet(() -> solicitudMovimientoRepository.findWithDetalles(solicitudIdCarga)
                             .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada")));
 
             Long solicitudProductoId = solicitud.getProducto() != null ? Long.valueOf(solicitud.getProducto().getId()) : null;
-            if (!Objects.equals(solicitudProductoId, dto.productoId() != null ? dto.productoId().longValue() : null)) {
+            Long productoDtoId = dto.productoId() != null ? dto.productoId().longValue() : null;
+            if (solicitudProductoId != null
+                    && productoDtoId != null
+                    && !Objects.equals(solicitudProductoId, productoDtoId)) {
                 log.warn("MISMATCH_PRODUCTO_ID: esperado={}, recibido={}", solicitudProductoId, dto.productoId());
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MISMATCH_PRODUCTO_ID");
             }
@@ -1908,13 +1941,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     BigDecimal cantidadSolicitadaDetalle = obtenerCantidadSolicitadaDelDetalle(detalleSolicitudRelacionado, cantidad);
                     if (disponibleParaSolicitud.compareTo(cantidadSolicitadaDetalle) < 0) {
                         log.warn(
-                                "Stock insuficiente en lote: loteId={} disponible={} reservadoTotal={} reservadoOtros={} reservadoDetalle={} solicitado={} productoId={}",
+                                "Stock insuficiente en lote (CON_SOLICITUD): solicitudId={} detalleId={} loteId={} disponible={} reservadoTotal={} reservadoOtros={} reservadoDetalle={} solicitado={} productoId={}",
+                                solicitud.getId(),
+                                detalleSolicitudRelacionado != null ? detalleSolicitudRelacionado.getId() : null,
                                 loteOrigen.getId(), disponibleParaSolicitud, stockReservadoTotal,
                                 reservadoPorOtros, reservadoPorEsteDetalle, cantidadSolicitadaDetalle, producto.getId());
                         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
                     }
                 } else if (stockDisponibleEfectivo.compareTo(cantidad) < 0) {
-                    log.warn("Stock insuficiente en lote: loteId={} disponible={} reservaPendiente={} solicitado={} productoId={}",
+                    log.warn("Stock insuficiente en lote (SIN_SOLICITUD): loteId={} disponible={} reservaPendiente={} solicitado={} productoId={}",
                             loteOrigen.getId(), stockDisponibleEfectivo, reservaPendiente, cantidad, producto.getId());
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
                 }
