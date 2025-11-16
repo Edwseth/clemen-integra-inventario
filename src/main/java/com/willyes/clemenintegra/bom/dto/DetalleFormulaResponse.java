@@ -6,6 +6,9 @@ public class DetalleFormulaResponse {
     public java.math.BigDecimal cantidadNecesaria;
     public java.math.BigDecimal cantidadTotalNecesaria;
     public java.math.BigDecimal stockDisponible;
+    public java.math.BigDecimal stockLibreFefo;
+    public java.math.BigDecimal faltanteFefo;
+    public Integer maxProducible;
     public String estadoStock;
     public String unidad;
     public String unidadSimbolo;

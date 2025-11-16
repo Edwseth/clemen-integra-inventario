@@ -118,6 +118,8 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
         SELECT lp.id AS loteProductoId,
                lp.codigo_lote AS codigoLote,
                (lp.stock_lote - lp.stock_reservado) AS stockLote,
+               lp.stock_lote AS stockFisico,
+               lp.stock_reservado AS stockReservado,
                lp.fecha_vencimiento AS fechaVencimiento,
                lp.almacenes_id AS almacenId,
                a.nombre AS nombreAlmacen,

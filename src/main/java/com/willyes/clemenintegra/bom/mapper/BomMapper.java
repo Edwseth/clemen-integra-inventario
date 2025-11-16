@@ -29,6 +29,22 @@ public interface BomMapper {
     @Mapping(target = "actualizadoPorNombre", source = "actualizadoPor", qualifiedByName = "mapNombreUsuario")
     FormulaProductoResponse toResponseDTO(FormulaProducto formula);
 
+    @Mapping(target = "productoId", source = "producto", qualifiedByName = "mapProductoId")
+    @Mapping(target = "codigoProducto", source = "producto", qualifiedByName = "mapProductoCodigo")
+    @Mapping(target = "nombreProducto", source = "producto", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "estado", source = "estado", qualifiedByName = "mapEstadoFormula")
+    @Mapping(target = "fechaActualizacion", expression = "java(mapFechaActualizacion(formula))")
+    @Mapping(target = "usuarioResponsable", expression = "java(mapUsuarioResponsable(formula))")
+    FormulaProductoResumenDTO toResumenDTO(FormulaProducto formula);
+
+    @Mapping(target = "formulaId", source = "id")
+    @Mapping(target = "productoId", source = "producto", qualifiedByName = "mapProductoId")
+    @Mapping(target = "codigoProducto", source = "producto", qualifiedByName = "mapProductoCodigo")
+    @Mapping(target = "nombreProducto", source = "producto", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "fechaActualizacion", expression = "java(mapFechaActualizacion(formula))")
+    @Mapping(target = "usuarioResponsable", expression = "java(mapUsuarioResponsable(formula))")
+    FormulaActivaProduccionDTO toFormulaActivaProduccionDTO(FormulaProducto formula);
+
     @Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
     //@Mapping(target = "insumo", source = "insumo")
@@ -41,12 +57,24 @@ public interface BomMapper {
     @Mapping(target = "unidadSimbolo", source = "unidadMedida", qualifiedByName = "mapUnidadSimbolo")
     DetalleFormulaResponse toResponseDTO(DetalleFormula detalle);
 
+    @Mapping(target = "detalleId", source = "id")
+    @Mapping(target = "productoInsumoId", source = "insumo", qualifiedByName = "mapProductoId")
+    @Mapping(target = "codigoInsumo", source = "insumo", qualifiedByName = "mapProductoCodigo")
+    @Mapping(target = "nombreInsumo", source = "insumo", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "unidadMedidaId", source = "unidadMedida", qualifiedByName = "mapUnidadId")
+    @Mapping(target = "nombreUnidadMedida", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
+    @Mapping(target = "simboloUnidadMedida", source = "unidadMedida", qualifiedByName = "mapUnidadSimbolo")
+    @Mapping(target = "obligatorio", expression = "java(mapObligatorio(detalle.getObligatorio()))")
+    DetalleFormulaProduccionDTO toDetalleFormulaProduccionDTO(DetalleFormula detalle);
+
     //@Mapping(target = "id", ignore = true)
     //@Mapping(target = "formula", source = "formula")
-    //@Mapping(target = "tipoDocumento", expression = "java(TipoDocumento.valueOf(dto.getTipoDocumento()))")
-    DocumentoFormula toEntity(DocumentoFormulaRequestDTO dto, FormulaProducto formula);
-
+    @Mapping(target = "formulaId", source = "formula.id")
     @Mapping(target = "tipoDocumento", source = "tipoDocumento", qualifiedByName = "mapTipoDocumento")
+    @Mapping(target = "nombreArchivo", source = ".", qualifiedByName = "mapNombreArchivoInterno")
+    @Mapping(target = "nombreVisible", source = "nombreArchivo")
+    @Mapping(target = "fechaRegistro", source = "fechaSubida")
+    @Mapping(target = "usuarioCreador", source = "usuario", qualifiedByName = "mapNombreUsuario")
     DocumentoFormulaResponseDTO toResponseDTO(DocumentoFormula documento);
 
     @Named("mapProductoNombre")
@@ -54,9 +82,24 @@ public interface BomMapper {
         return (producto != null) ? producto.getNombre() : null;
     }
 
+    @Named("mapProductoId")
+    default Long mapProductoId(Producto producto) {
+        return (producto != null && producto.getId() != null) ? producto.getId().longValue() : null;
+    }
+
+    @Named("mapProductoCodigo")
+    default String mapProductoCodigo(Producto producto) {
+        return (producto != null) ? producto.getCodigoSku() : null;
+    }
+
     @Named("mapUnidadNombre")
     default String mapUnidadNombre(UnidadMedida unidad) {
         return (unidad != null) ? unidad.getNombre() : null;
+    }
+
+    @Named("mapUnidadId")
+    default Long mapUnidadId(UnidadMedida unidad) {
+        return (unidad != null && unidad.getId() != null) ? unidad.getId().longValue() : null;
     }
 
     @Named("mapUnidadSimbolo")
@@ -77,5 +120,42 @@ public interface BomMapper {
     @Named("mapTipoDocumento")
     default String mapTipoDocumento(TipoDocumento tipoDocumento) {
         return (tipoDocumento != null) ? tipoDocumento.name() : null;
+    }
+
+    @Named("mapNombreArchivoInterno")
+    default String mapNombreArchivoInterno(DocumentoFormula documento) {
+        if (documento == null) {
+            return null;
+        }
+        String ruta = documento.getRutaArchivo();
+        if (ruta == null) {
+            return null;
+        }
+        try {
+            java.nio.file.Path path = java.nio.file.Paths.get(ruta);
+            java.nio.file.Path fileName = path.getFileName();
+            return fileName != null ? fileName.toString() : ruta;
+        } catch (Exception ex) {
+            return ruta;
+        }
+    }
+
+    default java.time.LocalDateTime mapFechaActualizacion(FormulaProducto formula) {
+        if (formula == null) {
+            return null;
+        }
+        return formula.getFechaActualizacion() != null ? formula.getFechaActualizacion() : formula.getFechaCreacion();
+    }
+
+    default String mapUsuarioResponsable(FormulaProducto formula) {
+        if (formula == null) {
+            return null;
+        }
+        Usuario responsable = formula.getActualizadoPor() != null ? formula.getActualizadoPor() : formula.getCreadoPor();
+        return mapNombreUsuario(responsable);
+    }
+
+    default boolean mapObligatorio(Boolean obligatorio) {
+        return Boolean.TRUE.equals(obligatorio);
     }
 }

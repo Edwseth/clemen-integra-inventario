@@ -18,4 +18,5 @@ public class FormulaProductoResponse {
     public String unidadBaseFormula;
     public List<DetalleFormulaResponse> detalles;
     public List<DocumentoFormulaResponseDTO> documentos;
+    public Boolean disponibilidadSuficiente;
 }

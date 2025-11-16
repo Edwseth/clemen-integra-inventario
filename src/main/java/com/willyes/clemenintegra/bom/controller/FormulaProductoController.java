@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,10 +44,10 @@ public class FormulaProductoController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public List<FormulaProductoResponse> listarTodas() {
-        return formulaService.listarTodas().stream()
-                .map(formula -> bomMapper.toResponseDTO(formula))
-                .collect(Collectors.toList());
+    public List<FormulaProductoResumenDTO> listarTodas(
+            @RequestParam(required = false) EstadoFormula estado,
+            @RequestParam(required = false) String producto) {
+        return formulaService.listarResumen(estado, producto);
     }
 
     @GetMapping("/{id}")
@@ -133,8 +134,18 @@ public class FormulaProductoController {
         return ResponseEntity.ok(bomMapper.toResponseDTO(guardado));
     }
 
+    @PostMapping("/{id}/clonar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<FormulaProductoResumenDTO> clonar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal com.willyes.clemenintegra.shared.security.service.CustomUserDetails usuario) {
+        FormulaProducto nuevaFormula = formulaService.clonarFormula(id, usuario.getId());
+        FormulaProductoResumenDTO dto = bomMapper.toResumenDTO(nuevaFormula);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaProductoResponse> actualizar(@PathVariable Long id, @RequestBody FormulaProductoRequest request) {
         return formulaService.buscarPorId(id)
                 .map(existente -> {
@@ -148,13 +159,13 @@ public class FormulaProductoController {
     }
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    @PutMapping("/{id}/estado")
-    public ResponseEntity<FormulaProductoResponse> actualizarEstado(
+    @PostMapping("/{id}/cambiar-estado")
+    public ResponseEntity<FormulaProductoResumenDTO> cambiarEstado(
             @PathVariable Long id,
-            @RequestBody @Valid ActualizarEstadoFormulaRequest request,
+            @RequestBody @Valid CambiarEstadoFormulaRequest request,
             @AuthenticationPrincipal com.willyes.clemenintegra.shared.security.service.CustomUserDetails usuario) {
-        FormulaProductoResponse dto = formulaService.actualizarEstado(
-                id, request.estado(), request.observacion(), usuario.getId());
+        FormulaProducto formulaActualizada = formulaService.cambiarEstado(id, request.nuevoEstado(), usuario.getId());
+        FormulaProductoResumenDTO dto = bomMapper.toResumenDTO(formulaActualizada);
         return ResponseEntity.ok(dto);
     }
 
@@ -171,6 +182,12 @@ public class FormulaProductoController {
                                                                         @RequestParam(defaultValue = "1") BigDecimal cantidad) {
         // LÍNEA CODEx: endpoint consultado por Producción para validar disponibilidad de insumos
         return ResponseEntity.ok(formulaService.obtenerFormulaActivaPorProducto(productoId, cantidad));
+    }
+
+    @GetMapping("/producto/{productoId}/formula-activa")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<FormulaActivaProduccionDTO> obtenerFormulaActivaProduccion(@PathVariable Long productoId) {
+        return ResponseEntity.ok(formulaService.obtenerFormulaActivaProduccion(productoId));
     }
 }
 

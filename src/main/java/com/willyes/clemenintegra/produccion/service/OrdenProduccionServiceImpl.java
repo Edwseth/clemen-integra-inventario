@@ -8,7 +8,6 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
-import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
@@ -38,6 +37,8 @@ import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
+import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
@@ -77,7 +78,6 @@ import org.springframework.http.ProblemDetail;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +85,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.function.Function;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -100,7 +99,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     private final FormulaProductoRepository formulaProductoRepository;
     private final ProductoRepository productoRepository;
-    private final StockQueryService stockQueryService;
     private final UsuarioRepository usuarioRepository;
     private final SolicitudMovimientoService solicitudMovimientoService;
     private final OrdenProduccionRepository repository;
@@ -121,6 +119,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final UmValidator umValidator;
     private final VidaUtilProductoRepository vidaUtilProductoRepository;
     private final ReservaLoteService reservaLoteService;
+    private final DisponibilidadInsumoService disponibilidadInsumoService;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -131,43 +130,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Value("${inventory.mov.clasificacion.entradaPt}")
     private String clasificacionEntradaPtConf;
 
-    private static final Map<TipoCategoria, Function<InventoryCatalogResolver, Long>> ALMACENES_ORIGEN_POR_CATEGORIA = Map.of(
-            TipoCategoria.MATERIA_PRIMA, InventoryCatalogResolver::getAlmacenOrigenMateriaPrimaId,
-            TipoCategoria.MATERIAL_EMPAQUE, InventoryCatalogResolver::getAlmacenOrigenMaterialEmpaqueId,
-            TipoCategoria.SUMINISTROS, InventoryCatalogResolver::getAlmacenOrigenSuministrosId);
-
-    private static final EnumSet<EstadoLote> ESTADOS_FEFO_PERMITIDOS = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
-
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefijo = "OP-CLEMEN-" + fecha;
         Long contador = repository.countByCodigoOrdenStartingWith(prefijo);
         return prefijo + "-" + String.format("%02d", contador + 1);
-    }
-
-    /**
-     * Obtiene los almacenes habilitados para consumir insumos desde producción.
-     * <p>
-     * Actualmente solo se permite consumir desde el almacén de origen configurado
-     * por categoría para producción. La pre-bodega de producción se excluye de
-     * manera explícita porque su stock está reservado para las transferencias de
-     * salida y no debe afectar la validación ni la reserva FEFO de insumos.
-     * </p>
-     */
-    private List<Long> obtenerAlmacenesOrigen(Producto insumo) {
-        Long preBodegaProduccionId = catalogResolver.getAlmacenPreBodegaProduccionId();
-        Long origenId = Optional.ofNullable(insumo)
-                .map(Producto::getCategoriaProducto)
-                .map(CategoriaProducto::getTipo)
-                .map(ALMACENES_ORIGEN_POR_CATEGORIA::get)
-                .map(func -> func.apply(catalogResolver))
-                .orElse(null);
-
-        if (origenId == null || Objects.equals(origenId, preBodegaProduccionId)) {
-            return List.of();
-        }
-
-        return List.of(origenId);
     }
 
     private String generarCodigoLote(Producto producto) {
@@ -281,7 +248,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
 
-            List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
+            List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
             if (almacenesValidos.isEmpty()) {
                 TipoCategoria tipoCategoria = Optional.ofNullable(productoInsumo.getCategoriaProducto())
                         .map(CategoriaProducto::getTipo)
@@ -290,41 +257,39 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         insumoId, tipoCategoria);
             }
 
-            BigDecimal stockDisponible = stockQueryService
-                    .obtenerStockDisponible(List.of(insumoId),
-                            almacenesValidos.isEmpty() ? Collections.emptyList() : almacenesValidos)
-                    .getOrDefault(insumoId, BigDecimal.ZERO);
+            DistribucionFefoResult distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
+                    insumoId,
+                    cantidadRequerida,
+                    almacenesValidos,
+                    true);
 
-            if (!almacenesValidos.isEmpty() && stockDisponible.compareTo(BigDecimal.ZERO) == 0) {
-                BigDecimal stockGlobal = stockQueryService
-                        .obtenerStockDisponible(List.of(insumoId))
-                        .getOrDefault(insumoId, BigDecimal.ZERO);
-                stockDisponible = stockGlobal;
-                log.info("OP-validacion fallback stock insumo={} almacenes={} stockGlobal={}",
-                        insumoId, almacenesValidos, stockDisponible);
-            }
+            BigDecimal stockLibreFefo = Optional.ofNullable(distribucionPreview.getStockLibreTotal())
+                    .orElse(BigDecimal.ZERO);
+            BigDecimal faltanteFefo = Optional.ofNullable(distribucionPreview.getFaltante())
+                    .orElse(BigDecimal.ZERO);
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
-                producibleConEste = stockDisponible.divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
+                producibleConEste = stockLibreFefo.divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
             }
             if (maxProducible == null || producibleConEste < maxProducible) {
                 maxProducible = producibleConEste;
             }
 
-            log.debug("OP-VALIDACION insumoId={} requerido={} disponible={} maxProducible={}",
+            log.debug("OP-VALIDACION insumoId={} requerido={} stockLibreFefo={} faltanteFefo={} maxProducible={}",
                     insumoId,
                     cantidadRequerida,
-                    stockDisponible,
+                    stockLibreFefo,
+                    faltanteFefo,
                     maxProducible);
 
-            if (stockDisponible.compareTo(cantidadRequerida) < 0) {
+            if (!distribucionPreview.isSuficiente()) {
                 stockSuficiente = false;
                 faltantes.add(InsumoFaltanteDTO.builder()
                         .productoId(insumoId)
                         .nombre(productoInsumo.getNombre())
                         .requerido(cantidadRequerida)
-                        .disponible(stockDisponible)
+                        .disponible(stockLibreFefo)
                         .unidadSimbolo(productoInsumo.getUnidadMedida() != null
                                 ? productoInsumo.getUnidadMedida().getSimbolo()
                                 : null)
@@ -764,80 +729,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
     }
 
-    private List<LoteFefoDisponibleProjection> seleccionarLotesFefo(Long ordenId, Long insumoId,
-            BigDecimal requerida, List<Long> almacenesValidos) {
-        List<LoteFefoDisponibleProjection> lotesDisponibles = loteProductoRepository
-                .findFefoDisponibles(insumoId, Integer.MAX_VALUE);
-
-        List<Long> almacenesPreferidos = almacenesValidos == null ? List.of() : almacenesValidos;
-        List<LoteFefoDisponibleProjection> lotesSeleccionados;
-        boolean usoFallback;
-        String motivoFallback = null;
-
-        if (almacenesPreferidos.isEmpty()) {
-            usoFallback = true;
-            lotesSeleccionados = lotesDisponibles;
-            motivoFallback = "SIN_ALMACEN_CONFIGURADO";
-        } else {
-            lotesSeleccionados = lotesDisponibles.stream()
-                    .filter(l -> l.getAlmacenId() != null && almacenesPreferidos.contains(l.getAlmacenId().longValue()))
-                    .toList();
-
-            BigDecimal cubierto = lotesSeleccionados.stream()
-                    .map(LoteFefoDisponibleProjection::getStockLote)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            usoFallback = lotesSeleccionados.isEmpty() || cubierto.compareTo(requerida) < 0;
-            if (usoFallback) {
-                lotesSeleccionados = lotesDisponibles;
-                motivoFallback = "STOCK_NO_DISPONIBLE_EN_ORIGEN";
-            }
-        }
-
-        if (usoFallback) {
-            log.info("OP-reserva fallback FEFO ordenId={}, insumoId={}, requerida={}, motivo={}, almacenesPreferidos={}",
-                    ordenId, insumoId, requerida, motivoFallback, almacenesPreferidos);
-        }
-
-        if (lotesSeleccionados.isEmpty()) {
-            log.warn("OP-RESERVA sin lotes elegibles ordenId={} insumoId={} requerida={}",
-                    ordenId,
-                    insumoId,
-                    requerida);
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "STOCK_INSUFICIENTE: faltan " + requerida);
-        }
-
-        lotesSeleccionados.stream()
-                .map(LoteFefoDisponibleProjection::getEstado)
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(this::parseEstadoLoteSafe)
-                .filter(Objects::nonNull)
-                .filter(estado -> !ESTADOS_FEFO_PERMITIDOS.contains(estado))
-                .findFirst()
-                .ifPresent(estado -> log.warn("OP-reserva detectó lote en estado no permitido: {}", estado));
-
-        Long primerLoteId = lotesSeleccionados.get(0).getLoteProductoId();
-        if (primerLoteId == null) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "STOCK_INSUFICIENTE: faltan " + requerida);
-        }
-
-        return lotesSeleccionados;
-    }
-
-    private EstadoLote parseEstadoLoteSafe(String valor) {
-        try {
-            return EstadoLote.valueOf(valor.toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            log.warn("Estado de lote desconocido recibido en FEFO: {}", valor);
-            return null;
-        }
-    }
-
     @Transactional(rollbackFor = Exception.class)
     public void reservarInsumosParaOP(Long ordenId) {
         OrdenProduccion orden = repository.findById(ordenId)
@@ -876,13 +767,31 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal requerida = insumo.getCantidadNecesaria()
                     .multiply(orden.getCantidadProgramada())
                     .setScale(8, RoundingMode.HALF_UP);
+            if (requerida.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
             BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
-            List<Long> almacenesValidos = obtenerAlmacenesOrigen(insumo.getInsumo());
+            List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
 
-            List<LoteFefoDisponibleProjection> lotesSeleccionados = seleccionarLotesFefo(
-                    ordenId, insumoId, requerida, almacenesValidos);
+            DistribucionFefoResult distribucion = disponibilidadInsumoService.calcularDisponibilidad(
+                    insumoId, requerida, almacenesValidos, false);
 
-            Long primerLoteId = lotesSeleccionados.get(0).getLoteProductoId();
+            BigDecimal faltanteDistribucion = Optional.ofNullable(distribucion.getFaltante())
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal totalAsignado = calcularTotalDistribuido(distribucion.getDetalles());
+            BigDecimal requeridaComparacion = requeridaSolicitud.setScale(8, RoundingMode.HALF_UP);
+            boolean sinAsignacion = totalAsignado.compareTo(requeridaComparacion) < 0;
+
+            if (faltanteDistribucion.compareTo(BigDecimal.ZERO) > 0 || sinAsignacion) {
+                manejarStockInsuficiente(insumo.getInsumo(), distribucion);
+            }
+
+            DistribucionFefoDetalle primerDetalle = distribucion.getDetalles().get(0);
+            Long primerLoteId = primerDetalle.getLoteProductoId();
+            if (primerLoteId == null) {
+                manejarStockInsuficiente(insumo.getInsumo(), distribucion);
+            }
 
             SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()
                     .tipoMovimiento(TipoMovimiento.SALIDA)
@@ -920,41 +829,80 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 detallesSolicitud.clear();
             }
 
-            BigDecimal restante = requerida;
-
-            for (LoteFefoDisponibleProjection lote : lotesSeleccionados) {
-                if (restante.compareTo(BigDecimal.ZERO) <= 0) {
-                    break;
-                }
-                BigDecimal disponible = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
-                BigDecimal usar = disponible.min(restante);
-                if (usar.compareTo(BigDecimal.ZERO) <= 0) {
+            for (DistribucionFefoDetalle detalleDistribucion : distribucion.getDetalles()) {
+                BigDecimal usarDetalle = Optional.ofNullable(detalleDistribucion.getCantidadReserva())
+                        .orElse(BigDecimal.ZERO);
+                if (usarDetalle.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
 
-                BigDecimal usarCalculo = usar.setScale(8, RoundingMode.HALF_UP);
-                BigDecimal usarDetalle = usarCalculo.setScale(6, RoundingMode.HALF_UP);
-
                 SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
                         .solicitudMovimiento(solicitud)
-                        .lote(new LoteProducto(lote.getLoteProductoId()))
+                        .lote(detalleDistribucion.getLoteProductoId() != null
+                                ? new LoteProducto(detalleDistribucion.getLoteProductoId())
+                                : null)
                         .cantidad(usarDetalle)
-                        .almacenOrigen(lote.getAlmacenId() != null ? new Almacen(Math.toIntExact(lote.getAlmacenId())) : null)
+                        .almacenOrigen(detalleDistribucion.getAlmacenId() != null
+                                ? new Almacen(Math.toIntExact(detalleDistribucion.getAlmacenId()))
+                                : null)
                         .almacenDestino(solicitud.getAlmacenDestino())
                         .build();
                 detallesSolicitud.add(detSolicitud);
-
-                restante = restante.subtract(usarCalculo).setScale(8, RoundingMode.HALF_UP);
-            }
-
-            if (restante.compareTo(BigDecimal.ZERO) > 0) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                        "STOCK_INSUFICIENTE: faltan " + restante);
             }
 
             solicitudMovimientoRepository.saveAndFlush(solicitud);
             reservaLoteService.sincronizarReservasSolicitud(solicitud);
         }
+    }
+
+    private void manejarStockInsuficiente(Producto insumo, DistribucionFefoResult resultado) {
+        BigDecimal faltante = Optional.ofNullable(resultado.getFaltante())
+                .orElse(BigDecimal.ZERO)
+                .setScale(6, RoundingMode.HALF_UP);
+
+        Producto producto = Optional.ofNullable(insumo)
+                .orElseGet(() -> resultado.getProductoInsumoId() != null
+                        ? productoRepository.findById(resultado.getProductoInsumoId()).orElse(null)
+                        : null);
+
+        String codigo = producto != null && producto.getCodigoSku() != null
+                ? producto.getCodigoSku()
+                : resultado.getProductoInsumoId() != null ? resultado.getProductoInsumoId().toString() : "";
+        String nombre = producto != null && producto.getNombre() != null
+                ? producto.getNombre()
+                : "Insumo";
+        String unidad = producto != null && producto.getUnidadMedida() != null
+                && producto.getUnidadMedida().getNombre() != null
+                ? producto.getUnidadMedida().getNombre()
+                : "";
+
+        log.warn(
+                "STOCK_INSUFICIENTE en OP: insumo {} - {}, requerido={}, stockFisicoTotal={}, stockReservadoTotal={}, stockLibreTotal={}, faltante={}",
+                codigo,
+                nombre,
+                Optional.ofNullable(resultado.getRequerido()).orElse(BigDecimal.ZERO),
+                Optional.ofNullable(resultado.getStockFisicoTotal()).orElse(BigDecimal.ZERO),
+                Optional.ofNullable(resultado.getStockReservadoTotal()).orElse(BigDecimal.ZERO),
+                Optional.ofNullable(resultado.getStockLibreTotal()).orElse(BigDecimal.ZERO),
+                faltante);
+
+        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                String.format("STOCK_INSUFICIENTE: insumo %s - %s, faltan %s %s",
+                        codigo,
+                        nombre,
+                        faltante.toPlainString(),
+                        unidad));
+    }
+
+    private BigDecimal calcularTotalDistribuido(List<DistribucionFefoDetalle> detalles) {
+        if (detalles == null || detalles.isEmpty()) {
+            return BigDecimal.ZERO.setScale(8, RoundingMode.HALF_UP);
+        }
+        return detalles.stream()
+                .map(DistribucionFefoDetalle::getCantidadCalculo)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(8, RoundingMode.HALF_UP);
     }
 
 
