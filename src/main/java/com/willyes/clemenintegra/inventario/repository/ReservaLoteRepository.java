@@ -48,5 +48,8 @@ public interface ReservaLoteRepository extends JpaRepository<ReservaLote, Long> 
     List<ReservaLote> findBySolicitudMovimientoDetalleId(Long detalleId);
 
     List<ReservaLote> findBySolicitudMovimientoDetalle_SolicitudMovimientoId(Long solicitudId);
+
+    boolean existsBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionIdAndEstado(Long ordenProduccionId,
+                                                                                              EstadoReservaLote estado);
 }
 

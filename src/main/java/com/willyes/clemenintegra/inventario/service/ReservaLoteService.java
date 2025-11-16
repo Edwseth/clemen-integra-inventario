@@ -34,6 +34,16 @@ public class ReservaLoteService {
     private final LoteProductoRepository loteProductoRepository;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
 
+    @Transactional(readOnly = true)
+    public boolean existenReservasConsumidasPorOrden(Long ordenProduccionId) {
+        if (ordenProduccionId == null) {
+            return false;
+        }
+        return reservaLoteRepository
+                .existsBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionIdAndEstado(
+                        ordenProduccionId, EstadoReservaLote.CONSUMIDA);
+    }
+
     @Transactional
     public void sincronizarReservasSolicitud(SolicitudMovimiento solicitud) {
         if (solicitud == null || solicitud.getDetalles() == null || solicitud.getDetalles().isEmpty()) {
