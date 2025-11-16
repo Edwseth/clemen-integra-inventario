@@ -63,6 +63,7 @@ import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -72,6 +73,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.lang.Nullable;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.http.ProblemDetail;
 
@@ -1072,6 +1074,70 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     public Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Pageable pageable) {
         return movimientoInventarioRepository.findByOrdenProduccionId(id, pageable)
                 .map(movimientoInventarioMapper::safeToResponseDTO);
+    }
+
+    @Override
+    @Transactional
+    public OrdenProduccion cancelarOrden(Long ordenProduccionId, @Nullable String motivo) {
+        OrdenProduccion orden = repository.findByIdForUpdate(ordenProduccionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+
+        if (orden.getEstado() == EstadoProduccion.FINALIZADA
+                || orden.getEstado() == EstadoProduccion.CANCELADA
+                || orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ORDEN_NO_CANCELABLE");
+        }
+
+        if (orden.getEstado() != EstadoProduccion.CREADA && orden.getEstado() != EstadoProduccion.EN_PROCESO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ORDEN_NO_CANCELABLE");
+        }
+
+        if (reservaLoteService.existenReservasConsumidasPorOrden(orden.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ORDEN_CONSUMOS_REGISTRADOS");
+        }
+
+        List<SolicitudMovimiento> solicitudes = Optional.ofNullable(
+                solicitudMovimientoRepository.findWithDetalles(orden.getId(), null, null, null)
+        ).orElse(List.of());
+
+        for (SolicitudMovimiento solicitud : solicitudes) {
+            boolean tieneDetalles = solicitud.getDetalles() != null && !solicitud.getDetalles().isEmpty();
+            boolean todosCancelados = true;
+            boolean algunAtendido = false;
+
+            if (tieneDetalles) {
+                for (SolicitudMovimientoDetalle detalle : solicitud.getDetalles()) {
+                    if (detalle.getEstado() == EstadoSolicitudMovimientoDetalle.ATENDIDO) {
+                        algunAtendido = true;
+                        todosCancelados = false;
+                        continue;
+                    }
+                    detalle.setEstado(EstadoSolicitudMovimientoDetalle.CANCELADO);
+                }
+            }
+
+            if (!tieneDetalles) {
+                todosCancelados = true;
+            }
+
+            if (!algunAtendido && todosCancelados) {
+                solicitud.setEstado(EstadoSolicitudMovimiento.CANCELADA);
+                solicitud.setFechaResolucion(LocalDateTime.now());
+            }
+        }
+
+        if (!solicitudes.isEmpty()) {
+            solicitudMovimientoRepository.saveAll(solicitudes);
+        }
+
+        reservaLoteService.liberarReservasPorOrden(orden.getId());
+
+        orden.setEstado(EstadoProduccion.CANCELADA);
+        if (orden.getFechaFin() == null) {
+            orden.setFechaFin(LocalDateTime.now());
+        }
+
+        return repository.save(orden);
     }
 
     @Transactional
