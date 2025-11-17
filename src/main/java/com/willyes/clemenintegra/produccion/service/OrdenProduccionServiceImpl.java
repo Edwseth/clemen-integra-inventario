@@ -937,6 +937,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         boolean actualizarOrden = false;
         if (orden.getEstado() == EstadoProduccion.CREADA) {
+            validarSolicitudesMovimientosEjecutadas(orden);
             orden.setEstado(EstadoProduccion.EN_PROCESO);
             actualizarOrden = true;
         }
@@ -1008,6 +1009,34 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         etapa.setUsuarioId(usuario.getId());
         etapa.setUsuarioNombre(usuario.getNombreCompleto());
         return etapaProduccionRepository.save(etapa);
+    }
+
+    private void validarSolicitudesMovimientosEjecutadas(OrdenProduccion orden) {
+        List<SolicitudMovimiento> solicitudes = solicitudMovimientoRepository.findByOrdenProduccionId(orden.getId());
+
+        if (solicitudes == null || solicitudes.isEmpty()) {
+            log.warn("[PRODUCCION] OP {} sin solicitudes de movimiento de insumos. No se puede iniciar la producción.",
+                    orden.getCodigoOrden());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_SIN_SOLICITUDES_MOVIMIENTO");
+        }
+
+        List<EstadoSolicitudMovimiento> estadosPendientes = List.of(
+                EstadoSolicitudMovimiento.PENDIENTE,
+                EstadoSolicitudMovimiento.AUTORIZADA,
+                EstadoSolicitudMovimiento.RESERVADA,
+                EstadoSolicitudMovimiento.PARCIAL
+        );
+
+        boolean tieneSolicitudesPendientes = solicitudes.stream()
+                .map(SolicitudMovimiento::getEstado)
+                .filter(Objects::nonNull)
+                .anyMatch(estadosPendientes::contains);
+
+        if (tieneSolicitudesPendientes) {
+            log.warn("[PRODUCCION] OP {} con solicitudes de movimiento pendientes. No se puede iniciar la producción.",
+                    orden.getCodigoOrden());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_MOVIMIENTOS_PENDIENTES");
+        }
     }
 
     @Transactional
