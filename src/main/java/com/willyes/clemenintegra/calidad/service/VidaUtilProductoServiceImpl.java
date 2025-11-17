@@ -53,11 +53,12 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
         VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId)
                 .orElseGet(() -> {
                     VidaUtilProducto nuevo = new VidaUtilProducto();
+                    nuevo.setProducto(producto);
                     nuevo.setProductoId(producto.getId());
                     return nuevo;
                 });
         vidaUtil.setProducto(producto);
-        vidaUtil.setProductoId(productoId);
+        vidaUtil.setProductoId(producto.getId());
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
         return vidaUtilProductoRepository.save(vidaUtil);
