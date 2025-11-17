@@ -36,7 +36,7 @@ public class EtapaProduccionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<EtapaProduccionResponse> crear(@RequestBody EtapaProduccionRequest request) {
         OrdenProduccion orden = new OrdenProduccion(); orden.setId(request.ordenProduccionId);
         EtapaProduccion entidad = ProduccionMapper.toEntity(request, orden);
