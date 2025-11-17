@@ -39,30 +39,37 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
     @Transactional
     public VidaUtilProducto guardar(Integer productoId, Integer semanasVigencia) {
         Producto producto = productoRepository.findById(Long.valueOf(productoId))
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Producto no encontrado"));
+                .orElseThrow(() -> new CustomBusinessException(
+                        ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Producto no encontrado"
+                ));
 
         if (!esProductoTerminado(producto)) {
-            throw new CustomBusinessException(ApiErrorCode.VIDA_UTIL_SOLO_PRODUCTO_TERMINADO,
-                    "La vida útil solo puede configurarse para productos terminados");
+            throw new CustomBusinessException(
+                    ApiErrorCode.VIDA_UTIL_SOLO_PRODUCTO_TERMINADO,
+                    "La vida útil solo puede configurarse para productos terminados"
+            );
         }
+
         if (semanasVigencia == null || semanasVigencia <= 0) {
-            throw new CustomBusinessException(ApiErrorCode.VIDA_UTIL_SEMANAS_INVALIDAS,
-                    "Las semanas de vigencia deben ser mayores a cero");
+            throw new CustomBusinessException(
+                    ApiErrorCode.VIDA_UTIL_SEMANAS_INVALIDAS,
+                    "Las semanas de vigencia deben ser mayores a cero"
+            );
         }
 
         VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId)
                 .orElseGet(() -> {
                     VidaUtilProducto nuevo = new VidaUtilProducto();
-                    nuevo.setProducto(producto);
-                    nuevo.setProductoId(producto.getId());
+                    nuevo.setProductoId(productoId);
                     return nuevo;
                 });
-        vidaUtil.setProducto(producto);
-        vidaUtil.setProductoId(producto.getId());
+
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
         return vidaUtilProductoRepository.save(vidaUtil);
     }
+
 
     @Override
     @Transactional

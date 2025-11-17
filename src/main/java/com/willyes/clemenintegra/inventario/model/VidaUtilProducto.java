@@ -17,12 +17,18 @@ public class VidaUtilProducto {
     @EqualsAndHashCode.Include
     private Integer productoId;
 
+    // 🔹 Relación solo para lectura, NO controla la columna
     @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "producto_id", foreignKey = @ForeignKey(name = "fk_vida_util_productos_producto"))
+    @JoinColumn(
+            name = "producto_id",
+            insertable = false,
+            updatable = false,
+            foreignKey = @ForeignKey(name = "fk_vida_util_productos_producto")
+    )
     private Producto producto;
 
     @Column(name = "semanas_vigencia", nullable = false)
     private Integer semanasVigencia;
 }
+
 
