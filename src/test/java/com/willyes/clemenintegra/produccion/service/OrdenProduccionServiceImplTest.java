@@ -6,16 +6,21 @@ import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.repository.*;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
@@ -302,6 +307,125 @@ class OrdenProduccionServiceImplTest {
         verify(ordenProduccionRepository, never()).save(any());
         verify(etapaProduccionRepository, never()).saveAll(any());
         verify(reservaLoteService, never()).sincronizarReservasSolicitud(any());
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa inicia la primera etapa cuando las solicitudes de movimiento están concluidas")
+    void iniciarEtapa_conSolicitudesConcluidas() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(1L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-001");
+        orden.setLoteProduccion("L-001");
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(10L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(5L)
+                .ordenProduccion(orden)
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(3L);
+        usuario.setNombreCompleto("Operario");
+
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(10L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(1L)).thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EtapaProduccion resultado = service.iniciarEtapa(1L, 10L);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.EN_PROCESO);
+        assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+        verify(ordenProduccionRepository).save(orden);
+        verify(movimientoInventarioService).consumirInsumosPorOrden(1L, usuario.getId());
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa bloquea el inicio cuando la OP no tiene solicitudes de movimiento")
+    void iniciarEtapa_sinSolicitudes() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(2L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-002");
+        orden.setLoteProduccion("L-002");
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(20L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(4L);
+        usuario.setNombreCompleto("Supervisor");
+
+        when(ordenProduccionRepository.findById(2L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(20L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(2L)).thenReturn(List.of());
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        assertThatThrownBy(() -> service.iniciarEtapa(2L, 20L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                    assertThat(rse.getReason()).isEqualTo("ORDEN_SIN_SOLICITUDES_MOVIMIENTO");
+                });
+
+        verify(etapaProduccionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa bloquea el inicio cuando existen solicitudes de movimiento pendientes")
+    void iniciarEtapa_conSolicitudesPendientes() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(3L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-003");
+        orden.setLoteProduccion("L-003");
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(30L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        SolicitudMovimiento solicitudPendiente = SolicitudMovimiento.builder()
+                .id(8L)
+                .ordenProduccion(orden)
+                .estado(EstadoSolicitudMovimiento.PENDIENTE)
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(5L);
+        usuario.setNombreCompleto("Analista");
+
+        when(ordenProduccionRepository.findById(3L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(30L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(3L)).thenReturn(List.of(solicitudPendiente));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        assertThatThrownBy(() -> service.iniciarEtapa(3L, 30L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                    assertThat(rse.getReason()).isEqualTo("ORDEN_MOVIMIENTOS_PENDIENTES");
+                });
+
+        verify(etapaProduccionRepository, never()).save(any());
     }
 
     private DistribucionFefoResult crearDistribucionJarabe() {

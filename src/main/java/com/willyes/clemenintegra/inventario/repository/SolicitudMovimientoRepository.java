@@ -82,4 +82,6 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
     @Override
     @EntityGraph(attributePaths = {"usuarioSolicitante", "ordenProduccion"})
     Page<SolicitudMovimiento> findAll(Specification<SolicitudMovimiento> spec, Pageable pageable);
+
+    List<SolicitudMovimiento> findByOrdenProduccionId(Long ordenProduccionId);
 }
