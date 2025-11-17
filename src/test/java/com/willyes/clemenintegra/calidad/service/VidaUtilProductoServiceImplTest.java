@@ -79,6 +79,7 @@ class VidaUtilProductoServiceImplTest {
         verify(vidaUtilProductoRepository).save(captor.capture());
         VidaUtilProducto enviado = captor.getValue();
         assertThat(enviado.getProductoId()).isEqualTo(productoTerminado.getId());
+        assertThat(enviado.getProducto()).isEqualTo(productoTerminado);
     }
 
     @Test
@@ -102,6 +103,7 @@ class VidaUtilProductoServiceImplTest {
         VidaUtilProducto enviado = captor.getValue();
         assertThat(enviado.getProductoId()).isEqualTo(productoTerminado.getId());
         assertThat(enviado.getSemanasVigencia()).isEqualTo(20);
+        assertThat(enviado.getProducto()).isEqualTo(productoTerminado);
     }
 
     @Test

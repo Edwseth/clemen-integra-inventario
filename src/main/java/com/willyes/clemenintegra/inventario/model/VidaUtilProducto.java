@@ -18,7 +18,8 @@ public class VidaUtilProducto {
     private Integer productoId;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_id", insertable = false, updatable = false, foreignKey = @ForeignKey(name = "fk_vida_util_productos_producto"))
+    @MapsId
+    @JoinColumn(name = "producto_id", foreignKey = @ForeignKey(name = "fk_vida_util_productos_producto"))
     private Producto producto;
 
     @Column(name = "semanas_vigencia", nullable = false)
