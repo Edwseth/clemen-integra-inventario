@@ -224,6 +224,17 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
         Long productoId = orden.getProducto().getId().longValue();
 
+        List<EtapaPlantilla> plantilla = cargarPlantillaEtapas(orden.getProducto().getId());
+        boolean esOrdenNueva = orden.getId() == null;
+        if (esOrdenNueva && (plantilla == null || plantilla.isEmpty())) {
+            String codigoProducto = Optional.ofNullable(orden.getProducto().getCodigoSku())
+                    .orElseGet(() -> Optional.ofNullable(orden.getProducto().getNombre()).orElse(""));
+            log.warn("OP sin etapas configuradas, productoId={}, codigoProducto={}, code={}",
+                    orden.getProducto().getId(), codigoProducto, "ORDEN_PRODUCTO_SIN_ETAPAS");
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "ORDEN_PRODUCTO_SIN_ETAPAS: No se puede crear la orden porque el producto no tiene etapas de producción configuradas. Configure la plantilla de etapas y vuelva a intentarlo.");
+        }
+
         FormulaProducto formula = formulaProductoRepository
                 .findByProductoIdAndEstadoAndActivoTrue(productoId, EstadoFormula.APROBADA)
                 .orElseThrow(() -> new IllegalArgumentException("No existe una fórmula activa y aprobada para el producto"));
@@ -319,8 +330,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
 
         OrdenProduccion guardada = repository.save(orden);
-
-        List<EtapaPlantilla> plantilla = cargarPlantillaEtapas(guardada.getProducto().getId());
         clonarEtapasParaOrden(guardada, plantilla);
 
         // Reserva FEFO y sincronización de reservas: SOLO AQUÍ (una vez)

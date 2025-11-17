@@ -12,6 +12,7 @@ import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.repository.*;
@@ -19,6 +20,8 @@ import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,12 +37,15 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,7 +90,13 @@ class OrdenProduccionServiceImplTest {
             return op;
         });
         lenient().when(ordenProduccionRepository.countByCodigoOrdenStartingWith(any())).thenReturn(0L);
-        lenient().when(etapaPlantillaRepository.findByProductoIdAndActivoTrueOrderBySecuenciaAsc(anyInt())).thenReturn(List.of());
+        EtapaPlantilla etapa = EtapaPlantilla.builder()
+                .id(1L)
+                .nombre("Preparación")
+                .secuencia(1)
+                .build();
+        lenient().when(etapaPlantillaRepository.findByProductoIdAndActivoTrueOrderBySecuenciaAsc(anyInt()))
+                .thenReturn(List.of(etapa));
         lenient().when(etapaProduccionRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -196,6 +208,100 @@ class OrdenProduccionServiceImplTest {
         assertThat(resultado.isEsValida()).isTrue();
         assertThat(resultado.getOrden()).isNotNull();
         assertThat(resultado.getInsumosFaltantes()).isNull();
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock permite crear la OP cuando el producto tiene etapas activas")
+    void guardarConValidacionStock_conEtapasActivas() {
+        Producto producto = new Producto();
+        producto.setId(5);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("kg");
+        producto.setUnidadMedida(unidad);
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setProducto(producto);
+        orden.setCantidadProgramada(new BigDecimal("3"));
+        orden.setEstado(EstadoProduccion.CREADA);
+
+        Producto insumo = new Producto();
+        insumo.setId(9);
+        insumo.setNombre("Materia Prima");
+        UnidadMedida unidadInsumo = new UnidadMedida();
+        unidadInsumo.setSimbolo("kg");
+        insumo.setUnidadMedida(unidadInsumo);
+        CategoriaProducto categoriaInsumo = new CategoriaProducto();
+        categoriaInsumo.setTipo(TipoCategoria.MATERIA_PRIMA);
+        insumo.setCategoriaProducto(categoriaInsumo);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(BigDecimal.ONE);
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setProducto(producto);
+        formula.setDetalles(List.of(detalle));
+
+        EtapaPlantilla etapa = EtapaPlantilla.builder()
+                .id(10L)
+                .nombre("Preparación")
+                .secuencia(1)
+                .build();
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(5L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(any())).thenReturn(List.of(insumo));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of(1L));
+        when(etapaPlantillaRepository.findByProductoIdAndActivoTrueOrderBySecuenciaAsc(5))
+                .thenReturn(List.of(etapa));
+
+        DistribucionFefoResult disponibilidad = DistribucionFefoResult.builder()
+                .productoInsumoId(9L)
+                .requerido(new BigDecimal("3.000000"))
+                .stockLibreTotal(new BigDecimal("5.000000"))
+                .faltante(BigDecimal.ZERO)
+                .suficiente(true)
+                .build();
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(9L), any(BigDecimal.class), eq(List.of(1L)), eq(true)))
+                .thenReturn(disponibilidad);
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertThat(resultado.isEsValida()).isTrue();
+        assertThat(resultado.getOrden()).isNotNull();
+        verify(ordenProduccionRepository).save(any(OrdenProduccion.class));
+        verify(etapaProduccionRepository).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock bloquea la creación cuando el producto no tiene etapas")
+    void guardarConValidacionStock_sinEtapasActivas() {
+        Producto producto = new Producto();
+        producto.setId(7);
+        producto.setNombre("Producto sin etapas");
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("UND");
+        producto.setUnidadMedida(unidad);
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setProducto(producto);
+        orden.setCantidadProgramada(BigDecimal.ONE);
+        orden.setEstado(EstadoProduccion.CREADA);
+
+        when(etapaPlantillaRepository.findByProductoIdAndActivoTrueOrderBySecuenciaAsc(7))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.guardarConValidacionStock(orden))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                    assertThat(rse.getReason()).contains("ORDEN_PRODUCTO_SIN_ETAPAS");
+                });
+
+        verify(ordenProduccionRepository, never()).save(any());
+        verify(etapaProduccionRepository, never()).saveAll(any());
+        verify(reservaLoteService, never()).sincronizarReservasSolicitud(any());
     }
 
     private DistribucionFefoResult crearDistribucionJarabe() {
