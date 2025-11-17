@@ -7,9 +7,11 @@ import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
@@ -35,6 +37,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -78,6 +81,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private UmValidator umValidator;
     @Mock private VidaUtilProductoRepository vidaUtilProductoRepository;
     @Mock private ReservaLoteService reservaLoteService;
+    @Mock private ReservaLoteRepository reservaLoteRepository;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
 
     @Spy
@@ -426,6 +430,169 @@ class OrdenProduccionServiceImplTest {
                 });
 
         verify(etapaProduccionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("recalcularEstadoOrden marca FINALIZADA cuando las etapas están terminadas y la producción está completa")
+    void recalcularEstadoOrden_finalizadaConProduccionCompleta() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(50L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+        orden.setCantidadProgramada(new BigDecimal("100"));
+        orden.setCantidadProducidaAcumulada(new BigDecimal("100"));
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(1L)
+                .estado(EstadoEtapa.FINALIZADA)
+                .build();
+
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(50L))
+                .thenReturn(List.of(etapa));
+
+        ReflectionTestUtils.invokeMethod(service, "recalcularEstadoOrden", orden);
+
+        assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.FINALIZADA);
+        assertThat(orden.getFechaFin()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("recalcularEstadoOrden marca CERRADA_INCOMPLETA cuando falta producción pese a etapas finalizadas")
+    void recalcularEstadoOrden_cerradaIncompletaCuandoFaltaProduccion() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(60L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+        orden.setCantidadProgramada(new BigDecimal("120"));
+        orden.setCantidadProducidaAcumulada(new BigDecimal("80"));
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(2L)
+                .estado(EstadoEtapa.FINALIZADA)
+                .build();
+
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(60L))
+                .thenReturn(List.of(etapa));
+
+        ReflectionTestUtils.invokeMethod(service, "recalcularEstadoOrden", orden);
+
+        assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.CERRADA_INCOMPLETA);
+        assertThat(orden.getFechaFin()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("recalcularEstadoOrden mantiene EN_PROCESO cuando hay etapas pendientes")
+    void recalcularEstadoOrden_conEtapasPendientes() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(70L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+        orden.setCantidadProgramada(new BigDecimal("150"));
+        orden.setCantidadProducidaAcumulada(new BigDecimal("140"));
+
+        EtapaProduccion finalizada = EtapaProduccion.builder()
+                .id(3L)
+                .estado(EstadoEtapa.FINALIZADA)
+                .build();
+        EtapaProduccion pendiente = EtapaProduccion.builder()
+                .id(4L)
+                .estado(EstadoEtapa.PENDIENTE)
+                .build();
+
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(70L))
+                .thenReturn(List.of(finalizada, pendiente));
+
+        ReflectionTestUtils.invokeMethod(service, "recalcularEstadoOrden", orden);
+
+        assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+        assertThat(orden.getFechaFin()).isNull();
+    }
+
+    @Test
+    @DisplayName("listarInsumos refleja consumido en cero con reservas activas")
+    void listarInsumos_conReservasActivas() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(200L);
+        orden.setCantidadProgramada(new BigDecimal("5"));
+        Producto producto = new Producto();
+        producto.setId(10);
+        orden.setProducto(producto);
+
+        Producto insumo = new Producto();
+        insumo.setId(300);
+        insumo.setNombre("Insumo A");
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setNombre("kg");
+        insumo.setUnidadMedida(unidad);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("2"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(detalle));
+
+        when(ordenProduccionRepository.findById(200L)).thenReturn(Optional.of(orden));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(11L);
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(11L);
+        when(tipoMovimientoDetalleRepository.findById(11L)).thenReturn(Optional.of(tipoDetalle));
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(200L, 300L, 11L))
+                .thenReturn(BigDecimal.ZERO);
+        when(reservaLoteRepository.sumConsumidaByOrdenAndProducto(200L, 300L, EstadoReservaLote.CONSUMIDA))
+                .thenReturn(BigDecimal.ZERO);
+
+        List<com.willyes.clemenintegra.produccion.dto.InsumoOPDTO> lista = service.listarInsumos(200L);
+
+        assertThat(lista).hasSize(1);
+        com.willyes.clemenintegra.produccion.dto.InsumoOPDTO dto = lista.get(0);
+        assertThat(dto.getCantidadRequerida()).isEqualByComparingTo(new BigDecimal("10"));
+        assertThat(dto.getCantidadConsumida()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(dto.getFaltante()).isEqualByComparingTo(new BigDecimal("10"));
+    }
+
+    @Test
+    @DisplayName("listarInsumos descuenta reservas consumidas")
+    void listarInsumos_conReservasConsumidas() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(201L);
+        orden.setCantidadProgramada(new BigDecimal("5"));
+        Producto producto = new Producto();
+        producto.setId(10);
+        orden.setProducto(producto);
+
+        Producto insumo = new Producto();
+        insumo.setId(301);
+        insumo.setNombre("Insumo B");
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setNombre("kg");
+        insumo.setUnidadMedida(unidad);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("2"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(detalle));
+
+        when(ordenProduccionRepository.findById(201L)).thenReturn(Optional.of(orden));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(12L);
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(12L);
+        when(tipoMovimientoDetalleRepository.findById(12L)).thenReturn(Optional.of(tipoDetalle));
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(201L, 301L, 12L))
+                .thenReturn(BigDecimal.ONE);
+        when(reservaLoteRepository.sumConsumidaByOrdenAndProducto(201L, 301L, EstadoReservaLote.CONSUMIDA))
+                .thenReturn(new BigDecimal("3"));
+
+        List<com.willyes.clemenintegra.produccion.dto.InsumoOPDTO> lista = service.listarInsumos(201L);
+
+        assertThat(lista).hasSize(1);
+        com.willyes.clemenintegra.produccion.dto.InsumoOPDTO dto = lista.get(0);
+        assertThat(dto.getCantidadRequerida()).isEqualByComparingTo(new BigDecimal("10"));
+        assertThat(dto.getCantidadConsumida()).isEqualByComparingTo(new BigDecimal("3"));
+        assertThat(dto.getFaltante()).isEqualByComparingTo(new BigDecimal("7"));
     }
 
     private DistribucionFefoResult crearDistribucionJarabe() {

@@ -51,5 +51,14 @@ public interface ReservaLoteRepository extends JpaRepository<ReservaLote, Long> 
 
     boolean existsBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionIdAndEstado(Long ordenProduccionId,
                                                                                               EstadoReservaLote estado);
+
+    @Query("select coalesce(sum(r.cantidadConsumida), 0) " +
+            "from ReservaLote r " +
+            "where r.solicitudMovimientoDetalle.solicitudMovimiento.ordenProduccion.id = :ordenId " +
+            "and r.solicitudMovimientoDetalle.solicitudMovimiento.producto.id = :productoId " +
+            "and r.estado = :estado")
+    BigDecimal sumConsumidaByOrdenAndProducto(@Param("ordenId") Long ordenId,
+                                              @Param("productoId") Long productoId,
+                                              @Param("estado") EstadoReservaLote estado);
 }
 

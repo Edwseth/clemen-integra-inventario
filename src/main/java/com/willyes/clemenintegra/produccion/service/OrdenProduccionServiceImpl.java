@@ -41,6 +41,7 @@ import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetall
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
+import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
@@ -50,6 +51,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -121,6 +123,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final UmValidator umValidator;
     private final VidaUtilProductoRepository vidaUtilProductoRepository;
     private final ReservaLoteService reservaLoteService;
+    private final ReservaLoteRepository reservaLoteRepository;
     private final DisponibilidadInsumoService disponibilidadInsumoService;
 
     @Value("${inventory.solicitud.estados.pendientes}")
@@ -555,17 +558,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
             BigDecimal nuevaAcumulada = acumulada.add(cantidad);
 
-            if (dto.getTipo() == TipoCierre.TOTAL) {
-                boolean etapasFinalizadas = etapaProduccionRepository
-                        .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId())
-                        .stream()
-                        .allMatch(e -> e.getEstado() == EstadoEtapa.FINALIZADA);
-                if (etapasFinalizadas) {
-                    orden.setEstado(EstadoProduccion.FINALIZADA);
-                    orden.setFechaFin(LocalDateTime.now());
-                }
-            }
-
             orden.setCantidadProducidaAcumulada(nuevaAcumulada);
             orden.setCantidadProducida(nuevaAcumulada);
             orden.setFechaUltimoCierre(LocalDateTime.now());
@@ -575,6 +567,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             cierre.setUsuarioId(usuario.getId());
             cierre.setUsuarioNombre(usuario.getNombreCompleto());
             cierreProduccionRepository.save(cierre);
+
+            recalcularEstadoOrden(orden);
 
             if (orden.getProducto() == null || orden.getProducto().getTipoAnalisis() == null) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
@@ -1011,6 +1005,34 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return etapaProduccionRepository.save(etapa);
     }
 
+    private void recalcularEstadoOrden(OrdenProduccion orden) {
+        if (orden == null || orden.getId() == null || orden.getEstado() == EstadoProduccion.CANCELADA) {
+            return;
+        }
+
+        List<EtapaProduccion> etapas = etapaProduccionRepository
+                .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId());
+
+        boolean todasFinalizadas = !etapas.isEmpty()
+                && etapas.stream().allMatch(e -> e.getEstado() == EstadoEtapa.FINALIZADA);
+
+        BigDecimal programada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
+        BigDecimal producida = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
+
+        if (todasFinalizadas) {
+            if (producida.compareTo(programada) >= 0) {
+                orden.setEstado(EstadoProduccion.FINALIZADA);
+            } else {
+                orden.setEstado(EstadoProduccion.CERRADA_INCOMPLETA);
+            }
+            if (orden.getFechaFin() == null) {
+                orden.setFechaFin(LocalDateTime.now());
+            }
+        } else if (orden.getEstado() != EstadoProduccion.CANCELADA) {
+            orden.setEstado(EstadoProduccion.EN_PROCESO);
+        }
+    }
+
     private void validarSolicitudesMovimientosEjecutadas(OrdenProduccion orden) {
         List<SolicitudMovimiento> solicitudes = solicitudMovimientoRepository.findByOrdenProduccionId(orden.getId());
 
@@ -1057,7 +1079,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         etapa.setFechaFin(LocalDateTime.now());
         etapa.setUsuarioId(usuario.getId());
         etapa.setUsuarioNombre(usuario.getNombreCompleto());
-        return etapaProduccionRepository.save(etapa);
+        EtapaProduccion guardada = etapaProduccionRepository.save(etapa);
+
+        recalcularEstadoOrden(orden);
+        repository.save(orden);
+
+        return guardada;
     }
 
     public List<InsumoOPDTO> listarInsumos(Long id) {
@@ -1073,9 +1100,13 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         for (DetalleFormula det : formula.getDetalles()) {
             BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             Long insumoId = det.getInsumo().getId().longValue();
-            BigDecimal consumida = Optional.ofNullable(
+            BigDecimal consumidaMov = Optional.ofNullable(
                     movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(id, insumoId, detalleId)
             ).orElse(BigDecimal.ZERO);
+            BigDecimal consumidaReservas = Optional.ofNullable(
+                    reservaLoteRepository.sumConsumidaByOrdenAndProducto(id, insumoId, EstadoReservaLote.CONSUMIDA)
+            ).orElse(BigDecimal.ZERO);
+            BigDecimal consumida = consumidaMov.max(consumidaReservas);
             BigDecimal faltante = requerida.subtract(consumida);
             if (faltante.compareTo(BigDecimal.ZERO) < 0) {
                 faltante = BigDecimal.ZERO;
