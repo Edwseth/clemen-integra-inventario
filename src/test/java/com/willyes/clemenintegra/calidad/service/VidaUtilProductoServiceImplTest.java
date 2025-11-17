@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -72,6 +74,11 @@ class VidaUtilProductoServiceImplTest {
         assertThat(resultado.getSemanasVigencia()).isEqualTo(12);
         assertThat(resultado.getProducto()).isEqualTo(productoTerminado);
         assertThat(resultado.getProductoId()).isEqualTo(productoTerminado.getId());
+
+        ArgumentCaptor<VidaUtilProducto> captor = ArgumentCaptor.forClass(VidaUtilProducto.class);
+        verify(vidaUtilProductoRepository).save(captor.capture());
+        VidaUtilProducto enviado = captor.getValue();
+        assertThat(enviado.getProductoId()).isEqualTo(productoTerminado.getId());
     }
 
     @Test
@@ -89,6 +96,12 @@ class VidaUtilProductoServiceImplTest {
         VidaUtilProducto resultado = service.guardar(productoTerminado.getId(), 20);
 
         assertThat(resultado.getSemanasVigencia()).isEqualTo(20);
+
+        ArgumentCaptor<VidaUtilProducto> captor = ArgumentCaptor.forClass(VidaUtilProducto.class);
+        verify(vidaUtilProductoRepository).save(captor.capture());
+        VidaUtilProducto enviado = captor.getValue();
+        assertThat(enviado.getProductoId()).isEqualTo(productoTerminado.getId());
+        assertThat(enviado.getSemanasVigencia()).isEqualTo(20);
     }
 
     @Test
