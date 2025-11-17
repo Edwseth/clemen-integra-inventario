@@ -20,6 +20,19 @@ public final class ProductoSpecifications {
                 : cb.like(cb.upper(root.get("codigoSku")), "%" + sku.trim().toUpperCase() + "%");
     }
 
+    public static Specification<Producto> textoLibre(String q) {
+        return (root, cq, cb) -> {
+            if (q == null || q.isBlank()) {
+                return cb.conjunction();
+            }
+            String termino = "%" + q.trim().toUpperCase() + "%";
+            return cb.or(
+                    cb.like(cb.upper(root.get("nombre")), termino),
+                    cb.like(cb.upper(root.get("codigoSku")), termino)
+            );
+        };
+    }
+
     /**
      * Filtra por id de categoría. Si la entidad Producto posee un campo
      * categoriaProductoId simple, se accede directamente; de lo contrario se
@@ -43,5 +56,15 @@ public final class ProductoSpecifications {
         return (root, cq, cb) -> (activo == null)
                 ? cb.conjunction()
                 : (activo ? cb.isTrue(root.get("activo")) : cb.isFalse(root.get("activo")));
+    }
+
+    public static Specification<Producto> tipoCategoriaEquals(com.willyes.clemenintegra.inventario.model.enums.TipoCategoria tipo) {
+        return (root, cq, cb) -> {
+            if (tipo == null) {
+                return cb.conjunction();
+            }
+            Join<Object, Object> cat = root.join("categoriaProducto");
+            return cb.equal(cat.get("tipo"), tipo);
+        };
     }
 }

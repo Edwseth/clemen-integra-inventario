@@ -42,7 +42,7 @@ import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepositor
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
-import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
+import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -107,7 +107,7 @@ class OrdenProduccionServiceReservaTest {
     @Mock private SolicitudMovimientoRepository solicitudMovimientoRepository;
     @Mock private InventoryCatalogResolver catalogResolver;
     @Mock private UmValidator umValidator;
-    @Mock private VidaUtilProductoRepository vidaUtilProductoRepository;
+    @Mock private VidaUtilProductoService vidaUtilProductoService;
     @Mock private ReservaLoteService reservaLoteService;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
 
@@ -378,7 +378,7 @@ class OrdenProduccionServiceReservaTest {
         etapa.setFechaInicio(LocalDateTime.now().minusDays(2));
         when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
                 .thenReturn(List.of(etapa));
-        when(vidaUtilProductoRepository.findById(10)).thenReturn(Optional.of(VidaUtilProducto.builder()
+        when(vidaUtilProductoService.buscarPorProductoId(10)).thenReturn(Optional.of(VidaUtilProducto.builder()
                 .productoId(10)
                 .semanasVigencia(4)
                 .build()));
