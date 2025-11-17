@@ -15,13 +15,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/produccion/plantillas")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
 public class EtapaPlantillaController {
 
     private final EtapaPlantillaService service;
     private final EtapaPlantillaMapper mapper;
 
     @GetMapping("/{productoId}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public List<EtapaPlantillaResponse> listar(@PathVariable Integer productoId) {
         return service.listarPorProducto(productoId).stream()
                 .map(mapper::toResponse)
@@ -29,6 +29,7 @@ public class EtapaPlantillaController {
     }
 
     @PostMapping("/{productoId}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<EtapaPlantillaResponse> crear(@PathVariable Integer productoId,
                                                          @RequestBody EtapaPlantillaRequest request) {
         Producto producto = new Producto();
@@ -39,6 +40,7 @@ public class EtapaPlantillaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<EtapaPlantillaResponse> actualizar(@PathVariable Long id,
                                                              @RequestBody EtapaPlantillaRequest request) {
         EtapaPlantilla entidad = mapper.toEntity(request);
@@ -46,12 +48,14 @@ public class EtapaPlantillaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{productoId}/reordenar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> reordenar(@PathVariable Integer productoId,
                                           @RequestBody List<EtapaPlantillaReordenRequest> cambios) {
         service.reordenar(productoId, cambios);
@@ -59,6 +63,7 @@ public class EtapaPlantillaController {
     }
 
     @GetMapping("/{productoId}/preview")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public List<EtapaPlantillaResponse> preview(@PathVariable Integer productoId) {
         return service.preview(productoId).stream()
                 .map(mapper::toResponse)
