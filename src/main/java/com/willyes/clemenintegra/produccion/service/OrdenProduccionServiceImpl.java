@@ -45,13 +45,15 @@ import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
-import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
-import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
+import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -121,7 +123,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
     private final InventoryCatalogResolver catalogResolver;
     private final UmValidator umValidator;
-    private final VidaUtilProductoRepository vidaUtilProductoRepository;
+    private final VidaUtilProductoService vidaUtilProductoService;
     private final ReservaLoteService reservaLoteService;
     private final ReservaLoteRepository reservaLoteRepository;
     private final DisponibilidadInsumoService disponibilidadInsumoService;
@@ -181,6 +183,17 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ESTADOS_SOLICITUD_NO_CONFIGURADOS");
         }
+    }
+
+    private Integer obtenerSemanasVigenciaProductoTerminado(Producto producto) {
+        if (producto == null || producto.getCategoriaProducto() == null
+                || producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO) {
+            return null;
+        }
+        return vidaUtilProductoService.buscarPorProductoId(producto.getId())
+                .map(VidaUtilProducto::getSemanasVigencia)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.VIDA_UTIL_NO_CONFIGURADA,
+                        "Debe configurar la vida útil del producto terminado antes de producirlo"));
     }
 
     private BigDecimal validarCantidad(BigDecimal cantidadOriginal, Producto producto) {
@@ -448,9 +461,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .orElse(null);
             }
             if (fechaVencimiento == null) {
-                Integer semanasVigencia = vidaUtilProductoRepository.findById(orden.getProducto().getId())
-                        .map(VidaUtilProducto::getSemanasVigencia)
-                        .orElse(null);
+                Integer semanasVigencia = obtenerSemanasVigenciaProductoTerminado(orden.getProducto());
                 fechaVencimiento = (fechaFabricacion != null && semanasVigencia != null)
                         ? fechaFabricacion.plusWeeks(semanasVigencia)
                         : null;
@@ -967,9 +978,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             }
 
             LocalDateTime fechaFabricacion = LocalDateTime.now();
-            Integer semanasVigencia = vidaUtilProductoRepository.findById(orden.getProducto().getId())
-                    .map(VidaUtilProducto::getSemanasVigencia)
-                    .orElse(null);
+            Integer semanasVigencia = obtenerSemanasVigenciaProductoTerminado(orden.getProducto());
             LocalDateTime fechaVencimiento = semanasVigencia != null
                     ? fechaFabricacion.plusWeeks(semanasVigencia)
                     : null;

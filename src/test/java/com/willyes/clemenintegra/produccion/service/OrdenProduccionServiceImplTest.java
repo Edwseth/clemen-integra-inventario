@@ -9,13 +9,18 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
+import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -27,6 +32,8 @@ import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +43,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -79,7 +87,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private SolicitudMovimientoRepository solicitudMovimientoRepository;
     @Mock private InventoryCatalogResolver catalogResolver;
     @Mock private UmValidator umValidator;
-    @Mock private VidaUtilProductoRepository vidaUtilProductoRepository;
+    @Mock private VidaUtilProductoService vidaUtilProductoService;
     @Mock private ReservaLoteService reservaLoteService;
     @Mock private ReservaLoteRepository reservaLoteRepository;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
@@ -355,6 +363,73 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("iniciarEtapa genera lote de producto terminado usando semanas de vigencia configuradas")
+    void iniciarEtapa_conVidaUtilConfigurada() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(5L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-005");
+
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+
+        Producto producto = new Producto();
+        producto.setId(15);
+        producto.setNombre("PT-Probador");
+        producto.setCodigoSku("PT-005");
+        producto.setCategoriaProducto(categoria);
+        producto.setTipoAnalisis(TipoAnalisisCalidad.NINGUNO);
+        orden.setProducto(producto);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(15L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .ordenProduccion(orden)
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+        usuario.setNombreCompleto("Usuario Calidad");
+
+        when(ordenProduccionRepository.findById(5L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(15L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(5L)).thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(2L);
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(new Almacen(1)));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(new Almacen(2)));
+        when(vidaUtilProductoService.buscarPorProductoId(15)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(15)
+                .producto(producto)
+                .semanasVigencia(6)
+                .build()));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            lote.setId(99L);
+            return lote;
+        });
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EtapaProduccion resultado = service.iniciarEtapa(5L, 15L);
+
+        ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository).save(captor.capture());
+        LoteProducto loteGenerado = captor.getValue();
+
+        assertThat(loteGenerado.getFechaVencimiento())
+                .isEqualTo(loteGenerado.getFechaFabricacion().plusWeeks(6));
+        assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.EN_PROCESO);
+    }
+
+    @Test
     @DisplayName("iniciarEtapa bloquea el inicio cuando la OP no tiene solicitudes de movimiento")
     void iniciarEtapa_sinSolicitudes() {
         OrdenProduccion orden = new OrdenProduccion();
@@ -593,6 +668,51 @@ class OrdenProduccionServiceImplTest {
         assertThat(dto.getCantidadRequerida()).isEqualByComparingTo(new BigDecimal("10"));
         assertThat(dto.getCantidadConsumida()).isEqualByComparingTo(new BigDecimal("3"));
         assertThat(dto.getFaltante()).isEqualByComparingTo(new BigDecimal("7"));
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa impide crear lote cuando no existe vida útil configurada para producto terminado")
+    void iniciarEtapa_rechazaSinVidaUtil() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(8L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-008");
+
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+
+        Producto producto = new Producto();
+        producto.setId(25);
+        producto.setCategoriaProducto(categoria);
+        producto.setTipoAnalisis(TipoAnalisisCalidad.NINGUNO);
+        orden.setProducto(producto);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(25L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .ordenProduccion(orden)
+                .build();
+
+        when(ordenProduccionRepository.findById(8L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(25L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(8L)).thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(new Usuario());
+        when(catalogResolver.getAlmacenPtId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(2L);
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(new Almacen(1)));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(new Almacen(2)));
+        when(vidaUtilProductoService.buscarPorProductoId(25)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.iniciarEtapa(8L, 25L))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.VIDA_UTIL_NO_CONFIGURADA);
     }
 
     private DistribucionFefoResult crearDistribucionJarabe() {
