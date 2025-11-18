@@ -62,12 +62,16 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
             );
         }
 
-        VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId)
-                .orElseGet(() -> {
-                    VidaUtilProducto nuevo = new VidaUtilProducto();
-                    nuevo.setProductoId(productoId);
-                    return nuevo;
-                });
+        VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId).orElse(null);
+        if (vidaUtil == null) {
+            // Crear una instancia nueva asegurando que el identificador se asigne
+            // antes de que Hibernate intente persistirla (evita el null identifier).
+            vidaUtil = new VidaUtilProducto();
+            vidaUtil.setProductoId(productoId);
+        } else if (vidaUtil.getProductoId() == null) {
+            // Refuerzo defensivo ante datos inconsistentes para evitar fallas de inserción.
+            vidaUtil.setProductoId(productoId);
+        }
 
         Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();
 

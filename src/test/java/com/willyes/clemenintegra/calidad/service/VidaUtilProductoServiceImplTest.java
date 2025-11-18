@@ -124,6 +124,26 @@ class VidaUtilProductoServiceImplTest {
     }
 
     @Test
+    void guardar_deberiaAsignarIdCuandoEntidadRecuperadaNoTieneIdentificador() {
+        // Reproduce el caso de null identifier: se recupera una entidad sin ID y debe corregirse antes de guardar
+        VidaUtilProducto existenteSinId = new VidaUtilProducto();
+
+        when(productoRepository.findById(10L)).thenReturn(Optional.of(productoTerminado));
+        when(vidaUtilProductoRepository.findById(productoTerminado.getId())).thenReturn(Optional.of(existenteSinId));
+        when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
+
+        VidaUtilProducto resultado = service.guardar(productoTerminado.getId(), 16);
+
+        assertThat(resultado.getProductoId()).isEqualTo(productoTerminado.getId());
+
+        ArgumentCaptor<VidaUtilProducto> captor = ArgumentCaptor.forClass(VidaUtilProducto.class);
+        verify(vidaUtilProductoRepository).save(captor.capture());
+        VidaUtilProducto enviado = captor.getValue();
+        assertThat(enviado.getProductoId()).isEqualTo(productoTerminado.getId());
+    }
+
+    @Test
     void guardar_deberiaFallarCuandoProductoNoExiste() {
         when(productoRepository.findById(10L)).thenReturn(Optional.empty());
 
