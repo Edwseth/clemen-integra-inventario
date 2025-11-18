@@ -16,16 +16,14 @@ import java.time.LocalDateTime;
 public class VidaUtilProducto {
 
     @Id
-    @Column(name = "producto_id")
+    @Column(name = "producto_id", nullable = false)
     @EqualsAndHashCode.Include
     private Integer productoId;
 
-    // 🔹 Relación solo para lectura, NO controla la columna
     @OneToOne(fetch = FetchType.LAZY)
+    @MapsId
     @JoinColumn(
             name = "producto_id",
-            insertable = false,
-            updatable = false,
             foreignKey = @ForeignKey(name = "fk_vida_util_productos_producto")
     )
     private Producto producto;
