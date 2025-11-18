@@ -1,7 +1,10 @@
 package com.willyes.clemenintegra.inventario.model;
 
+import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "vida_util_productos")
@@ -29,6 +32,13 @@ public class VidaUtilProducto {
 
     @Column(name = "semanas_vigencia", nullable = false)
     private Integer semanasVigencia;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "actualizado_por_id")
+    private Usuario actualizadoPor;
+
+    @Column(name = "fecha_actualizacion")
+    private LocalDateTime fechaActualizacion;
 }
 
 

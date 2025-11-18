@@ -9,6 +9,8 @@ import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,10 +42,14 @@ class VidaUtilProductoServiceImplTest {
     @Mock
     private ProductoRepository productoRepository;
 
+    @Mock
+    private UsuarioService usuarioService;
+
     @InjectMocks
     private VidaUtilProductoServiceImpl service;
 
     private Producto productoTerminado;
+    private Usuario usuarioAutenticado;
 
     @BeforeEach
     void setUp() {
@@ -55,6 +61,11 @@ class VidaUtilProductoServiceImplTest {
         productoTerminado.setCodigoSku("PT-001");
         productoTerminado.setNombre("Producto Terminado");
         productoTerminado.setCategoriaProducto(categoria);
+
+        usuarioAutenticado = Usuario.builder()
+                .id(5L)
+                .nombreCompleto("Usuario Prueba")
+                .build();
     }
 
     @Test
@@ -68,6 +79,7 @@ class VidaUtilProductoServiceImplTest {
         when(productoRepository.findById(10L)).thenReturn(Optional.of(productoTerminado));
         when(vidaUtilProductoRepository.findById(productoTerminado.getId())).thenReturn(Optional.empty());
         when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class))).thenReturn(entidadGuardada);
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
 
         VidaUtilProducto resultado = service.guardar(productoTerminado.getId(), 12);
 
@@ -80,6 +92,8 @@ class VidaUtilProductoServiceImplTest {
         VidaUtilProducto enviado = captor.getValue();
         assertThat(enviado.getProductoId()).isEqualTo(productoTerminado.getId());
         assertThat(enviado.getProducto()).isEqualTo(productoTerminado);
+        assertThat(enviado.getActualizadoPor()).isEqualTo(usuarioAutenticado);
+        assertThat(enviado.getFechaActualizacion()).isNotNull();
     }
 
     @Test
@@ -93,6 +107,7 @@ class VidaUtilProductoServiceImplTest {
         when(productoRepository.findById(10L)).thenReturn(Optional.of(productoTerminado));
         when(vidaUtilProductoRepository.findById(productoTerminado.getId())).thenReturn(Optional.of(existente));
         when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
 
         VidaUtilProducto resultado = service.guardar(productoTerminado.getId(), 20);
 
@@ -104,6 +119,8 @@ class VidaUtilProductoServiceImplTest {
         assertThat(enviado.getProductoId()).isEqualTo(productoTerminado.getId());
         assertThat(enviado.getSemanasVigencia()).isEqualTo(20);
         assertThat(enviado.getProducto()).isEqualTo(productoTerminado);
+        assertThat(enviado.getActualizadoPor()).isEqualTo(usuarioAutenticado);
+        assertThat(enviado.getFechaActualizacion()).isNotNull();
     }
 
     @Test
@@ -148,6 +165,8 @@ class VidaUtilProductoServiceImplTest {
                 .productoId(productoTerminado.getId())
                 .producto(productoTerminado)
                 .semanasVigencia(15)
+                .actualizadoPor(usuarioAutenticado)
+                .fechaActualizacion(java.time.LocalDateTime.now())
                 .build();
 
         when(productoRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10))))
@@ -161,5 +180,22 @@ class VidaUtilProductoServiceImplTest {
         VidaUtilProductoDTO dto = page.getContent().get(0);
         assertThat(dto.getProductoId()).isEqualTo(productoTerminado.getId());
         assertThat(dto.getSemanasVigencia()).isEqualTo(15);
+        assertThat(dto.getActualizadoPorNombre()).isEqualTo(usuarioAutenticado.getNombreCompleto());
+        assertThat(dto.getFechaActualizacion()).isEqualTo(vidaUtil.getFechaActualizacion());
+    }
+
+    @Test
+    void listarProductosTerminados_deberiaRetornarCamposNulosCuandoNoExisteVidaUtil() {
+        when(productoRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10))))
+                .thenReturn(new PageImpl<>(List.of(productoTerminado)));
+        when(vidaUtilProductoRepository.findAllById(List.of(productoTerminado.getId())))
+                .thenReturn(List.of());
+
+        Page<VidaUtilProductoDTO> page = service.listarProductosTerminados(null, PageRequest.of(0, 10));
+
+        VidaUtilProductoDTO dto = page.getContent().get(0);
+        assertThat(dto.getSemanasVigencia()).isNull();
+        assertThat(dto.getActualizadoPorNombre()).isNull();
+        assertThat(dto.getFechaActualizacion()).isNull();
     }
 }

@@ -39,11 +39,11 @@ public class VidaUtilProductoController {
 
     @PostMapping("/producto-terminado/{productoId}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<VidaUtilProductoDTO> guardar(
+    public ResponseEntity<Void> guardar(
             @PathVariable Integer productoId,
             @RequestBody VidaUtilProductoRequest request) {
-        VidaUtilProducto vidaUtil = vidaUtilProductoService.guardar(productoId, request.getSemanasVigencia());
-        return ResponseEntity.ok(mapToDto(vidaUtil));
+        vidaUtilProductoService.guardar(productoId, request.getSemanasVigencia());
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/producto-terminado/{productoId}")
@@ -54,11 +54,17 @@ public class VidaUtilProductoController {
     }
 
     private VidaUtilProductoDTO mapToDto(VidaUtilProducto vidaUtil) {
+        String actualizadoPorNombre = vidaUtil.getActualizadoPor() != null
+                ? vidaUtil.getActualizadoPor().getNombreCompleto()
+                : null;
+
         return VidaUtilProductoDTO.builder()
                 .productoId(vidaUtil.getProducto().getId())
                 .codigoSku(vidaUtil.getProducto().getCodigoSku())
                 .nombreProducto(vidaUtil.getProducto().getNombre())
                 .semanasVigencia(vidaUtil.getSemanasVigencia())
+                .actualizadoPorNombre(actualizadoPorNombre)
+                .fechaActualizacion(vidaUtil.getFechaActualizacion())
                 .build();
     }
 }
