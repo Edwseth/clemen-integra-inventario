@@ -62,22 +62,16 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
             );
         }
 
-        VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId).orElse(null);
-        if (vidaUtil == null) {
-            // Crear una instancia nueva asegurando que el identificador se asigne
-            // antes de que Hibernate intente persistirla (evita el null identifier).
-            vidaUtil = new VidaUtilProducto();
-            vidaUtil.setProductoId(productoId);
-        } else if (vidaUtil.getProductoId() == null) {
-            // Refuerzo defensivo ante datos inconsistentes para evitar fallas de inserción.
-            vidaUtil.setProductoId(productoId);
+        VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId)
+                .orElseGet(VidaUtilProducto::new);
+
+        vidaUtil.setProducto(producto);
+        if (vidaUtil.getProductoId() == null && producto.getId() != null) {
+            vidaUtil.setProductoId(producto.getId());
         }
+        vidaUtil.setSemanasVigencia(semanasVigencia);
 
         Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();
-
-        vidaUtil.setProductoId(producto.getId());
-        vidaUtil.setProducto(producto);
-        vidaUtil.setSemanasVigencia(semanasVigencia);
         vidaUtil.setActualizadoPor(usuarioActual);
         vidaUtil.setFechaActualizacion(LocalDateTime.now());
 

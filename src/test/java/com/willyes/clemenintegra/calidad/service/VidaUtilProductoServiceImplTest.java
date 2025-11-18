@@ -70,15 +70,10 @@ class VidaUtilProductoServiceImplTest {
 
     @Test
     void guardar_deberiaCrearNuevoCuandoProductoTerminadoValido() {
-        VidaUtilProducto entidadGuardada = VidaUtilProducto.builder()
-                .productoId(productoTerminado.getId())
-                .producto(productoTerminado)
-                .semanasVigencia(12)
-                .build();
-
         when(productoRepository.findById(10L)).thenReturn(Optional.of(productoTerminado));
         when(vidaUtilProductoRepository.findById(productoTerminado.getId())).thenReturn(Optional.empty());
-        when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class))).thenReturn(entidadGuardada);
+        when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
 
         VidaUtilProducto resultado = service.guardar(productoTerminado.getId(), 12);
@@ -136,11 +131,15 @@ class VidaUtilProductoServiceImplTest {
         VidaUtilProducto resultado = service.guardar(productoTerminado.getId(), 16);
 
         assertThat(resultado.getProductoId()).isEqualTo(productoTerminado.getId());
+        assertThat(resultado.getProducto()).isEqualTo(productoTerminado);
+        assertThat(resultado.getSemanasVigencia()).isEqualTo(16);
 
         ArgumentCaptor<VidaUtilProducto> captor = ArgumentCaptor.forClass(VidaUtilProducto.class);
         verify(vidaUtilProductoRepository).save(captor.capture());
         VidaUtilProducto enviado = captor.getValue();
         assertThat(enviado.getProductoId()).isEqualTo(productoTerminado.getId());
+        assertThat(enviado.getProducto()).isEqualTo(productoTerminado);
+        assertThat(enviado.getSemanasVigencia()).isEqualTo(16);
     }
 
     @Test
