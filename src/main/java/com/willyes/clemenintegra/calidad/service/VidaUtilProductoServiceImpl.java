@@ -63,17 +63,22 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
         }
 
         VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId)
-                .orElseGet(VidaUtilProducto::new);
+                .orElseGet(() -> {
+                    VidaUtilProducto nuevo = new VidaUtilProducto();
+                    nuevo.setProductoId(productoId);
+                    return nuevo;
+                });
 
-        vidaUtil.setProducto(producto);
-        if (vidaUtil.getProductoId() == null && producto.getId() != null) {
-            vidaUtil.setProductoId(producto.getId());
-        }
+        vidaUtil.setProductoId(productoId);
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
         Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();
         vidaUtil.setActualizadoPor(usuarioActual);
         vidaUtil.setFechaActualizacion(LocalDateTime.now());
+
+        if (vidaUtil.getProductoId() == null) {
+            throw new IllegalStateException("VidaUtilProducto sin productoId antes de guardar");
+        }
 
         return vidaUtilProductoRepository.save(vidaUtil);
     }

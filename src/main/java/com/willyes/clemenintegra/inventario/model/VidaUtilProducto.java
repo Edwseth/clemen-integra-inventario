@@ -21,9 +21,11 @@ public class VidaUtilProducto {
     private Integer productoId;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
     @JoinColumn(
             name = "producto_id",
+            referencedColumnName = "id",
+            insertable = false,
+            updatable = false,
             foreignKey = @ForeignKey(name = "fk_vida_util_productos_producto")
     )
     private Producto producto;
