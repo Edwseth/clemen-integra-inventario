@@ -1,9 +1,11 @@
 package com.willyes.clemenintegra.inventario.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.shared.json.LenientLocalDateTimeDeserializer;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -37,6 +39,7 @@ public record MovimientoInventarioDTO(
         Long ordenProduccionId,
         Long ordenCompraDetalleId,
         String codigoLote,
+        @JsonDeserialize(using = LenientLocalDateTimeDeserializer.class)
         LocalDateTime fechaVencimiento,
         /**
          * Estado inicial sugerido por el cliente. Este valor se ignora en el
