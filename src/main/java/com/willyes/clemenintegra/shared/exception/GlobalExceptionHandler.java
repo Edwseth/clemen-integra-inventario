@@ -41,7 +41,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleInvalidDateFormat(Exception ex) {
         return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA,
                 "Formato de fecha inválido",
-                "Use 'YYYY-MM-DDTHH:mm:ss', ej. '2025-09-10T00:00:00'.");
+                "Use 'YYYY-MM-DDTHH:mm:ss' (ISO-8601). Si el campo no aplica, envíelo nulo u omítalo.");
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
