@@ -537,6 +537,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             motivoMovimiento = motivoMovimientoRepository.findById(dto.motivoMovimientoId())
                     .orElseThrow(() -> new NoSuchElementException("Motivo no encontrado"));
         }
+        motivoMovimiento = resolverMotivoMovimientoPorClasificacion(clasificacion, motivoMovimiento);
 
         OrdenCompra orden = null;
         RecepcionOC recepcionCabecera = null;
@@ -686,12 +687,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setOrdenCompra(dto.ordenCompraId() != null
                 ? entityManager.getReference(OrdenCompra.class, dto.ordenCompraId()) : null);
         movimiento.setOrdenCompraDetalle(ordenCompraDetalle);
-        movimiento.setMotivoMovimiento(dto.motivoMovimientoId() != null
-                ? entityManager.getReference(MotivoMovimiento.class, dto.motivoMovimientoId()) : null);
+        movimiento.setMotivoMovimiento(motivoMovimiento);
         movimiento.setTipoMovimientoDetalle(tipoMovimientoDetalle);
         movimiento.setRegistradoPor(usuario);
         if (solicitud != null) {
             movimiento.setSolicitudMovimiento(solicitud);
+        }
+
+        if (clasificacion == ClasificacionMovimientoInventario.SALIDA_CLIENTE) {
+            log.debug("SALIDA_CLIENTE motivoMovimientoId={}",
+                    movimiento.getMotivoMovimiento() != null ? movimiento.getMotivoMovimiento().getId() : null);
         }
 
         MovimientoInventario guardado = repository.save(movimiento);
@@ -2403,6 +2408,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
         Long salidaId = catalogResolver.getTipoDetalleSalidaId();
         return salidaId != null && Objects.equals(tipoDetalleId, salidaId);
+    }
+
+    private MotivoMovimiento resolverMotivoMovimientoPorClasificacion(
+            ClasificacionMovimientoInventario clasificacion,
+            MotivoMovimiento motivoActual
+    ) {
+        if (motivoActual != null) {
+            return motivoActual;
+        }
+        if (clasificacion == ClasificacionMovimientoInventario.SALIDA_CLIENTE) {
+            return motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_CLIENTE)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "No se encontró MotivoMovimiento configurado para SALIDA_CLIENTE"));
+        }
+        return null;
     }
 
     private Long ensureAlmacenPtId() {
