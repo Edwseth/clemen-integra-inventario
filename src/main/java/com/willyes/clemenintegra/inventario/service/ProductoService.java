@@ -35,4 +35,8 @@ public interface ProductoService {
     Producto findById(Long id);
 
     Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable);
+
+    Page<ProductoResumenDTO> buscarInsumos(String term, Pageable pageable);
+
+    Page<ProductoResumenDTO> buscarProductosTerminados(String term, Pageable pageable);
 }
