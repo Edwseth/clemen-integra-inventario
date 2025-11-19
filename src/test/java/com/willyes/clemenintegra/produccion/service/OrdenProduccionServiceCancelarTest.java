@@ -81,7 +81,8 @@ class OrdenProduccionServiceCancelarTest {
 
         when(ordenProduccionRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(orden));
         when(reservaLoteService.existenReservasConsumidasPorOrden(1L)).thenReturn(false);
-        when(solicitudMovimientoRepository.findWithDetalles(1L, null, null, null)).thenReturn(List.of(solicitud));
+        when(solicitudMovimientoRepository.findWithDetalles(1L, null, null, null, false, List.of()))
+                .thenReturn(List.of(solicitud));
         doNothing().when(reservaLoteService).liberarReservasPorOrden(anyLong());
         when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> {
             OrdenProduccion op = invocation.getArgument(0);

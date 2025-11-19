@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -38,11 +39,14 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
             "and (:estados is null or s.estado in :estados) " +
             "and (:desde is null or s.fechaSolicitud >= :desde) " +
             "and (:hasta is null or s.fechaSolicitud <= :hasta) " +
+            "and (:filtrarOpAbierta = false or op is null or op.estado not in :estadosOpCerrados) " +
             "order by s.fechaSolicitud desc")
     List<SolicitudMovimiento> findWithDetalles(@Param("ordenId") Long ordenId,
                                                @Param("estados") List<EstadoSolicitudMovimiento> estados,
                                                @Param("desde") LocalDateTime desde,
-                                               @Param("hasta") LocalDateTime hasta);
+                                               @Param("hasta") LocalDateTime hasta,
+                                               @Param("filtrarOpAbierta") boolean filtrarOpAbierta,
+                                               @Param("estadosOpCerrados") List<EstadoProduccion> estadosOpCerrados);
 
     @Query("select s from SolicitudMovimiento s " +
             "left join fetch s.producto p " +

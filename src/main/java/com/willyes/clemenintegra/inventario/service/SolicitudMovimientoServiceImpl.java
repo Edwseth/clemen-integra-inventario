@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoDetalleRepository.OpDetalleCount;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -50,6 +51,12 @@ import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 @Service
 @RequiredArgsConstructor
 public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoService {
+
+    private static final List<EstadoProduccion> ESTADOS_OP_CERRADOS = List.of(
+            EstadoProduccion.FINALIZADA,
+            EstadoProduccion.CANCELADA,
+            EstadoProduccion.CERRADA_INCOMPLETA
+    );
 
     private final SolicitudMovimientoRepository repository;
     private final SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
@@ -375,7 +382,22 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 : List.of(EstadoSolicitudMovimiento.PENDIENTE);
         LocalDateTime inicio = desde;
         LocalDateTime fin = hasta;
-        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(null, filtros, inicio, fin);
+        boolean filtrarOpAbierta = filtros.contains(EstadoSolicitudMovimiento.AUTORIZADA);
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(
+                null,
+                filtros,
+                inicio,
+                fin,
+                filtrarOpAbierta,
+                ESTADOS_OP_CERRADOS
+        );
+        if (filtrarOpAbierta) {
+            solicitudes = solicitudes.stream()
+                    .filter(s -> s.getOrdenProduccion() == null
+                            || s.getOrdenProduccion().getEstado() == null
+                            || !ESTADOS_OP_CERRADOS.contains(s.getOrdenProduccion().getEstado()))
+                    .toList();
+        }
         Map<Long, List<SolicitudMovimiento>> agrupadas = new LinkedHashMap<>();
         for (SolicitudMovimiento s : solicitudes) {
             if (s.getOrdenProduccion() == null) continue;
@@ -426,7 +448,14 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Override
     @Transactional(readOnly = true)
     public SolicitudesPorOrdenDTO obtenerPorOrden(Long ordenId) {
-        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(ordenId, null, null, null);
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(
+                ordenId,
+                null,
+                null,
+                null,
+                false,
+                ESTADOS_OP_CERRADOS
+        );
         if (solicitudes.isEmpty()) {
             throw new NoSuchElementException("No se encontraron solicitudes para la orden");
         }
@@ -450,7 +479,14 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Transactional(readOnly = true)
     public PicklistDTO generarPicklist(Long ordenId, boolean incluirAprobadas) {
         List<EstadoSolicitudMovimiento> estados = incluirAprobadas ? null : List.of(EstadoSolicitudMovimiento.PENDIENTE);
-        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(ordenId, estados, null, null);
+        List<SolicitudMovimiento> solicitudes = repository.findWithDetalles(
+                ordenId,
+                estados,
+                null,
+                null,
+                false,
+                ESTADOS_OP_CERRADOS
+        );
         if (solicitudes.isEmpty()) {
             throw new NoSuchElementException("No se encontraron solicitudes para la orden");
         }

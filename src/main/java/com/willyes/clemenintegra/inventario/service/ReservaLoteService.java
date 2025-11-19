@@ -219,7 +219,14 @@ public class ReservaLoteService {
             return;
         }
         List<SolicitudMovimiento> solicitudes = Optional.ofNullable(
-                solicitudMovimientoRepository.findWithDetalles(ordenProduccionId, null, null, null)
+                solicitudMovimientoRepository.findWithDetalles(
+                        ordenProduccionId,
+                        null,
+                        null,
+                        null,
+                        false,
+                        List.of()
+                )
         ).orElse(List.of());
         if (solicitudes.isEmpty()) {
             return;
