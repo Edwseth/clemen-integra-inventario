@@ -91,6 +91,25 @@ public class ProductoServiceImpl implements ProductoService {
         return val.setScale(2, RoundingMode.HALF_UP);
     }
 
+    private String sanitizeBusqueda(String term) {
+        return term == null ? "" : term.trim();
+    }
+
+    private ProductoResumenDTO mapToResumenDto(Producto producto) {
+        if (producto == null) {
+            return null;
+        }
+        return ProductoResumenDTO.builder()
+                .id(producto.getId() != null ? producto.getId().longValue() : null)
+                .nombre(producto.getNombre())
+                .codigoSku(producto.getCodigoSku())
+                .tipoCategoria(producto.getCategoriaProducto() != null
+                        ? producto.getCategoriaProducto().getTipo() : null)
+                .unidadMedida(producto.getUnidadMedida() != null
+                        ? producto.getUnidadMedida().getNombre() : null)
+                .build();
+    }
+
     private TipoAnalisisCalidad obtenerTipoAnalisisDesdeDto(String valor) {
         if (valor == null || valor.isBlank()) {
             return TipoAnalisisCalidad.NINGUNO;
@@ -502,6 +521,22 @@ public class ProductoServiceImpl implements ProductoService {
                             loteDTOs
                     );
                 }).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductoResumenDTO> buscarInsumos(String term, Pageable pageable) {
+        String sanitized = sanitizeBusqueda(term);
+        Page<Producto> page = productoRepository.searchInsumosByNombre(sanitized, pageable);
+        return page.map(this::mapToResumenDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductoResumenDTO> buscarProductosTerminados(String term, Pageable pageable) {
+        String sanitized = sanitizeBusqueda(term);
+        Page<Producto> page = productoRepository.searchProductosTerminadosByNombre(sanitized, pageable);
+        return page.map(this::mapToResumenDto);
     }
 
 }
