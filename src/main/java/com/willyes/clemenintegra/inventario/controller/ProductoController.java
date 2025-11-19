@@ -46,6 +46,26 @@ public class ProductoController {
         return ResponseEntity.ok(page);
     }
 
+    @GetMapping("/buscar-insumos")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public ResponseEntity<Page<ProductoResumenDTO>> buscarInsumos(
+            @RequestParam(name = "term") String term,
+            @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
+        validarTerminoBusqueda(term);
+        Page<ProductoResumenDTO> page = productoService.buscarInsumos(term, pageable);
+        return ResponseEntity.ok(page);
+    }
+
+    @GetMapping("/buscar-pt")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public ResponseEntity<Page<ProductoResumenDTO>> buscarProductosTerminados(
+            @RequestParam(name = "term") String term,
+            @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
+        validarTerminoBusqueda(term);
+        Page<ProductoResumenDTO> page = productoService.buscarProductosTerminados(term, pageable);
+        return ResponseEntity.ok(page);
+    }
+
     @GetMapping("/categoria/{nombre}")
     public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
             @PathVariable String nombre) {
@@ -194,6 +214,12 @@ public class ProductoController {
         String finalSku = sku != null ? sku : codigoSkuLegacy;
         Page<ProductoResponseDTO> productos = productoService.listarTodos(nombre, finalSku, categoriaProductoId, activo, sanitized);
         return ResponseEntity.ok(productos);
+    }
+
+    private void validarTerminoBusqueda(String term) {
+        if (term == null || term.trim().length() < 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe enviar al menos 2 caracteres para la búsqueda");
+        }
     }
 
 }
