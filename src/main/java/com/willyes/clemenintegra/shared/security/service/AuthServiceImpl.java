@@ -58,10 +58,10 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalStateException("El usuario no tiene un correo electrónico registrado para el 2FA");
         }
 
-        String asunto = "Código de verificación de Clemen-Integra";
+        String asunto = "Código de verificación de Clemen-Integra ERP";
         String cuerpo = String.format("Hola %s,%n%nTu código de verificación es: %s.%n" +
                         "Este código caduca en 5 minutos. Si no solicitaste este acceso, ignora este mensaje.%n%n" +
-                        "Equipo Clemen-Integra", usuario.getNombreUsuario(), codigo);
+                        "Equipo Clemen-Integra ERP", usuario.getNombreUsuario(), codigo);
 
         try {
             emailService.enviarCorreoTexto(correoDestino, asunto, cuerpo);

@@ -14,7 +14,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${app.mail.from:no-reply@clemenintegra.com}")
+    @Value("${app.mail.from:integralerp@clemenlab.com}")
     private String defaultFrom;
 
     public EmailService(JavaMailSender mailSender) {
