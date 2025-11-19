@@ -486,7 +486,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_DEVOLUCION_DESDE_PRODUCCION_INEXISTENTE"));
 
             List<SolicitudMovimiento> solicitudesPend = Optional.ofNullable(
-                    solicitudMovimientoRepository.findWithDetalles(orden.getId(), estadosPendientes, null, null)
+                    solicitudMovimientoRepository.findWithDetalles(
+                            orden.getId(),
+                            estadosPendientes,
+                            null,
+                            null,
+                            false,
+                            List.of()
+                    )
             ).orElse(List.of());
 
             List<Map<String, Object>> pendientes = new ArrayList<>();
@@ -536,7 +543,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             if (solicitudesPend.isEmpty()) {
                 List<SolicitudMovimiento> todas = Optional.ofNullable(
-                        solicitudMovimientoRepository.findWithDetalles(orden.getId(), null, null, null)
+                        solicitudMovimientoRepository.findWithDetalles(
+                                orden.getId(),
+                                null,
+                                null,
+                                null,
+                                false,
+                                List.of()
+                        )
                 ).orElse(List.of());
                 long lotesConReserva = todas.stream()
                         .flatMap(s -> s.getDetalles().stream())
@@ -757,7 +771,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         // Idempotencia: si ya existen solicitudes SALIDA pendientes para esta OP, no recrear
         List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
         List<SolicitudMovimiento> yaPendientes = Optional.ofNullable(
-                solicitudMovimientoRepository.findWithDetalles(ordenId, estadosPendientes, null, null)
+                solicitudMovimientoRepository.findWithDetalles(
+                        ordenId,
+                        estadosPendientes,
+                        null,
+                        null,
+                        false,
+                        List.of()
+                )
         ).orElse(List.of());
 
         boolean haySalidasPendientes = yaPendientes.stream()
@@ -1175,7 +1196,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
 
         List<SolicitudMovimiento> solicitudes = Optional.ofNullable(
-                solicitudMovimientoRepository.findWithDetalles(orden.getId(), null, null, null)
+                solicitudMovimientoRepository.findWithDetalles(
+                        orden.getId(),
+                        null,
+                        null,
+                        null,
+                        false,
+                        List.of()
+                )
         ).orElse(List.of());
 
         for (SolicitudMovimiento solicitud : solicitudes) {

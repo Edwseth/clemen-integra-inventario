@@ -90,7 +90,7 @@ class ReservaLoteServiceTest {
                 .solicitudMovimientoDetalle(detalle)
                 .build();
 
-        when(solicitudMovimientoRepository.findWithDetalles(1L, null, null, null))
+        when(solicitudMovimientoRepository.findWithDetalles(1L, null, null, null, false, List.of()))
                 .thenReturn(List.of(solicitud));
         when(reservaLoteRepository.findBySolicitudMovimientoDetalleId(20L))
                 .thenReturn(List.of(reserva));

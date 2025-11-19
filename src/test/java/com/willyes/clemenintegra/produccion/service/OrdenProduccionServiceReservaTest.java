@@ -148,7 +148,7 @@ class OrdenProduccionServiceReservaTest {
         when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenAnswer(invocation -> Optional.of(crearFormula()));
-        when(solicitudMovimientoRepository.findWithDetalles(eq(1L), any(), eq(null), eq(null)))
+        when(solicitudMovimientoRepository.findWithDetalles(eq(1L), any(), eq(null), eq(null), eq(false), anyList()))
                 .thenReturn(List.of());
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(99L);
         when(catalogResolver.getAlmacenOrigenMateriaPrimaId()).thenReturn(5L);
@@ -363,7 +363,7 @@ class OrdenProduccionServiceReservaTest {
         MotivoMovimiento motivoDev = new MotivoMovimiento();
         motivoDev.setId(70L);
         when(motivoMovimientoRepository.findById(70L)).thenReturn(Optional.of(motivoDev));
-        when(solicitudMovimientoRepository.findWithDetalles(eq(1L), eq(null), eq(null), eq(null)))
+        when(solicitudMovimientoRepository.findWithDetalles(eq(1L), eq(null), eq(null), eq(null), eq(false), anyList()))
                 .thenReturn(List.of());
         when(catalogResolver.getMotivoIdEntradaProductoTerminado()).thenReturn(80L);
         MotivoMovimiento motivoEntrada = new MotivoMovimiento();
@@ -403,7 +403,7 @@ class OrdenProduccionServiceReservaTest {
         usuario.setId(7L);
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(solicitudMovimientoRepository.findWithDetalles(eq(1L), any(), eq(null), eq(null)))
+        when(solicitudMovimientoRepository.findWithDetalles(eq(1L), any(), eq(null), eq(null), eq(false), anyList()))
                 .thenReturn(List.of());
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
         orden.setCodigoOrden("OP-001");
