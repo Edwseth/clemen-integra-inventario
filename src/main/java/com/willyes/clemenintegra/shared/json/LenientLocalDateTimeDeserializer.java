@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.fasterxml.jackson.core.JsonToken;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -23,12 +24,18 @@ public class LenientLocalDateTimeDeserializer extends JsonDeserializer<LocalDate
 
     @Override
     public LocalDateTime deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        if (p.currentToken() == JsonToken.VALUE_NULL) {
+            return null;
+        }
+
         String value = p.getValueAsString();
         if (value == null) {
             return null;
         }
+
         String trimmed = value.trim();
         if (trimmed.isEmpty()) {
+            // null o cadena vacía se interpreta como ausencia de valor. La obligatoriedad se valida en capas superiores.
             return null;
         }
         try {

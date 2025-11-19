@@ -39,6 +39,11 @@ public record MovimientoInventarioDTO(
         Long ordenProduccionId,
         Long ordenCompraDetalleId,
         String codigoLote,
+        /**
+         * Fecha asociada a la creación o actualización de lotes (recepciones/ajustes).
+         * Para salidas de producto terminado y otros movimientos este campo es opcional
+         * y normalmente se omite del payload enviado por el frontend.
+         */
         @JsonDeserialize(using = LenientLocalDateTimeDeserializer.class)
         LocalDateTime fechaVencimiento,
         /**

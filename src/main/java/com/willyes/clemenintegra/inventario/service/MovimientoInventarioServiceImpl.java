@@ -1554,7 +1554,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     private void validarFechaVencimientoRecepcion(LocalDateTime fechaVencimiento) {
         if (fechaVencimiento == null) {
-            return;
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FECHA_VENCIMIENTO_REQUERIDA");
         }
 
         LocalDate fechaMinima = LocalDate.now().plusWeeks(1);
