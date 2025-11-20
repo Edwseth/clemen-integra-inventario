@@ -74,6 +74,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -413,6 +414,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 OrdenProduccionSpecifications.byFechaBetween(fechaInicio, fechaFin)
         );
         return repository.findAll(spec, pageable).map(ProduccionMapper::toResponse);
+    }
+
+    @Override
+    public List<OrdenProduccion> listar(String codigo,
+                                        EstadoProduccion estado,
+                                        String responsable,
+                                        LocalDateTime fechaInicio,
+                                        LocalDateTime fechaFin) {
+        Specification<OrdenProduccion> spec = OrdenProduccionSpecifications.and(
+                OrdenProduccionSpecifications.byCodigo(codigo),
+                OrdenProduccionSpecifications.byEstado(estado),
+                OrdenProduccionSpecifications.byResponsable(responsable),
+                OrdenProduccionSpecifications.byFechaBetween(fechaInicio, fechaFin)
+        );
+        return repository.findAll(spec, Sort.by(Sort.Direction.DESC, "fechaInicio"));
     }
 
     public List<OrdenProduccion> listarTodas() {

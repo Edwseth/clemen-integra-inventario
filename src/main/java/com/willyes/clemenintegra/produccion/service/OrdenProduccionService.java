@@ -55,5 +55,11 @@ public interface OrdenProduccionService {
                                                     LocalDateTime fechaFin,
                                                     Pageable pageable);
 
+    List<OrdenProduccion> listar(String codigo,
+                                 EstadoProduccion estado,
+                                 String responsable,
+                                 LocalDateTime fechaInicio,
+                                 LocalDateTime fechaFin);
+
     OrdenProduccion cancelarOrden(Long ordenProduccionId, @Nullable String motivo);
 }

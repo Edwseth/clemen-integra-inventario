@@ -33,8 +33,8 @@ public final class OrdenProduccionSpecifications {
             var r = root.join("responsable", JoinType.LEFT);
             String like = "%" + responsable.trim().toUpperCase() + "%";
             return cb.or(
-                    cb.like(cb.upper(r.get("nombreUsuario")), like),
-                    cb.like(cb.upper(r.get("nombreCompleto")), like)
+                    cb.like(cb.upper(cb.coalesce(r.get("nombreUsuario"), cb.literal("")).as(String.class)), like),
+                    cb.like(cb.upper(cb.coalesce(r.get("nombreCompleto"), cb.literal("")).as(String.class)), like)
             );
         };
     }
