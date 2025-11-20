@@ -15,6 +15,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,6 +37,7 @@ import java.util.Map;
 public class OrdenProduccionController {
 
     private final OrdenProduccionService service;
+    private final ReporteOrdenProduccionService reporteOrdenProduccionService;
     private final UsuarioService usuarioService;
     private final com.willyes.clemenintegra.inventario.service.MovimientoInventarioService movimientoInventarioService;
     //private final UsuarioService usuarioService;
@@ -50,6 +53,38 @@ public class OrdenProduccionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
             @PageableDefault(size = 10, sort = "fechaInicio", direction = Sort.Direction.DESC) Pageable pageable) {
         return service.listarPaginado(codigo, estado, responsable, fechaInicio, fechaFin, pageable);
+    }
+
+    @GetMapping(value = "/export/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<byte[]> exportarExcel(
+            @RequestParam(required = false) String codigo,
+            @RequestParam(required = false) EstadoProduccion estado,
+            @RequestParam(required = false) String responsable,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
+        List<OrdenProduccion> ordenes = service.listar(codigo, estado, responsable, fechaInicio, fechaFin);
+        byte[] excel = reporteOrdenProduccionService.generarExcelOrdenesProduccion(ordenes);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ordenes-produccion.xlsx");
+        return new ResponseEntity<>(excel, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<byte[]> exportarPdf(
+            @RequestParam(required = false) String codigo,
+            @RequestParam(required = false) EstadoProduccion estado,
+            @RequestParam(required = false) String responsable,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
+        List<OrdenProduccion> ordenes = service.listar(codigo, estado, responsable, fechaInicio, fechaFin);
+        byte[] pdf = reporteOrdenProduccionService.generarPdfOrdenesProduccion(ordenes);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ordenes-produccion.pdf");
+        return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
