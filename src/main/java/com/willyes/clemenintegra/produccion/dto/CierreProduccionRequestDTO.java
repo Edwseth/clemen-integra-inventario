@@ -18,6 +18,7 @@ public class CierreProduccionRequestDTO {
     private TipoCierre tipo;
     private String codigoLote;
     private Boolean cerradaIncompleta;
+    private Boolean confirmarCierreParcial;
     private String turno;
     private String observacion;
 }

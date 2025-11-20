@@ -478,6 +478,44 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_PRODUCCION_OBLIGATORIA");
             }
 
+            BigDecimal cantidadProgramada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
+            BigDecimal producidaAntes = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
+            BigDecimal producidaDespues = producidaAntes.add(cantidad);
+            EstadoProduccion estadoObjetivo = calcularEstadoObjetivo(orden, producidaDespues);
+
+            if ((estadoObjetivo == EstadoProduccion.FINALIZADA || estadoObjetivo == EstadoProduccion.CERRADA_INCOMPLETA)
+                    && producidaDespues.compareTo(BigDecimal.ZERO) == 0) {
+                ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+                problem.setTitle("Regla de cierre de Orden de Producción");
+                problem.setDetail("La Orden de Producción no puede cerrarse porque no tiene ingresos registrados.");
+                problem.setProperty("code", "OP_SIN_INGRESOS");
+                problem.setProperty("idOrden", orden.getId());
+                problem.setProperty("cantidadProgramada", cantidadProgramada);
+                problem.setProperty("cantidadFabricadaTotal", producidaDespues);
+                throw new ErrorResponseException(HttpStatus.CONFLICT, problem, null);
+            }
+
+            if (estadoObjetivo == EstadoProduccion.CERRADA_INCOMPLETA
+                    && producidaDespues.compareTo(BigDecimal.ZERO) > 0
+                    && producidaDespues.compareTo(cantidadProgramada) < 0
+                    && !Boolean.TRUE.equals(dto.getConfirmarCierreParcial())) {
+                BigDecimal porcentajeCumplimiento = calcularPorcentajeCumplimiento(producidaDespues, cantidadProgramada);
+                BigDecimal cantidadFaltante = cantidadProgramada.subtract(producidaDespues);
+                if (cantidadFaltante.compareTo(BigDecimal.ZERO) < 0) {
+                    cantidadFaltante = BigDecimal.ZERO;
+                }
+
+                ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+                problem.setTitle("Regla de cierre de Orden de Producción");
+                problem.setDetail("Se requiere confirmación para cierre parcial de la Orden de Producción.");
+                problem.setProperty("code", "OP_CIERRE_PARCIAL_REQUIERE_CONFIRMACION");
+                problem.setProperty("cantidadProgramada", cantidadProgramada);
+                problem.setProperty("cantidadFabricadaTotal", producidaDespues);
+                problem.setProperty("porcentajeCumplimiento", porcentajeCumplimiento);
+                problem.setProperty("cantidadFaltante", cantidadFaltante);
+                throw new ErrorResponseException(HttpStatus.CONFLICT, problem, null);
+            }
+
             List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
             parseEstados(estadosSolicitudConcluyentesConf);
 
@@ -580,8 +618,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
 
-            BigDecimal acumulada = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
-            BigDecimal nuevaAcumulada = acumulada.add(cantidad);
+            BigDecimal acumulada = producidaAntes;
+            BigDecimal nuevaAcumulada = producidaDespues;
+            BigDecimal porcentajeCumplimiento = calcularPorcentajeCumplimiento(nuevaAcumulada, cantidadProgramada);
 
             orden.setCantidadProducidaAcumulada(nuevaAcumulada);
             orden.setCantidadProducida(nuevaAcumulada);
@@ -594,6 +633,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             cierreProduccionRepository.save(cierre);
 
             recalcularEstadoOrden(orden);
+
+            if (orden.getEstado() == EstadoProduccion.FINALIZADA
+                    || orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA) {
+                orden.setPorcentajeCumplimiento(porcentajeCumplimiento);
+                orden.setTipoCierre(orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA
+                        ? TipoCierre.PARCIAL
+                        : TipoCierre.TOTAL);
+                orden.setUsuarioCierreId(usuario.getId());
+                orden.setFechaCierre(LocalDateTime.now());
+            }
 
             if (orden.getProducto() == null || orden.getProducto().getTipoAnalisis() == null) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
@@ -757,6 +806,43 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             List<EtapaPlantilla> plantilla = cargarPlantillaEtapas(orden.getProducto().getId());
             clonarEtapasParaOrden(orden, plantilla);
         }
+    }
+
+    private EstadoProduccion calcularEstadoObjetivo(OrdenProduccion orden, BigDecimal producida) {
+        if (orden == null || orden.getId() == null) {
+            return orden != null ? orden.getEstado() : null;
+        }
+
+        if (orden.getEstado() == EstadoProduccion.CANCELADA) {
+            return EstadoProduccion.CANCELADA;
+        }
+
+        List<EtapaProduccion> etapas = etapaProduccionRepository
+                .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId());
+
+        boolean todasFinalizadas = !etapas.isEmpty()
+                && etapas.stream().allMatch(e -> e.getEstado() == EstadoEtapa.FINALIZADA);
+
+        BigDecimal programada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
+        BigDecimal producidaSafe = Optional.ofNullable(producida).orElse(BigDecimal.ZERO);
+
+        if (todasFinalizadas) {
+            if (producidaSafe.compareTo(programada) >= 0) {
+                return EstadoProduccion.FINALIZADA;
+            }
+            return EstadoProduccion.CERRADA_INCOMPLETA;
+        }
+
+        return EstadoProduccion.EN_PROCESO;
+    }
+
+    private BigDecimal calcularPorcentajeCumplimiento(BigDecimal cantidadFabricada, BigDecimal cantidadPlaneada) {
+        if (cantidadPlaneada == null || cantidadPlaneada.compareTo(BigDecimal.ZERO) == 0 || cantidadFabricada == null) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return cantidadFabricada
+                .multiply(BigDecimal.valueOf(100))
+                .divide(cantidadPlaneada, 4, RoundingMode.HALF_UP);
     }
 
     @Transactional(rollbackFor = Exception.class)

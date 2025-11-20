@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -40,6 +41,17 @@ public class OrdenProduccion {
 
     @Column(name = "fecha_ultimo_cierre")
     private LocalDateTime fechaUltimoCierre;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal porcentajeCumplimiento;
+
+    @Enumerated(EnumType.STRING)
+    private TipoCierre tipoCierre;
+
+    @Column(name = "usuario_cierre_id")
+    private Long usuarioCierreId;
+
+    private LocalDateTime fechaCierre;
 
     @Enumerated(EnumType.STRING)
     private EstadoProduccion estado;
