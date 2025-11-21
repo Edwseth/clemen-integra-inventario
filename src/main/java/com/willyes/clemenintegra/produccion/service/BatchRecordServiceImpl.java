@@ -26,12 +26,13 @@ import com.willyes.clemenintegra.produccion.repository.ControlEmpaqueLoteReposit
 import com.willyes.clemenintegra.produccion.repository.ControlProcesoProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.ObservacionProcesoRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class BatchRecordServiceImpl implements BatchRecordService {
 
     private final OrdenProduccionRepository ordenProduccionRepository;
@@ -56,8 +58,9 @@ public class BatchRecordServiceImpl implements BatchRecordService {
 
     @Override
     public BatchRecordDTO buildByOrdenProduccion(Long ordenProduccionId) {
+        log.info("Generando Batch Record para orden de producción {}", ordenProduccionId);
         OrdenProduccion ordenProduccion = ordenProduccionRepository.findById(ordenProduccionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ORDEN_NO_ENCONTRADA"));
 
         BatchRecordDTO dto = new BatchRecordDTO();
         dto.op = mapOp(ordenProduccion);
@@ -96,19 +99,22 @@ public class BatchRecordServiceImpl implements BatchRecordService {
     }
 
     private BatchRecordDTO.FormulaDTO mapFormula(OrdenProduccion ordenProduccion) {
+        BatchRecordDTO.FormulaDTO formulaDTO = new BatchRecordDTO.FormulaDTO();
+        List<BatchRecordDTO.DetalleFormulaDTO> detalles = new ArrayList<>();
         if (ordenProduccion.getProducto() == null) {
-            return null;
+            formulaDTO.detalles = detalles;
+            return formulaDTO;
         }
         Optional<FormulaProducto> formulaOpt = formulaProductoRepository
                 .findByProductoIdAndEstadoAndActivoTrue(ordenProduccion.getProducto().getId().longValue(), EstadoFormula.APROBADA);
         FormulaProducto formula = formulaOpt.orElseGet(() -> formulaProductoRepository
                 .findByProductoId(ordenProduccion.getProducto().getId().longValue()).orElse(null));
         if (formula == null) {
-            return null;
+            log.warn("No se encontró fórmula activa para el producto {}", ordenProduccion.getProducto().getId());
+            formulaDTO.detalles = detalles;
+            return formulaDTO;
         }
-        BatchRecordDTO.FormulaDTO formulaDTO = new BatchRecordDTO.FormulaDTO();
         formulaDTO.version = formula.getVersion();
-        List<BatchRecordDTO.DetalleFormulaDTO> detalles = new ArrayList<>();
         if (formula.getDetalles() != null) {
             for (DetalleFormula detalle : formula.getDetalles()) {
                 BatchRecordDTO.DetalleFormulaDTO detalleDTO = new BatchRecordDTO.DetalleFormulaDTO();
@@ -207,16 +213,18 @@ public class BatchRecordServiceImpl implements BatchRecordService {
     }
 
     private BatchRecordDTO.LotePTDTO mapLoteProductoTerminado(OrdenProduccion ordenProduccion) {
+        BatchRecordDTO.LotePTDTO dto = new BatchRecordDTO.LotePTDTO();
         if (ordenProduccion.getProducto() == null) {
-            return null;
+            log.warn("Orden de producción {} no tiene producto asociado para lote PT", ordenProduccion.getId());
+            return dto;
         }
         Optional<LoteProducto> loteOpt = loteProductoRepository
                 .findByOrdenProduccionIdAndProductoId(ordenProduccion.getId(), ordenProduccion.getProducto().getId().longValue());
         if (loteOpt.isEmpty()) {
-            return null;
+            log.warn("No se encontró lote de producto terminado para la orden {}", ordenProduccion.getId());
+            return dto;
         }
         LoteProducto lote = loteOpt.get();
-        BatchRecordDTO.LotePTDTO dto = new BatchRecordDTO.LotePTDTO();
         dto.loteId = lote.getId();
         dto.codigoLote = lote.getCodigoLote();
         dto.estado = lote.getEstado() != null ? lote.getEstado().name() : null;
@@ -228,12 +236,13 @@ public class BatchRecordServiceImpl implements BatchRecordService {
     }
 
     private BatchRecordDTO.CalidadDTO mapCalidad(BatchRecordDTO.LotePTDTO lotePTDTO) {
-        if (lotePTDTO == null || lotePTDTO.loteId == null) {
-            return null;
-        }
         BatchRecordDTO.CalidadDTO calidadDTO = new BatchRecordDTO.CalidadDTO();
+        calidadDTO.evaluaciones = new ArrayList<>();
+        calidadDTO.retenciones = new ArrayList<>();
+        if (lotePTDTO == null || lotePTDTO.loteId == null) {
+            return calidadDTO;
+        }
         List<EvaluacionCalidad> evaluaciones = evaluacionCalidadRepository.findByLoteProductoId(lotePTDTO.loteId);
-        List<BatchRecordDTO.EvaluacionDTO> evaluacionDTOS = new ArrayList<>();
         for (EvaluacionCalidad evaluacion : evaluaciones) {
             BatchRecordDTO.EvaluacionDTO dto = new BatchRecordDTO.EvaluacionDTO();
             dto.id = evaluacion.getId();
@@ -242,14 +251,12 @@ public class BatchRecordServiceImpl implements BatchRecordService {
             dto.observaciones = evaluacion.getObservaciones();
             dto.fechaEvaluacion = evaluacion.getFechaEvaluacion();
             dto.evaluador = evaluacion.getUsuarioEvaluador() != null ? evaluacion.getUsuarioEvaluador().getNombreCompleto() : null;
-            evaluacionDTOS.add(dto);
+            calidadDTO.evaluaciones.add(dto);
         }
-        calidadDTO.evaluaciones = evaluacionDTOS;
 
         List<RetencionLote> retenciones = new ArrayList<>();
         retenciones.addAll(retencionLoteRepository.findByLote_IdAndEstado(lotePTDTO.loteId, EstadoRetencion.RETENIDO));
         retenciones.addAll(retencionLoteRepository.findByLote_IdAndEstado(lotePTDTO.loteId, EstadoRetencion.LIBERADO));
-        List<BatchRecordDTO.RetencionDTO> retencionDTOS = new ArrayList<>();
         for (RetencionLote retencion : retenciones) {
             BatchRecordDTO.RetencionDTO dto = new BatchRecordDTO.RetencionDTO();
             dto.estado = retencion.getEstado() != null ? retencion.getEstado().name() : null;
@@ -257,9 +264,8 @@ public class BatchRecordServiceImpl implements BatchRecordService {
             dto.fechaRetencion = retencion.getFechaRetencion();
             dto.fechaLiberacion = retencion.getFechaLiberacion();
             dto.aprobador = retencion.getAprobadoPor() != null ? retencion.getAprobadoPor().getNombreCompleto() : null;
-            retencionDTOS.add(dto);
+            calidadDTO.retenciones.add(dto);
         }
-        calidadDTO.retenciones = retencionDTOS;
         return calidadDTO;
     }
 

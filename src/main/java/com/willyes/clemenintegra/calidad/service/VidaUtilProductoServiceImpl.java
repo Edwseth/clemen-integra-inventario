@@ -70,6 +70,7 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
                 });
 
         vidaUtil.setProductoId(productoId);
+        vidaUtil.setProducto(producto);
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
         Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();

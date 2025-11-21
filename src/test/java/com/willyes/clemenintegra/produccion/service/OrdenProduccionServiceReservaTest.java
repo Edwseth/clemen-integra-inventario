@@ -354,6 +354,7 @@ class OrdenProduccionServiceReservaTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("1.25"))
                 .tipo(TipoCierre.TOTAL)
+                .confirmarCierreParcial(true)
                 .build();
 
         when(umValidator.ajustar(any(BigDecimal.class))).thenAnswer(invocation -> invocation.getArgument(0));
