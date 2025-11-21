@@ -161,11 +161,11 @@ class BatchRecordControllerTest {
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
-    @DisplayName("POST /api/produccion/batch-record/{id}/decision devuelve 204")
+    @DisplayName("POST /api/produccion/calidad/batch-record/{id}/decision devuelve 204")
     void decidirBatchRecord() throws Exception {
         String body = "{\"decision\":\"APROBADO\",\"observacionesCalidad\":\"Listo\"}";
 
-        mockMvc.perform(post("/api/produccion/batch-record/{id}/decision", 10L)
+        mockMvc.perform(post("/api/produccion/calidad/batch-record/{id}/decision", 10L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isNoContent());
@@ -175,11 +175,11 @@ class BatchRecordControllerTest {
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
-    @DisplayName("POST /api/produccion/batch-record/{id}/decision requiere rol de calidad")
+    @DisplayName("POST /api/produccion/calidad/batch-record/{id}/decision requiere rol de calidad")
     void decidirBatchRecordNoAutorizado() throws Exception {
         String body = "{\"decision\":\"APROBADO\"}";
 
-        mockMvc.perform(post("/api/produccion/batch-record/{id}/decision", 10L)
+        mockMvc.perform(post("/api/produccion/calidad/batch-record/{id}/decision", 10L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isForbidden());

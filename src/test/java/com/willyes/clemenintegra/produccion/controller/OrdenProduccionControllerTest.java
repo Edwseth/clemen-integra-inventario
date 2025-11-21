@@ -21,15 +21,19 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -47,6 +51,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @TestPropertySource(properties = {"DB_SECURPASS=dummy", "DB_SECURNAME=dummy"})
 class OrdenProduccionControllerTest {
+
+    @TestConfiguration
+    @EnableMethodSecurity
+    static class TestSecurityConfig {
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -88,6 +97,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     @DisplayName("POST /api/produccion/ordenes retorna 201 cuando la validación es correcta")
     void crearOrden_valida() throws Exception {
         OrdenProduccionResponseDTO orden = new OrdenProduccionResponseDTO();
@@ -111,6 +121,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     @DisplayName("POST /api/produccion/ordenes retorna 400 con code STOCK_INSUFICIENTE")
     void crearOrden_insuficiente() throws Exception {
         ResultadoValidacionOrdenDTO respuesta = ResultadoValidacionOrdenDTO.builder()
@@ -136,5 +147,21 @@ class OrdenProduccionControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.esValida").value(false))
                 .andExpect(jsonPath("$.code").value("STOCK_INSUFICIENTE"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @DisplayName("GET /api/produccion/ordenes/{id} permite consulta a jefe de calidad")
+    void obtenerOrden_jefeCalidadPuedeConsultar() throws Exception {
+        com.willyes.clemenintegra.produccion.model.OrdenProduccion orden = com.willyes.clemenintegra.produccion.model.OrdenProduccion.builder()
+                .id(15L)
+                .codigoOrden("OP-15")
+                .estado(com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion.CREADA)
+                .build();
+
+        when(ordenProduccionService.buscarPorId(15L)).thenReturn(Optional.of(orden));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/produccion/ordenes/{id}", 15L))
+                .andExpect(status().isOk());
     }
 }
