@@ -20,16 +20,20 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.data.domain.Page;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(OrdenProduccionController.class)
@@ -76,6 +80,46 @@ class OrdenProduccionControllerSecurityTest {
     @DisplayName("GET /api/produccion/ordenes/{id} sin rol permitido devuelve 403")
     void obtenerOrden_sinPermisos_devuelve403() throws Exception {
         mockMvc.perform(get("/api/produccion/ordenes/{id}", 1L))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @DisplayName("GET /api/produccion/ordenes permite consulta a jefe de calidad")
+    void listarOrdenes_conRolJefeCalidad_devuelve200() throws Exception {
+        when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
+
+        mockMvc.perform(get("/api/produccion/ordenes"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @DisplayName("GET /api/produccion/ordenes/{id} permite ver detalle con rol de calidad")
+    void obtenerOrden_conRolJefeCalidad_devuelve404SiNoExiste() throws Exception {
+        when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/produccion/ordenes/{id}", 1L))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @DisplayName("POST /api/produccion/ordenes es rechazado para jefe de calidad")
+    void crearOrden_conRolJefeCalidad_devuelve403() throws Exception {
+        mockMvc.perform(post("/api/produccion/ordenes")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @DisplayName("POST /api/produccion/ordenes/{id}/cierres es rechazado para jefe de calidad")
+    void registrarCierre_conRolJefeCalidad_devuelve403() throws Exception {
+        mockMvc.perform(post("/api/produccion/ordenes/{id}/cierres", 5L)
+                        .contentType("application/json")
+                        .content("{}"))
                 .andExpect(status().isForbidden());
     }
 

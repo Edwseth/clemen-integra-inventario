@@ -141,6 +141,20 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    // Acceso de solo lectura a órdenes de producción y batch record para rol de calidad
+                    auth.requestMatchers(
+                            HttpMethod.GET,
+                            "/api/produccion/ordenes",
+                            "/api/produccion/ordenes/**",
+                            "/api/produccion/batch-record/**"
+                    ).hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
+                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers("/api/produccion/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_LIDER_ALIMENTOS.name(),
