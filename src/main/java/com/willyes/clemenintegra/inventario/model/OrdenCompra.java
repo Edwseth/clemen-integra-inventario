@@ -41,6 +41,7 @@ public class OrdenCompra {
     @Column(name = "observaciones", length = 255)
     private String observaciones;
 
+    @Builder.Default
     @Column(name = "descuento", nullable = false, precision = 12, scale = 2)
     private BigDecimal descuento = BigDecimal.ZERO;
 

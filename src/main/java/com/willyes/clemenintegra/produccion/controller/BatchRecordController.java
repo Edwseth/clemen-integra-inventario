@@ -1,6 +1,9 @@
 package com.willyes.clemenintegra.produccion.controller;
 
 import com.willyes.clemenintegra.produccion.dto.BatchRecordDTO;
+import com.willyes.clemenintegra.produccion.dto.ControlEmpaqueRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.ControlProcesoRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.ObservacionProcesoRequestDTO;
 import com.willyes.clemenintegra.produccion.model.ControlEmpaqueLote;
 import com.willyes.clemenintegra.produccion.model.ControlProcesoProduccion;
 import com.willyes.clemenintegra.produccion.model.ObservacionProceso;
@@ -11,6 +14,7 @@ import com.willyes.clemenintegra.produccion.repository.ObservacionProcesoReposit
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.service.BatchRecordService;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -18,10 +22,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,17 +50,18 @@ public class BatchRecordController {
     }
 
     @PostMapping("/{ordenProduccionId}/controles-proceso")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION','ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ControlProcesoDTO>> guardarControlesProceso(
             @PathVariable Long ordenProduccionId,
-            @RequestBody List<BatchRecordDTO.ControlProcesoDTO> controles) {
+            @Valid @RequestBody List<@Valid ControlProcesoRequestDTO> controles,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         OrdenProduccion orden = obtenerOrden(ordenProduccionId);
-        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        Usuario usuario = userDetails != null ? userDetails.getUsuario() : usuarioService.obtenerUsuarioAutenticado();
 
         controlProcesoProduccionRepository.deleteByOrdenProduccionId(ordenProduccionId);
         List<ControlProcesoProduccion> entidades = new ArrayList<>();
-        for (BatchRecordDTO.ControlProcesoDTO dto : controles != null ? controles : List.<BatchRecordDTO.ControlProcesoDTO>of()) {
+        for (ControlProcesoRequestDTO dto : controles != null ? controles : List.<ControlProcesoRequestDTO>of()) {
             ControlProcesoProduccion entidad = ControlProcesoProduccion.builder()
                     .ordenProduccion(orden)
                     .etapa(dto.etapa)
@@ -73,17 +80,18 @@ public class BatchRecordController {
     }
 
     @PostMapping("/{ordenProduccionId}/controles-empaque")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION','ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ControlEmpaqueDTO>> guardarControlesEmpaque(
             @PathVariable Long ordenProduccionId,
-            @RequestBody List<BatchRecordDTO.ControlEmpaqueDTO> controles) {
+            @Valid @RequestBody List<@Valid ControlEmpaqueRequestDTO> controles,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         OrdenProduccion orden = obtenerOrden(ordenProduccionId);
-        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        Usuario usuario = userDetails != null ? userDetails.getUsuario() : usuarioService.obtenerUsuarioAutenticado();
 
         controlEmpaqueLoteRepository.deleteByOrdenProduccionId(ordenProduccionId);
         List<ControlEmpaqueLote> entidades = new ArrayList<>();
-        for (BatchRecordDTO.ControlEmpaqueDTO dto : controles != null ? controles : List.<BatchRecordDTO.ControlEmpaqueDTO>of()) {
+        for (ControlEmpaqueRequestDTO dto : controles != null ? controles : List.<ControlEmpaqueRequestDTO>of()) {
             ControlEmpaqueLote entidad = ControlEmpaqueLote.builder()
                     .ordenProduccion(orden)
                     .parametro(dto.parametro)
@@ -101,17 +109,18 @@ public class BatchRecordController {
     }
 
     @PostMapping("/{ordenProduccionId}/observaciones")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_OPERARIO_PRODUCCION','ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ObservacionProcesoDTO>> guardarObservaciones(
             @PathVariable Long ordenProduccionId,
-            @RequestBody List<BatchRecordDTO.ObservacionProcesoDTO> observaciones) {
+            @Valid @RequestBody List<@Valid ObservacionProcesoRequestDTO> observaciones,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         OrdenProduccion orden = obtenerOrden(ordenProduccionId);
-        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        Usuario usuario = userDetails != null ? userDetails.getUsuario() : usuarioService.obtenerUsuarioAutenticado();
 
         observacionProcesoRepository.deleteByOrdenProduccionId(ordenProduccionId);
         List<ObservacionProceso> entidades = new ArrayList<>();
-        for (BatchRecordDTO.ObservacionProcesoDTO dto : observaciones != null ? observaciones : List.<BatchRecordDTO.ObservacionProcesoDTO>of()) {
+        for (ObservacionProcesoRequestDTO dto : observaciones != null ? observaciones : List.<ObservacionProcesoRequestDTO>of()) {
             ObservacionProceso entidad = ObservacionProceso.builder()
                     .ordenProduccion(orden)
                     .tipo(dto.tipo)

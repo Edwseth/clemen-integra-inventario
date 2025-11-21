@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.produccion.web;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.produccion.controller.OrdenProduccionController;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
+import com.willyes.clemenintegra.produccion.service.ReporteOrdenProduccionService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.SecurityConfig;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
@@ -42,6 +43,8 @@ class OrdenProduccionControllerSecurityTest {
 
     @MockBean
     private OrdenProduccionService ordenProduccionService;
+    @MockBean
+    private ReporteOrdenProduccionService reporteOrdenProduccionService;
     @MockBean
     private UsuarioService usuarioService;
     @MockBean

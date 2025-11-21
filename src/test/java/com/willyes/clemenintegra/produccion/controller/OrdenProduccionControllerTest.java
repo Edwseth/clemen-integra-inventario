@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
+import com.willyes.clemenintegra.produccion.service.ReporteOrdenProduccionService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
@@ -61,6 +62,9 @@ class OrdenProduccionControllerTest {
 
     @MockBean
     private MovimientoInventarioService movimientoInventarioService;
+
+    @MockBean
+    private ReporteOrdenProduccionService reporteOrdenProduccionService;
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
