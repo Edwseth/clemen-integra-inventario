@@ -2,9 +2,10 @@ package com.willyes.clemenintegra.produccion.model;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
-import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoBatchRecord;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -70,6 +71,20 @@ public class OrdenProduccion {
 
     @OneToMany(mappedBy = "ordenProduccion")
     private List<EtapaProduccion> etapas;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "batch_record_estado", nullable = false)
+    private EstadoBatchRecord batchRecordEstado = EstadoBatchRecord.BORRADOR;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "batch_record_revisado_por_id")
+    private Usuario batchRecordRevisadoPor;
+
+    @Column(name = "batch_record_fecha_revision")
+    private LocalDateTime batchRecordFechaRevision;
+
+    @Column(name = "batch_record_observaciones_calidad", columnDefinition = "TEXT")
+    private String batchRecordObservacionesCalidad;
 
     @Version
     private Long version;

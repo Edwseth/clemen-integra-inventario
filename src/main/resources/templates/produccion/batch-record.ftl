@@ -178,7 +178,29 @@
     <tbody>${retencionRows}</tbody>
 </table>
 
-<h2>6. Observaciones</h2>
+<h2>6. Revisión y aprobación de Calidad</h2>
+<table>
+    <tbody>
+    <tr>
+        <th>Estado Batch Record</th>
+        <td>${batchRecord.estadoBatchRecord!'-'}</td>
+    </tr>
+    <tr>
+        <th>Revisado por</th>
+        <td>${batchRecord.revisadoPorNombre!'-'}</td>
+    </tr>
+    <tr>
+        <th>Fecha de revisión</th>
+        <td>${batchRecord.fechaRevision!'-'}</td>
+    </tr>
+    <tr>
+        <th>Observaciones de Calidad</th>
+        <td>${batchRecord.observacionesCalidad!'-'}</td>
+    </tr>
+    </tbody>
+</table>
+
+<h2>7. Observaciones</h2>
 <table>
     <thead>
     <tr>

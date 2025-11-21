@@ -89,6 +89,16 @@ public class ReporteBatchRecordServiceImpl implements ReporteBatchRecordService 
 
         template = template.replace("${evaluacionRows}", buildEvaluacionRows(batchRecord.calidad != null ? batchRecord.calidad.evaluaciones : null));
         template = template.replace("${retencionRows}", buildRetencionRows(batchRecord.calidad != null ? batchRecord.calidad.retenciones : null));
+        template = template.replace("${batchRecord.estadoBatchRecord!'-'}",
+                        escape(defaultWithDash(batchRecord != null && batchRecord.estadoBatchRecord != null
+                                ? batchRecord.estadoBatchRecord.name()
+                                : null)))
+                .replace("${batchRecord.revisadoPorNombre!'-'}",
+                        escape(defaultWithDash(batchRecord != null ? batchRecord.revisadoPorNombre : null)))
+                .replace("${batchRecord.fechaRevision!'-'}",
+                        escape(defaultWithDash(formatDate(batchRecord != null ? batchRecord.fechaRevision : null))))
+                .replace("${batchRecord.observacionesCalidad!'-'}",
+                        escape(defaultWithDash(batchRecord != null ? batchRecord.observacionesCalidad : null)));
         return template;
     }
 
@@ -263,5 +273,9 @@ public class ReporteBatchRecordServiceImpl implements ReporteBatchRecordService 
 
     private String formatDate(LocalDateTime value) {
         return value == null ? "" : DATE_TIME_FORMATTER.format(value);
+    }
+
+    private String defaultWithDash(String value) {
+        return (value == null || value.isBlank()) ? "-" : value;
     }
 }

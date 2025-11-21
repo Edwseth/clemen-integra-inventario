@@ -15,12 +15,14 @@ import com.willyes.clemenintegra.inventario.model.ReservaLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
+import com.willyes.clemenintegra.produccion.dto.BatchRecordDecisionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.BatchRecordDTO;
 import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.model.ControlEmpaqueLote;
 import com.willyes.clemenintegra.produccion.model.ControlProcesoProduccion;
 import com.willyes.clemenintegra.produccion.model.ObservacionProceso;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoBatchRecord;
 import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.ControlEmpaqueLoteRepository;
 import com.willyes.clemenintegra.produccion.repository.ControlProcesoProduccionRepository;
@@ -28,12 +30,16 @@ import com.willyes.clemenintegra.produccion.repository.ObservacionProcesoReposit
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -57,6 +63,49 @@ public class BatchRecordServiceImpl implements BatchRecordService {
     private final ObservacionProcesoRepository observacionProcesoRepository;
 
     @Override
+    @Transactional
+    public void decidirBatchRecord(Long ordenProduccionId,
+                                   BatchRecordDecisionRequestDTO request,
+                                   Authentication auth) {
+        OrdenProduccion ordenProduccion = ordenProduccionRepository.findById(ordenProduccionId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ORDEN_NO_ENCONTRADA"));
+
+        if (ordenProduccion.getBatchRecordEstado() == EstadoBatchRecord.APROBADO) {
+            // No se permite modificar un batch record ya aprobado
+            throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA, "BATCH_RECORD_YA_APROBADO");
+        }
+
+        if (request == null || request.getDecision() == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "DECISION_BATCH_RECORD_REQUERIDA");
+        }
+
+        EstadoBatchRecord estadoActual = ordenProduccion.getBatchRecordEstado();
+        if (estadoActual != null
+                && estadoActual != EstadoBatchRecord.BORRADOR
+                && estadoActual != EstadoBatchRecord.EN_REVISION_CALIDAD
+                && estadoActual != EstadoBatchRecord.RECHAZADO) {
+            throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
+                    "El estado actual del batch record no permite registrar una decisión");
+        }
+
+        Usuario usuario = obtenerUsuarioDesdeAuth(auth);
+        if (request.getDecision() == EstadoBatchRecord.RECHAZADO
+                && (request.getObservacionesCalidad() == null || request.getObservacionesCalidad().isBlank())) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Las observaciones de calidad son obligatorias al rechazar el batch record");
+        }
+
+        ordenProduccion.setBatchRecordEstado(request.getDecision());
+        ordenProduccion.setBatchRecordRevisadoPor(usuario);
+        ordenProduccion.setBatchRecordFechaRevision(LocalDateTime.now());
+        ordenProduccion.setBatchRecordObservacionesCalidad(request.getObservacionesCalidad());
+
+        ordenProduccionRepository.save(ordenProduccion);
+        log.info("Batch Record de OP {} marcado como {} por {}", ordenProduccionId, request.getDecision(),
+                usuario != null ? usuario.getNombreCompleto() : "usuario-desconocido");
+    }
+
+    @Override
     public BatchRecordDTO buildByOrdenProduccion(Long ordenProduccionId) {
         log.info("Generando Batch Record para orden de producción {}", ordenProduccionId);
         OrdenProduccion ordenProduccion = ordenProduccionRepository.findById(ordenProduccionId)
@@ -74,6 +123,12 @@ public class BatchRecordServiceImpl implements BatchRecordService {
         dto.controlesProceso = mapControlesProceso(ordenProduccionId);
         dto.controlesEmpaque = mapControlesEmpaque(ordenProduccionId);
         dto.observacionesProceso = mapObservaciones(ordenProduccionId);
+        dto.estadoBatchRecord = ordenProduccion.getBatchRecordEstado();
+        dto.revisadoPorNombre = ordenProduccion.getBatchRecordRevisadoPor() != null
+                ? ordenProduccion.getBatchRecordRevisadoPor().getNombreCompleto()
+                : null;
+        dto.fechaRevision = ordenProduccion.getBatchRecordFechaRevision();
+        dto.observacionesCalidad = ordenProduccion.getBatchRecordObservacionesCalidad();
         return dto;
     }
 
@@ -319,5 +374,19 @@ public class BatchRecordServiceImpl implements BatchRecordService {
             resultado.add(dto);
         }
         return resultado;
+    }
+
+    private Usuario obtenerUsuarioDesdeAuth(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "USUARIO_NO_AUTENTICADO");
+        }
+        Object principal = auth.getPrincipal();
+        if (principal instanceof CustomUserDetails customUserDetails) {
+            return customUserDetails.getUsuario();
+        }
+        if (principal instanceof Usuario usuario) {
+            return usuario;
+        }
+        throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "USUARIO_NO_AUTENTICADO");
     }
 }

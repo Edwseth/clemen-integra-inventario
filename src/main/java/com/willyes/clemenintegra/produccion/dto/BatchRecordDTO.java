@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.produccion.dto;
 
+import com.willyes.clemenintegra.produccion.model.enums.EstadoBatchRecord;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,6 +17,10 @@ public class BatchRecordDTO {
     public List<ControlProcesoDTO> controlesProceso;
     public List<ControlEmpaqueDTO> controlesEmpaque;
     public List<ObservacionProcesoDTO> observacionesProceso;
+    public EstadoBatchRecord estadoBatchRecord;
+    public String revisadoPorNombre;
+    public LocalDateTime fechaRevision;
+    public String observacionesCalidad;
 
     public static class OpDTO {
         public Long id;

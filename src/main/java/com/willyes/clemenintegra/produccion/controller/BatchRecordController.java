@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.produccion.controller;
 
 import com.willyes.clemenintegra.produccion.dto.BatchRecordDTO;
+import com.willyes.clemenintegra.produccion.dto.BatchRecordDecisionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ControlEmpaqueRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ControlProcesoRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ObservacionProcesoRequestDTO;
@@ -24,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -156,6 +158,17 @@ public class BatchRecordController {
             log.error("Error exportando PDF de batch record para la OP {}", ordenProduccionId, e);
             throw e;
         }
+    }
+
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PostMapping("/{ordenProduccionId}/decision")
+    public ResponseEntity<Void> decidirBatchRecord(
+            @PathVariable Long ordenProduccionId,
+            @Valid @RequestBody BatchRecordDecisionRequestDTO request,
+            Authentication auth) {
+        log.info("Recibida decisión de batch record para OP {}: {}", ordenProduccionId, request.getDecision());
+        batchRecordService.decidirBatchRecord(ordenProduccionId, request, auth);
+        return ResponseEntity.noContent().build();
     }
 
     private OrdenProduccion obtenerOrden(Long ordenProduccionId) {
