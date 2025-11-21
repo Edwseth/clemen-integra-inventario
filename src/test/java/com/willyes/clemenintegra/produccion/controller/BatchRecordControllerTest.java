@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.produccion.repository.ControlProcesoProduccionR
 import com.willyes.clemenintegra.produccion.repository.ObservacionProcesoRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.service.BatchRecordService;
+import com.willyes.clemenintegra.produccion.service.ReporteBatchRecordService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 @WebMvcTest(BatchRecordController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -50,6 +52,8 @@ class BatchRecordControllerTest {
     private ObservacionProcesoRepository observacionProcesoRepository;
     @MockBean
     private UsuarioService usuarioService;
+    @MockBean
+    private ReporteBatchRecordService reporteBatchRecordService;
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
     @MockBean
@@ -89,5 +93,23 @@ class BatchRecordControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.RECURSO_NO_ENCONTRADO.name()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/batch-record/{id}/pdf devuelve PDF con headers")
+    void exportarPdfBatchRecord() throws Exception {
+        BatchRecordDTO dto = new BatchRecordDTO();
+        BatchRecordDTO.OpDTO opDTO = new BatchRecordDTO.OpDTO();
+        opDTO.id = 5L;
+        opDTO.codigoOrden = "OP-123";
+        dto.op = opDTO;
+        when(batchRecordService.buildByOrdenProduccion(5L)).thenReturn(dto);
+        when(reporteBatchRecordService.generarPdfBatchRecord(5L)).thenReturn("pdf".getBytes());
+
+        mockMvc.perform(get("/api/produccion/batch-record/{id}/pdf", 5L))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", MediaType.APPLICATION_PDF_VALUE))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=batch-record-OP-123.pdf"));
     }
 }

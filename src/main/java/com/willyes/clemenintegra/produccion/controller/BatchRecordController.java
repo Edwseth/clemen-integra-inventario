@@ -13,10 +13,12 @@ import com.willyes.clemenintegra.produccion.repository.ControlProcesoProduccionR
 import com.willyes.clemenintegra.produccion.repository.ObservacionProcesoRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.service.BatchRecordService;
+import com.willyes.clemenintegra.produccion.service.ReporteBatchRecordService;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,6 +36,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/produccion/batch-record")
 @RequiredArgsConstructor
+@Slf4j
 public class BatchRecordController {
 
     private final BatchRecordService batchRecordService;
@@ -42,6 +45,7 @@ public class BatchRecordController {
     private final ControlEmpaqueLoteRepository controlEmpaqueLoteRepository;
     private final ObservacionProcesoRepository observacionProcesoRepository;
     private final UsuarioService usuarioService;
+    private final ReporteBatchRecordService reporteBatchRecordService;
 
     @GetMapping("/{ordenProduccionId}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
@@ -137,12 +141,21 @@ public class BatchRecordController {
     @GetMapping(value = "/{ordenProduccionId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarPdf(@PathVariable Long ordenProduccionId) {
-        batchRecordService.buildByOrdenProduccion(ordenProduccionId);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=batch-record.pdf");
-        // TODO: Implementar renderizado PDF reutilizando el motor de exportación existente.
-        return new ResponseEntity<>(new byte[0], headers, HttpStatus.OK);
+        try {
+            BatchRecordDTO batchRecordDTO = batchRecordService.buildByOrdenProduccion(ordenProduccionId);
+            byte[] pdf = reporteBatchRecordService.generarPdfBatchRecord(ordenProduccionId);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            String filename = batchRecordDTO != null && batchRecordDTO.op != null && batchRecordDTO.op.codigoOrden != null
+                    ? "batch-record-" + batchRecordDTO.op.codigoOrden + ".pdf"
+                    : "batch-record-orden-" + ordenProduccionId + ".pdf";
+            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
+            return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error exportando PDF de batch record para la OP {}", ordenProduccionId, e);
+            throw e;
+        }
     }
 
     private OrdenProduccion obtenerOrden(Long ordenProduccionId) {
