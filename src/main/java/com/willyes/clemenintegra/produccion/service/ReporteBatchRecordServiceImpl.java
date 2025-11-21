@@ -30,6 +30,10 @@ public class ReporteBatchRecordServiceImpl implements ReporteBatchRecordService 
     @Override
     public byte[] generarPdfBatchRecord(Long ordenProduccionId) {
         BatchRecordDTO batchRecord = batchRecordService.buildByOrdenProduccion(ordenProduccionId);
+        if (log.isDebugEnabled()) {
+            log.debug("Generando PDF de batch record para OP {} con plantilla {}", ordenProduccionId,
+                    "templates/produccion/batch-record.ftl");
+        }
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             String html = buildHtml(batchRecord);
             PdfRendererBuilder builder = new PdfRendererBuilder();
