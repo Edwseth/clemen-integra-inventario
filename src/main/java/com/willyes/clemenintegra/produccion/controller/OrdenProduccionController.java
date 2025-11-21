@@ -157,14 +157,14 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}/cierres")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public Page<CierreProduccionResponseDTO> listarCierres(@PathVariable Long id,
                                                           @PageableDefault(size = 10, sort = "fechaCierre", direction = Sort.Direction.DESC) Pageable pageable) {
         return service.listarCierres(id, pageable);
     }
 
     @GetMapping("/{id}/etapas")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public List<EtapaProduccionResponse> listarEtapas(@PathVariable Long id) {
         return service.listarEtapas(id);
     }
@@ -194,13 +194,13 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}/insumos")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public List<InsumoOPDTO> listarInsumos(@PathVariable Long id) {
         return service.listarInsumos(id);
     }
 
     @GetMapping("/{id}/movimientos")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public Page<MovimientoInventarioResponseDTO> listarMovimientos(@PathVariable Long id,
                                                                    Pageable pageable) {
         return service.listarMovimientos(id, pageable);
