@@ -97,6 +97,21 @@ class BatchRecordControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @DisplayName("GET /api/produccion/batch-record/{id} permite consulta a jefe de calidad")
+    void obtenerBatchRecordRolCalidad() throws Exception {
+        BatchRecordDTO dto = new BatchRecordDTO();
+        dto.op = new BatchRecordDTO.OpDTO();
+        dto.op.codigoOrden = "OP-2";
+        when(batchRecordService.buildByOrdenProduccion(2L)).thenReturn(dto);
+
+        mockMvc.perform(get("/api/produccion/batch-record/{id}", 2L)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.op.codigoOrden").value("OP-2"));
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     @DisplayName("GET /api/produccion/batch-record/{id} devuelve 404 cuando no existe")
     void obtenerBatchRecordNoExiste() throws Exception {
@@ -129,6 +144,23 @@ class BatchRecordControllerTest {
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @DisplayName("GET /api/produccion/batch-record/{id}/pdf permite acceso a jefe de calidad")
+    void exportarPdfBatchRecordRolCalidad() throws Exception {
+        BatchRecordDTO dto = new BatchRecordDTO();
+        BatchRecordDTO.OpDTO opDTO = new BatchRecordDTO.OpDTO();
+        opDTO.id = 7L;
+        opDTO.codigoOrden = "OP-777";
+        dto.op = opDTO;
+        when(batchRecordService.buildByOrdenProduccion(7L)).thenReturn(dto);
+        when(reporteBatchRecordService.generarPdfBatchRecord(7L)).thenReturn("pdf".getBytes());
+
+        mockMvc.perform(get("/api/produccion/batch-record/{id}/pdf", 7L))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=batch-record-OP-777.pdf"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
     @DisplayName("POST /api/produccion/batch-record/{id}/decision devuelve 204")
     void decidirBatchRecord() throws Exception {
         String body = "{\"decision\":\"APROBADO\",\"observacionesCalidad\":\"Listo\"}";
@@ -153,5 +185,15 @@ class BatchRecordControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(batchRecordService, never()).decidirBatchRecord(anyLong(), any(), any());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @DisplayName("POST /api/produccion/batch-record/{id}/controles-proceso es rechazado para jefe de calidad")
+    void guardarControlesProceso_conRolCalidad_devuelve403() throws Exception {
+        mockMvc.perform(post("/api/produccion/batch-record/{id}/controles-proceso", 3L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isForbidden());
     }
 }

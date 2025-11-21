@@ -44,7 +44,7 @@ public class OrdenProduccionController {
 
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public Page<OrdenProduccionResponseDTO> listar(
             @RequestParam(required = false) String codigo,
             @RequestParam(required = false) EstadoProduccion estado,
@@ -88,7 +88,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
                 .map(ProduccionMapper::toResponse)
