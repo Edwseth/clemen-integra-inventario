@@ -12,6 +12,8 @@ import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import com.willyes.clemenintegra.inventario.model.Almacen;
+import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
@@ -23,12 +25,14 @@ import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
+import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import com.willyes.clemenintegra.produccion.repository.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -38,6 +42,8 @@ import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,10 +54,13 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,6 +70,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -68,6 +78,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class OrdenProduccionServiceImplTest {
 
     @Mock private FormulaProductoRepository formulaProductoRepository;
@@ -118,6 +129,13 @@ class OrdenProduccionServiceImplTest {
         lenient().when(etapaPlantillaRepository.findByProductoIdAndActivoTrueOrderBySecuenciaAsc(anyInt()))
                 .thenReturn(List.of(etapa));
         lenient().when(etapaProduccionRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA");
+        ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "EJECUTADA");
+        ReflectionTestUtils.setField(service, "clasificacionEntradaPtConf", "ENTRADA_PRODUCTO_TERMINADO");
+        lenient().when(umValidator.ajustar(any(BigDecimal.class)))
+                .thenAnswer(invocation -> ((BigDecimal) invocation.getArgument(0)).setScale(2, RoundingMode.HALF_UP));
+        lenient().when(umValidator.getRoundingMode()).thenReturn(RoundingMode.HALF_UP);
+        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
     }
 
     @Test
@@ -569,6 +587,7 @@ class OrdenProduccionServiceImplTest {
         orden.setEstado(EstadoProduccion.EN_PROCESO);
         orden.setCantidadProgramada(new BigDecimal("100"));
         orden.setCantidadProducidaAcumulada(new BigDecimal("100"));
+        orden.setTipoCierre(TipoCierre.TOTAL);
 
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(1L)
@@ -593,6 +612,7 @@ class OrdenProduccionServiceImplTest {
         orden.setEstado(EstadoProduccion.EN_PROCESO);
         orden.setCantidadProgramada(new BigDecimal("120"));
         orden.setCantidadProducidaAcumulada(new BigDecimal("80"));
+        orden.setTipoCierre(TipoCierre.PARCIAL);
 
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(2L)
@@ -644,6 +664,7 @@ class OrdenProduccionServiceImplTest {
         orden.setEstado(EstadoProduccion.EN_PROCESO);
         orden.setCantidadProgramada(new BigDecimal("50"));
         orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
+        orden.setTipoCierre(TipoCierre.TOTAL);
 
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(5L)
@@ -674,6 +695,7 @@ class OrdenProduccionServiceImplTest {
         orden.setEstado(EstadoProduccion.EN_PROCESO);
         orden.setCantidadProgramada(new BigDecimal("200"));
         orden.setCantidadProducidaAcumulada(new BigDecimal("50"));
+        orden.setTipoCierre(TipoCierre.TOTAL);
 
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(6L)
@@ -693,6 +715,104 @@ class OrdenProduccionServiceImplTest {
                 });
 
         assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+    }
+
+    @Test
+    @DisplayName("registrarCierre parcial mantiene EN_PROCESO aun con etapas finalizadas")
+    void registrarCierre_parcialNoCierraOrden() {
+        OrdenProduccion orden = crearOrdenBase(300L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("80"))
+                .tipo(TipoCierre.PARCIAL)
+                .cerradaIncompleta(false)
+                .build();
+
+        OrdenProduccion resultado = service.registrarCierre(300L, dto);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+        assertThat(resultado.getTipoCierre()).isNull();
+        assertThat(resultado.getCantidadProducidaAcumulada()).isEqualByComparingTo(new BigDecimal("80.00"));
+    }
+
+    @Test
+    @DisplayName("registrarCierre total incompleto exige confirmación antes de cerrar")
+    void registrarCierre_totalIncompletoRequiereConfirmacion() {
+        OrdenProduccion orden = crearOrdenBase(301L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("80"))
+                .tipo(TipoCierre.TOTAL)
+                .cerradaIncompleta(true)
+                .confirmarCierreParcial(false)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(301L, dto))
+                .isInstanceOf(ErrorResponseException.class)
+                .satisfies(ex -> {
+                    ErrorResponseException error = (ErrorResponseException) ex;
+                    ProblemDetail body = error.getBody();
+                    assertThat(body.getProperties().get("code")).isEqualTo("OP_CIERRE_PARCIAL_REQUIERE_CONFIRMACION");
+                });
+    }
+
+    @Test
+    @DisplayName("registrarCierre total incompleto con confirmación marca CERRADA_INCOMPLETA")
+    void registrarCierre_totalIncompletoConfirmado() {
+        OrdenProduccion orden = crearOrdenBase(302L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("80"))
+                .tipo(TipoCierre.TOTAL)
+                .cerradaIncompleta(true)
+                .confirmarCierreParcial(true)
+                .build();
+
+        OrdenProduccion resultado = service.registrarCierre(302L, dto);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.CERRADA_INCOMPLETA);
+        assertThat(resultado.getTipoCierre()).isEqualTo(TipoCierre.PARCIAL);
+    }
+
+    @Test
+    @DisplayName("registrarCierre total con producción completa finaliza la orden")
+    void registrarCierre_totalCompletoFinaliza() {
+        OrdenProduccion orden = crearOrdenBase(303L, new BigDecimal("100"), new BigDecimal("50"), EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("50"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        OrdenProduccion resultado = service.registrarCierre(303L, dto);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.FINALIZADA);
+        assertThat(resultado.getTipoCierre()).isEqualTo(TipoCierre.TOTAL);
+    }
+
+    @Test
+    @DisplayName("registrarCierre definitivo rechaza cierre sin producción acumulada")
+    void registrarCierre_definitivoSinProduccion() {
+        OrdenProduccion orden = crearOrdenBase(304L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 0L);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("0.00"))
+                .tipo(TipoCierre.TOTAL)
+                .cerradaIncompleta(true)
+                .confirmarCierreParcial(true)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(304L, dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getReason()).isEqualTo("CANTIDAD_INVALIDA"));
     }
 
     @Test
@@ -783,6 +903,97 @@ class OrdenProduccionServiceImplTest {
         assertThat(dto.getCantidadRequerida()).isEqualByComparingTo(new BigDecimal("10"));
         assertThat(dto.getCantidadConsumida()).isEqualByComparingTo(new BigDecimal("3"));
         assertThat(dto.getFaltante()).isEqualByComparingTo(new BigDecimal("7"));
+    }
+
+    private OrdenProduccion crearOrdenBase(Long id, BigDecimal programada, BigDecimal producida, EstadoProduccion estado) {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(id);
+        orden.setEstado(estado);
+        orden.setCantidadProgramada(programada);
+        orden.setCantidadProducida(producida);
+        orden.setCantidadProducidaAcumulada(producida);
+        orden.setFechaInicio(LocalDateTime.now().minusDays(2));
+        orden.setProducto(crearProductoTerminado());
+        return orden;
+    }
+
+    private Producto crearProductoTerminado() {
+        Producto producto = new Producto();
+        producto.setId(500);
+        producto.setNombre("Producto terminado");
+        UnidadMedida um = new UnidadMedida();
+        um.setNombre("UND");
+        um.setSimbolo("UND");
+        producto.setUnidadMedida(um);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setCategoriaProducto(categoria);
+        producto.setTipoAnalisis(TipoAnalisisCalidad.NINGUNO);
+        return producto;
+    }
+
+    private Usuario usuarioBasico() {
+        Usuario usuario = new Usuario();
+        usuario.setId(99L);
+        usuario.setNombreCompleto("Tester");
+        return usuario;
+    }
+
+    private void stubInfraCierre(OrdenProduccion orden, long cierresRegistrados) {
+        when(ordenProduccionRepository.findById(orden.getId())).thenReturn(Optional.of(orden));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(
+                orden.getId(), orden.getProducto().getId().longValue())).thenReturn(Optional.empty());
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(1L)
+                .estado(EstadoEtapa.FINALIZADA)
+                .fechaInicio(LocalDateTime.now().minusHours(5))
+                .build();
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId()))
+                .thenReturn(List.of(etapa));
+
+        VidaUtilProducto vidaUtil = new VidaUtilProducto();
+        vidaUtil.setSemanasVigencia(4);
+        when(vidaUtilProductoService.buscarPorProductoId(orden.getProducto().getId()))
+                .thenReturn(Optional.of(vidaUtil));
+
+        when(catalogResolver.getMotivoIdDevolucionDesdeProduccion()).thenReturn(10L);
+        MotivoMovimiento motivoDev = new MotivoMovimiento();
+        motivoDev.setId(10L);
+        when(motivoMovimientoRepository.findById(10L)).thenReturn(Optional.of(motivoDev));
+
+        when(solicitudMovimientoRepository.findWithDetalles(eq(orden.getId()), any(), any(), any(), eq(false), any()))
+                .thenReturn(List.of());
+        when(solicitudMovimientoRepository.findWithDetalles(eq(orden.getId()), isNull(), isNull(), isNull(), eq(false), any()))
+                .thenReturn(List.of());
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(11L);
+        when(catalogResolver.getTipoDetalleTransferenciaId()).thenReturn(null);
+        when(movimientoInventarioRepository.sumaPorSolicitudYTipo(any(), any(), any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+
+        when(catalogResolver.getMotivoIdEntradaProductoTerminado()).thenReturn(20L);
+        MotivoMovimiento motivoEntrada = new MotivoMovimiento();
+        motivoEntrada.setId(20L);
+        when(motivoMovimientoRepository.findById(20L)).thenReturn(Optional.of(motivoEntrada));
+        when(catalogResolver.getTipoDetalleEntradaId()).thenReturn(21L);
+        TipoMovimientoDetalle tipoEntrada = new TipoMovimientoDetalle();
+        tipoEntrada.setId(21L);
+        when(tipoMovimientoDetalleRepository.findById(21L)).thenReturn(Optional.of(tipoEntrada));
+
+        when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);
+        Almacen almacenPt = new Almacen();
+        almacenPt.setId(30);
+        Almacen almacenCuarentena = new Almacen();
+        almacenCuarentena.setId(31);
+        when(almacenRepository.findById(30L)).thenReturn(Optional.of(almacenPt));
+        when(almacenRepository.findById(31L)).thenReturn(Optional.of(almacenCuarentena));
+
+        when(loteProductoRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioBasico());
+        when(cierreProduccionRepository.countByOrdenProduccionId(orden.getId())).thenReturn(cierresRegistrados);
+        doNothing().when(reservaLoteService).liberarReservasPorOrden(anyLong());
+        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
     }
 
     @Test

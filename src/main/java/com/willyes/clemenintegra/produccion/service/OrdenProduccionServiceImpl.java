@@ -501,7 +501,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal cantidadProgramada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
             BigDecimal producidaAntes = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
             BigDecimal producidaDespues = producidaAntes.add(cantidad);
-            EstadoProduccion estadoObjetivo = calcularEstadoObjetivo(orden, producidaDespues);
+            boolean cierreDefinitivo = esCierreDefinitivo(dto);
+            EstadoProduccion estadoObjetivo = calcularEstadoObjetivo(orden, producidaDespues, cierreDefinitivo);
 
             // Esta validación actúa por cierre individual; la regla global para evitar cerrar la OP sin cierres
             // se aplica en recalcularEstadoOrden cuando todas las etapas terminan.
@@ -647,6 +648,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             orden.setCantidadProducidaAcumulada(nuevaAcumulada);
             orden.setCantidadProducida(nuevaAcumulada);
             orden.setFechaUltimoCierre(LocalDateTime.now());
+
+            // Cierres parciales de turno/avance no deben cambiar el estado final de la OP.
+            // Solo los cierres definitivos (TOTAL o cerrada incompleta confirmada) deben
+            // habilitar la transición a FINALIZADA o CERRADA_INCOMPLETA.
+            if (cierreDefinitivo) {
+                orden.setTipoCierre(dto.getTipo());
+            } else {
+                orden.setTipoCierre(null);
+            }
 
             Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
             CierreProduccion cierre = ProduccionMapper.toEntity(dto, orden);
@@ -830,7 +840,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
     }
 
-    private EstadoProduccion calcularEstadoObjetivo(OrdenProduccion orden, BigDecimal producida) {
+    private boolean esCierreDefinitivo(CierreProduccionRequestDTO dto) {
+        if (dto == null) {
+            return false;
+        }
+        return dto.getTipo() == TipoCierre.TOTAL || Boolean.TRUE.equals(dto.getCerradaIncompleta());
+    }
+
+    private EstadoProduccion calcularEstadoObjetivo(OrdenProduccion orden, BigDecimal producida, boolean cierreDefinitivo) {
         if (orden == null || orden.getId() == null) {
             return orden != null ? orden.getEstado() : null;
         }
@@ -848,7 +865,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         BigDecimal programada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
         BigDecimal producidaSafe = Optional.ofNullable(producida).orElse(BigDecimal.ZERO);
 
-        if (todasFinalizadas) {
+        if (todasFinalizadas && cierreDefinitivo) {
             if (producidaSafe.compareTo(programada) >= 0) {
                 return EstadoProduccion.FINALIZADA;
             }
@@ -1166,18 +1183,23 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         BigDecimal programada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
         BigDecimal producida = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
         long cierresRegistrados = cierreProduccionRepository.countByOrdenProduccionId(orden.getId());
+        boolean cierreDefinitivo = orden.getTipoCierre() == TipoCierre.TOTAL || orden.getTipoCierre() == TipoCierre.PARCIAL;
 
         if (todasFinalizadas) {
-            if (producida.compareTo(BigDecimal.ZERO) <= 0 || cierresRegistrados == 0) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_CIERRES_PRODUCCION");
-            }
-            if (producida.compareTo(programada) >= 0) {
-                orden.setEstado(EstadoProduccion.FINALIZADA);
+            if (!cierreDefinitivo) {
+                orden.setEstado(EstadoProduccion.EN_PROCESO);
             } else {
-                orden.setEstado(EstadoProduccion.CERRADA_INCOMPLETA);
-            }
-            if (orden.getFechaFin() == null) {
-                orden.setFechaFin(LocalDateTime.now());
+                if (producida.compareTo(BigDecimal.ZERO) <= 0 || cierresRegistrados == 0) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_CIERRES_PRODUCCION");
+                }
+                if (producida.compareTo(programada) >= 0) {
+                    orden.setEstado(EstadoProduccion.FINALIZADA);
+                } else {
+                    orden.setEstado(EstadoProduccion.CERRADA_INCOMPLETA);
+                }
+                if (orden.getFechaFin() == null) {
+                    orden.setFechaFin(LocalDateTime.now());
+                }
             }
         } else if (orden.getEstado() != EstadoProduccion.CANCELADA) {
             orden.setEstado(EstadoProduccion.EN_PROCESO);
