@@ -72,6 +72,7 @@ public class OrdenProduccion {
     @OneToMany(mappedBy = "ordenProduccion")
     private List<EtapaProduccion> etapas;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "batch_record_estado", nullable = false)
     private EstadoBatchRecord batchRecordEstado = EstadoBatchRecord.BORRADOR;
@@ -88,4 +89,13 @@ public class OrdenProduccion {
 
     @Version
     private Long version;
+
+    // Garantiza que las instancias construidas con builder no persistan un estado nulo
+    // (causante del error de columna NOT NULL en batch_record_estado).
+    @PrePersist
+    public void prePersist() {
+        if (batchRecordEstado == null) {
+            batchRecordEstado = EstadoBatchRecord.BORRADOR;
+        }
+    }
 }
