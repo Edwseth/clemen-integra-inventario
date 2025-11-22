@@ -173,6 +173,7 @@ public class BatchRecordServiceImpl implements BatchRecordService {
         if (formula.getDetalles() != null) {
             for (DetalleFormula detalle : formula.getDetalles()) {
                 BatchRecordDTO.DetalleFormulaDTO detalleDTO = new BatchRecordDTO.DetalleFormulaDTO();
+                // Mostrar todos los insumos declarados en el BOM, incluso los que no generan reservas (p.ej. SIN_CONTROL_STOCK)
                 detalleDTO.insumoId = detalle.getInsumo() != null ? detalle.getInsumo().getId().longValue() : null;
                 detalleDTO.codigoSku = detalle.getInsumo() != null ? detalle.getInsumo().getCodigoSku() : null;
                 detalleDTO.nombre = detalle.getInsumo() != null ? detalle.getInsumo().getNombre() : null;

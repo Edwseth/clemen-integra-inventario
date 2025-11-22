@@ -1,7 +1,8 @@
 package com.willyes.clemenintegra.inventario.model;
 
-import com.willyes.clemenintegra.shared.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.shared.model.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -77,6 +78,11 @@ public class Producto {
             foreignKey = @ForeignKey(name = "fk_productos_usuarios1"))
     private Usuario creadoPor;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modo_control_inventario", nullable = false, length = 30)
+    private ModoControlInventario modoControlInventario = ModoControlInventario.CONTROL_STOCK;
+
     public Producto(Integer id) {
         this.id = id;
     }
@@ -85,6 +91,9 @@ public class Producto {
     public void prePersist() {
         if (this.fechaCreacion == null) {
             this.fechaCreacion = LocalDateTime.now();
+        }
+        if (this.modoControlInventario == null) {
+            this.modoControlInventario = ModoControlInventario.CONTROL_STOCK;
         }
     }
 
@@ -119,6 +128,8 @@ public class Producto {
     public void setCreadoPor(Usuario creadoPor) {this.creadoPor = creadoPor;}
     public BigDecimal getRendimientoUnidad() {return rendimientoUnidad;}
     public void setRendimientoUnidad(BigDecimal rendimientoUnidad) {this.rendimientoUnidad = rendimientoUnidad;}
+    public ModoControlInventario getModoControlInventario() {return modoControlInventario;}
+    public void setModoControlInventario(ModoControlInventario modoControlInventario) {this.modoControlInventario = modoControlInventario;}
 
 }
 

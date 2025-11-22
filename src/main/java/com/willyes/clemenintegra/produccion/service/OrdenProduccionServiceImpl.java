@@ -45,6 +45,7 @@ import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
@@ -276,6 +277,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new IllegalArgumentException("Insumo no encontrado: ID " + insumoId);
             }
 
+            ModoControlInventario modoControl = Optional.ofNullable(productoInsumo.getModoControlInventario())
+                    .orElse(ModoControlInventario.CONTROL_STOCK);
+
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
 
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
@@ -313,7 +317,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     faltanteFefo,
                     maxProducible);
 
-            if (!distribucionPreview.isSuficiente()) {
+            if (modoControl == ModoControlInventario.CONTROL_STOCK && !distribucionPreview.isSuficiente()) {
                 stockSuficiente = false;
                 faltantes.add(InsumoFaltanteDTO.builder()
                         .productoId(insumoId)
@@ -907,6 +911,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .multiply(orden.getCantidadProgramada())
                     .setScale(8, RoundingMode.HALF_UP);
             if (requerida.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            ModoControlInventario modoControl = Optional.ofNullable(insumo.getInsumo())
+                    .map(Producto::getModoControlInventario)
+                    .orElse(ModoControlInventario.CONTROL_STOCK);
+
+            if (modoControl == ModoControlInventario.SIN_CONTROL_STOCK) {
+                log.debug("OP-reserva: insumo {} configurado sin control de stock, se omite reserva e inventario", insumoId);
                 continue;
             }
             BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
