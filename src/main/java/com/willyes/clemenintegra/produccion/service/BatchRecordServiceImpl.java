@@ -12,6 +12,8 @@ import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.ReservaLote;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
@@ -189,10 +191,17 @@ public class BatchRecordServiceImpl implements BatchRecordService {
 
     private List<BatchRecordDTO.ConsumoDTO> mapConsumos(Long ordenProduccionId) {
         List<MovimientoInventario> movimientos = movimientoInventarioRepository
-                .findByOrdenProduccionId(ordenProduccionId, Pageable.unpaged())
+                .findByOrdenProduccionIdAndClasificacion(
+                        ordenProduccionId,
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                        Pageable.unpaged())
                 .getContent();
         List<BatchRecordDTO.ConsumoDTO> consumos = new ArrayList<>();
         for (MovimientoInventario movimiento : movimientos) {
+            // Solo se consideran consumos reales de producción (SALIDA_PRODUCCION desde Pre-Bodega)
+            if (movimiento.getTipoMovimiento() != TipoMovimiento.SALIDA) {
+                continue;
+            }
             BatchRecordDTO.ConsumoDTO consumoDTO = new BatchRecordDTO.ConsumoDTO();
             consumoDTO.tipoMovimiento = movimiento.getTipoMovimiento() != null ? movimiento.getTipoMovimiento().name() : null;
             consumoDTO.clasificacionMovimiento = movimiento.getClasificacion() != null ? movimiento.getClasificacion().name() : null;

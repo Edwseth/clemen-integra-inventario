@@ -112,7 +112,10 @@ class BatchRecordServiceImplTest {
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formula));
 
-        when(movimientoInventarioRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
                 .thenReturn(new PageImpl<>(Collections.emptyList()));
         when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
                 .thenReturn(Collections.emptyList());
@@ -156,7 +159,10 @@ class BatchRecordServiceImplTest {
         movimiento.setLote(loteMp);
         movimiento.setCantidad(BigDecimal.ONE);
         movimiento.setFechaIngreso(LocalDateTime.now());
-        when(movimientoInventarioRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
                 .thenReturn(new PageImpl<>(List.of(movimiento)));
 
         when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
@@ -201,6 +207,41 @@ class BatchRecordServiceImplTest {
         assertThat(result.loteProductoTerminado.usuarioLiberador).isEqualTo("Jefe Calidad");
         assertThat(result.calidad.evaluaciones).isNotNull();
         assertThat(result.calidad.retenciones).isNotNull();
+    }
+
+    @Test
+    @DisplayName("mapConsumos ignora movimientos clasificados como producción que no sean salidas")
+    void buildByOrdenProduccionIgnoraTiposNoSalida() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(buildFormula(orden.getProducto())));
+
+        MovimientoInventario movimiento = new MovimientoInventario();
+        movimiento.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        movimiento.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        movimiento.setProducto(orden.getProducto());
+        movimiento.setCantidad(BigDecimal.ONE);
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(movimiento)));
+
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        assertThat(result.consumos).isEmpty();
     }
 
     @Test

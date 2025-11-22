@@ -12,11 +12,13 @@ import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import com.willyes.clemenintegra.inventario.model.Almacen;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
@@ -575,6 +577,7 @@ class OrdenProduccionServiceImplTest {
 
         when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(50L))
                 .thenReturn(List.of(etapa));
+        when(cierreProduccionRepository.countByOrdenProduccionId(50L)).thenReturn(1L);
 
         ReflectionTestUtils.invokeMethod(service, "recalcularEstadoOrden", orden);
 
@@ -598,6 +601,7 @@ class OrdenProduccionServiceImplTest {
 
         when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(60L))
                 .thenReturn(List.of(etapa));
+        when(cierreProduccionRepository.countByOrdenProduccionId(60L)).thenReturn(1L);
 
         ReflectionTestUtils.invokeMethod(service, "recalcularEstadoOrden", orden);
 
@@ -633,6 +637,65 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("recalcularEstadoOrden rechaza cierre sin cierres registrados")
+    void recalcularEstadoOrden_rechazaSinCierres() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(80L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+        orden.setCantidadProgramada(new BigDecimal("50"));
+        orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(5L)
+                .estado(EstadoEtapa.FINALIZADA)
+                .build();
+
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(80L))
+                .thenReturn(List.of(etapa));
+        when(cierreProduccionRepository.countByOrdenProduccionId(80L)).thenReturn(0L);
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "recalcularEstadoOrden", orden))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                    assertThat(rse.getReason()).isEqualTo("OP_SIN_CIERRES_PRODUCCION");
+                });
+
+        assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+        assertThat(orden.getFechaFin()).isNull();
+    }
+
+    @Test
+    @DisplayName("recalcularEstadoOrden exige cierres incluso cuando hay producción acumulada")
+    void recalcularEstadoOrden_rechazaSinCierresConProduccion() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(81L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+        orden.setCantidadProgramada(new BigDecimal("200"));
+        orden.setCantidadProducidaAcumulada(new BigDecimal("50"));
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(6L)
+                .estado(EstadoEtapa.FINALIZADA)
+                .build();
+
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(81L))
+                .thenReturn(List.of(etapa));
+        when(cierreProduccionRepository.countByOrdenProduccionId(81L)).thenReturn(0L);
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "recalcularEstadoOrden", orden))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                    assertThat(rse.getReason()).isEqualTo("OP_SIN_CIERRES_PRODUCCION");
+                });
+
+        assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+    }
+
+    @Test
     @DisplayName("listarInsumos refleja consumido en cero con reservas activas")
     void listarInsumos_conReservasActivas() {
         OrdenProduccion orden = new OrdenProduccion();
@@ -659,11 +722,11 @@ class OrdenProduccionServiceImplTest {
         when(ordenProduccionRepository.findById(200L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formula));
-        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(11L);
-        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
-        tipoDetalle.setId(11L);
-        when(tipoMovimientoDetalleRepository.findById(11L)).thenReturn(Optional.of(tipoDetalle));
-        when(movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(200L, 300L, 11L))
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacion(
+                200L,
+                300L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                TipoMovimiento.SALIDA))
                 .thenReturn(BigDecimal.ZERO);
         when(reservaLoteRepository.sumConsumidaByOrdenAndProducto(200L, 300L, EstadoReservaLote.CONSUMIDA))
                 .thenReturn(BigDecimal.ZERO);
@@ -704,11 +767,11 @@ class OrdenProduccionServiceImplTest {
         when(ordenProduccionRepository.findById(201L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formula));
-        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(12L);
-        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
-        tipoDetalle.setId(12L);
-        when(tipoMovimientoDetalleRepository.findById(12L)).thenReturn(Optional.of(tipoDetalle));
-        when(movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(201L, 301L, 12L))
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacion(
+                201L,
+                301L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                TipoMovimiento.SALIDA))
                 .thenReturn(BigDecimal.ONE);
         when(reservaLoteRepository.sumConsumidaByOrdenAndProducto(201L, 301L, EstadoReservaLote.CONSUMIDA))
                 .thenReturn(new BigDecimal("3"));
