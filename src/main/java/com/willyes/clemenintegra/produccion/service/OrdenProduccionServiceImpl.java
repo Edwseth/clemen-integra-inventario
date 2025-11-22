@@ -503,6 +503,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal producidaDespues = producidaAntes.add(cantidad);
             EstadoProduccion estadoObjetivo = calcularEstadoObjetivo(orden, producidaDespues);
 
+            // Esta validación actúa por cierre individual; la regla global para evitar cerrar la OP sin cierres
+            // se aplica en recalcularEstadoOrden cuando todas las etapas terminan.
             if ((estadoObjetivo == EstadoProduccion.FINALIZADA || estadoObjetivo == EstadoProduccion.CERRADA_INCOMPLETA)
                     && producidaDespues.compareTo(BigDecimal.ZERO) == 0) {
                 ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
@@ -1163,8 +1165,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         BigDecimal programada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
         BigDecimal producida = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
+        long cierresRegistrados = cierreProduccionRepository.countByOrdenProduccionId(orden.getId());
 
         if (todasFinalizadas) {
+            if (producida.compareTo(BigDecimal.ZERO) <= 0 || cierresRegistrados == 0) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_CIERRES_PRODUCCION");
+            }
             if (producida.compareTo(programada) >= 0) {
                 orden.setEstado(EstadoProduccion.FINALIZADA);
             } else {
@@ -1238,15 +1244,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         FormulaProducto formula = formulaProductoRepository
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
-        TipoMovimientoDetalle detalleSalida = tipoMovimientoDetalleRepository.findById(catalogResolver.getTipoDetalleSalidaId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "DETALLE_MOVIMIENTO_NO_ENCONTRADO"));
-        Long detalleId = detalleSalida.getId();
         List<InsumoOPDTO> lista = new ArrayList<>();
         for (DetalleFormula det : formula.getDetalles()) {
             BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             Long insumoId = det.getInsumo().getId().longValue();
+            // Solo se consideran consumos reales de producción (SALIDA_PRODUCCION). Traslados o preparaciones no suman aquí.
             BigDecimal consumidaMov = Optional.ofNullable(
-                    movimientoInventarioRepository.sumaCantidadPorOrdenYProducto(id, insumoId, detalleId)
+                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacion(
+                            id,
+                            insumoId,
+                            ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                            TipoMovimiento.SALIDA
+                    )
             ).orElse(BigDecimal.ZERO);
             BigDecimal consumidaReservas = Optional.ofNullable(
                     reservaLoteRepository.sumConsumidaByOrdenAndProducto(id, insumoId, EstadoReservaLote.CONSUMIDA)

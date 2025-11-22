@@ -95,10 +95,24 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
 
     Page<MovimientoInventario> findByOrdenProduccionId(Long ordenProduccionId, Pageable pageable);
 
+    Page<MovimientoInventario> findByOrdenProduccionIdAndClasificacion(Long ordenProduccionId,
+                                                                       ClasificacionMovimientoInventario clasificacion,
+                                                                       Pageable pageable);
+
     @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m where m.ordenProduccion.id = :ordenId and m.producto.id = :productoId and m.tipoMovimientoDetalle.id = :detalleId")
     BigDecimal sumaCantidadPorOrdenYProducto(@Param("ordenId") Long ordenId,
                                              @Param("productoId") Long productoId,
                                              @Param("detalleId") Long detalleId);
+
+    @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m " +
+            "where m.ordenProduccion.id = :ordenId " +
+            "and m.producto.id = :productoId " +
+            "and m.clasificacion = :clasificacion " +
+            "and m.tipoMovimiento = :tipoMovimiento")
+    BigDecimal sumaCantidadPorOrdenProductoClasificacion(@Param("ordenId") Long ordenId,
+                                                         @Param("productoId") Long productoId,
+                                                         @Param("clasificacion") ClasificacionMovimientoInventario clasificacion,
+                                                         @Param("tipoMovimiento") TipoMovimiento tipoMovimiento);
 
     @EntityGraph(attributePaths = {
             "producto", "producto.unidadMedida", "lote", "almacenOrigen", "almacenDestino",

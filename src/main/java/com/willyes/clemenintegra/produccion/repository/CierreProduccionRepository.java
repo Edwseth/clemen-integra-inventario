@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CierreProduccionRepository extends JpaRepository<CierreProduccion, Long> {
     Page<CierreProduccion> findByOrdenProduccionId(Long ordenId, Pageable pageable);
+
+    long countByOrdenProduccionId(Long ordenId);
 }
