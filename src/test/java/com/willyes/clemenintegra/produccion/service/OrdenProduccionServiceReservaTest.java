@@ -432,6 +432,7 @@ class OrdenProduccionServiceReservaTest {
         usuario.setId(7L);
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cierreProduccionRepository.countByOrdenProduccionId(1L)).thenReturn(1L);
         when(solicitudMovimientoRepository.findWithDetalles(eq(1L), any(), eq(null), eq(null), eq(false), anyList()))
                 .thenReturn(List.of());
         when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(new MovimientoInventarioResponseDTO());
