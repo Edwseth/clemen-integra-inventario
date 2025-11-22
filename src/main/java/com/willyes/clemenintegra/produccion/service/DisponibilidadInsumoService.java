@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
@@ -62,6 +63,32 @@ public class DisponibilidadInsumoService {
                 .orElse(BigDecimal.ZERO)
                 .setScale(8, RoundingMode.HALF_UP);
 
+        List<Long> preferidos = almacenesPreferidos == null ? List.of() : List.copyOf(almacenesPreferidos);
+        Producto producto = productoInsumoId != null
+                ? productoRepository.findById(productoInsumoId).orElse(null)
+                : null;
+        ModoControlInventario modoControl = Optional.ofNullable(producto)
+                .map(Producto::getModoControlInventario)
+                .orElse(ModoControlInventario.CONTROL_STOCK);
+
+        if (modoControl == ModoControlInventario.SIN_CONTROL_STOCK) {
+            BigDecimal requeridaEscala = requerida.setScale(6, RoundingMode.HALF_UP);
+            BigDecimal stockLibreSimulado = requeridaEscala;
+            // Insumos sin control de inventario (ej. agua por tubería) no bloquean la OP ni consultan lotes
+            return DistribucionFefoResult.builder()
+                    .productoInsumoId(productoInsumoId)
+                    .requerido(requeridaEscala)
+                    .stockFisicoTotal(requeridaEscala)
+                    .stockReservadoTotal(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP))
+                    .stockLibreTotal(stockLibreSimulado)
+                    .faltante(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP))
+                    .suficiente(true)
+                    .usoFallback(false)
+                    .almacenesPreferidos(preferidos)
+                    .detalles(List.of())
+                    .build();
+        }
+
         List<LoteFefoDisponibleProjection> lotesDisponibles = loteProductoRepository
                 .findFefoDisponibles(productoInsumoId, Integer.MAX_VALUE);
 
@@ -69,7 +96,6 @@ public class DisponibilidadInsumoService {
                 .filter(this::esLotePermitido)
                 .toList();
 
-        List<Long> preferidos = almacenesPreferidos == null ? List.of() : List.copyOf(almacenesPreferidos);
         List<LoteFefoDisponibleProjection> lotesSeleccionados = new ArrayList<>(lotesElegibles);
         boolean usoFallback = false;
         String motivoFallback = null;
@@ -158,9 +184,11 @@ public class DisponibilidadInsumoService {
         if (productoInsumoId != null
                 && stockFisicoTotal.compareTo(requerida) >= 0
                 && stockLibreTotal.compareTo(requerida) < 0) {
-            String codigo = productoRepository.findById(productoInsumoId)
+            String codigo = Optional.ofNullable(producto)
                     .map(Producto::getCodigoSku)
-                    .orElse(null);
+                    .orElseGet(() -> productoRepository.findById(productoInsumoId)
+                            .map(Producto::getCodigoSku)
+                            .orElse(null));
             log.warn("Disponibilidad FEFO detectó stock libre insuficiente pese a stock físico: insumoId={} codigo={} requerido={} stockFisicoTotal={} stockReservadoTotal={} stockLibreFefo={} faltante={} almacenes={}",
                     productoInsumoId,
                     codigo,

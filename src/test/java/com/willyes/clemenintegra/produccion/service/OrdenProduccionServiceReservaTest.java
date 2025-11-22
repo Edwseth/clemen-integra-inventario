@@ -48,6 +48,7 @@ import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
@@ -274,6 +276,32 @@ class OrdenProduccionServiceReservaTest {
         assertThatThrownBy(() -> service.reservarInsumosParaOP(orden.getId()))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessage("422 UNPROCESSABLE_ENTITY \"STOCK_INSUFICIENTE: insumo MP-COLRO - COLORANTE NATURAL ROJO, faltan 47.500000 MILILITRO\"");
+    }
+
+    @Test
+    @DisplayName("reservarInsumosParaOP omite insumos configurados como SIN_CONTROL_STOCK")
+    void reservarInsumosParaOp_omiteSinControlStock() {
+        Producto insumoSinControl = new Producto();
+        insumoSinControl.setId(120);
+        insumoSinControl.setModoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setNombre("LITRO");
+        insumoSinControl.setUnidadMedida(unidad);
+
+        FormulaProducto formulaEscenario = new FormulaProducto();
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumoSinControl);
+        detalle.setCantidadNecesaria(new BigDecimal("3"));
+        formulaEscenario.setDetalles(List.of(detalle));
+        formulaEscenario.setProducto(orden.getProducto());
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaEscenario));
+
+        service.reservarInsumosParaOP(1L);
+
+        verify(solicitudMovimientoService, never()).registrarSolicitud(any(SolicitudMovimientoRequestDTO.class));
+        verify(disponibilidadInsumoService, never()).calcularDisponibilidad(anyLong(), any(BigDecimal.class), anyList(), anyBoolean());
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
@@ -21,6 +22,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -126,6 +131,22 @@ class DisponibilidadInsumoServiceTest {
                 .map(det -> det.getCantidadReserva() == null ? BigDecimal.ZERO : det.getCantidadReserva())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         assertThat(totalDistribuido).isEqualByComparingTo(new BigDecimal("139650.000000"));
+    }
+
+    @Test
+    @DisplayName("calcularDisponibilidad omite FEFO cuando el insumo es SIN_CONTROL_STOCK")
+    void calcularDisponibilidad_insumoSinControlStock() {
+        Producto insumo = new Producto();
+        insumo.setId(99);
+        insumo.setModoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK);
+        when(productoRepository.findById(99L)).thenReturn(Optional.of(insumo));
+
+        DistribucionFefoResult resultado = service.calcularDisponibilidad(99L, new BigDecimal("15"), List.of(7L), false);
+
+        assertThat(resultado.isSuficiente()).isTrue();
+        assertThat(resultado.getFaltante()).isEqualByComparingTo(BigDecimal.ZERO.setScale(6));
+        assertThat(resultado.getStockLibreTotal()).isEqualByComparingTo(new BigDecimal("15.000000"));
+        verify(loteProductoRepository, never()).findFefoDisponibles(anyLong(), anyInt());
     }
 
     private LoteFefoDisponibleProjection lote(Long id, String codigo, BigDecimal stockLibre,

@@ -16,6 +16,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
@@ -224,6 +225,57 @@ class OrdenProduccionServiceImplTest {
 
         assertThat(resultado.isEsValida()).isTrue();
         assertThat(resultado.getOrden()).isNotNull();
+        assertThat(resultado.getInsumosFaltantes()).isNull();
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock permite insumos SIN_CONTROL_STOCK aunque la simulación no tenga stock")
+    void guardarConValidacionStock_insumoSinControlStock() {
+        Producto producto = new Producto();
+        producto.setId(20);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("LTS");
+        producto.setUnidadMedida(unidad);
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setProducto(producto);
+        orden.setCantidadProgramada(new BigDecimal("5"));
+        orden.setEstado(EstadoProduccion.CREADA);
+
+        Producto agua = new Producto();
+        agua.setId(21);
+        agua.setNombre("AGUA PURIFICADA");
+        UnidadMedida umAgua = new UnidadMedida();
+        umAgua.setSimbolo("LTS");
+        agua.setUnidadMedida(umAgua);
+        agua.setModoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(agua);
+        detalle.setCantidadNecesaria(BigDecimal.ONE);
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setProducto(producto);
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(20L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(any())).thenReturn(List.of(agua));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(agua)).thenReturn(List.of());
+
+        DistribucionFefoResult sinStock = DistribucionFefoResult.builder()
+                .productoInsumoId(21L)
+                .requerido(new BigDecimal("5.000000"))
+                .stockLibreTotal(BigDecimal.ZERO.setScale(6))
+                .faltante(new BigDecimal("5.000000"))
+                .suficiente(false)
+                .build();
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(21L), any(BigDecimal.class), eq(List.of()), eq(true)))
+                .thenReturn(sinStock);
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertThat(resultado.isEsValida()).isTrue();
         assertThat(resultado.getInsumosFaltantes()).isNull();
     }
 
