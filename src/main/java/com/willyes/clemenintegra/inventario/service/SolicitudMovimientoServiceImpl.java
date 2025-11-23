@@ -533,23 +533,25 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                         .setTextAlignment(TextAlignment.LEFT));
             }
 
+            List<PicklistItem> items = buildPicklistItems(solicitudes);
+
             int index = 0;
-            for (SolicitudMovimiento s : solicitudes) {
+            for (PicklistItem item : items) {
                 index++;
                 boolean zebra = index % 2 == 0;
                 DeviceRgb zebraColor = new DeviceRgb(0xFA, 0xFA, 0xFA);
 
-                String producto = s.getProducto() != null ? s.getProducto().getNombre() : "-";
-                String lote = s.getLote() != null ? s.getLote().getCodigoLote() : "-";
-                String cantidad = s.getCantidad() != null ? String.format(Locale.US, "%,.3f", s.getCantidad()) : "-";
-                String um = s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : "-";
-                String almOrig = s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getNombre() : "-";
-                String ubicOrig = s.getAlmacenOrigen() != null ? s.getAlmacenOrigen().getUbicacion() : "-";
-                String almDest = s.getAlmacenDestino() != null ? s.getAlmacenDestino().getNombre() : "-";
-                String ubicDest = s.getAlmacenDestino() != null ? s.getAlmacenDestino().getUbicacion() : "-";
-                String obs = s.getObservaciones() != null ? s.getObservaciones() : "-";
-
-                String[] valores = {producto, lote, cantidad, um, almOrig, ubicOrig, almDest, ubicDest, obs};
+                String[] valores = {
+                        item.producto(),
+                        item.lote(),
+                        item.cantidad(),
+                        item.unidadMedida(),
+                        item.almacenOrigen(),
+                        item.ubicacionOrigen(),
+                        item.almacenDestino(),
+                        item.ubicacionDestino(),
+                        item.observaciones()
+                };
                 for (int i = 0; i < valores.length; i++) {
                     Cell cell = new Cell()
                             .add(new Paragraph(valores[i]).setFontSize(9))
@@ -584,6 +586,91 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         } catch (Exception e) {
             throw new RuntimeException("Error generando PDF", e);
         }
+    }
+
+    List<PicklistItem> buildPicklistItems(List<SolicitudMovimiento> solicitudes) {
+        List<PicklistItem> items = new ArrayList<>();
+
+        for (SolicitudMovimiento solicitud : solicitudes) {
+            List<SolicitudMovimientoDetalle> detalles = Optional.ofNullable(solicitud.getDetalles())
+                    .orElseGet(Collections::emptyList);
+
+            if (!detalles.isEmpty()) {
+                for (SolicitudMovimientoDetalle detalle : detalles) {
+                    Almacen origen = detalle.getAlmacenOrigen() != null ? detalle.getAlmacenOrigen() : solicitud.getAlmacenOrigen();
+                    Almacen destino = detalle.getAlmacenDestino() != null ? detalle.getAlmacenDestino() : solicitud.getAlmacenDestino();
+
+                    String producto = solicitud.getProducto() != null ? solicitud.getProducto().getNombre() : "-";
+                    String lote = detalle.getLote() != null ? detalle.getLote().getCodigoLote() : "-";
+                    String cantidad = detalle.getCantidad() != null ? String.format(Locale.US, "%,.3f", detalle.getCantidad()) : "-";
+                    String um = solicitud.getProducto() != null && solicitud.getProducto().getUnidadMedida() != null
+                            ? solicitud.getProducto().getUnidadMedida().getNombre()
+                            : "-";
+                    String almOrigen = origen != null ? origen.getNombre() : "-";
+                    String ubicOrigen = origen != null && origen.getUbicacion() != null ? origen.getUbicacion() : "-";
+                    String almDestino = destino != null ? destino.getNombre() : "-";
+                    String ubicDestino = destino != null && destino.getUbicacion() != null ? destino.getUbicacion() : "-";
+                    String obs = solicitud.getObservaciones() != null ? solicitud.getObservaciones() : "-";
+
+                    items.add(new PicklistItem(
+                            producto,
+                            lote,
+                            cantidad,
+                            um,
+                            almOrigen,
+                            ubicOrigen,
+                            almDestino,
+                            ubicDestino,
+                            obs
+                    ));
+                }
+                continue;
+            }
+
+            String producto = solicitud.getProducto() != null ? solicitud.getProducto().getNombre() : "-";
+            String lote = solicitud.getLote() != null ? solicitud.getLote().getCodigoLote() : "-";
+            String cantidad = solicitud.getCantidad() != null ? String.format(Locale.US, "%,.3f", solicitud.getCantidad()) : "-";
+            String um = solicitud.getProducto() != null && solicitud.getProducto().getUnidadMedida() != null
+                    ? solicitud.getProducto().getUnidadMedida().getNombre()
+                    : "-";
+            String almOrigen = solicitud.getAlmacenOrigen() != null ? solicitud.getAlmacenOrigen().getNombre() : "-";
+            String ubicOrigen = solicitud.getAlmacenOrigen() != null ? solicitud.getAlmacenOrigen().getUbicacion() : "-";
+            String almDestino = solicitud.getAlmacenDestino() != null ? solicitud.getAlmacenDestino().getNombre() : "-";
+            String ubicDestino = solicitud.getAlmacenDestino() != null ? solicitud.getAlmacenDestino().getUbicacion() : "-";
+            String obs = solicitud.getObservaciones() != null ? solicitud.getObservaciones() : "-";
+
+            items.add(new PicklistItem(
+                    producto,
+                    lote,
+                    cantidad,
+                    um,
+                    almOrigen,
+                    ubicOrigen,
+                    almDestino,
+                    ubicDestino,
+                    obs
+            ));
+        }
+
+        return items;
+    }
+
+    /**
+     * Representa una fila del picklist. Los datos de lote y almacén de origen se toman del detalle
+     * porque las solicitudes de producción suelen almacenar esa información a nivel de detalle
+     * (multi-lote). Los valores de cabecera se mantienen como respaldo cuando no hay detalles.
+     */
+    static record PicklistItem(
+            String producto,
+            String lote,
+            String cantidad,
+            String unidadMedida,
+            String almacenOrigen,
+            String ubicacionOrigen,
+            String almacenDestino,
+            String ubicacionDestino,
+            String observaciones
+    ) {
     }
 
     private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s, SolicitudMovimientoDetalle det) {
