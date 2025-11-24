@@ -103,4 +103,14 @@ public class SolicitudMovimientoController {
         Long usuarioId = usuario.getId();
         return ResponseEntity.ok(service.revertirAutorizacion(id, usuarioId));
     }
+
+    @PostMapping("/{id}/autorizar-todo")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public ResponseEntity<SolicitudMovimientoResponseDTO> autorizarCompleta(@PathVariable Long id,
+                                                                            Authentication authentication) {
+        String username = authentication.getName();
+        Usuario usuario = usuarioService.buscarPorNombreUsuario(username);
+        Long usuarioId = usuario.getId();
+        return ResponseEntity.ok(service.autorizarSolicitudCompleta(id, usuarioId));
+    }
 }

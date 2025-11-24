@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoDetalleRepository.OpDetalleCount;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -359,6 +360,96 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         solicitud.setFechaResolucion(null);
         SolicitudMovimiento actualizada = repository.save(solicitud);
         return toResponse(actualizada);
+    }
+
+    @Override
+    @Transactional
+    public SolicitudMovimientoResponseDTO autorizarSolicitudCompleta(Long solicitudId, Long usuarioAutorizadorId) {
+        validarAutenticacion();
+        SolicitudMovimiento solicitud = repository.findByIdWithLock(solicitudId)
+                .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
+
+        if (solicitud.getEstado() == EstadoSolicitudMovimiento.CANCELADA
+                || solicitud.getEstado() == EstadoSolicitudMovimiento.CERRADA
+                || solicitud.getEstado() == EstadoSolicitudMovimiento.RECHAZADO) {
+            throw new IllegalStateException("La solicitud no admite nuevas autorizaciones en su estado actual: "
+                    + solicitud.getEstado());
+        }
+
+        Usuario responsable = usuarioRepository.findById(usuarioAutorizadorId)
+                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
+
+        int totalPendientes = 0;
+        int totalAutorizados = 0;
+        List<String> errores = new ArrayList<>();
+
+        List<SolicitudMovimientoDetalle> detalles = Optional.ofNullable(solicitud.getDetalles())
+                .orElseGet(Collections::emptyList);
+        for (SolicitudMovimientoDetalle detalle : detalles) {
+            if (!estaPendienteDeAutorizacion(detalle)) {
+                continue;
+            }
+
+            totalPendientes++;
+
+            try {
+                autorizarDetalleInterno(solicitud, detalle, responsable);
+                totalAutorizados++;
+            } catch (RuntimeException ex) {
+                String nombreProducto = obtenerNombreProducto(detalle, solicitud);
+                errores.add(nombreProducto + ": " + ex.getMessage());
+            }
+        }
+
+        if (totalPendientes > 0) {
+            solicitud.setUsuarioResponsable(responsable);
+            solicitud.setFechaResolucion(LocalDateTime.now());
+
+            if (totalAutorizados == totalPendientes && errores.isEmpty()) {
+                solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
+            } else if (totalAutorizados > 0 || !errores.isEmpty()) {
+                solicitud.setEstado(EstadoSolicitudMovimiento.PARCIAL);
+            }
+        }
+
+        SolicitudMovimiento actualizada = repository.saveAndFlush(solicitud);
+        reservaLoteService.sincronizarReservasSolicitud(actualizada);
+        return toResponse(actualizada);
+    }
+
+    private void autorizarDetalleInterno(SolicitudMovimiento solicitud,
+                                         SolicitudMovimientoDetalle detalle,
+                                         Usuario responsable) {
+        if (solicitud.getEstado() == EstadoSolicitudMovimiento.CANCELADA
+                || solicitud.getEstado() == EstadoSolicitudMovimiento.CERRADA
+                || solicitud.getEstado() == EstadoSolicitudMovimiento.RECHAZADO) {
+            throw new IllegalStateException("La solicitud no admite nuevas autorizaciones");
+        }
+
+        if (!estaPendienteDeAutorizacion(detalle)) {
+            throw new IllegalStateException("El detalle ya fue procesado");
+        }
+        if (detalle.getLote() == null || detalle.getLote().getId() == null) {
+            throw new IllegalArgumentException("El detalle no tiene lote asignado");
+        }
+
+        solicitud.setUsuarioResponsable(responsable);
+        reservaLoteService.crearOActualizarDesdeDetalle(detalle);
+    }
+
+    private boolean estaPendienteDeAutorizacion(SolicitudMovimientoDetalle detalle) {
+        EstadoSolicitudMovimientoDetalle estado = detalle != null ? detalle.getEstado() : null;
+        return estado == null
+                || estado == EstadoSolicitudMovimientoDetalle.PENDIENTE
+                || estado == EstadoSolicitudMovimientoDetalle.PARCIAL;
+    }
+
+    private String obtenerNombreProducto(SolicitudMovimientoDetalle detalle, SolicitudMovimiento solicitud) {
+        Producto producto = Optional.ofNullable(detalle)
+                .map(SolicitudMovimientoDetalle::getLote)
+                .map(LoteProducto::getProducto)
+                .orElseGet(() -> solicitud != null ? solicitud.getProducto() : null);
+        return producto != null ? producto.getNombre() : "Insumo";
     }
 
     private void validarAutenticacion() {
