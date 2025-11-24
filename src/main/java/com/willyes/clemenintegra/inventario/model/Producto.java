@@ -41,6 +41,18 @@ public class Producto {
     @Column(name = "stock_minimo_proveedor")
     private BigDecimal stockMinimoProveedor;
 
+    @Column(name = "lead_time_compra_dias")
+    private Integer leadTimeCompraDias;
+
+    @Column(name = "lead_time_produccion_dias")
+    private Integer leadTimeProduccionDias;
+
+    @Column(name = "stock_seguridad", precision = 19, scale = 6)
+    private BigDecimal stockSeguridad;
+
+    @Column(name = "stock_maximo_planeacion", precision = 19, scale = 6)
+    private BigDecimal stockMaximoPlaneacion;
+
     /**
      * Rendimiento de producción expresado en la unidad del producto.
      * Representa, por ejemplo, el volumen por unidad de empaque.
@@ -130,6 +142,15 @@ public class Producto {
     public void setRendimientoUnidad(BigDecimal rendimientoUnidad) {this.rendimientoUnidad = rendimientoUnidad;}
     public ModoControlInventario getModoControlInventario() {return modoControlInventario;}
     public void setModoControlInventario(ModoControlInventario modoControlInventario) {this.modoControlInventario = modoControlInventario;}
+
+    public Integer getLeadTimeCompraDias() {return leadTimeCompraDias;}
+    public void setLeadTimeCompraDias(Integer leadTimeCompraDias) {this.leadTimeCompraDias = leadTimeCompraDias;}
+    public Integer getLeadTimeProduccionDias() {return leadTimeProduccionDias;}
+    public void setLeadTimeProduccionDias(Integer leadTimeProduccionDias) {this.leadTimeProduccionDias = leadTimeProduccionDias;}
+    public BigDecimal getStockSeguridad() {return stockSeguridad;}
+    public void setStockSeguridad(BigDecimal stockSeguridad) {this.stockSeguridad = stockSeguridad;}
+    public BigDecimal getStockMaximoPlaneacion() {return stockMaximoPlaneacion;}
+    public void setStockMaximoPlaneacion(BigDecimal stockMaximoPlaneacion) {this.stockMaximoPlaneacion = stockMaximoPlaneacion;}
 
 }
 

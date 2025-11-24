@@ -2,10 +2,13 @@ package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 public interface OrdenCompraDetalleRepository extends JpaRepository<OrdenCompraDetalle, Long> {
@@ -31,4 +34,14 @@ public interface OrdenCompraDetalleRepository extends JpaRepository<OrdenCompraD
     ORDER BY AVG(d.valorUnitario) DESC
     """)
     java.util.List<Object[]> productosMasCostosos(@Param("categoria") String categoria);
+
+    @Query("""
+            SELECT COALESCE(SUM(d.cantidad - d.cantidadRecibida), 0)
+            FROM OrdenCompraDetalle d
+            JOIN d.ordenCompra oc
+            WHERE d.producto.id = :productoId
+              AND oc.estado IN :estados
+            """)
+    BigDecimal sumarCantidadPendientePorProductoYEstados(@Param("productoId") Long productoId,
+                                                          @Param("estados") List<EstadoOrdenCompra> estados);
 }

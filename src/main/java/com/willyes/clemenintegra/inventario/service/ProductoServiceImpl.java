@@ -95,6 +95,10 @@ public class ProductoServiceImpl implements ProductoService {
         return term == null ? "" : term.trim();
     }
 
+    private BigDecimal normalizeToScale6(BigDecimal value) {
+        return value != null ? value.setScale(6, RoundingMode.HALF_UP) : null;
+    }
+
     private ProductoResumenDTO mapToResumenDto(Producto producto) {
         if (producto == null) {
             return null;
@@ -212,6 +216,10 @@ public class ProductoServiceImpl implements ProductoService {
                 .descripcionProducto(dto.getDescripcionProducto())
                 .stockMinimo(dto.getStockMinimo())
                 .stockMinimoProveedor(dto.getStockMinimoProveedor())
+                .leadTimeCompraDias(dto.getLeadTimeCompraDias())
+                .leadTimeProduccionDias(dto.getLeadTimeProduccionDias())
+                .stockSeguridad(normalizeToScale6(dto.getStockSeguridad()))
+                .stockMaximoPlaneacion(normalizeToScale6(dto.getStockMaximoPlaneacion()))
                 .activo(true)
                 .tipoAnalisis(obtenerTipoAnalisisDesdeDto(dto.getTipoAnalisisCalidad()))
                 .fechaCreacion(LocalDateTime.now())
@@ -255,6 +263,10 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setDescripcionProducto(dto.getDescripcionProducto());
         producto.setStockMinimo(dto.getStockMinimo());
         producto.setStockMinimoProveedor(dto.getStockMinimoProveedor());
+        producto.setLeadTimeCompraDias(dto.getLeadTimeCompraDias());
+        producto.setLeadTimeProduccionDias(dto.getLeadTimeProduccionDias());
+        producto.setStockSeguridad(normalizeToScale6(dto.getStockSeguridad()));
+        producto.setStockMaximoPlaneacion(normalizeToScale6(dto.getStockMaximoPlaneacion()));
         producto.setTipoAnalisis(obtenerTipoAnalisisDesdeDto(dto.getTipoAnalisisCalidad()));
         producto.setUnidadMedida(unidad);
         producto.setCategoriaProducto(categoria);
