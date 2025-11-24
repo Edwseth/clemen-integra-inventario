@@ -23,6 +23,10 @@ public class ProductoResponseDTO {
     private BigDecimal stockDisponible;
     private BigDecimal stockMinimo;
     private BigDecimal stockMinimoProveedor;
+    private Integer leadTimeCompraDias;
+    private Integer leadTimeProduccionDias;
+    private BigDecimal stockSeguridad;
+    private BigDecimal stockMaximoPlaneacion;
     private Boolean activo;
     private String tipoAnalisisCalidad;
     private BigDecimal rendimiento;
@@ -46,6 +50,10 @@ public class ProductoResponseDTO {
         this.descripcionProducto = producto.getDescripcionProducto();
         this.stockMinimo = producto.getStockMinimo();
         this.stockMinimoProveedor = producto.getStockMinimoProveedor();
+        this.leadTimeCompraDias = producto.getLeadTimeCompraDias();
+        this.leadTimeProduccionDias = producto.getLeadTimeProduccionDias();
+        this.stockSeguridad = producto.getStockSeguridad();
+        this.stockMaximoPlaneacion = producto.getStockMaximoPlaneacion();
         this.activo = producto.isActivo();
         this.tipoAnalisisCalidad = producto.getTipoAnalisisCalidad() != null
                 ? producto.getTipoAnalisisCalidad().name()

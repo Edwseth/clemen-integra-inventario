@@ -80,6 +80,12 @@ public interface ProductoMapper {
                     entity.getRendimientoUnidad().setScale(2, RoundingMode.HALF_UP)
             );
         }
+        if (entity.getStockSeguridad() != null) {
+            entity.setStockSeguridad(entity.getStockSeguridad().setScale(6, RoundingMode.HALF_UP));
+        }
+        if (entity.getStockMaximoPlaneacion() != null) {
+            entity.setStockMaximoPlaneacion(entity.getStockMaximoPlaneacion().setScale(6, RoundingMode.HALF_UP));
+        }
     }
 
 }

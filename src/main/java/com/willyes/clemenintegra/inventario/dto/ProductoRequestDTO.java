@@ -50,6 +50,18 @@ public class ProductoRequestDTO {
     @DecimalMin(value = "0.00", message = "Debe ser >= 0.00")
     private BigDecimal rendimientoUnidad;
 
+    private Integer leadTimeCompraDias;
+
+    private Integer leadTimeProduccionDias;
+
+    @Digits(integer = 19, fraction = 6, message = "Máximo 19 enteros y 6 decimales")
+    @DecimalMin(value = "0.00", message = "Debe ser >= 0.00")
+    private BigDecimal stockSeguridad;
+
+    @Digits(integer = 19, fraction = 6, message = "Máximo 19 enteros y 6 decimales")
+    @DecimalMin(value = "0.00", message = "Debe ser >= 0.00")
+    private BigDecimal stockMaximoPlaneacion;
+
     public String getTipoAnalisisCalidad() {return tipoAnalisisCalidad;}
     public void setTipoAnalisisCalidad(String tipoAnalisisCalidad) {this.tipoAnalisisCalidad = tipoAnalisisCalidad;}
 }
