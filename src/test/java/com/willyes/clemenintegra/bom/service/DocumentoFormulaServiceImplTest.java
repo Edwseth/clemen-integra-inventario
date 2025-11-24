@@ -125,7 +125,17 @@ class DocumentoFormulaServiceImplTest {
         assertThat(almacenado.getUsuario()).isEqualTo(usuario);
         assertThat(almacenado.getTipoDocumento()).isEqualTo(TipoDocumento.PROCEDIMIENTO);
         assertThat(almacenado.getNombreArchivo()).isEqualTo("Procedimiento de prueba");
-        assertThat(almacenado.getRutaArchivo()).startsWith("uploads/bom/formulas/1/");
+        assertThat(almacenado.getFormula()).isEqualTo(formula);
+        assertThat(almacenado.getUsuario()).isEqualTo(usuario);
+        assertThat(almacenado.getTipoDocumento()).isEqualTo(TipoDocumento.PROCEDIMIENTO);
+        assertThat(almacenado.getNombreArchivo()).isEqualTo("Procedimiento de prueba");
+
+        // 🔧 Normalizar la ruta para que funcione en Windows y Linux
+        String rutaNormalizada = almacenado.getRutaArchivo().replace("\\", "/");
+        assertThat(rutaNormalizada).startsWith("uploads/bom/formulas/1/");
+
+        assertThat(almacenado.getFechaSubida()).isNotNull();
+
         assertThat(almacenado.getFechaSubida()).isNotNull();
 
         Path rutaFisica = tempDir.resolve(almacenado.getRutaArchivo());
