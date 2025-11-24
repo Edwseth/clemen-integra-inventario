@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.planeacion.service;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
@@ -32,9 +33,11 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -52,7 +55,23 @@ public class PlaneacionMrpServiceImpl implements PlaneacionMrpService {
     @Transactional
     public CorridaMrpResponseDTO ejecutarMrpSimple(MrpSimpleRequestDTO request, Long usuarioId) {
         MrpSimpleRequestDTO safeRequest = request != null ? request : new MrpSimpleRequestDTO();
-        List<Producto> candidatos = productoRepository.findAll(buildProductoSpecification(safeRequest));
+        List<TipoCategoria> tiposCategorias = parseTiposCategorias(safeRequest.getCategoriasProducto());
+
+        boolean soloControlStock = safeRequest.getSoloControlStock() == null || Boolean.TRUE.equals(safeRequest.getSoloControlStock());
+
+        List<Producto> candidatos;
+        if (soloControlStock) {
+            if (tiposCategorias.isEmpty()) {
+                candidatos = productoRepository.findByModoControlInventarioAndActivoTrue(ModoControlInventario.CONTROL_STOCK);
+            } else {
+                candidatos = productoRepository.findByModoControlInventarioAndActivoTrueAndCategoriaProducto_TipoIn(
+                        ModoControlInventario.CONTROL_STOCK,
+                        tiposCategorias
+                );
+            }
+        } else {
+            candidatos = productoRepository.findAll(buildProductoSpecification(safeRequest, tiposCategorias));
+        }
         log.info("Iniciando corrida MRP simple para {} productos candidatos", candidatos.size());
 
         List<SugerenciaAbastecimiento> sugerencias = new ArrayList<>();
@@ -159,7 +178,7 @@ public class PlaneacionMrpServiceImpl implements PlaneacionMrpService {
         return listarSugerencias(corridaId, null, null, null, pageable);
     }
 
-    private Specification<Producto> buildProductoSpecification(MrpSimpleRequestDTO request) {
+    private Specification<Producto> buildProductoSpecification(MrpSimpleRequestDTO request, List<TipoCategoria> tiposCategorias) {
         MrpSimpleRequestDTO safeRequest = request != null ? request : new MrpSimpleRequestDTO();
         return (root, query, cb) -> {
             query.distinct(true);
@@ -170,11 +189,32 @@ public class PlaneacionMrpServiceImpl implements PlaneacionMrpService {
             }
             predicates.add(cb.isTrue(root.get("activo")));
 
-            if (safeRequest.getCategoriasProducto() != null && !safeRequest.getCategoriasProducto().isEmpty()) {
-                predicates.add(root.join("categoriaProducto").get("nombre").in(safeRequest.getCategoriasProducto()));
+            if (tiposCategorias != null && !tiposCategorias.isEmpty()) {
+                predicates.add(root.join("categoriaProducto").get("tipo").in(tiposCategorias));
             }
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
+    }
+
+    private List<TipoCategoria> parseTiposCategorias(List<String> categoriasProducto) {
+        if (categoriasProducto == null || categoriasProducto.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return categoriasProducto.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(categoria -> {
+                    try {
+                        return TipoCategoria.valueOf(categoria);
+                    } catch (IllegalArgumentException ex) {
+                        log.warn("Tipo de categoría inválido recibido: {}", categoria);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     private BigDecimal obtenerStockActual(Long productoId) {
