@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
@@ -19,12 +20,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Collections;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -82,11 +82,12 @@ class PlaneacionMrpServiceImplTest {
                 .stockMinimo(new BigDecimal("10"))
                 .stockSeguridad(new BigDecimal("2"))
                 .modoControlInventario(ModoControlInventario.CONTROL_STOCK)
-                .categoriaProducto(CategoriaProducto.builder().nombre("CAT").build())
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
                 .activo(true)
                 .build();
 
-        when(productoRepository.findAll(any(Specification.class))).thenReturn(List.of(producto));
+        when(productoRepository.findByModoControlInventarioAndActivoTrue(ModoControlInventario.CONTROL_STOCK))
+                .thenReturn(List.of(producto));
         List<Object[]> sumas = Collections.singletonList(new Object[]{EstadoLote.DISPONIBLE, new BigDecimal("5")});
         when(loteProductoRepository.sumarPorEstado(1L)).thenReturn(sumas);
         when(ordenCompraDetalleRepository.sumarCantidadPendientePorProductoYEstados(eq(1L), anyList()))
@@ -112,10 +113,12 @@ class PlaneacionMrpServiceImplTest {
                 .nombre("Producto 2")
                 .stockMinimo(new BigDecimal("5"))
                 .modoControlInventario(ModoControlInventario.CONTROL_STOCK)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
                 .activo(true)
                 .build();
 
-        when(productoRepository.findAll(any(Specification.class))).thenReturn(List.of(producto));
+        when(productoRepository.findByModoControlInventarioAndActivoTrue(ModoControlInventario.CONTROL_STOCK))
+                .thenReturn(List.of(producto));
         List<Object[]> sumas = Collections.singletonList(new Object[]{EstadoLote.DISPONIBLE, new BigDecimal("10")});
         when(loteProductoRepository.sumarPorEstado(2L)).thenReturn(sumas);
         when(ordenCompraDetalleRepository.sumarCantidadPendientePorProductoYEstados(eq(2L), anyList()))
@@ -125,5 +128,39 @@ class PlaneacionMrpServiceImplTest {
 
         assertThat(response.getTotalSugerencias()).isZero();
         assertThat(response.getSugerencias()).isEmpty();
+    }
+
+    @Test
+    void generarSugerenciaFiltrandoPorTipoCategoria() {
+        Producto producto = Producto.builder()
+                .id(3)
+                .codigoSku("SKU-3")
+                .nombre("Producto 3")
+                .stockMinimo(new BigDecimal("8"))
+                .stockSeguridad(new BigDecimal("2"))
+                .modoControlInventario(ModoControlInventario.CONTROL_STOCK)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
+                .activo(true)
+                .build();
+
+        when(productoRepository.findByModoControlInventarioAndActivoTrueAndCategoriaProducto_TipoIn(
+                eq(ModoControlInventario.CONTROL_STOCK),
+                eq(List.of(TipoCategoria.MATERIA_PRIMA))
+        )).thenReturn(List.of(producto));
+
+        List<Object[]> sumas = Collections.singletonList(new Object[]{EstadoLote.DISPONIBLE, new BigDecimal("3")});
+        when(loteProductoRepository.sumarPorEstado(3L)).thenReturn(sumas);
+        when(ordenCompraDetalleRepository.sumarCantidadPendientePorProductoYEstados(eq(3L), anyList()))
+                .thenReturn(BigDecimal.ZERO);
+
+        MrpSimpleRequestDTO request = MrpSimpleRequestDTO.builder()
+                .categoriasProducto(List.of("MATERIA_PRIMA"))
+                .build();
+
+        CorridaMrpResponseDTO response = service.ejecutarMrpSimple(request, 30L);
+
+        assertThat(response.getTotalSugerencias()).isEqualTo(1);
+        assertThat(response.getSugerencias()).hasSize(1);
+        assertThat(response.getSugerencias().get(0).getProductoId()).isEqualTo(3);
     }
 }

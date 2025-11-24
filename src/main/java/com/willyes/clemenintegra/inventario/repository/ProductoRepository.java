@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.repository;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,7 +14,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import com.willyes.clemenintegra.inventario.dto.StockDisponibleProjection;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +28,13 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     List<Producto> findByCategoriaProducto_Tipo(String tipo);
     List<Producto> findByCategoriaProducto_TipoIn(List<TipoCategoria> tipos);
     List<Producto> findByCategoriaProducto_TipoAndActivoTrueOrderByNombreAsc(TipoCategoria tipo);
+
+    List<Producto> findByModoControlInventarioAndActivoTrue(ModoControlInventario modo);
+
+    List<Producto> findByModoControlInventarioAndActivoTrueAndCategoriaProducto_TipoIn(
+            ModoControlInventario modo,
+            java.util.Collection<TipoCategoria> tipos
+    );
 
     Optional<Producto> findByCodigoSku(String codigoSku);
     Optional<Producto> findByNombre(String nombre);
