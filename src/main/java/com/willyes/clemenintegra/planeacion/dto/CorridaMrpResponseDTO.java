@@ -36,6 +36,10 @@ public class CorridaMrpResponseDTO {
         private String productoNombre;
         private String codigoInsumo;
         private String nombreInsumo;
+        /**
+         * Nombre de la categoría del insumo (ej. "Materia Prima", "Material de Empaque").
+         * El frontend puede usar este valor directamente para filtros.
+         */
         private String categoriaInsumo;
         private BigDecimal requerimientoBruto;
         private BigDecimal inventarioDisponible;

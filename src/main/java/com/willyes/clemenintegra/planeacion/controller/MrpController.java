@@ -108,15 +108,15 @@ public class MrpController {
     }
 
     private CorridaMrpResponseDTO.DetalleCorridaMrpDTO toDetalleDto(DetalleCorridaMrp detalle) {
-        Producto producto = detalle.getProducto();
+        Producto insumo = detalle.getProducto();
         return CorridaMrpResponseDTO.DetalleCorridaMrpDTO.builder()
                 .id(detalle.getId())
-                .productoId(producto != null && producto.getId() != null ? producto.getId().longValue() : null)
-                .productoSku(producto != null ? producto.getCodigoSku() : null)
-                .productoNombre(producto != null ? producto.getNombre() : null)
-                .codigoInsumo(producto != null ? producto.getCodigoSku() : null)
-                .nombreInsumo(producto != null ? producto.getNombre() : null)
-                .categoriaInsumo(producto != null && producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)
+                .productoId(insumo != null && insumo.getId() != null ? insumo.getId().longValue() : null)
+                .productoSku(insumo != null ? insumo.getCodigoSku() : null)
+                .productoNombre(insumo != null ? insumo.getNombre() : null)
+                .codigoInsumo(insumo != null ? insumo.getCodigoSku() : null)
+                .nombreInsumo(insumo != null ? insumo.getNombre() : null)
+                .categoriaInsumo(insumo != null && insumo.getCategoriaProducto() != null ? insumo.getCategoriaProducto().getNombre() : null)
                 .requerimientoBruto(detalle.getRequerimientoBruto())
                 .inventarioDisponible(detalle.getInventarioDisponible())
                 .recepcionesProgramadas(detalle.getRecepcionesProgramadas())
