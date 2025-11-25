@@ -7,13 +7,19 @@ import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
+import com.willyes.clemenintegra.planeacion.service.MrpReporteService;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -25,6 +31,7 @@ public class MrpController {
 
     private final MrpService mrpService;
     private final PlanProduccionService planProduccionService;
+    private final MrpReporteService mrpReporteService;
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
@@ -39,9 +46,41 @@ public class MrpController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
-    public ResponseEntity<CorridaMrpResponseDTO> obtener(@PathVariable Long id) {
-        CorridaMrp corrida = mrpService.obtenerCorrida(id);
-        return ResponseEntity.ok(toDto(corrida));
+    public ResponseEntity<?> obtener(@PathVariable Long id) {
+        try {
+            CorridaMrp corrida = mrpService.obtenerCorrida(id);
+            return ResponseEntity.ok(toDto(corrida));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/excel")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
+    public ResponseEntity<?> exportarExcel(@PathVariable Long id) {
+        try {
+            byte[] excel = mrpReporteService.generarExcelCorrida(id);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"mrp_corrida_" + id + ".xlsx\"")
+                    .body(excel);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/pdf")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
+    public ResponseEntity<?> exportarPdf(@PathVariable Long id) {
+        try {
+            byte[] pdf = mrpReporteService.generarPdfCorrida(id);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"mrp_corrida_" + id + ".pdf\"")
+                    .body(pdf);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+        }
     }
 
     private CorridaMrpResponseDTO toDto(CorridaMrp corrida) {
@@ -75,6 +114,9 @@ public class MrpController {
                 .productoId(producto != null && producto.getId() != null ? producto.getId().longValue() : null)
                 .productoSku(producto != null ? producto.getCodigoSku() : null)
                 .productoNombre(producto != null ? producto.getNombre() : null)
+                .codigoInsumo(producto != null ? producto.getCodigoSku() : null)
+                .nombreInsumo(producto != null ? producto.getNombre() : null)
+                .categoriaInsumo(producto != null && producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)
                 .requerimientoBruto(detalle.getRequerimientoBruto())
                 .inventarioDisponible(detalle.getInventarioDisponible())
                 .recepcionesProgramadas(detalle.getRecepcionesProgramadas())

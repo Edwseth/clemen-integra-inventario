@@ -34,6 +34,9 @@ public class CorridaMrpResponseDTO {
         private Long productoId;
         private String productoSku;
         private String productoNombre;
+        private String codigoInsumo;
+        private String nombreInsumo;
+        private String categoriaInsumo;
         private BigDecimal requerimientoBruto;
         private BigDecimal inventarioDisponible;
         private BigDecimal recepcionesProgramadas;
