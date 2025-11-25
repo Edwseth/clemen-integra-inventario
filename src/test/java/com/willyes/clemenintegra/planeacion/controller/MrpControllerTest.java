@@ -14,9 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -32,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = MrpController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(MrpControllerTest.MethodSecurityTestConfig.class)
 class MrpControllerTest {
 
     @Autowired
@@ -58,7 +62,7 @@ class MrpControllerTest {
     @MockBean
     private AuthenticationManager authenticationManager;
 
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "ROL_COMPRADOR")
     @Test
     void obtenerIncluyeDatosDeInsumo() throws Exception {
         CategoriaProducto categoria = CategoriaProducto.builder()
@@ -109,5 +113,40 @@ class MrpControllerTest {
                 .andExpect(jsonPath("$.detalles[0].nombreInsumo").value("Botella 500ml"))
                 .andExpect(jsonPath("$.detalles[0].categoriaInsumo").value("Envases"))
                 .andExpect(jsonPath("$.detalles[0].tipoSugerencia").value("COMPRA"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    void obtenerPermiteSuperAdmin() throws Exception {
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .id(4L)
+                .semanaInicio(LocalDate.now())
+                .semanaFin(LocalDate.now().plusDays(7))
+                .build();
+
+        CorridaMrp corrida = CorridaMrp.builder()
+                .id(5L)
+                .planProduccionSemanal(plan)
+                .detalles(List.of())
+                .build();
+
+        when(mrpService.obtenerCorrida(anyLong())).thenReturn(corrida);
+
+        mockMvc.perform(get("/api/mrp/corridas/5")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void obtenerRechazaJefeProduccion() throws Exception {
+        mockMvc.perform(get("/api/mrp/corridas/2")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    @TestConfiguration
+    @EnableMethodSecurity
+    static class MethodSecurityTestConfig {
     }
 }

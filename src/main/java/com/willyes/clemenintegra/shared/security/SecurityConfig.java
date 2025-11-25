@@ -114,11 +114,14 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
-                    auth.requestMatchers("/api/planeacion/**", "/api/mrp/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name(),
+                    auth.requestMatchers("/api/planeacion/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_COMPRADOR.name()
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/mrp/**").hasAnyAuthority(
+                            RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
                     auth.requestMatchers("/api/calidad/**",
