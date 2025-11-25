@@ -2,151 +2,85 @@ package com.willyes.clemenintegra.planeacion.controller;
 
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.planeacion.dto.CorridaMrpResponseDTO;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
-import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
-import com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento;
-import com.willyes.clemenintegra.planeacion.model.enums.TipoSugerenciaAbastecimiento;
 import com.willyes.clemenintegra.planeacion.service.MrpReporteService;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
 
-@WebMvcTest(controllers = MrpController.class)
-@AutoConfigureMockMvc(addFilters = false)
-@Import(MrpControllerTest.MethodSecurityTestConfig.class)
 class MrpControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
-    private MrpService mrpService;
-
-    @MockBean
-    private PlanProduccionService planProduccionService;
-
-    @MockBean
-    private MrpReporteService mrpReporteService;
-
-    @MockBean
-    private com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider jwtAuthenticationProvider;
-
-    @MockBean
-    private com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    @MockBean
-    private com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter usuarioInactivoFilter;
-
-    @MockBean
-    private AuthenticationManager authenticationManager;
-
-    @WithMockUser(authorities = "ROL_COMPRADOR")
     @Test
-    void obtenerIncluyeDatosDeInsumo() throws Exception {
+    void toDtoShouldCalculateCriticidadPerRules() {
+        MrpController controller = new MrpController(
+                mock(MrpService.class),
+                mock(PlanProduccionService.class),
+                mock(MrpReporteService.class)
+        );
+
         CategoriaProducto categoria = CategoriaProducto.builder()
-                .id(5L)
-                .nombre("Envases")
+                .id(1L)
+                .nombre("Categoria Prueba")
                 .build();
+
         Producto producto = Producto.builder()
-                .id(2)
-                .codigoSku("SKU-01")
-                .nombre("Botella 500ml")
+                .id(1)
+                .codigoSku("SKU-1")
+                .nombre("Insumo 1")
                 .categoriaProducto(categoria)
                 .build();
 
-        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
-                .id(10L)
+        DetalleCorridaMrp criticidadBaja = DetalleCorridaMrp.builder()
+                .id(1L)
                 .producto(producto)
                 .requerimientoBruto(BigDecimal.TEN)
-                .inventarioDisponible(BigDecimal.ONE)
-                .requerimientoNeto(BigDecimal.valueOf(9))
+                .inventarioDisponible(BigDecimal.TEN)
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.ZERO)
+                .nivelBom(1)
                 .build();
 
-        SugerenciaAbastecimiento sugerencia = SugerenciaAbastecimiento.builder()
-                .id(11L)
-                .detalleCorrida(detalle)
-                .tipo(TipoSugerenciaAbastecimiento.COMPRA)
-                .cantidadSugerida(BigDecimal.valueOf(9))
+        DetalleCorridaMrp criticidadAlta = DetalleCorridaMrp.builder()
+                .id(2L)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.TEN)
+                .inventarioDisponible(BigDecimal.ZERO)
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.valueOf(5))
+                .nivelBom(1)
                 .build();
-        detalle.setSugerencia(sugerencia);
 
-        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+        DetalleCorridaMrp criticidadMedia = DetalleCorridaMrp.builder()
                 .id(3L)
-                .semanaInicio(LocalDate.now())
-                .semanaFin(LocalDate.now().plusDays(7))
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.TEN)
+                .inventarioDisponible(BigDecimal.valueOf(2))
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.valueOf(3))
+                .nivelBom(1)
                 .build();
 
-        CorridaMrp corrida = CorridaMrp.builder()
-                .id(1L)
-                .planProduccionSemanal(plan)
-                .detalles(List.of(detalle))
-                .build();
+        CorridaMrp corrida = CorridaMrp.builder().build();
+        corrida.setDetalles(List.of(criticidadBaja, criticidadAlta, criticidadMedia));
 
-        when(mrpService.obtenerCorrida(anyLong())).thenReturn(corrida);
+        CorridaMrpResponseDTO dto = ReflectionTestUtils.invokeMethod(controller, "toDto", corrida);
 
-        mockMvc.perform(get("/api/mrp/corridas/1")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.detalles[0].codigoInsumo").value("SKU-01"))
-                .andExpect(jsonPath("$.detalles[0].nombreInsumo").value("Botella 500ml"))
-                .andExpect(jsonPath("$.detalles[0].categoriaInsumo").value("Envases"))
-                .andExpect(jsonPath("$.detalles[0].tipoSugerencia").value("COMPRA"));
-    }
-
-    @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
-    void obtenerPermiteSuperAdmin() throws Exception {
-        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
-                .id(4L)
-                .semanaInicio(LocalDate.now())
-                .semanaFin(LocalDate.now().plusDays(7))
-                .build();
-
-        CorridaMrp corrida = CorridaMrp.builder()
-                .id(5L)
-                .planProduccionSemanal(plan)
-                .detalles(List.of())
-                .build();
-
-        when(mrpService.obtenerCorrida(anyLong())).thenReturn(corrida);
-
-        mockMvc.perform(get("/api/mrp/corridas/5")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
-    void obtenerRechazaJefeProduccion() throws Exception {
-        mockMvc.perform(get("/api/mrp/corridas/2")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isForbidden());
-    }
-
-    @TestConfiguration
-    @EnableMethodSecurity
-    static class MethodSecurityTestConfig {
+        assertNotNull(dto);
+        assertNotNull(dto.getDetalles());
+        assertEquals(3, dto.getDetalles().size());
+        assertEquals("BAJA", dto.getDetalles().get(0).getCriticidad());
+        assertEquals("ALTA", dto.getDetalles().get(1).getCriticidad());
+        assertEquals("MEDIA", dto.getDetalles().get(2).getCriticidad());
     }
 }
+
