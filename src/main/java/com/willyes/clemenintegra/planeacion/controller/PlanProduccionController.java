@@ -30,7 +30,7 @@ public class PlanProduccionController {
     private final PlanProduccionService planProduccionService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
     public ResponseEntity<PlanProduccionSemanalDTO> crearOActualizar(@RequestBody PlanProduccionSemanalDTO dto,
                                                                      @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (dto.getCreadoPorId() == null && userDetails != null) {
@@ -41,14 +41,14 @@ public class PlanProduccionController {
     }
 
     @PostMapping("/{id}/confirmar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
     public ResponseEntity<PlanProduccionSemanalDTO> confirmar(@PathVariable Long id) {
         PlanProduccionSemanal plan = planProduccionService.confirmar(id);
         return ResponseEntity.ok(toDto(plan));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
     public ResponseEntity<Page<PlanProduccionSemanalDTO>> listar(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate semanaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate semanaFin,
@@ -60,7 +60,7 @@ public class PlanProduccionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
     public ResponseEntity<PlanProduccionSemanalDTO> obtener(@PathVariable Long id) {
         return planProduccionService.buscarPorId(id)
                 .map(plan -> ResponseEntity.ok(toDto(plan)))

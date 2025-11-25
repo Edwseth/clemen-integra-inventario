@@ -27,7 +27,7 @@ public class MrpController {
     private final PlanProduccionService planProduccionService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
     public ResponseEntity<CorridaMrpResponseDTO> ejecutar(@RequestBody CorridaMrpRequest request) {
         Optional<PlanProduccionSemanal> plan = planProduccionService.buscarPorId(request.getPlanSemanalId());
         if (plan.isEmpty()) {
@@ -38,7 +38,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
     public ResponseEntity<CorridaMrpResponseDTO> obtener(@PathVariable Long id) {
         CorridaMrp corrida = mrpService.obtenerCorrida(id);
         return ResponseEntity.ok(toDto(corrida));
