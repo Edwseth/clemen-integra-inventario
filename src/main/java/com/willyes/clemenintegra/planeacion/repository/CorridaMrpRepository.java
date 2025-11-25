@@ -15,6 +15,7 @@ public interface CorridaMrpRepository extends JpaRepository<CorridaMrp, Long> {
             "planProduccionSemanal",
             "detalles",
             "detalles.producto",
+            "detalles.producto.categoriaProducto",
             "detalles.sugerencia",
             "detalles.sugerencia.detalleCorrida"
     })
