@@ -5,6 +5,8 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
+import com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento;
+import com.willyes.clemenintegra.planeacion.model.enums.TipoSugerenciaAbastecimiento;
 import com.willyes.clemenintegra.planeacion.service.MrpReporteService;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
@@ -78,6 +80,14 @@ class MrpControllerTest {
                 .requerimientoNeto(BigDecimal.valueOf(9))
                 .build();
 
+        SugerenciaAbastecimiento sugerencia = SugerenciaAbastecimiento.builder()
+                .id(11L)
+                .detalleCorrida(detalle)
+                .tipo(TipoSugerenciaAbastecimiento.COMPRA)
+                .cantidadSugerida(BigDecimal.valueOf(9))
+                .build();
+        detalle.setSugerencia(sugerencia);
+
         PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
                 .id(3L)
                 .semanaInicio(LocalDate.now())
@@ -97,6 +107,7 @@ class MrpControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.detalles[0].codigoInsumo").value("SKU-01"))
                 .andExpect(jsonPath("$.detalles[0].nombreInsumo").value("Botella 500ml"))
-                .andExpect(jsonPath("$.detalles[0].categoriaInsumo").value("Envases"));
+                .andExpect(jsonPath("$.detalles[0].categoriaInsumo").value("Envases"))
+                .andExpect(jsonPath("$.detalles[0].tipoSugerencia").value("COMPRA"));
     }
 }
