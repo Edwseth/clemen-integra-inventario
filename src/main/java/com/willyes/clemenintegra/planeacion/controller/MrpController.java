@@ -123,6 +123,9 @@ public class MrpController {
                 .requerimientoNeto(detalle.getRequerimientoNeto())
                 .nivelBom(detalle.getNivelBom())
                 .mensajeValidacion(detalle.getMensajeValidacion())
+                .tipoSugerencia(detalle.getSugerencia() != null && detalle.getSugerencia().getTipo() != null
+                        ? detalle.getSugerencia().getTipo().name()
+                        : null)
                 .build();
     }
 

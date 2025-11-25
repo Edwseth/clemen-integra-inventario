@@ -43,6 +43,7 @@ public class CorridaMrpResponseDTO {
         private BigDecimal requerimientoNeto;
         private Integer nivelBom;
         private String mensajeValidacion;
+        private String tipoSugerencia;
     }
 
     @Data
