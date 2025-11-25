@@ -66,6 +66,10 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
             });
         }
 
+        if (plan.getSemanaInicio() == null || plan.getSemanaFin() == null) {
+            throw new IllegalArgumentException("La semana objetivo debe tener fecha de inicio y fecha de fin.");
+        }
+
         return planProduccionSemanalRepository.save(plan);
     }
 

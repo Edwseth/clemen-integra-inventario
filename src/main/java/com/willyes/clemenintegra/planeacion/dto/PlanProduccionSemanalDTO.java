@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.planeacion.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +16,11 @@ import java.util.List;
 @AllArgsConstructor
 public class PlanProduccionSemanalDTO {
     private Long id;
+
+    @JsonAlias({"fechaInicio"})
     private LocalDate semanaInicio;
+
+    @JsonAlias({"fechaFin"})
     private LocalDate semanaFin;
     private String estado;
     private String comentarios;
