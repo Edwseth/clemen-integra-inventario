@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.NoSuchElementException;
 import java.util.Map;
 import java.util.List;
@@ -126,7 +127,23 @@ public class MrpController {
                 .tipoSugerencia(detalle.getSugerencia() != null && detalle.getSugerencia().getTipo() != null
                         ? detalle.getSugerencia().getTipo().name()
                         : null)
+                .criticidad(calcularCriticidad(detalle))
                 .build();
+    }
+
+    private String calcularCriticidad(DetalleCorridaMrp detalle) {
+        BigDecimal neto = detalle.getRequerimientoNeto();
+        BigDecimal inventario = Optional.ofNullable(detalle.getInventarioDisponible()).orElse(BigDecimal.ZERO);
+
+        if (neto == null || neto.compareTo(BigDecimal.ZERO) <= 0) {
+            return "BAJA";
+        }
+
+        if (inventario.compareTo(BigDecimal.ZERO) <= 0) {
+            return "ALTA";
+        }
+
+        return "MEDIA";
     }
 
     private CorridaMrpResponseDTO.SugerenciaAbastecimientoDTO toSugerenciaDto(SugerenciaAbastecimiento sugerencia) {

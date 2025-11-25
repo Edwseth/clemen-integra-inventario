@@ -48,6 +48,7 @@ public class CorridaMrpResponseDTO {
         private Integer nivelBom;
         private String mensajeValidacion;
         private String tipoSugerencia;
+        private String criticidad;
     }
 
     @Data
