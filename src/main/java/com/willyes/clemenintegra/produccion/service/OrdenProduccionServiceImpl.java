@@ -189,10 +189,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     private Integer obtenerSemanasVigenciaProductoTerminado(Producto producto) {
-        if (producto == null || producto.getCategoriaProducto() == null) {
-            return null;
-        }
-        TipoCategoria tipoCategoria = producto.getCategoriaProducto().getTipo();
+        TipoCategoria tipoCategoria = obtenerTipoCategoriaProducto(producto);
         if (tipoCategoria != TipoCategoria.PRODUCTO_TERMINADO
                 && tipoCategoria != TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
             return null;
@@ -201,6 +198,31 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .map(VidaUtilProducto::getSemanasVigencia)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.VIDA_UTIL_NO_CONFIGURADA,
                         "Debe configurar la vida útil del producto antes de producirlo"));
+    }
+
+    private TipoCategoria obtenerTipoCategoriaProducto(Producto producto) {
+        return Optional.ofNullable(producto)
+                .map(Producto::getCategoriaProducto)
+                .map(CategoriaProducto::getTipo)
+                .orElse(null);
+    }
+
+    private List<DetalleFormula> obtenerDetallesFormulaSeguro(FormulaProducto formula) {
+        return Optional.ofNullable(formula)
+                .map(FormulaProducto::getDetalles)
+                .orElse(List.of());
+    }
+
+    private List<DetalleFormula> obtenerInsumosPs(List<DetalleFormula> detalles) {
+        if (detalles == null || detalles.isEmpty()) {
+            return List.of();
+        }
+        return detalles.stream()
+                .filter(Objects::nonNull)
+                .filter(d -> d.getInsumo() != null
+                        && d.getInsumo().getCategoriaProducto() != null
+                        && d.getInsumo().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO)
+                .toList();
     }
 
     private BigDecimal validarCantidad(BigDecimal cantidadOriginal, Producto producto) {
@@ -268,20 +290,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         BigDecimal cantidadProgramada = orden.getCantidadProgramada();
 
-        List<DetalleFormula> insumosPs = formula.getDetalles().stream()
-                .filter(d -> d.getInsumo() != null
-                        && d.getInsumo().getCategoriaProducto() != null
-                        && d.getInsumo().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO)
-                .toList();
+        List<DetalleFormula> detallesFormula = obtenerDetallesFormulaSeguro(formula);
+        List<DetalleFormula> insumosPs = obtenerInsumosPs(detallesFormula);
         if (insumosPs.size() > 1) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                     "Solo se admite un insumo de tipo PRODUCTO_SEMI_ELABORADO por fórmula");
         }
-        if (orden.getLotePsId() != null && insumosPs.isEmpty()) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "No se requiere lote de producto semielaborado para esta orden");
-        }
-
         LoteProducto lotePsSeleccionado = null;
         Long insumoPsId = insumosPs.isEmpty() ? null : insumosPs.get(0).getInsumo().getId().longValue();
         if (!insumosPs.isEmpty()) {
@@ -305,13 +319,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
 
         // Cargar todos los productos de los insumos en una sola consulta para evitar N+1
-        List<Long> insumoIds = formula.getDetalles().stream()
-                .map(d -> d.getInsumo().getId().longValue())
+        List<Long> insumoIds = detallesFormula.stream()
+                .map(DetalleFormula::getInsumo)
+                .filter(Objects::nonNull)
+                .map(p -> p.getId().longValue())
                 .toList();
         Map<Long, Producto> productosInsumo = productoRepository.findAllById(insumoIds).stream()
                 .collect(Collectors.toMap(p -> p.getId().longValue(), p -> p));
 
-        for (DetalleFormula insumo : formula.getDetalles()) {
+        for (DetalleFormula insumo : detallesFormula) {
+            if (insumo == null || insumo.getInsumo() == null) {
+                continue;
+            }
             Long insumoId = insumo.getInsumo().getId().longValue();
             Producto productoInsumo = productosInsumo.get(insumoId);
             if (productoInsumo == null) {
@@ -754,8 +773,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             Almacen destino;
             EstadoLote estadoLote;
             TipoAnalisisCalidad tipoAnalisis = orden.getProducto().getTipoAnalisis();
-            if (orden.getProducto().getCategoriaProducto() != null
-                    && orden.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+            TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
+            if (tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
                 destino = almacenCuarentena;
                 estadoLote = EstadoLote.EN_CUARENTENA;
             } else {
@@ -957,7 +976,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         ).orElse(List.of());
 
         List<Long> lotesPs = solicitudes.stream()
-                .flatMap(sol -> sol.getDetalles().stream())
+                .flatMap(sol -> Optional.ofNullable(sol.getDetalles()).orElse(List.of()).stream())
                 .map(SolicitudMovimientoDetalle::getLote)
                 .filter(Objects::nonNull)
                 .filter(l -> l.getProducto() != null
@@ -997,11 +1016,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
 
-        List<DetalleFormula> insumosPs = formula.getDetalles().stream()
-                .filter(det -> det.getInsumo() != null
-                        && det.getInsumo().getCategoriaProducto() != null
-                        && det.getInsumo().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO)
-                .toList();
+        List<DetalleFormula> detallesFormula = obtenerDetallesFormulaSeguro(formula);
+        List<DetalleFormula> insumosPs = obtenerInsumosPs(detallesFormula);
         if (insumosPs.size() > 1) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                     "Solo se admite un insumo de tipo PRODUCTO_SEMI_ELABORADO por fórmula");
@@ -1009,10 +1025,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         if (!insumosPs.isEmpty() && lotePsId == null) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                     "Debe seleccionar un lote de producto semielaborado para esta orden");
-        }
-        if (insumosPs.isEmpty() && lotePsId != null) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "No se requiere lote de producto semielaborado para esta orden");
         }
 
         Long insumoPsId = insumosPs.isEmpty() ? null : insumosPs.get(0).getInsumo().getId().longValue();
@@ -1048,7 +1060,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findById(catalogResolver.getTipoDetalleSalidaId())
                 .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
 
-        for (DetalleFormula insumo : formula.getDetalles()) {
+        for (DetalleFormula insumo : detallesFormula) {
+            if (insumo == null || insumo.getInsumo() == null) {
+                continue;
+            }
             Long insumoId = insumo.getInsumo().getId().longValue();
             BigDecimal requerida = insumo.getCantidadNecesaria()
                     .multiply(orden.getCantidadProgramada())
@@ -1264,8 +1279,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             Almacen destino;
             EstadoLote estadoLote;
             TipoAnalisisCalidad tipoAnalisis = orden.getProducto().getTipoAnalisis();
-            if (orden.getProducto().getCategoriaProducto() != null
-                    && orden.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+            TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
+            if (tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
                 destino = almacenCuarentena;
                 estadoLote = EstadoLote.EN_CUARENTENA;
             } else {
@@ -1430,7 +1445,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
         List<InsumoOPDTO> lista = new ArrayList<>();
-        for (DetalleFormula det : formula.getDetalles()) {
+        for (DetalleFormula det : obtenerDetallesFormulaSeguro(formula)) {
+            if (det == null || det.getInsumo() == null) {
+                continue;
+            }
             BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             Long insumoId = det.getInsumo().getId().longValue();
             // Solo se consideran consumos reales de producción (SALIDA_PRODUCCION). Traslados o preparaciones no suman aquí.

@@ -267,6 +267,9 @@ public class DisponibilidadInsumoService {
     }
 
     private EstadoLote parseEstadoLoteSafe(String valor) {
+        if (valor == null) {
+            return null;
+        }
         try {
             return EstadoLote.valueOf(valor.toUpperCase());
         } catch (IllegalArgumentException ex) {

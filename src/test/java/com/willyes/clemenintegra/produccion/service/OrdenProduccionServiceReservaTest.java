@@ -15,6 +15,7 @@ import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
@@ -228,6 +229,66 @@ class OrdenProduccionServiceReservaTest {
         assertThat(detalles.get(1).getCantidad().scale()).isEqualTo(6);
         assertThat(total).isEqualByComparingTo(new BigDecimal("6.790123"));
         verify(reservaLoteService).sincronizarReservasSolicitud(solicitudCaptor.getValue());
+    }
+
+    @Test
+    @DisplayName("reservarInsumosParaOP usa el lote PS forzado cuando la fórmula lo requiere")
+    void reservarInsumosParaOp_conPsUsaLoteForzado() {
+        Producto insumoPs = new Producto();
+        insumoPs.setId(200);
+        insumoPs.setNombre("Base PS");
+        insumoPs.setUnidadMedida(new UnidadMedida());
+        com.willyes.clemenintegra.inventario.model.CategoriaProducto categoriaPs = new com.willyes.clemenintegra.inventario.model.CategoriaProducto();
+        categoriaPs.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        insumoPs.setCategoriaProducto(categoriaPs);
+
+        DetalleFormula detallePs = new DetalleFormula();
+        detallePs.setInsumo(insumoPs);
+        detallePs.setCantidadNecesaria(BigDecimal.ONE);
+
+        FormulaProducto formulaPs = new FormulaProducto();
+        formulaPs.setDetalles(List.of(detallePs));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPs));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumoPs)).thenReturn(List.of(5L));
+        when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().id(100L).build());
+
+        DistribucionFefoResult distribucion = DistribucionFefoResult.builder()
+                .productoInsumoId(insumoPs.getId().longValue())
+                .requerido(new BigDecimal("5.50000000"))
+                .stockLibreTotal(new BigDecimal("6.000000"))
+                .faltante(BigDecimal.ZERO)
+                .suficiente(true)
+                .detalles(List.of(DistribucionFefoDetalle.builder()
+                        .loteProductoId(500L)
+                        .almacenId(5L)
+                        .cantidadCalculo(new BigDecimal("5.50000000"))
+                        .cantidadReserva(new BigDecimal("5.500000"))
+                        .disponible(new BigDecimal("6.000000"))
+                        .estado(EstadoLote.LIBERADO.name())
+                        .build()))
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(false), eq(500L), eq(true)))
+                .thenReturn(distribucion);
+
+        SolicitudMovimiento solicitudBase = new SolicitudMovimiento();
+        solicitudBase.setId(100L);
+        solicitudBase.setDetalles(new ArrayList<>());
+        solicitudBase.setAlmacenDestino(new Almacen(Math.toIntExact(catalogResolver.getAlmacenPreBodegaProduccionId())));
+        when(solicitudMovimientoRepository.findById(100L)).thenReturn(Optional.of(solicitudBase));
+
+        service.reservarInsumosParaOP(1L, 500L);
+
+        verify(disponibilidadInsumoService).calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(false), eq(500L), eq(true));
+
+        ArgumentCaptor<SolicitudMovimiento> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimiento.class);
+        verify(solicitudMovimientoRepository).saveAndFlush(solicitudCaptor.capture());
+        List<SolicitudMovimientoDetalle> detallesGuardados = solicitudCaptor.getValue().getDetalles();
+        assertThat(detallesGuardados).hasSize(1);
+        assertThat(detallesGuardados.get(0).getLote().getId()).isEqualTo(500L);
     }
 
     @Test
