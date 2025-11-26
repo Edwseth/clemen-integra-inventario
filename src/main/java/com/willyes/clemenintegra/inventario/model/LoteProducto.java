@@ -88,6 +88,10 @@ public class LoteProducto {
     @JoinColumn(name = "produccion_id")
     private Produccion produccion;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lote_ps_origen_id")
+    private LoteProducto lotePsOrigen;
+
     public LoteProducto(Long id) {
         this.id = id;
     }

@@ -22,6 +22,8 @@ public interface LoteProductoMapper {
     @Mapping(target = "nombreProducto", expression = "java(lote.getProducto()!=null ? lote.getProducto().getNombre() : null)")
     @Mapping(target = "nombreUsuarioLiberador", expression = "java(lote.getUsuarioLiberador()!=null ? lote.getUsuarioLiberador().getNombreCompleto() : null)")
     @Mapping(target = "evaluaciones", ignore = true)
+    @Mapping(target = "lotePsOrigenId", expression = "java(lote.getLotePsOrigen()!=null ? lote.getLotePsOrigen().getId() : null)")
+    @Mapping(target = "codigoLotePsOrigen", expression = "java(lote.getLotePsOrigen()!=null ? lote.getLotePsOrigen().getCodigoLote() : null)")
     LoteProductoResponseDTO toResponseDTO(LoteProducto lote);
 
     @Mapping(source = "producto.nombre", target = "nombreProducto")
@@ -29,6 +31,8 @@ public interface LoteProductoMapper {
     @Mapping(source = "almacen.ubicacion", target = "ubicacionAlmacen")
     @Mapping(source = "usuarioLiberador.nombreCompleto", target = "nombreUsuarioLiberador")
     @Mapping(target = "evaluaciones", ignore = true)
+    @Mapping(source = "lotePsOrigen.id", target = "lotePsOrigenId")
+    @Mapping(source = "lotePsOrigen.codigoLote", target = "codigoLotePsOrigen")
     LoteProductoResponseDTO toDto(LoteProducto entity);
 
 }

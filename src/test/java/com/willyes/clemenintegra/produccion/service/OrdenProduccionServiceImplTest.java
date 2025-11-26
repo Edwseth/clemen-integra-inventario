@@ -112,7 +112,7 @@ class OrdenProduccionServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        lenient().doNothing().when(service).reservarInsumosParaOP(anyLong());
+        lenient().doNothing().when(service).reservarInsumosParaOP(anyLong(), any());
         lenient().when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> {
             OrdenProduccion op = invocation.getArgument(0);
             if (op.getId() == null) {

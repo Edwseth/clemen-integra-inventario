@@ -148,7 +148,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     private String generarCodigoLote(Producto producto) {
         if (producto.getCategoriaProducto() == null ||
-                producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO) {
+                (producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO
+                        && producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_SEMI_ELABORADO)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "PRODUCTO_NO_TERMINADO");
         }
         String prefijo = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -188,14 +189,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     private Integer obtenerSemanasVigenciaProductoTerminado(Producto producto) {
-        if (producto == null || producto.getCategoriaProducto() == null
-                || producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO) {
+        if (producto == null || producto.getCategoriaProducto() == null) {
+            return null;
+        }
+        TipoCategoria tipoCategoria = producto.getCategoriaProducto().getTipo();
+        if (tipoCategoria != TipoCategoria.PRODUCTO_TERMINADO
+                && tipoCategoria != TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
             return null;
         }
         return vidaUtilProductoService.buscarPorProductoId(producto.getId())
                 .map(VidaUtilProducto::getSemanasVigencia)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.VIDA_UTIL_NO_CONFIGURADA,
-                        "Debe configurar la vida útil del producto terminado antes de producirlo"));
+                        "Debe configurar la vida útil del producto antes de producirlo"));
     }
 
     private BigDecimal validarCantidad(BigDecimal cantidadOriginal, Producto producto) {
@@ -263,6 +268,42 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         BigDecimal cantidadProgramada = orden.getCantidadProgramada();
 
+        List<DetalleFormula> insumosPs = formula.getDetalles().stream()
+                .filter(d -> d.getInsumo() != null
+                        && d.getInsumo().getCategoriaProducto() != null
+                        && d.getInsumo().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO)
+                .toList();
+        if (insumosPs.size() > 1) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Solo se admite un insumo de tipo PRODUCTO_SEMI_ELABORADO por fórmula");
+        }
+        if (orden.getLotePsId() != null && insumosPs.isEmpty()) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "No se requiere lote de producto semielaborado para esta orden");
+        }
+
+        LoteProducto lotePsSeleccionado = null;
+        Long insumoPsId = insumosPs.isEmpty() ? null : insumosPs.get(0).getInsumo().getId().longValue();
+        if (!insumosPs.isEmpty()) {
+            Long lotePsId = orden.getLotePsId();
+            if (lotePsId == null) {
+                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "Debe seleccionar un lote de producto semielaborado para esta orden");
+            }
+            lotePsSeleccionado = loteProductoRepository.findById(lotePsId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
+            if (lotePsSeleccionado.getProducto() == null
+                    || lotePsSeleccionado.getProducto().getCategoriaProducto() == null
+                    || lotePsSeleccionado.getProducto().getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "El lote seleccionado no corresponde a un producto semielaborado");
+            }
+            if (lotePsSeleccionado.getEstado() != EstadoLote.LIBERADO) {
+                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "El lote de producto semielaborado debe estar LIBERADO");
+            }
+        }
+
         // Cargar todos los productos de los insumos en una sola consulta para evitar N+1
         List<Long> insumoIds = formula.getDetalles().stream()
                 .map(d -> d.getInsumo().getId().longValue())
@@ -282,6 +323,17 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
 
+            if (insumoPsId != null && insumoPsId.equals(insumoId) && lotePsSeleccionado != null) {
+                BigDecimal stockLibrePs = Optional.ofNullable(lotePsSeleccionado.getStockLote())
+                        .orElse(BigDecimal.ZERO)
+                        .subtract(Optional.ofNullable(lotePsSeleccionado.getStockReservado()).orElse(BigDecimal.ZERO))
+                        .setScale(6, RoundingMode.HALF_UP);
+                if (stockLibrePs.compareTo(cantidadRequerida) < 0) {
+                    throw new CustomBusinessException(ApiErrorCode.STOCK_INSUFICIENTE,
+                            "El lote semielaborado seleccionado no tiene stock suficiente");
+                }
+            }
+
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
             if (almacenesValidos.isEmpty()) {
                 TipoCategoria tipoCategoria = Optional.ofNullable(productoInsumo.getCategoriaProducto())
@@ -291,11 +343,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         insumoId, tipoCategoria);
             }
 
-            DistribucionFefoResult distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
-                    insumoId,
-                    cantidadRequerida,
-                    almacenesValidos,
-                    true);
+            DistribucionFefoResult distribucionPreview;
+            if (insumoPsId != null && insumoPsId.equals(insumoId) && lotePsSeleccionado != null) {
+                distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
+                        insumoId,
+                        cantidadRequerida,
+                        almacenesValidos,
+                        true,
+                        lotePsSeleccionado.getId(),
+                        true);
+            } else {
+                distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
+                        insumoId,
+                        cantidadRequerida,
+                        almacenesValidos,
+                        true);
+            }
 
             BigDecimal stockLibreFefo = Optional.ofNullable(distribucionPreview.getStockLibreTotal())
                     .orElse(BigDecimal.ZERO);
@@ -354,7 +417,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         clonarEtapasParaOrden(guardada, plantilla);
 
         // Reserva FEFO y sincronización de reservas: SOLO AQUÍ (una vez)
-        reservarInsumosParaOP(guardada.getId());
+        reservarInsumosParaOP(guardada.getId(), orden.getLotePsId());
 
         OrdenProduccionResponseDTO ordenResp = ProduccionMapper.toResponse(guardada);
 
@@ -691,16 +754,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             Almacen destino;
             EstadoLote estadoLote;
             TipoAnalisisCalidad tipoAnalisis = orden.getProducto().getTipoAnalisis();
-            switch (tipoAnalisis) {
-                case NINGUNO -> {
-                    destino = almacenPt;
-                    estadoLote = EstadoLote.DISPONIBLE;
+            if (orden.getProducto().getCategoriaProducto() != null
+                    && orden.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+                destino = almacenCuarentena;
+                estadoLote = EstadoLote.EN_CUARENTENA;
+            } else {
+                switch (tipoAnalisis) {
+                    case NINGUNO -> {
+                        destino = almacenPt;
+                        estadoLote = EstadoLote.DISPONIBLE;
+                    }
+                    case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
+                        destino = almacenCuarentena;
+                        estadoLote = EstadoLote.EN_CUARENTENA;
+                    }
+                    default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
                 }
-                case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
-                    destino = almacenCuarentena;
-                    estadoLote = EstadoLote.EN_CUARENTENA;
-                }
-                default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
             }
 
             String codigoLote = dto.getCodigoLote();
@@ -875,6 +944,41 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return EstadoProduccion.EN_PROCESO;
     }
 
+    private LoteProducto obtenerLotePsReservado(Long ordenId) {
+        List<SolicitudMovimiento> solicitudes = Optional.ofNullable(
+                solicitudMovimientoRepository.findWithDetalles(
+                        ordenId,
+                        null,
+                        null,
+                        null,
+                        false,
+                        List.of()
+                )
+        ).orElse(List.of());
+
+        List<Long> lotesPs = solicitudes.stream()
+                .flatMap(sol -> sol.getDetalles().stream())
+                .map(SolicitudMovimientoDetalle::getLote)
+                .filter(Objects::nonNull)
+                .filter(l -> l.getProducto() != null
+                        && l.getProducto().getCategoriaProducto() != null
+                        && l.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO)
+                .map(LoteProducto::getId)
+                .distinct()
+                .toList();
+
+        if (lotesPs.isEmpty()) {
+            return null;
+        }
+        if (lotesPs.size() > 1) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Solo se permite consumir un lote de producto semielaborado por orden");
+        }
+        Long loteId = lotesPs.get(0);
+        return loteProductoRepository.findById(loteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
+    }
+
     private BigDecimal calcularPorcentajeCumplimiento(BigDecimal cantidadFabricada, BigDecimal cantidadPlaneada) {
         if (cantidadPlaneada == null || cantidadPlaneada.compareTo(BigDecimal.ZERO) == 0 || cantidadFabricada == null) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -885,13 +989,33 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void reservarInsumosParaOP(Long ordenId) {
+    public void reservarInsumosParaOP(Long ordenId, @Nullable Long lotePsId) {
         OrdenProduccion orden = repository.findById(ordenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
 
         FormulaProducto formula = formulaProductoRepository
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
+
+        List<DetalleFormula> insumosPs = formula.getDetalles().stream()
+                .filter(det -> det.getInsumo() != null
+                        && det.getInsumo().getCategoriaProducto() != null
+                        && det.getInsumo().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO)
+                .toList();
+        if (insumosPs.size() > 1) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Solo se admite un insumo de tipo PRODUCTO_SEMI_ELABORADO por fórmula");
+        }
+        if (!insumosPs.isEmpty() && lotePsId == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe seleccionar un lote de producto semielaborado para esta orden");
+        }
+        if (insumosPs.isEmpty() && lotePsId != null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "No se requiere lote de producto semielaborado para esta orden");
+        }
+
+        Long insumoPsId = insumosPs.isEmpty() ? null : insumosPs.get(0).getInsumo().getId().longValue();
 
         // Idempotencia: si ya existen solicitudes SALIDA pendientes para esta OP, no recrear
         List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
@@ -944,8 +1068,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
 
-            DistribucionFefoResult distribucion = disponibilidadInsumoService.calcularDisponibilidad(
-                    insumoId, requerida, almacenesValidos, false);
+            DistribucionFefoResult distribucion;
+            if (insumoPsId != null && insumoPsId.equals(insumoId) && lotePsId != null) {
+                distribucion = disponibilidadInsumoService.calcularDisponibilidad(
+                        insumoId,
+                        requerida,
+                        almacenesValidos,
+                        false,
+                        lotePsId,
+                        true);
+            } else {
+                distribucion = disponibilidadInsumoService.calcularDisponibilidad(
+                        insumoId,
+                        requerida,
+                        almacenesValidos,
+                        false);
+            }
 
             BigDecimal faltanteDistribucion = Optional.ofNullable(distribucion.getFaltante())
                     .orElse(BigDecimal.ZERO)
@@ -962,6 +1100,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             Long primerLoteId = primerDetalle.getLoteProductoId();
             if (primerLoteId == null) {
                 manejarStockInsuficiente(insumo.getInsumo(), distribucion);
+            }
+
+            if (insumoPsId != null && insumoPsId.equals(insumoId) && lotePsId != null
+                    && !lotePsId.equals(primerLoteId)) {
+                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "El lote reservado para el producto semielaborado no coincide con el solicitado");
             }
 
             SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()
@@ -1120,16 +1264,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             Almacen destino;
             EstadoLote estadoLote;
             TipoAnalisisCalidad tipoAnalisis = orden.getProducto().getTipoAnalisis();
-            switch (tipoAnalisis) {
-                case NINGUNO -> {
-                    destino = almacenPt;
-                    estadoLote = EstadoLote.DISPONIBLE;
+            if (orden.getProducto().getCategoriaProducto() != null
+                    && orden.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+                destino = almacenCuarentena;
+                estadoLote = EstadoLote.EN_CUARENTENA;
+            } else {
+                switch (tipoAnalisis) {
+                    case NINGUNO -> {
+                        destino = almacenPt;
+                        estadoLote = EstadoLote.DISPONIBLE;
+                    }
+                    case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
+                        destino = almacenCuarentena;
+                        estadoLote = EstadoLote.EN_CUARENTENA;
+                    }
+                    default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
                 }
-                case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
-                    destino = almacenCuarentena;
-                    estadoLote = EstadoLote.EN_CUARENTENA;
-                }
-                default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
             }
 
             LocalDateTime fechaFabricacion = LocalDateTime.now();
@@ -1137,6 +1287,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             LocalDateTime fechaVencimiento = semanasVigencia != null
                     ? fechaFabricacion.plusWeeks(semanasVigencia)
                     : null;
+
+            LoteProducto lotePsOrigen = null;
+            if (orden.getProducto().getCategoriaProducto() != null
+                    && orden.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO) {
+                lotePsOrigen = obtenerLotePsReservado(orden.getId());
+                if (lotePsOrigen != null && lotePsOrigen.getFechaVencimiento() != null) {
+                    fechaVencimiento = lotePsOrigen.getFechaVencimiento();
+                } else if (lotePsOrigen != null && semanasVigencia == null) {
+                    throw new CustomBusinessException(ApiErrorCode.VIDA_UTIL_NO_CONFIGURADA,
+                            "El lote semielaborado consumido no tiene fecha de vencimiento configurada");
+                }
+            }
 
             LoteProducto lote = LoteProducto.builder()
                     .codigoLote(codigoLote)
@@ -1147,6 +1309,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .fechaFabricacion(fechaFabricacion)
                     .fechaVencimiento(fechaVencimiento)
                     .ordenProduccion(orden)
+                    .lotePsOrigen(lotePsOrigen)
                     .build();
 
             lote = loteProductoRepository.save(lote);
