@@ -49,7 +49,7 @@ public class PlanProduccionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<PlanProduccionSemanalDTO>> listar(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate semanaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate semanaFin,
@@ -61,7 +61,7 @@ public class PlanProduccionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlanProduccionSemanalDTO> obtener(@PathVariable Long id) {
         return planProduccionService.buscarPorId(id)
                 .map(plan -> ResponseEntity.ok(toDto(plan)))

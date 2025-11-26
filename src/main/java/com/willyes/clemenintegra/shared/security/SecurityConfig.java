@@ -114,6 +114,13 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    // 1) Lectura de planes semanales (Producción + Compras + Super Admin)
+                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+                    // 2) Resto de operaciones de planeación (crear/editar/eliminar):
                     auth.requestMatchers("/api/planeacion/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
