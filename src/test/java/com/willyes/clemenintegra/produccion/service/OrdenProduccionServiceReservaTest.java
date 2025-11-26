@@ -211,7 +211,7 @@ class OrdenProduccionServiceReservaTest {
         when(disponibilidadInsumoService.calcularDisponibilidad(eq(50L), any(BigDecimal.class), anyList(), eq(false)))
                 .thenReturn(resultado);
 
-        service.reservarInsumosParaOP(1L);
+        service.reservarInsumosParaOP(1L, null);
 
         ArgumentCaptor<SolicitudMovimientoRequestDTO> dtoCaptor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
         verify(solicitudMovimientoService).registrarSolicitud(dtoCaptor.capture());
@@ -273,7 +273,7 @@ class OrdenProduccionServiceReservaTest {
         assertThat(validacion.getInsumosFaltantes().get(0).getDisponible())
                 .isEqualByComparingTo(new BigDecimal("302.500000"));
 
-        assertThatThrownBy(() -> service.reservarInsumosParaOP(orden.getId()))
+        assertThatThrownBy(() -> service.reservarInsumosParaOP(orden.getId(), null))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessage("422 UNPROCESSABLE_ENTITY \"STOCK_INSUFICIENTE: insumo MP-COLRO - COLORANTE NATURAL ROJO, faltan 47.500000 MILILITRO\"");
     }
@@ -298,7 +298,7 @@ class OrdenProduccionServiceReservaTest {
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formulaEscenario));
 
-        service.reservarInsumosParaOP(1L);
+        service.reservarInsumosParaOP(1L, null);
 
         verify(solicitudMovimientoService, never()).registrarSolicitud(any(SolicitudMovimientoRequestDTO.class));
         verify(disponibilidadInsumoService, never()).calcularDisponibilidad(anyLong(), any(BigDecimal.class), anyList(), anyBoolean());
@@ -335,7 +335,7 @@ class OrdenProduccionServiceReservaTest {
 
         orden.setCantidadProgramada(new BigDecimal("700"));
 
-        assertThatCode(() -> service.reservarInsumosParaOP(1L)).doesNotThrowAnyException();
+        assertThatCode(() -> service.reservarInsumosParaOP(1L, null)).doesNotThrowAnyException();
 
         ArgumentCaptor<SolicitudMovimiento> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimiento.class);
         verify(solicitudMovimientoRepository).saveAndFlush(solicitudCaptor.capture());
@@ -365,7 +365,7 @@ class OrdenProduccionServiceReservaTest {
         when(disponibilidadInsumoService.calcularDisponibilidad(eq(50L), any(BigDecimal.class), anyList(), eq(false)))
                 .thenReturn(insuficiente);
 
-        assertThatThrownBy(() -> service.reservarInsumosParaOP(1L))
+        assertThatThrownBy(() -> service.reservarInsumosParaOP(1L, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("MP-COLRO")
                 .hasMessageContaining("COLORANTE NATURAL ROJO")

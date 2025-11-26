@@ -26,6 +26,8 @@ public class LoteProductoResponseDTO {
     private String ubicacionAlmacen;
     private String nombreUsuarioLiberador;
     private List<TipoEvaluacion> evaluaciones;
+    private Long lotePsOrigenId;
+    private String codigoLotePsOrigen;
 
     public String getNombreProducto() {
         return nombreProducto;}

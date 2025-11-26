@@ -59,6 +59,15 @@ public class DisponibilidadInsumoService {
                                                           BigDecimal cantidadRequerida,
                                                           List<Long> almacenesPreferidos,
                                                           boolean modoPreview) {
+        return calcularDisponibilidad(productoInsumoId, cantidadRequerida, almacenesPreferidos, modoPreview, null, false);
+    }
+
+    public DistribucionFefoResult calcularDisponibilidad(Long productoInsumoId,
+                                                          BigDecimal cantidadRequerida,
+                                                          List<Long> almacenesPreferidos,
+                                                          boolean modoPreview,
+                                                          Long loteForzadoId,
+                                                          boolean bloquearMultiplesLotes) {
         BigDecimal requerida = Optional.ofNullable(cantidadRequerida)
                 .orElse(BigDecimal.ZERO)
                 .setScale(8, RoundingMode.HALF_UP);
@@ -92,15 +101,23 @@ public class DisponibilidadInsumoService {
         List<LoteFefoDisponibleProjection> lotesDisponibles = loteProductoRepository
                 .findFefoDisponibles(productoInsumoId, Integer.MAX_VALUE);
 
+        EnumSet<EstadoLote> estadosPermitidos = obtenerEstadosPermitidos(producto);
         List<LoteFefoDisponibleProjection> lotesElegibles = lotesDisponibles.stream()
-                .filter(this::esLotePermitido)
+                .filter(l -> esLotePermitido(l, estadosPermitidos))
+                .filter(l -> loteForzadoId == null || Objects.equals(l.getLoteProductoId(), loteForzadoId))
                 .toList();
 
         List<LoteFefoDisponibleProjection> lotesSeleccionados = new ArrayList<>(lotesElegibles);
         boolean usoFallback = false;
         String motivoFallback = null;
 
-        if (!preferidos.isEmpty()) {
+        if (loteForzadoId != null) {
+            usoFallback = false;
+            motivoFallback = null;
+            lotesSeleccionados = lotesElegibles.stream()
+                    .filter(l -> Objects.equals(l.getLoteProductoId(), loteForzadoId))
+                    .toList();
+        } else if (!preferidos.isEmpty()) {
             lotesSeleccionados = lotesElegibles.stream()
                     .filter(lote -> lote.getAlmacenId() != null && preferidos.contains(lote.getAlmacenId()))
                     .toList();
@@ -120,6 +137,10 @@ public class DisponibilidadInsumoService {
             motivoFallback = "SIN_ALMACEN_CONFIGURADO";
         }
 
+        if (bloquearMultiplesLotes && !lotesSeleccionados.isEmpty()) {
+            lotesSeleccionados = List.of(lotesSeleccionados.get(0));
+        }
+
         if (usoFallback && !modoPreview) {
             log.info("Disponibilidad FEFO fallback insumoId={} requerida={} motivo={} almacenesPreferidos={}",
                     productoInsumoId, requerida, motivoFallback, preferidos);
@@ -132,7 +153,7 @@ public class DisponibilidadInsumoService {
                 .filter(s -> !s.isEmpty())
                 .map(this::parseEstadoLoteSafe)
                 .filter(Objects::nonNull)
-                .filter(estado -> !ESTADOS_FEFO_PERMITIDOS.contains(estado))
+                .filter(estado -> !estadosPermitidos.contains(estado))
                 .findFirst()
                 .ifPresent(estado -> log.warn("Disponibilidad FEFO detectó lote en estado no permitido: {}", estado));
 
@@ -223,9 +244,17 @@ public class DisponibilidadInsumoService {
         return total.setScale(6, RoundingMode.HALF_UP);
     }
 
-    private boolean esLotePermitido(LoteFefoDisponibleProjection lote) {
+    private EnumSet<EstadoLote> obtenerEstadosPermitidos(Producto producto) {
+        if (producto != null && producto.getCategoriaProducto() != null
+                && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+            return EnumSet.of(EstadoLote.LIBERADO);
+        }
+        return ESTADOS_FEFO_PERMITIDOS;
+    }
+
+    private boolean esLotePermitido(LoteFefoDisponibleProjection lote, EnumSet<EstadoLote> estadosPermitidos) {
         EstadoLote estado = parseEstadoLoteSafe(lote.getEstado());
-        return estado != null && ESTADOS_FEFO_PERMITIDOS.contains(estado);
+        return estado != null && estadosPermitidos.contains(estado);
     }
 
     private BigDecimal calcularStockLibre(LoteFefoDisponibleProjection lote) {
