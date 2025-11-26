@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Comparator;
 
 @RestController
 @RequestMapping("/api/bom")
@@ -24,7 +25,12 @@ public class BomProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<ProductoMinResponseDTO>> listarProductosTerminados() {
         List<Producto> items = productoRepository
-                .findByCategoriaProducto_TipoAndActivoTrueOrderByNombreAsc(TipoCategoria.PRODUCTO_TERMINADO);
+                .findByCategoriaProducto_TipoIn(List.of(
+                        TipoCategoria.PRODUCTO_TERMINADO,
+                        TipoCategoria.PRODUCTO_SEMI_ELABORADO))
+                .stream()
+                .sorted(Comparator.comparing(Producto::getNombre, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .toList();
 
         List<ProductoMinResponseDTO> dto = items.stream()
                 .map(p -> new ProductoMinResponseDTO(p.getId(), p.getCodigoSku(), p.getNombre()))

@@ -10,6 +10,7 @@ public enum TipoCategoria {
     /** INSUMOS: Suministros varios utilizados en planta */
     SUMINISTROS,
     REPUESTOS,
-    OBSOLETOS
+    OBSOLETOS,
+    PRODUCTO_SEMI_ELABORADO
 }
 

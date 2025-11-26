@@ -19,5 +19,7 @@ public class LoteProductoResponse {
     private LocalDateTime fechaVencimiento;
     private EstadoLote estado;
     private AlmacenResponseDTO almacen;
+    private Long lotePsOrigenId;
+    private String codigoLotePsOrigen;
 }
 

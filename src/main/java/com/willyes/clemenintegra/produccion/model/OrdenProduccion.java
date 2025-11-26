@@ -87,6 +87,9 @@ public class OrdenProduccion {
     @Column(name = "batch_record_observaciones_calidad", columnDefinition = "TEXT")
     private String batchRecordObservacionesCalidad;
 
+    @Transient
+    private Long lotePsId;
+
     @Version
     private Long version;
 

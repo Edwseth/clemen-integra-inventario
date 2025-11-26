@@ -19,6 +19,7 @@ public class ProduccionMapper {
                 .producto(producto)
                 .unidadMedida(producto.getUnidadMedida())
                 .responsable(responsable)
+                .lotePsId(dto.getLotePsId())
                 .build();
     }
 
