@@ -76,6 +76,13 @@ public class ProductoController {
         return ResponseEntity.ok(productos);
     }
 
+    @GetMapping("/fabricables")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<List<ProductoResponseDTO>> getProductosFabricables() {
+        List<ProductoResponseDTO> productos = productoService.findProductosFabricables();
+        return ResponseEntity.ok(productos);
+    }
+
     @GetMapping("/producto-terminado")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public List<ProductoResponseDTO> getProductosTerminados() {
