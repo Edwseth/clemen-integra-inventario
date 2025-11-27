@@ -74,16 +74,16 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
         VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoIdPersistencia)
                 .orElseGet(() -> {
                     VidaUtilProducto nuevo = new VidaUtilProducto();
-                    nuevo.setProducto(producto);
                     nuevo.setProductoId(productoIdPersistencia);
+                    nuevo.setProducto(producto);
                     return nuevo;
                 });
 
-        if (vidaUtil.getProducto() == null) {
-            vidaUtil.setProducto(producto);
-        }
         if (vidaUtil.getProductoId() == null) {
             vidaUtil.setProductoId(productoIdPersistencia);
+        }
+        if (vidaUtil.getProducto() == null) {
+            vidaUtil.setProducto(producto);
         }
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
@@ -91,8 +91,8 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
         vidaUtil.setActualizadoPor(usuarioActual);
         vidaUtil.setFechaActualizacion(LocalDateTime.now());
 
-        if (vidaUtil.getProductoId() == null) {
-            throw new IllegalStateException("VidaUtilProducto sin productoId antes de guardar");
+        if (vidaUtil.getProductoId() == null && (vidaUtil.getProducto() == null || vidaUtil.getProducto().getId() == null)) {
+            throw new IllegalStateException("Intento de guardar VidaUtilProducto sin PK configurada (productoId=" + productoId + ")");
         }
 
         return vidaUtilProductoRepository.save(vidaUtil);

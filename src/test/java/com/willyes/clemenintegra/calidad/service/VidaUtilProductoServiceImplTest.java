@@ -226,6 +226,36 @@ class VidaUtilProductoServiceImplTest {
     }
 
     @Test
+    void deberiaCrearVidaUtilParaProductoTerminadoConPkValida() {
+        when(productoRepository.findById(10L)).thenReturn(Optional.of(productoTerminado));
+        when(vidaUtilProductoRepository.findById(productoTerminado.getId())).thenReturn(Optional.empty());
+        when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
+
+        VidaUtilProducto resultado = service.guardar(productoTerminado.getId(), 14);
+
+        assertThat(resultado.getProductoId()).isEqualTo(productoTerminado.getId());
+        assertThat(resultado.getProducto()).isEqualTo(productoTerminado);
+        assertThat(resultado.getSemanasVigencia()).isEqualTo(14);
+    }
+
+    @Test
+    void deberiaCrearVidaUtilParaProductoSemielaboradoConPkValida() {
+        when(productoRepository.findById(20L)).thenReturn(Optional.of(productoSemielaborado));
+        when(vidaUtilProductoRepository.findById(productoSemielaborado.getId())).thenReturn(Optional.empty());
+        when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
+
+        VidaUtilProducto resultado = service.guardar(productoSemielaborado.getId(), 18);
+
+        assertThat(resultado.getProductoId()).isEqualTo(productoSemielaborado.getId());
+        assertThat(resultado.getProducto()).isEqualTo(productoSemielaborado);
+        assertThat(resultado.getSemanasVigencia()).isEqualTo(18);
+    }
+
+    @Test
     void guardar_deberiaFallarCuandoSemanasInvalidas() {
         when(productoRepository.findById(10L)).thenReturn(Optional.of(productoTerminado));
 
