@@ -53,13 +53,13 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     Page<Producto> buscarPorTexto(@Param("q") String q, Pageable pageable);
 
     /**
-     * Busca insumos (MP, ME y suministros) por nombre.
+     * Busca insumos (MP, ME, suministros y semielaborados) por nombre.
      */
     @Query("""
             select p
             from Producto p
             where lower(p.nombre) like lower(concat('%', :term, '%'))
-              and p.categoriaProducto.tipo in ('MATERIA_PRIMA','MATERIAL_EMPAQUE','SUMINISTROS')
+              and p.categoriaProducto.tipo in ('MATERIA_PRIMA','MATERIAL_EMPAQUE','SUMINISTROS','PRODUCTO_SEMI_ELABORADO')
             """)
     Page<Producto> searchInsumosByNombre(@Param("term") String term, Pageable pageable);
 

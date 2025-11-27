@@ -34,6 +34,14 @@ public class DetalleFormulaServiceImpl implements DetalleFormulaService {
     public DetalleFormula guardar(DetalleFormula detalle) {
         FormulaProducto formula = obtenerFormula(detalle);
         verificarFormulaEditable(formula);
+        if (detalle.getInsumo() == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El insumo es obligatorio para los detalles de fórmula.");
+        }
+        if (detalle.getUnidadMedida() == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "La unidad de medida del insumo es obligatoria para los detalles de fórmula.");
+        }
         detalle.setFormula(formula);
         return detalleRepository.save(detalle);
     }

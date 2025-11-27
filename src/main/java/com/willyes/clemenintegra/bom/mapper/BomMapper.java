@@ -46,9 +46,9 @@ public interface BomMapper {
     FormulaActivaProduccionDTO toFormulaActivaProduccionDTO(FormulaProducto formula);
 
     @Mapping(target = "id", ignore = true)
-    //@Mapping(target = "formula", source = "formula")
-    //@Mapping(target = "insumo", source = "insumo")
-    //@Mapping(target = "unidadMedida", source = "unidad")
+    @Mapping(target = "formula", source = "formula")
+    @Mapping(target = "insumo", source = "insumo")
+    @Mapping(target = "unidadMedida", source = "unidad")
     //@Mapping(target = "cantidadNecesaria", expression = "java(java.math.BigDecimal.valueOf(dto.cantidadNecesaria))")
     DetalleFormula toEntity(DetalleFormulaRequest dto, FormulaProducto formula, Producto insumo, UnidadMedida unidad);
 
