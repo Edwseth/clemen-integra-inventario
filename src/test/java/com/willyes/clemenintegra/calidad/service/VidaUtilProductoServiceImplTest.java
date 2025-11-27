@@ -23,6 +23,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -163,6 +164,14 @@ class VidaUtilProductoServiceImplTest {
     }
 
     @Test
+    void guardar_deberiaFallarCuandoProductoIdEsNulo() {
+        assertThatThrownBy(() -> service.guardar(null, 8))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.NEGOCIO_GENERICO);
+    }
+
+    @Test
     void guardar_deberiaFallarCuandoProductoNoEsTerminado() {
         CategoriaProducto categoria = new CategoriaProducto();
         categoria.setTipo(TipoCategoria.MATERIA_PRIMA);
@@ -176,6 +185,21 @@ class VidaUtilProductoServiceImplTest {
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.VIDA_UTIL_SOLO_PRODUCTO_TERMINADO);
+    }
+
+    @Test
+    void guardar_deberiaFallarCuandoProductoNoTieneIdPersistente() {
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+        Producto sinId = new Producto();
+        sinId.setCategoriaProducto(categoria);
+
+        when(productoRepository.findById(30L)).thenReturn(Optional.of(sinId));
+
+        assertThatThrownBy(() -> service.guardar(30, 6))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.NEGOCIO_GENERICO);
     }
 
     @Test
@@ -249,5 +273,33 @@ class VidaUtilProductoServiceImplTest {
         assertThat(dto.getSemanasVigencia()).isNull();
         assertThat(dto.getActualizadoPorNombre()).isNull();
         assertThat(dto.getFechaActualizacion()).isNull();
+    }
+
+    @Test
+    void listarProductosTerminados_deberiaIncluirProductosSemielaborados() {
+        VidaUtilProducto vidaUtilPs = VidaUtilProducto.builder()
+                .productoId(productoSemielaborado.getId())
+                .producto(productoSemielaborado)
+                .semanasVigencia(10)
+                .actualizadoPor(usuarioAutenticado)
+                .fechaActualizacion(LocalDateTime.now())
+                .build();
+
+        when(productoRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10))))
+                .thenReturn(new PageImpl<>(List.of(productoTerminado, productoSemielaborado)));
+        when(vidaUtilProductoRepository.findAllById(List.of(productoTerminado.getId(), productoSemielaborado.getId())))
+                .thenReturn(List.of(vidaUtilPs));
+
+        Page<VidaUtilProductoDTO> page = service.listarProductosTerminados(null, PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).hasSize(2);
+        VidaUtilProductoDTO dtoSemielaborado = page.getContent().stream()
+                .filter(dto -> productoSemielaborado.getId().equals(dto.getProductoId()))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(dtoSemielaborado.getSemanasVigencia()).isEqualTo(10);
+        assertThat(dtoSemielaborado.getActualizadoPorNombre()).isEqualTo(usuarioAutenticado.getNombreCompleto());
+        assertThat(dtoSemielaborado.getFechaActualizacion()).isEqualTo(vidaUtilPs.getFechaActualizacion());
     }
 }
