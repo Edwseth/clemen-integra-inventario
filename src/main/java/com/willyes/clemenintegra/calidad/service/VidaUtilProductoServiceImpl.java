@@ -60,12 +60,17 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
         VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId)
                 .orElseGet(() -> {
                     VidaUtilProducto nuevo = new VidaUtilProducto();
+                    nuevo.setProducto(producto);
                     nuevo.setProductoId(productoId);
                     return nuevo;
                 });
 
-        vidaUtil.setProductoId(productoId);
-        vidaUtil.setProducto(producto);
+        if (vidaUtil.getProducto() == null) {
+            vidaUtil.setProducto(producto);
+        }
+        if (vidaUtil.getProductoId() == null) {
+            vidaUtil.setProductoId(productoId);
+        }
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
         Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();

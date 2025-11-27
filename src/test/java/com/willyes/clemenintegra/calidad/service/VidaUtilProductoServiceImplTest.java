@@ -179,7 +179,7 @@ class VidaUtilProductoServiceImplTest {
     }
 
     @Test
-    void guardar_deberiaCrearCuandoProductoSemielaboradoValido() {
+    void guardar_deberiaCrearNuevoCuandoProductoSemielaboradoSinVidaUtilPrevia() {
         when(productoRepository.findById(20L)).thenReturn(Optional.of(productoSemielaborado));
         when(vidaUtilProductoRepository.findById(productoSemielaborado.getId())).thenReturn(Optional.empty());
         when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class)))
@@ -191,6 +191,14 @@ class VidaUtilProductoServiceImplTest {
         assertThat(resultado.getSemanasVigencia()).isEqualTo(10);
         assertThat(resultado.getProducto()).isEqualTo(productoSemielaborado);
         assertThat(resultado.getProductoId()).isEqualTo(productoSemielaborado.getId());
+
+        ArgumentCaptor<VidaUtilProducto> captor = ArgumentCaptor.forClass(VidaUtilProducto.class);
+        verify(vidaUtilProductoRepository).save(captor.capture());
+        VidaUtilProducto enviado = captor.getValue();
+        assertThat(enviado.getProducto()).isEqualTo(productoSemielaborado);
+        assertThat(enviado.getProductoId()).isEqualTo(productoSemielaborado.getId());
+        assertThat(enviado.getActualizadoPor()).isEqualTo(usuarioAutenticado);
+        assertThat(enviado.getFechaActualizacion()).isNotNull();
     }
 
     @Test
