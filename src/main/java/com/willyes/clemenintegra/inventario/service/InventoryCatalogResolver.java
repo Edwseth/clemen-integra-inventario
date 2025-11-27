@@ -2,8 +2,10 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.config.InventoryCatalogProperties;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAlmacen;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
@@ -193,10 +195,23 @@ public class InventoryCatalogResolver {
             case MATERIA_PRIMA -> getAlmacenMateriaPrimaId();
             case MATERIAL_EMPAQUE -> getAlmacenMaterialEmpaqueId();
             case PRODUCTO_TERMINADO -> getAlmacenPtId();
+            case PRODUCTO_SEMI_ELABORADO -> resolvePrincipalFromRepository(tipo);
             default -> throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY,
                     "TIPO_CATEGORIA_SIN_ALMACEN (tipo=" + tipo + ")");
         };
+    }
+
+    private Long resolvePrincipalFromRepository(TipoCategoria tipo) {
+        return almacenRepository.findByTipoAndCategoria(TipoAlmacen.PRINCIPAL, tipo).stream()
+                .map(almacen -> almacen.getId() != null ? almacen.getId().longValue() : null)
+                .findFirst()
+                .orElseThrow(() -> {
+                    log.warn("[INVENTARIO] no se encontró almacén principal para tipo {}", tipo);
+                    return new ResponseStatusException(
+                            HttpStatus.UNPROCESSABLE_ENTITY,
+                            "TIPO_CATEGORIA_SIN_ALMACEN (tipo=" + tipo + ")");
+                });
     }
 
     public int decimals(UnidadMedida unidad) {
