@@ -92,7 +92,12 @@ public class ProductoController {
     @GetMapping("/insumos")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public List<ProductoResponseDTO> getProductosInsumo() {
-        return productoService.findByCategoriaTipoIn(List.of("MATERIA_PRIMA", "MATERIAL_EMPAQUE"));
+        return productoService.findByCategoriaTipoIn(List.of(
+                "MATERIA_PRIMA",
+                "MATERIAL_EMPAQUE",
+                "SUMINISTROS",
+                "PRODUCTO_SEMI_ELABORADO"
+        ));
     }
 
     @GetMapping("/terminados")

@@ -6,6 +6,8 @@ import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.DetalleFormulaRepository;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,6 +46,8 @@ class DetalleFormulaServiceImplTest {
 
         DetalleFormula detalle = new DetalleFormula();
         detalle.setFormula(formula);
+        detalle.setInsumo(new Producto());
+        detalle.setUnidadMedida(new UnidadMedida());
 
         when(formulaRepository.findById(1L)).thenReturn(Optional.of(formula));
         when(detalleRepository.save(any(DetalleFormula.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -61,6 +65,8 @@ class DetalleFormulaServiceImplTest {
 
         DetalleFormula detalle = new DetalleFormula();
         detalle.setFormula(formula);
+        detalle.setInsumo(new Producto());
+        detalle.setUnidadMedida(new UnidadMedida());
 
         when(formulaRepository.findById(5L)).thenReturn(Optional.of(formula));
         when(detalleRepository.save(any(DetalleFormula.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -69,6 +75,46 @@ class DetalleFormulaServiceImplTest {
 
         assertThat(resultado.getFormula()).isEqualTo(formula);
         verify(detalleRepository).save(detalle);
+    }
+
+    @Test
+    @DisplayName("guardar rechaza cuando falta la unidad de medida")
+    void guardarRechazaUnidadMedidaNula() {
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(3L);
+        formula.setEstado(EstadoFormula.BORRADOR);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setFormula(formula);
+        detalle.setInsumo(new Producto());
+
+        when(formulaRepository.findById(3L)).thenReturn(Optional.of(formula));
+
+        assertThatThrownBy(() -> service.guardar(detalle))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("unidad de medida del insumo es obligatoria");
+
+        verify(detalleRepository, never()).save(any(DetalleFormula.class));
+    }
+
+    @Test
+    @DisplayName("guardar rechaza cuando falta el insumo")
+    void guardarRechazaInsumoNulo() {
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(4L);
+        formula.setEstado(EstadoFormula.BORRADOR);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setFormula(formula);
+        detalle.setUnidadMedida(new UnidadMedida());
+
+        when(formulaRepository.findById(4L)).thenReturn(Optional.of(formula));
+
+        assertThatThrownBy(() -> service.guardar(detalle))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("insumo es obligatorio");
+
+        verify(detalleRepository, never()).save(any(DetalleFormula.class));
     }
 
     @Test

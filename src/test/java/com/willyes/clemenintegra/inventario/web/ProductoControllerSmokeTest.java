@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -152,20 +154,25 @@ class ProductoControllerSmokeTest {
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
-    @DisplayName("GET /api/productos/fabricables devuelve PT y PS")
-    void getProductosFabricables_deberiaRetornar200() throws Exception {
+    @DisplayName("GET /api/productos/insumos incluye MP, ME, SU y PS")
+    void listarInsumosIncluyeCategoriasEsperadas() throws Exception {
         List<ProductoResponseDTO> productos = List.of(
-                ProductoResponseDTO.builder().id(1L).sku("PT-01").nombre("Producto PT").build(),
-                ProductoResponseDTO.builder().id(2L).sku("PS-01").nombre("Producto PS").build()
+                ProductoResponseDTO.builder().id(1L).nombre("MP").build(),
+                ProductoResponseDTO.builder().id(2L).nombre("ME").build(),
+                ProductoResponseDTO.builder().id(3L).nombre("SU").build(),
+                ProductoResponseDTO.builder().id(4L).nombre("PS").build()
         );
 
-        when(productoService.findProductosFabricables()).thenReturn(productos);
+        when(productoService.findByCategoriaTipoIn(any(List.class))).thenReturn(productos);
 
-        mockMvc.perform(get("/api/productos/fabricables"))
+        mockMvc.perform(get("/api/productos/insumos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].sku").value("PT-01"))
-                .andExpect(jsonPath("$[1].id").value(2))
-                .andExpect(jsonPath("$[1].sku").value("PS-01"));
+                .andExpect(jsonPath("$[0].nombre").value("MP"))
+                .andExpect(jsonPath("$[1].nombre").value("ME"))
+                .andExpect(jsonPath("$[2].nombre").value("SU"))
+                .andExpect(jsonPath("$[3].nombre").value("PS"));
+
+        verify(productoService).findByCategoriaTipoIn(argThat(tipos ->
+                tipos.containsAll(List.of("MATERIA_PRIMA", "MATERIAL_EMPAQUE", "SUMINISTROS", "PRODUCTO_SEMI_ELABORADO"))));
     }
 }
