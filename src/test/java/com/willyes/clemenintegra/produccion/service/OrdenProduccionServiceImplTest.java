@@ -20,6 +20,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -565,6 +566,75 @@ class OrdenProduccionServiceImplTest {
 
         assertThat(loteGenerado.getFechaVencimiento())
                 .isEqualTo(loteGenerado.getFechaFabricacion().plusWeeks(6));
+        assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.EN_PROCESO);
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa genera lote de producto semielaborado usando semanas de vigencia configuradas")
+    void iniciarEtapa_conVidaUtilParaPs() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(6L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-006");
+
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+
+        Producto producto = new Producto();
+        producto.setId(25);
+        producto.setNombre("PS-Probador");
+        producto.setCodigoSku("PS-025");
+        producto.setCategoriaProducto(categoria);
+        producto.setTipoAnalisis(TipoAnalisisCalidad.FISICO);
+        orden.setProducto(producto);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(16L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .ordenProduccion(orden)
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(10L);
+        usuario.setNombreCompleto("Usuario Ps");
+
+        when(ordenProduccionRepository.findById(6L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(16L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(6L)).thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(2L);
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(new Almacen(1)));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(new Almacen(2)));
+        when(vidaUtilProductoService.buscarPorProductoId(25)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(25)
+                .producto(producto)
+                .semanasVigencia(4)
+                .build()));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            lote.setId(100L);
+            return lote;
+        });
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EtapaProduccion resultado = service.iniciarEtapa(6L, 16L);
+
+        ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository).save(captor.capture());
+        LoteProducto loteGenerado = captor.getValue();
+
+        assertThat(loteGenerado.getFechaVencimiento())
+                .isEqualTo(loteGenerado.getFechaFabricacion().plusWeeks(4));
+        assertThat(loteGenerado.getEstado()).isEqualTo(EstadoLote.EN_CUARENTENA);
+        assertThat(loteGenerado.getAlmacen().getId()).isEqualTo(2L);
         assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.EN_PROCESO);
     }
 
