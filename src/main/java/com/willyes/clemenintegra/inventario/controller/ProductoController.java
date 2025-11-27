@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.*;
+import com.willyes.clemenintegra.inventario.mapper.ProductoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
@@ -36,6 +37,7 @@ public class ProductoController {
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final UnidadMedidaRepository unidadMedidaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ProductoMapper productoMapper;
 
     @GetMapping("/buscar")
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR')")
@@ -98,6 +100,17 @@ public class ProductoController {
                 "SUMINISTROS",
                 "PRODUCTO_SEMI_ELABORADO"
         ));
+    }
+
+    @GetMapping("/insumos/autocomplete")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public ResponseEntity<Page<ProductoResponseDTO>> buscarInsumosAutocomplete(
+            @RequestParam("term") String term,
+            Pageable pageable
+    ) {
+        Page<Producto> page = productoService.buscarInsumosAutocomplete(term, pageable);
+        Page<ProductoResponseDTO> dtoPage = page.map(productoMapper::toDto);
+        return ResponseEntity.ok(dtoPage);
     }
 
     @GetMapping("/terminados")

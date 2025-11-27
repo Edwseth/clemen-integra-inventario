@@ -41,4 +41,6 @@ public interface ProductoService {
     Page<ProductoResumenDTO> buscarProductosTerminados(String term, Pageable pageable);
 
     List<ProductoResponseDTO> findProductosFabricables();
+
+    Page<Producto> buscarInsumosAutocomplete(String term, Pageable pageable);
 }
