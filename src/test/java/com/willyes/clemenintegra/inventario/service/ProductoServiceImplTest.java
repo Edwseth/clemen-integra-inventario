@@ -261,6 +261,42 @@ class ProductoServiceImplTest {
         assertThat(termCaptor.getValue()).isEqualTo("mp");
     }
 
+    @Test
+    @DisplayName("Debe devolver página vacía si el término de fabricables está vacío")
+    void buscarProductosFabricablesAutocomplete_sinTermino_devuelveVacio() {
+        Pageable pageable = PageRequest.of(0, 5);
+
+        Page<Producto> resultado = service.buscarProductosFabricablesAutocomplete("   ", pageable);
+
+        assertThat(resultado).isEmpty();
+        verify(productoRepository, never()).buscarFabricablesAutocomplete(anyList(), anyString(), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("Debe buscar fabricables en PT y PS y normalizar el término")
+    void buscarProductosFabricablesAutocomplete_conTermino_invocaRepositorioConFiltros() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Producto producto = new Producto();
+        Page<Producto> page = new PageImpl<>(List.of(producto), pageable, 1);
+        when(productoRepository.buscarFabricablesAutocomplete(anyList(), anyString(), any(Pageable.class)))
+                .thenReturn(page);
+
+        Page<Producto> resultado = service.buscarProductosFabricablesAutocomplete("  ps ", pageable);
+
+        assertThat(resultado.getContent()).containsExactly(producto);
+
+        ArgumentCaptor<List<TipoCategoria>> tiposCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<String> termCaptor = ArgumentCaptor.forClass(String.class);
+        verify(productoRepository).buscarFabricablesAutocomplete(tiposCaptor.capture(), termCaptor.capture(), any(Pageable.class));
+
+        assertThat(tiposCaptor.getValue())
+                .containsExactlyInAnyOrder(
+                        TipoCategoria.PRODUCTO_TERMINADO,
+                        TipoCategoria.PRODUCTO_SEMI_ELABORADO
+                );
+        assertThat(termCaptor.getValue()).isEqualTo("ps");
+    }
+
     private CategoriaProducto categoria(TipoCategoria tipo) {
         CategoriaProducto categoria = new CategoriaProducto();
         categoria.setTipo(tipo);

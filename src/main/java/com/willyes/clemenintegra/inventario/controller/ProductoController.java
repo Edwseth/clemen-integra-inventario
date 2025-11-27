@@ -68,6 +68,17 @@ public class ProductoController {
         return ResponseEntity.ok(page);
     }
 
+    @GetMapping("/buscar-fabricables")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<Page<ProductoResponseDTO>> buscarProductosFabricablesAutocomplete(
+            @RequestParam("term") String term,
+            Pageable pageable
+    ) {
+        Page<Producto> page = productoService.buscarProductosFabricablesAutocomplete(term, pageable);
+        Page<ProductoResponseDTO> dtoPage = page.map(productoMapper::toDto);
+        return ResponseEntity.ok(dtoPage);
+    }
+
     @GetMapping("/categoria/{nombre}")
     public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
             @PathVariable String nombre) {
