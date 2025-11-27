@@ -606,6 +606,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             lotesProcesados = procesarMovimientoConLoteExistente(
                     dto,
                     tipoMovimiento,
+                    clasificacion,
                     almacenOrigen,
                     almacenDestino,
                     producto,
@@ -629,7 +630,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         } else {
             // Comportamiento anterior (un solo lote desde DTO)
             lotesProcesados = procesarMovimientoConLoteExistente(
-                    dto, tipoMovimiento, almacenOrigen, almacenDestino,
+                    dto, tipoMovimiento, clasificacion, almacenOrigen, almacenDestino,
                     producto, cantidadSolicitada, devolucionInterna, solicitud, solicitudOpProcesadaEnLote
             );
         }
@@ -1062,6 +1063,38 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return null;
         }
         return valor.setScale(6, RoundingMode.HALF_UP);
+    }
+
+    void validarEstadoLoteParaMovimiento(LoteProducto lote,
+                                         TipoMovimiento tipoMovimiento,
+                                         ClasificacionMovimientoInventario clasificacion,
+                                         boolean esLoteOrigen) {
+        EstadoLote estado = lote != null ? lote.getEstado() : null;
+        boolean esEntradaProduccion = !esLoteOrigen
+                && tipoMovimiento == TipoMovimiento.ENTRADA
+                && clasificacion == ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO;
+
+        boolean estadoRestringido = estado == EstadoLote.RECHAZADO
+                || estado == EstadoLote.VENCIDO
+                || (esLoteOrigen && (estado == EstadoLote.EN_CUARENTENA || estado == EstadoLote.RETENIDO));
+
+        if (!estadoRestringido || esEntradaProduccion) {
+            return;
+        }
+
+        if (estado == EstadoLote.RETENIDO) {
+            retencionLoteService.obtenerActivaPorLote(lote.getId()).ifPresent(ret -> {
+                if (ret.getMotivo() == MotivoRetencion.NO_CONFORMIDAD) {
+                    throw new CustomBusinessException(ApiErrorCode.BLOQUEO_RETENCION_NC,
+                            "El lote está retenido por una no conformidad abierta.",
+                            Map.of("loteId", lote.getId(), "retencionId", ret.getId()));
+                }
+            });
+        }
+
+        throw new CustomBusinessException(ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA,
+                "El lote no se encuentra en un estado válido para movimientos.",
+                Map.of("loteId", lote.getId(), "estado", estado != null ? estado.name() : null));
     }
 
     private void actualizarStockLote(LoteProducto lote, BigDecimal cantidad, Producto producto) {
@@ -1687,6 +1720,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     private List<MovimientoLoteDetalle> procesarMovimientoConLoteExistente(MovimientoInventarioDTO dto,
                                                                            TipoMovimiento tipo,
+                                                                           ClasificacionMovimientoInventario clasificacion,
                                                                            Almacen origen,
                                                                            Almacen destino,
                                                                            Producto producto,
@@ -1717,29 +1751,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         log.debug("VAL-GATE esPorLote={} solicitudId={} tipo={}", esPorLote,
                 solicitud != null ? solicitud.getId() : null, tipo);
 
-        boolean estadoBloqueado = EnumSet.of(EstadoLote.RETENIDO,
-                        EstadoLote.RECHAZADO, EstadoLote.VENCIDO)
-                .contains(loteOrigen.getEstado())
-                || (loteOrigen.getEstado() == EstadoLote.EN_CUARENTENA
-                && producto.getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_TERMINADO);
-
-        if (estadoBloqueado) {
-            log.info(
-                    "[INVENTARIO] movimiento bloqueado por estado de lote. loteId={} estado={} productoId={}",
-                    loteOrigen.getId(), loteOrigen.getEstado(), producto.getId());
-            if (loteOrigen.getEstado() == EstadoLote.RETENIDO) {
-                retencionLoteService.obtenerActivaPorLote(loteOrigen.getId()).ifPresent(ret -> {
-                    if (ret.getMotivo() == MotivoRetencion.NO_CONFORMIDAD) {
-                        throw new CustomBusinessException(ApiErrorCode.BLOQUEO_RETENCION_NC,
-                                "El lote está retenido por una no conformidad abierta.",
-                                Map.of("loteId", loteOrigen.getId(), "retencionId", ret.getId()));
-                    }
-                });
-            }
-            throw new CustomBusinessException(ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA,
-                    "El lote no se encuentra en un estado válido para movimientos.",
-                    Map.of("loteId", loteOrigen.getId(), "estado", loteOrigen.getEstado().name()));
-        }
+        boolean esLoteOrigen = tipo != TipoMovimiento.ENTRADA;
+        validarEstadoLoteParaMovimiento(loteOrigen, tipo, clasificacion, esLoteOrigen);
 
         Almacen almacenOrigen = origen != null
                 ? origen

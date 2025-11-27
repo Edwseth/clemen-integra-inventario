@@ -9,6 +9,8 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.*;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -69,6 +71,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
     private InventoryCatalogResolver catalogResolver;
     @Mock
     private ReservaLoteService reservaLoteService;
+    @Mock
+    private ReservaLoteRepository reservaLoteRepository;
     @Mock
     private RecepcionOCService recepcionOCService;
     @Mock
@@ -762,6 +766,133 @@ class MovimientoInventarioServiceSolicitudOpTest {
         verify(solicitudMovimientoRepository, never()).findByIdWithLock(anyLong());
     }
 
+    @Test
+    void registrarMovimiento_permiteEntradaProduccionEnCuarentena() {
+        Producto producto = productoSemiElaborado();
+        LoteProducto lote = loteEnEstado(producto, EstadoLote.EN_CUARENTENA, BigDecimal.ZERO, 50);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("25"),
+                TipoMovimiento.ENTRADA,
+                ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO,
+                "DOC-PT",
+                null,
+                producto.getId(),
+                lote.getId(),
+                null,
+                lote.getAlmacen().getId(),
+                null,
+                null,
+                null,
+                1L,
+                null,
+                null,
+                10L,
+                null,
+                null,
+                null,
+                null,
+                Boolean.FALSE,
+                List.of()
+        );
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.ENTRADA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO);
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        TipoMovimientoDetalle detalle = new TipoMovimientoDetalle();
+        detalle.setId(1L);
+        detalle.setDescripcion("ENTRADA OP");
+        given(tipoMovimientoDetalleRepository.findById(1L)).willReturn(Optional.of(detalle));
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuarioBasico());
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(10L);
+        given(entityManager.getReference(eq(OrdenProduccion.class), eq(10L))).willReturn(orden);
+        given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
+            Number id = invocation.getArgument(1);
+            return new Almacen(id.intValue());
+        });
+        given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
+        given(loteProductoRepository.save(any(LoteProducto.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(movimientoInventarioRepository.save(any())).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(1L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(1L).build());
+        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        assertThat(respuesta).isNotNull();
+        assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("25"));
+        assertThat(lote.getEstado()).isEqualTo(EstadoLote.EN_CUARENTENA);
+    }
+
+    @Test
+    void registrarMovimiento_bloqueaSalidaDesdeCuarentena() {
+        Producto producto = productoSemiElaborado();
+        LoteProducto lote = loteEnEstado(producto, EstadoLote.EN_CUARENTENA, new BigDecimal("10"), 60);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("2"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                "DOC-SAL",
+                null,
+                producto.getId(),
+                lote.getId(),
+                lote.getAlmacen().getId(),
+                null,
+                null,
+                null,
+                null,
+                2L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Boolean.FALSE,
+                List.of()
+        );
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.SALIDA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+
+        TipoMovimientoDetalle detalle = new TipoMovimientoDetalle();
+        detalle.setId(2L);
+        detalle.setDescripcion("SALIDA OP");
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(detalle));
+        given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
+            Number id = invocation.getArgument(1);
+            return new Almacen(id.intValue());
+        });
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuarioBasico());
+        given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
+        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+        lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
+                .thenReturn(BigDecimal.ZERO);
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA);
+    }
+
     private void prepararEscenarioComun(MovimientoInventarioDTO dto,
                                         Producto producto,
                                         SolicitudMovimiento solicitud,
@@ -807,6 +938,42 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lenient().when(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
                 .thenReturn(MovimientoInventarioResponseDTO.builder().id(900L).build());
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+    }
+
+    private Producto productoSemiElaborado() {
+        Producto producto = new Producto();
+        producto.setId(200);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        producto.setCategoriaProducto(categoria);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(20L);
+        producto.setUnidadMedida(unidad);
+        producto.setTipoAnalisis(TipoAnalisisCalidad.FISICO);
+        return producto;
+    }
+
+    private LoteProducto loteEnEstado(Producto producto, EstadoLote estado, BigDecimal stock, int almacenId) {
+        LoteProducto lote = new LoteProducto();
+        lote.setId(500L + almacenId);
+        lote.setProducto(producto);
+        lote.setEstado(estado);
+        lote.setStockLote(stock);
+        lote.setAlmacen(new Almacen(almacenId));
+        return lote;
+    }
+
+    private Usuario usuarioBasico() {
+        return Usuario.builder()
+                .id(99L)
+                .rol(RolUsuario.ROL_SUPER_ADMIN)
+                .nombreUsuario("tester")
+                .clave("secret")
+                .nombreCompleto("Tester")
+                .correo("tester@example.com")
+                .activo(true)
+                .bloqueado(false)
+                .build();
     }
 
     private LoteProducto clonarLote(LoteProducto origen) {
