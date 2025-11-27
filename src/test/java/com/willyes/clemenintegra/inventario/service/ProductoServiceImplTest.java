@@ -27,6 +27,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,7 +45,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -215,6 +221,44 @@ class ProductoServiceImplTest {
         assertThat(resultado)
                 .extracting(ProductoResponseDTO::getSku)
                 .containsExactly("PT-001", "PS-001");
+    }
+
+    @Test
+    @DisplayName("Debe devolver página vacía si el término de autocomplete está vacío")
+    void buscarInsumosAutocomplete_sinTermino_devuelveVacio() {
+        Pageable pageable = PageRequest.of(0, 5);
+
+        Page<Producto> resultado = service.buscarInsumosAutocomplete("   ", pageable);
+
+        assertThat(resultado).isEmpty();
+        verify(productoRepository, never()).buscarInsumosAutocomplete(anyList(), anyString(), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("Debe buscar insumos en categorías permitidas y mapear término recortado")
+    void buscarInsumosAutocomplete_conTermino_invocaRepositorioConFiltros() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Producto producto = new Producto();
+        Page<Producto> page = new PageImpl<>(List.of(producto), pageable, 1);
+        when(productoRepository.buscarInsumosAutocomplete(anyList(), anyString(), any(Pageable.class)))
+                .thenReturn(page);
+
+        Page<Producto> resultado = service.buscarInsumosAutocomplete("  mp ", pageable);
+
+        assertThat(resultado.getContent()).containsExactly(producto);
+
+        ArgumentCaptor<List<TipoCategoria>> tiposCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<String> termCaptor = ArgumentCaptor.forClass(String.class);
+        verify(productoRepository).buscarInsumosAutocomplete(tiposCaptor.capture(), termCaptor.capture(), any(Pageable.class));
+
+        assertThat(tiposCaptor.getValue())
+                .containsExactlyInAnyOrder(
+                        TipoCategoria.MATERIA_PRIMA,
+                        TipoCategoria.MATERIAL_EMPAQUE,
+                        TipoCategoria.SUMINISTROS,
+                        TipoCategoria.PRODUCTO_SEMI_ELABORADO
+                );
+        assertThat(termCaptor.getValue()).isEqualTo("mp");
     }
 
     private CategoriaProducto categoria(TipoCategoria tipo) {

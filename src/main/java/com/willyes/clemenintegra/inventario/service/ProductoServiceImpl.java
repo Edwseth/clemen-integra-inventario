@@ -575,5 +575,21 @@ public class ProductoServiceImpl implements ProductoService {
         return page.map(this::mapToResumenDto);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Producto> buscarInsumosAutocomplete(String term, Pageable pageable) {
+        if (term == null || term.trim().isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<TipoCategoria> tipos = List.of(
+                TipoCategoria.MATERIA_PRIMA,
+                TipoCategoria.MATERIAL_EMPAQUE,
+                TipoCategoria.SUMINISTROS,
+                TipoCategoria.PRODUCTO_SEMI_ELABORADO
+        );
+        return productoRepository.buscarInsumosAutocomplete(tipos, term.trim(), pageable);
+    }
+
 }
 
