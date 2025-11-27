@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.controller.ProductoController;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
+import com.willyes.clemenintegra.inventario.mapper.ProductoMapper;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
@@ -55,6 +56,9 @@ class ProductoControllerSmokeTest {
 
     @MockBean
     private ProductoService productoService;
+
+    @MockBean
+    private ProductoMapper productoMapper;
 
     @MockBean
     private ProductoRepository productoRepository;
