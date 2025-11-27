@@ -49,6 +49,7 @@ class VidaUtilProductoServiceImplTest {
     private VidaUtilProductoServiceImpl service;
 
     private Producto productoTerminado;
+    private Producto productoSemielaborado;
     private Usuario usuarioAutenticado;
 
     @BeforeEach
@@ -61,6 +62,15 @@ class VidaUtilProductoServiceImplTest {
         productoTerminado.setCodigoSku("PT-001");
         productoTerminado.setNombre("Producto Terminado");
         productoTerminado.setCategoriaProducto(categoria);
+
+        CategoriaProducto categoriaPs = new CategoriaProducto();
+        categoriaPs.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+
+        productoSemielaborado = new Producto();
+        productoSemielaborado.setId(20);
+        productoSemielaborado.setCodigoSku("PS-001");
+        productoSemielaborado.setNombre("Producto Semielaborado");
+        productoSemielaborado.setCategoriaProducto(categoriaPs);
 
         usuarioAutenticado = Usuario.builder()
                 .id(5L)
@@ -166,6 +176,21 @@ class VidaUtilProductoServiceImplTest {
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.VIDA_UTIL_SOLO_PRODUCTO_TERMINADO);
+    }
+
+    @Test
+    void guardar_deberiaCrearCuandoProductoSemielaboradoValido() {
+        when(productoRepository.findById(20L)).thenReturn(Optional.of(productoSemielaborado));
+        when(vidaUtilProductoRepository.findById(productoSemielaborado.getId())).thenReturn(Optional.empty());
+        when(vidaUtilProductoRepository.save(any(VidaUtilProducto.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioAutenticado);
+
+        VidaUtilProducto resultado = service.guardar(productoSemielaborado.getId(), 10);
+
+        assertThat(resultado.getSemanasVigencia()).isEqualTo(10);
+        assertThat(resultado.getProducto()).isEqualTo(productoSemielaborado);
+        assertThat(resultado.getProductoId()).isEqualTo(productoSemielaborado.getId());
     }
 
     @Test

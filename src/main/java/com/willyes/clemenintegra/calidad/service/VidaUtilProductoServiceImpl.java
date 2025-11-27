@@ -48,12 +48,7 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
                         "Producto no encontrado"
                 ));
 
-        if (!esProductoTerminado(producto)) {
-            throw new CustomBusinessException(
-                    ApiErrorCode.VIDA_UTIL_SOLO_PRODUCTO_TERMINADO,
-                    "La vida útil solo puede configurarse para productos terminados"
-            );
-        }
+        validarProductoAdmiteVidaUtil(producto);
 
         if (semanasVigencia == null || semanasVigencia <= 0) {
             throw new CustomBusinessException(
@@ -90,10 +85,7 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
     public void eliminar(Integer productoId) {
         Producto producto = productoRepository.findById(Long.valueOf(productoId))
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Producto no encontrado"));
-        if (!esProductoTerminado(producto)) {
-            throw new CustomBusinessException(ApiErrorCode.VIDA_UTIL_SOLO_PRODUCTO_TERMINADO,
-                    "La vida útil solo puede configurarse para productos terminados");
-        }
+        validarProductoAdmiteVidaUtil(producto);
         vidaUtilProductoRepository.findById(productoId)
                 .ifPresent(vidaUtilProductoRepository::delete);
     }
@@ -128,9 +120,18 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
                 .build());
     }
 
-    private boolean esProductoTerminado(Producto producto) {
-        return producto != null
-                && producto.getCategoriaProducto() != null
-                && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO;
+    private void validarProductoAdmiteVidaUtil(Producto producto) {
+        if (producto == null || producto.getCategoriaProducto() == null) {
+            throw new IllegalArgumentException("El producto es obligatorio para definir vida útil.");
+        }
+
+        TipoCategoria tipo = producto.getCategoriaProducto().getTipo();
+        if (tipo != TipoCategoria.PRODUCTO_TERMINADO
+                && tipo != TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.VIDA_UTIL_SOLO_PRODUCTO_TERMINADO,
+                    "Solo se puede registrar vida útil para productos terminados o semielaborados."
+            );
+        }
     }
 }

@@ -189,10 +189,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     private Integer obtenerSemanasVigenciaProductoTerminado(Producto producto) {
-        TipoCategoria tipoCategoria = obtenerTipoCategoriaProducto(producto);
+        // Ahora aplica para productos terminados (PT) y semielaborados (PS).
+        if (producto == null || producto.getCategoriaProducto() == null) {
+            throw new IllegalArgumentException("Producto inválido para calcular vida útil");
+        }
+        TipoCategoria tipoCategoria = producto.getCategoriaProducto().getTipo();
         if (tipoCategoria != TipoCategoria.PRODUCTO_TERMINADO
                 && tipoCategoria != TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
-            return null;
+            throw new IllegalArgumentException(
+                    "Solo productos terminados o semielaborados pueden tener vida útil registrada."
+            );
         }
         return vidaUtilProductoService.buscarPorProductoId(producto.getId())
                 .map(VidaUtilProducto::getSemanasVigencia)
