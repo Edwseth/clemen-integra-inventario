@@ -68,19 +68,16 @@ public class ProductoServiceImpl implements ProductoService {
         throw new IllegalStateException("No se pudo extraer el token JWT");
     }
 
-    private boolean esCategoriaPT(com.willyes.clemenintegra.inventario.model.CategoriaProducto categoria) {
-        if (categoria == null) return false;
-        // Si tu entidad tiene getTipo(): TipoCategoria (MP, ME, SU, PT)
-        TipoCategoria tipo = categoria.getTipo();
-        if (tipo != null && tipo == TipoCategoria.PRODUCTO_TERMINADO) return true;
-
-        // Fallback por nombre, por si acaso
-        String nombre = categoria.getNombre() != null ? categoria.getNombre().toUpperCase() : "";
-        return nombre.contains("PRODUCTO TERMINADO");
-    }
-
-    private boolean skuEmpiezaConPT(String sku) {
-        return sku != null && sku.trim().toUpperCase().startsWith("PT");
+    private boolean esProductoFabricable(com.willyes.clemenintegra.inventario.model.CategoriaProducto categoria, String sku) {
+        if (categoria == null || categoria.getTipo() == null || sku == null) {
+            return false;
+        }
+        String skuNormalizado = sku.trim().toUpperCase();
+        return switch (categoria.getTipo()) {
+            case PRODUCTO_TERMINADO -> skuNormalizado.startsWith("PT");
+            case PRODUCTO_SEMI_ELABORADO -> skuNormalizado.startsWith("PS");
+            default -> false;
+        };
     }
 
     private BigDecimal sanitizeRendimiento(BigDecimal val) {
@@ -89,6 +86,19 @@ public class ProductoServiceImpl implements ProductoService {
             throw new IllegalArgumentException("Rendimiento × Unidad debe ser >= 0.00");
         }
         return val.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal resolverRendimientoUnidad(ProductoRequestDTO dto, com.willyes.clemenintegra.inventario.model.CategoriaProducto categoria) {
+        if (!esProductoFabricable(categoria, dto.getSku())) {
+            return null;
+        }
+
+        BigDecimal rendimiento = sanitizeRendimiento(dto.getRendimientoUnidad());
+        if (rendimiento == null || rendimiento.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "El rendimiento por unidad es obligatorio y debe ser mayor que cero para productos terminados y semielaborados.");
+        }
+        return rendimiento;
     }
 
     private String sanitizeBusqueda(String term) {
@@ -228,11 +238,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .creadoPor(usuario)
                 .build();
 
-        if (esCategoriaPT(categoria) && skuEmpiezaConPT(dto.getSku())) {
-            producto.setRendimientoUnidad(sanitizeRendimiento(dto.getRendimientoUnidad()));
-        } else {
-            producto.setRendimientoUnidad(null);
-        }
+        producto.setRendimientoUnidad(resolverRendimientoUnidad(dto, categoria));
 
         productoRepository.save(producto);
         return buildDto(producto);
@@ -272,11 +278,7 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setCategoriaProducto(categoria);
         producto.setCreadoPor(usuario);
 
-        if (esCategoriaPT(categoria) && skuEmpiezaConPT(dto.getSku())) {
-            producto.setRendimientoUnidad(sanitizeRendimiento(dto.getRendimientoUnidad()));
-        } else {
-            producto.setRendimientoUnidad(null);
-        }
+        producto.setRendimientoUnidad(resolverRendimientoUnidad(dto, categoria));
 
         productoRepository.save(producto);
         BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());

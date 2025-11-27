@@ -207,6 +207,31 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .orElse(null);
     }
 
+    private boolean esProductoFabricable(TipoCategoria tipoCategoria) {
+        return tipoCategoria == TipoCategoria.PRODUCTO_TERMINADO
+                || tipoCategoria == TipoCategoria.PRODUCTO_SEMI_ELABORADO;
+    }
+
+    private void validarRendimientoProductoFabricable(Producto producto) {
+        TipoCategoria tipoCategoria = obtenerTipoCategoriaProducto(producto);
+        if (tipoCategoria == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El producto de la orden de producción no tiene categoría válida configurada.");
+        }
+        if (!esProductoFabricable(tipoCategoria)) {
+            return;
+        }
+        BigDecimal rendimiento = Optional.ofNullable(producto)
+                .map(Producto::getRendimientoUnidad)
+                .orElse(null);
+        if (rendimiento == null || rendimiento.compareTo(BigDecimal.ZERO) <= 0) {
+            String identificador = Optional.ofNullable(producto.getCodigoSku())
+                    .orElse(Optional.ofNullable(producto.getNombre()).orElse("producto"));
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    String.format("El producto %s requiere un rendimiento por unidad definido y mayor que cero para crear una orden de producción.", identificador));
+        }
+    }
+
     private List<DetalleFormula> obtenerDetallesFormulaSeguro(FormulaProducto formula) {
         return Optional.ofNullable(formula)
                 .map(FormulaProducto::getDetalles)
@@ -461,6 +486,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             unidadBase = unidadProducto;
             dto.setUnidadMedidaSimbolo(unidadBase);
         }
+        validarRendimientoProductoFabricable(producto);
         BigDecimal cantidadConvertida = unidadConversionService.convertir(cantidadBase, unidadBase, unidadProducto);
 
         BigDecimal unidadesProducidas = unidadConversionService.dividirNormalizado(
