@@ -149,4 +149,23 @@ class ProductoControllerSmokeTest {
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.totalPages").value(1));
     }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/productos/fabricables devuelve PT y PS")
+    void getProductosFabricables_deberiaRetornar200() throws Exception {
+        List<ProductoResponseDTO> productos = List.of(
+                ProductoResponseDTO.builder().id(1L).sku("PT-01").nombre("Producto PT").build(),
+                ProductoResponseDTO.builder().id(2L).sku("PS-01").nombre("Producto PS").build()
+        );
+
+        when(productoService.findProductosFabricables()).thenReturn(productos);
+
+        mockMvc.perform(get("/api/productos/fabricables"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].sku").value("PT-01"))
+                .andExpect(jsonPath("$[1].id").value(2))
+                .andExpect(jsonPath("$[1].sku").value("PS-01"));
+    }
 }

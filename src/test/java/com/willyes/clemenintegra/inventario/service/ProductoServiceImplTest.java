@@ -32,12 +32,15 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -73,6 +76,7 @@ class ProductoServiceImplTest {
 
         when(productoMapper.toDto(any(Producto.class))).thenReturn(new ProductoResponseDTO());
         when(stockQueryService.obtenerStockDisponible(any(Long.class))).thenReturn(BigDecimal.ZERO);
+        when(stockQueryService.obtenerStockDisponible(anyList())).thenReturn(Collections.emptyMap());
         when(loteProductoRepository.existsByProducto(any(Producto.class))).thenReturn(false);
         when(movimientoInventarioRepository.existsByProductoId(any(Long.class))).thenReturn(false);
         when(productoRepository.save(any(Producto.class))).thenAnswer(invocation -> {
@@ -183,5 +187,39 @@ class ProductoServiceImplTest {
         assertThatThrownBy(() -> service.crearProducto(dto))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("rendimiento por unidad es obligatorio");
+    }
+
+    @Test
+    @DisplayName("Debe devolver solo productos fabricables (PT y PS)")
+    void findProductosFabricables_devuelveFabricables() {
+        CategoriaProducto categoriaPt = categoria(TipoCategoria.PRODUCTO_TERMINADO);
+        CategoriaProducto categoriaPs = categoria(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        CategoriaProducto categoriaMp = categoria(TipoCategoria.MATERIA_PRIMA);
+
+        Producto pt = Producto.builder().id(1).codigoSku("PT-001").categoriaProducto(categoriaPt).build();
+        Producto ps = Producto.builder().id(2).codigoSku("PS-001").categoriaProducto(categoriaPs).build();
+        Producto mp = Producto.builder().id(3).codigoSku("MP-001").categoriaProducto(categoriaMp).build();
+
+        when(productoRepository.findByCategoriaProducto_TipoIn(anyList()))
+                .thenReturn(List.of(pt, ps, mp));
+        when(stockQueryService.obtenerStockDisponible(List.of(1L, 2L)))
+                .thenReturn(Map.of(1L, BigDecimal.ONE, 2L, new BigDecimal("2.50")));
+        when(productoMapper.toDto(pt)).thenReturn(ProductoResponseDTO.builder().id(1L).sku("PT-001").build());
+        when(productoMapper.toDto(ps)).thenReturn(ProductoResponseDTO.builder().id(2L).sku("PS-001").build());
+
+        List<ProductoResponseDTO> resultado = service.findProductosFabricables();
+
+        assertThat(resultado)
+                .extracting(ProductoResponseDTO::getId)
+                .containsExactly(1L, 2L);
+        assertThat(resultado)
+                .extracting(ProductoResponseDTO::getSku)
+                .containsExactly("PT-001", "PS-001");
+    }
+
+    private CategoriaProducto categoria(TipoCategoria tipo) {
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(tipo);
+        return categoria;
     }
 }

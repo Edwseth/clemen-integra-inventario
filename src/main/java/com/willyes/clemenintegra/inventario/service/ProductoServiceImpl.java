@@ -205,6 +205,28 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ProductoResponseDTO> findProductosFabricables() {
+        List<TipoCategoria> tiposFabricables = List.of(
+                TipoCategoria.PRODUCTO_TERMINADO,
+                TipoCategoria.PRODUCTO_SEMI_ELABORADO
+        );
+
+        List<Producto> lista = Optional.ofNullable(productoRepository.findByCategoriaProducto_TipoIn(tiposFabricables))
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(p -> p.getCategoriaProducto() != null && tiposFabricables.contains(p.getCategoriaProducto().getTipo()))
+                .toList();
+
+        Map<Long, BigDecimal> stockMap = stockQueryService.obtenerStockDisponible(
+                lista.stream().map(p -> p.getId().longValue()).toList());
+
+        return lista.stream()
+                .map(p -> buildDto(p, stockMap.getOrDefault(p.getId().longValue(), BigDecimal.ZERO)))
+                .toList();
+    }
+
+    @Override
     @Transactional
     public ProductoResponseDTO crearProducto(ProductoRequestDTO dto) {
         validarDuplicados(dto.getSku(), dto.getNombre());

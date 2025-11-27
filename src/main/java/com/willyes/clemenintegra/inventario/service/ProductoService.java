@@ -39,4 +39,6 @@ public interface ProductoService {
     Page<ProductoResumenDTO> buscarInsumos(String term, Pageable pageable);
 
     Page<ProductoResumenDTO> buscarProductosTerminados(String term, Pageable pageable);
+
+    List<ProductoResponseDTO> findProductosFabricables();
 }
