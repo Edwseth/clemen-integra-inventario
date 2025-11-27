@@ -117,5 +117,21 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
             @Param("term") String term,
             Pageable pageable
     );
+
+    @Query("""
+    SELECT p
+    FROM Producto p
+    WHERE p.categoriaProducto.tipo IN :tipos
+      AND p.activo = true
+      AND (
+           UPPER(p.nombre) LIKE CONCAT('%', UPPER(:term), '%')
+        OR UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:term), '%')
+      )
+    """)
+    Page<Producto> buscarFabricablesAutocomplete(
+            @Param("tipos") Collection<TipoCategoria> tipos,
+            @Param("term") String term,
+            Pageable pageable
+    );
 }
 

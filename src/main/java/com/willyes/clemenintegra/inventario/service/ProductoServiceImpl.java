@@ -577,6 +577,23 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<Producto> buscarProductosFabricablesAutocomplete(String term, Pageable pageable) {
+        if (term == null || term.trim().isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        String cleaned = term.trim();
+
+        List<TipoCategoria> tiposFabricables = List.of(
+                TipoCategoria.PRODUCTO_TERMINADO,
+                TipoCategoria.PRODUCTO_SEMI_ELABORADO
+        );
+
+        return productoRepository.buscarFabricablesAutocomplete(tiposFabricables, cleaned, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<Producto> buscarInsumosAutocomplete(String term, Pageable pageable) {
         if (term == null || term.trim().isEmpty()) {
             return Page.empty(pageable);
