@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -42,6 +43,13 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
     @Override
     @Transactional
     public VidaUtilProducto guardar(Integer productoId, Integer semanasVigencia) {
+        if (productoId == null) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.NEGOCIO_GENERICO,
+                    "El identificador del producto es obligatorio para registrar vida útil"
+            );
+        }
+
         Producto producto = productoRepository.findById(Long.valueOf(productoId))
                 .orElseThrow(() -> new CustomBusinessException(
                         ApiErrorCode.RECURSO_NO_ENCONTRADO,
@@ -50,6 +58,12 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
 
         validarProductoAdmiteVidaUtil(producto);
 
+        Integer productoIdPersistencia = Optional.ofNullable(producto.getId())
+                .orElseThrow(() -> new CustomBusinessException(
+                        ApiErrorCode.NEGOCIO_GENERICO,
+                        "El producto no posee identificador para registrar vida útil"
+                ));
+
         if (semanasVigencia == null || semanasVigencia <= 0) {
             throw new CustomBusinessException(
                     ApiErrorCode.VIDA_UTIL_SEMANAS_INVALIDAS,
@@ -57,11 +71,11 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
             );
         }
 
-        VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoId)
+        VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoIdPersistencia)
                 .orElseGet(() -> {
                     VidaUtilProducto nuevo = new VidaUtilProducto();
                     nuevo.setProducto(producto);
-                    nuevo.setProductoId(productoId);
+                    nuevo.setProductoId(productoIdPersistencia);
                     return nuevo;
                 });
 
@@ -69,7 +83,7 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
             vidaUtil.setProducto(producto);
         }
         if (vidaUtil.getProductoId() == null) {
-            vidaUtil.setProductoId(productoId);
+            vidaUtil.setProductoId(productoIdPersistencia);
         }
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
@@ -100,7 +114,10 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
     public Page<VidaUtilProductoDTO> listarProductosTerminados(String filtro, Pageable pageable) {
         Specification<Producto> spec = Specification
                 .where(textoLibre(filtro))
-                .and(tipoCategoriaEquals(TipoCategoria.PRODUCTO_TERMINADO));
+                .and(tipoCategoriaIn(List.of(
+                        TipoCategoria.PRODUCTO_TERMINADO,
+                        TipoCategoria.PRODUCTO_SEMI_ELABORADO
+                )));
 
         Page<Producto> productos = productoRepository.findAll(spec, pageable);
         Map<Integer, VidaUtilProducto> vidaUtilMap = vidaUtilProductoRepository

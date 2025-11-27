@@ -3,6 +3,9 @@ package com.willyes.clemenintegra.inventario.service.spec;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Join;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
+
+import java.util.Collection;
 
 public final class ProductoSpecifications {
 
@@ -65,6 +68,19 @@ public final class ProductoSpecifications {
             }
             Join<Object, Object> cat = root.join("categoriaProducto");
             return cb.equal(cat.get("tipo"), tipo);
+        };
+    }
+
+    public static Specification<Producto> tipoCategoriaIn(Collection<TipoCategoria> tipos) {
+        return (root, cq, cb) -> {
+            if (tipos == null || tipos.isEmpty()) {
+                return cb.conjunction();
+            }
+
+            Join<Object, Object> cat = root.join("categoriaProducto");
+            var inClause = cb.in(cat.get("tipo"));
+            tipos.forEach(inClause::value);
+            return inClause;
         };
     }
 }
