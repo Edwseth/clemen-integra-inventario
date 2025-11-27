@@ -24,6 +24,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
+import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
@@ -72,6 +73,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -197,6 +199,71 @@ class OrdenProduccionServiceImplTest {
         assertThat(resultado.getInsumosFaltantes().get(0).getProductoId()).isEqualTo(2L);
         assertThat(resultado.getInsumosFaltantes().get(0).getRequerido()).isEqualByComparingTo(new BigDecimal("10"));
         assertThat(resultado.getInsumosFaltantes().get(0).getDisponible()).isEqualByComparingTo(new BigDecimal("8.000000"));
+    }
+
+    @Test
+    @DisplayName("crearOrden valida rendimiento obligatorio para PS")
+    void crearOrden_conPsSinRendimientoLanzaExcepcion() {
+        Producto producto = new Producto();
+        producto.setId(20);
+        producto.setCodigoSku("PS-001");
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        producto.setCategoriaProducto(categoria);
+        UnidadMedida unidadMedida = new UnidadMedida();
+        unidadMedida.setSimbolo("UND");
+        producto.setUnidadMedida(unidadMedida);
+
+        when(productoRepository.findById(20L)).thenReturn(Optional.of(producto));
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(new Usuario()));
+
+        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        dto.setProductoId(20L);
+        dto.setResponsableId(5L);
+        dto.setCantidadProgramada(new BigDecimal("10"));
+        dto.setUnidadMedidaSimbolo("UND");
+
+        assertThatThrownBy(() -> service.crearOrden(dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("rendimiento por unidad definido y mayor que cero");
+    }
+
+    @Test
+    @DisplayName("crearOrden usa rendimiento válido para PS")
+    void crearOrden_conPsValidoUtilizaRendimiento() {
+        Producto producto = new Producto();
+        producto.setId(21);
+        producto.setCodigoSku("PS-002");
+        producto.setRendimientoUnidad(new BigDecimal("8"));
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        producto.setCategoriaProducto(categoria);
+        UnidadMedida unidadMedida = new UnidadMedida();
+        unidadMedida.setSimbolo("UND");
+        producto.setUnidadMedida(unidadMedida);
+
+        when(productoRepository.findById(21L)).thenReturn(Optional.of(producto));
+        when(usuarioRepository.findById(6L)).thenReturn(Optional.of(new Usuario()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenReturn(new BigDecimal("10"));
+        when(unidadConversionService.dividirNormalizado(any(BigDecimal.class), any(), any(), any()))
+                .thenReturn(new BigDecimal("1.25"));
+        doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).build())
+                .when(service).guardarConValidacionStock(any(OrdenProduccion.class));
+
+        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        dto.setProductoId(21L);
+        dto.setResponsableId(6L);
+        dto.setCantidadProgramada(new BigDecimal("10"));
+        dto.setUnidadMedidaSimbolo("UND");
+        dto.setEstado("CREADA");
+
+        service.crearOrden(dto);
+
+        verify(unidadConversionService).dividirNormalizado(
+                new BigDecimal("10"),
+                "UND",
+                new BigDecimal("8"),
+                "UND");
     }
 
     @Test
