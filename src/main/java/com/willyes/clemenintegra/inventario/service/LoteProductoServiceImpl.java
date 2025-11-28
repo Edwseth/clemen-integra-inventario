@@ -412,19 +412,18 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     public LoteProductoResponseDTO liberarLote(Long id) {
         LoteProducto lote = loteRepo.findById(id)
                 .orElseThrow(() -> new java.util.NoSuchElementException("Lote no encontrado"));
+
         validarEvaluacionesExistentes(id);
         validarNoConformidadesParaLiberacion(lote.getId());
 
-        if (lote.getEstado() == EstadoLote.EN_CUARENTENA) {
-            lote.setEstado(EstadoLote.DISPONIBLE);
-            lote.setFechaLiberacion(LocalDateTime.now());
-            lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
-        } else if (lote.getEstado() == EstadoLote.RETENIDO) {
-            lote.setEstado(EstadoLote.LIBERADO);
-            lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
-        } else {
+        if (lote.getEstado() != EstadoLote.EN_CUARENTENA
+                && lote.getEstado() != EstadoLote.RETENIDO) {
             throw new IllegalStateException("El lote no puede ser liberado desde su estado actual");
         }
+
+        lote.setEstado(EstadoLote.LIBERADO);
+        lote.setFechaLiberacion(LocalDateTime.now());
+        lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
 
         loteRepo.save(lote);
         return loteProductoMapper.toResponseDTO(lote);

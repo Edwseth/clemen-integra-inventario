@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
@@ -34,11 +35,15 @@ public class DisponibilidadInsumoService {
     private final InventoryCatalogResolver catalogResolver;
     private final ProductoRepository productoRepository;
 
-    private static final EnumSet<EstadoLote> ESTADOS_FEFO_PERMITIDOS = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+    private static final EnumSet<EstadoLote> ESTADOS_FEFO_PERMITIDOS =
+            EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+
     private static final Map<TipoCategoria, Function<InventoryCatalogResolver, Long>> ALMACENES_ORIGEN_POR_CATEGORIA = Map.of(
-            TipoCategoria.MATERIA_PRIMA, InventoryCatalogResolver::getAlmacenOrigenMateriaPrimaId,
-            TipoCategoria.MATERIAL_EMPAQUE, InventoryCatalogResolver::getAlmacenOrigenMaterialEmpaqueId,
-            TipoCategoria.SUMINISTROS, InventoryCatalogResolver::getAlmacenOrigenSuministrosId);
+            TipoCategoria.MATERIA_PRIMA,       InventoryCatalogResolver::getAlmacenOrigenMateriaPrimaId,
+            TipoCategoria.MATERIAL_EMPAQUE,    InventoryCatalogResolver::getAlmacenOrigenMaterialEmpaqueId,
+            TipoCategoria.SUMINISTROS,         InventoryCatalogResolver::getAlmacenOrigenSuministrosId,
+            TipoCategoria.PRODUCTO_SEMI_ELABORADO, InventoryCatalogResolver::getAlmacenOrigenProductoSemiElaboradoId);
+
 
     public List<Long> resolverAlmacenesPreferidos(Producto insumo) {
         Long preBodegaProduccionId = catalogResolver.getAlmacenPreBodegaProduccionId();
@@ -245,12 +250,19 @@ public class DisponibilidadInsumoService {
     }
 
     private EnumSet<EstadoLote> obtenerEstadosPermitidos(Producto producto) {
-        if (producto != null && producto.getCategoriaProducto() != null
-                && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+        // Regla única:
+        // - Si el producto requiere análisis de calidad (tipoAnalisis != NINGUNO),
+        //   SOLO se pueden consumir lotes LIBERADOS.
+        // - Si no requiere análisis, se aplican los estados "normales" permitidos
+        //   (DISPONIBLE y LIBERADO).
+        if (producto != null
+                && producto.getTipoAnalisis() != null
+                && producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO) {
             return EnumSet.of(EstadoLote.LIBERADO);
         }
         return ESTADOS_FEFO_PERMITIDOS;
     }
+
 
     private boolean esLotePermitido(LoteFefoDisponibleProjection lote, EnumSet<EstadoLote> estadosPermitidos) {
         EstadoLote estado = parseEstadoLoteSafe(lote.getEstado());

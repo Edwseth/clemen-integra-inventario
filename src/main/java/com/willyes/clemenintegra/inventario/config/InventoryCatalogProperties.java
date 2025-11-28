@@ -39,6 +39,7 @@ public class InventoryCatalogProperties {
         private Long materiaPrima;
         private Long materialEmpaque;
         private Long suministros;
+        private Long productoSemiElaborado;
         private Long preBodegaProduccion;
     }
 

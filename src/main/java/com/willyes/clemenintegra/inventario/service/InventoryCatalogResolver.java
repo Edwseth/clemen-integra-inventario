@@ -37,6 +37,7 @@ public class InventoryCatalogResolver {
     private Long almacenMateriaPrimaId;
     private Long almacenMaterialEmpaqueId;
     private Long almacenSuministrosId;
+    private Long almacenProductoSemiElaboradoId;
     private Long almacenPreBodegaProduccionId;
 
     private Long motivoEntradaPtId;
@@ -82,6 +83,7 @@ public class InventoryCatalogResolver {
         almacenMateriaPrimaId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getMateriaPrima());
         almacenMaterialEmpaqueId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getMaterialEmpaque());
         almacenSuministrosId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getSuministros());
+        almacenProductoSemiElaboradoId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getProductoSemiElaborado());
         almacenPreBodegaProduccionId = validateAlmacen(properties.getProduccion().getAlmacen().getOrigen().getPreBodegaProduccion());
 
         motivoEntradaPtId = resolveMotivo(properties.getMotivo().getEntradaPt());
@@ -109,10 +111,10 @@ public class InventoryCatalogResolver {
 
         log.info(
                 "Inventory catalogs loaded pt={} cuarentena={} obsoletos={} materiaPrima={} materialEmpaque={} suministros={} " +
-                        "preBodegaProduccion={} motivoEntradaPt={} motivoTransferenciaCalidad={} motivoDevolucion={} motivoAjuste={} " +
+                        "preBodegaProduccion={} productoSemiElaborado={} motivoEntradaPt={} motivoTransferenciaCalidad={} motivoDevolucion={} motivoAjuste={} " +
                         "tipoDetalleEntrada={} tipoDetalleTransferencia={} tipoDetalleSalida={} tipoDetalleSalidaPt={}",
-                almacenPtId, almacenCuarentenaId, almacenObsoletosId,
-                almacenMateriaPrimaId, almacenMaterialEmpaqueId, almacenSuministrosId, almacenPreBodegaProduccionId,
+                almacenPtId, almacenCuarentenaId, almacenObsoletosId, almacenMateriaPrimaId,
+                almacenMaterialEmpaqueId, almacenSuministrosId, almacenPreBodegaProduccionId,almacenProductoSemiElaboradoId,
                 motivoEntradaPtId, motivoTransferenciaCalidadId, motivoDevolucionDesdeProduccionId,
                 motivoAjusteRechazoId, tipoDetalleEntradaId, tipoDetalleTransferenciaId, tipoDetalleSalidaId,
                 getTipoDetalleSalidaPtId());
@@ -159,6 +161,7 @@ public class InventoryCatalogResolver {
     public Long getAlmacenOrigenMateriaPrimaId() { return almacenMateriaPrimaId; }
     public Long getAlmacenOrigenMaterialEmpaqueId() { return almacenMaterialEmpaqueId; }
     public Long getAlmacenOrigenSuministrosId() { return almacenSuministrosId; }
+    public Long getAlmacenOrigenProductoSemiElaboradoId() { return almacenProductoSemiElaboradoId; }
 
     public Long getAlmacenMateriaPrimaId() { return getAlmacenOrigenMateriaPrimaId(); }
     public Long getAlmacenMaterialEmpaqueId() { return getAlmacenOrigenMaterialEmpaqueId(); }
