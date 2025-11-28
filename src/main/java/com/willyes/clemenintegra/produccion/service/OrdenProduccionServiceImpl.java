@@ -321,22 +321,27 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         BigDecimal cantidadProgramada = orden.getCantidadProgramada();
 
+        // --- PS: detectar insumo semielaborado, pero lotePsId es OPCIONAL ---
         List<DetalleFormula> detallesFormula = obtenerDetallesFormulaSeguro(formula);
         List<DetalleFormula> insumosPs = obtenerInsumosPs(detallesFormula);
+
         if (insumosPs.size() > 1) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                     "Solo se admite un insumo de tipo PRODUCTO_SEMI_ELABORADO por fórmula");
         }
+
+        // ID del insumo PS (si existe)
+        Long insumoPsId = insumosPs.isEmpty()
+                ? null
+                : insumosPs.get(0).getInsumo().getId().longValue();
+
+        // Lote PS seleccionado manualmente (opcional)
         LoteProducto lotePsSeleccionado = null;
-        Long insumoPsId = insumosPs.isEmpty() ? null : insumosPs.get(0).getInsumo().getId().longValue();
-        if (!insumosPs.isEmpty()) {
+        if (insumoPsId != null && orden.getLotePsId() != null) {
             Long lotePsId = orden.getLotePsId();
-            if (lotePsId == null) {
-                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                        "Debe seleccionar un lote de producto semielaborado para esta orden");
-            }
             lotePsSeleccionado = loteProductoRepository.findById(lotePsId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
+
             if (lotePsSeleccionado.getProducto() == null
                     || lotePsSeleccionado.getProducto().getCategoriaProducto() == null
                     || lotePsSeleccionado.getProducto().getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
@@ -373,17 +378,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
 
-            if (insumoPsId != null && insumoPsId.equals(insumoId) && lotePsSeleccionado != null) {
-                BigDecimal stockLibrePs = Optional.ofNullable(lotePsSeleccionado.getStockLote())
-                        .orElse(BigDecimal.ZERO)
-                        .subtract(Optional.ofNullable(lotePsSeleccionado.getStockReservado()).orElse(BigDecimal.ZERO))
-                        .setScale(6, RoundingMode.HALF_UP);
-                if (stockLibrePs.compareTo(cantidadRequerida) < 0) {
-                    throw new CustomBusinessException(ApiErrorCode.STOCK_INSUFICIENTE,
-                            "El lote semielaborado seleccionado no tiene stock suficiente");
-                }
-            }
-
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
             if (almacenesValidos.isEmpty()) {
                 TipoCategoria tipoCategoria = Optional.ofNullable(productoInsumo.getCategoriaProducto())
@@ -393,21 +387,27 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         insumoId, tipoCategoria);
             }
 
+            // ---- FEFO: preview por insumo ----
             DistribucionFefoResult distribucionPreview;
-            if (insumoPsId != null && insumoPsId.equals(insumoId) && lotePsSeleccionado != null) {
+            if (insumoPsId != null && insumoPsId.equals(insumoId)) {
+                // PS: FEFO pero forzando a un solo lote. Si no hay selección manual, FEFO elige.
+                Long loteForzadoId = (lotePsSeleccionado != null ? lotePsSeleccionado.getId() : null);
                 distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
                         insumoId,
                         cantidadRequerida,
                         almacenesValidos,
-                        true,
-                        lotePsSeleccionado.getId(),
-                        true);
+                        true,              // modoPreview: solo validación
+                        loteForzadoId,     // null → FEFO elige lote PS
+                        true               // bloquearMultiplesLotes: un único lote PS
+                );
             } else {
+                // MP / ME / SU: lógica normal
                 distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
                         insumoId,
                         cantidadRequerida,
                         almacenesValidos,
-                        true);
+                        true               // modoPreview
+                );
             }
 
             BigDecimal stockLibreFefo = Optional.ofNullable(distribucionPreview.getStockLibreTotal())
@@ -417,7 +417,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             int producibleConEste = 0;
             if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
-                producibleConEste = stockLibreFefo.divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN).intValue();
+                producibleConEste = stockLibreFefo
+                        .divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN)
+                        .intValue();
             }
             if (maxProducible == null || producibleConEste < maxProducible) {
                 maxProducible = producibleConEste;
@@ -466,7 +468,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         OrdenProduccion guardada = repository.save(orden);
         clonarEtapasParaOrden(guardada, plantilla);
 
-        // Reserva FEFO y sincronización de reservas: SOLO AQUÍ (una vez)
+        // Reserva FEFO real (incluye PS) – aquí ya se aplican las reservas
         reservarInsumosParaOP(guardada.getId(), orden.getLotePsId());
 
         OrdenProduccionResponseDTO ordenResp = ProduccionMapper.toResponse(guardada);
