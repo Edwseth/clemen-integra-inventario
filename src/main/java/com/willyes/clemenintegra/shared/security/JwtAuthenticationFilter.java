@@ -32,7 +32,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String uri = request.getRequestURI();
 
         // 1) Deja pasar preflight CORS y endpoints públicos
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || uri.startsWith("/api/auth")) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())
+                || uri.startsWith("/api/auth")
+                || uri.startsWith("/api/public/")
+                || "/auth/login".equals(uri)) {
             filterChain.doFilter(request, response);
             return;
         }
