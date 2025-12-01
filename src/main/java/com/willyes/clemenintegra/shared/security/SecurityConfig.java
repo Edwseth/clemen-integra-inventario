@@ -64,7 +64,7 @@ public class SecurityConfig {
                             "/configuration/ui",
                             "/configuration/security",
                             "/webjars/**",
-                            "/api/public/version"
+                            "/api/public/**"
                     ).permitAll();
 
                     auth.requestMatchers(
