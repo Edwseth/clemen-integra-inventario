@@ -1056,11 +1056,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                     "Solo se admite un insumo de tipo PRODUCTO_SEMI_ELABORADO por fórmula");
         }
-        if (!insumosPs.isEmpty() && lotePsId == null) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "Debe seleccionar un lote de producto semielaborado para esta orden");
-        }
-
         Long insumoPsId = insumosPs.isEmpty() ? null : insumosPs.get(0).getInsumo().getId().longValue();
 
         // Idempotencia: si ya existen solicitudes SALIDA pendientes para esta OP, no recrear
@@ -1117,8 +1112,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
 
+            boolean esInsumoPs = insumoPsId != null && insumoPsId.equals(insumoId);
             DistribucionFefoResult distribucion;
-            if (insumoPsId != null && insumoPsId.equals(insumoId) && lotePsId != null) {
+            if (esInsumoPs) {
                 distribucion = disponibilidadInsumoService.calcularDisponibilidad(
                         insumoId,
                         requerida,
@@ -1145,13 +1141,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 manejarStockInsuficiente(insumo.getInsumo(), distribucion);
             }
 
+            if (distribucion.getDetalles().isEmpty()) {
+                manejarStockInsuficiente(insumo.getInsumo(), distribucion);
+            }
             DistribucionFefoDetalle primerDetalle = distribucion.getDetalles().get(0);
             Long primerLoteId = primerDetalle.getLoteProductoId();
             if (primerLoteId == null) {
                 manejarStockInsuficiente(insumo.getInsumo(), distribucion);
             }
 
-            if (insumoPsId != null && insumoPsId.equals(insumoId) && lotePsId != null
+            if (esInsumoPs && lotePsId != null
                     && !lotePsId.equals(primerLoteId)) {
                 throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                         "El lote reservado para el producto semielaborado no coincide con el solicitado");
