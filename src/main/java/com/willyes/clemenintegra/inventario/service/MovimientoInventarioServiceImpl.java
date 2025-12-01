@@ -2227,7 +2227,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (destino.getCategoria() == TipoCategoria.OBSOLETOS) {
             loteDestino.setEstado(EstadoLote.RECHAZADO);
         } else if (loteDestino.getEstado() == null) {
-            loteDestino.setEstado(EstadoLote.DISPONIBLE);
+            loteDestino.setEstado(obtenerEstadoInicial(producto));
         }
 
         recalcularAgotadoSegunDisponibilidad(loteDestino);
