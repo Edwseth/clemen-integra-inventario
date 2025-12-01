@@ -20,12 +20,11 @@ public class VidaUtilProducto {
     @EqualsAndHashCode.Include
     private Integer productoId;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @MapsId
     @JoinColumn(
             name = "producto_id",
             referencedColumnName = "id",
-            insertable = false,
-            updatable = false,
             foreignKey = @ForeignKey(name = "fk_vida_util_productos_producto")
     )
     private Producto producto;
@@ -39,6 +38,13 @@ public class VidaUtilProducto {
 
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
+
+    public void setProducto(Producto producto) {
+        this.producto = producto;
+        if (producto != null) {
+            this.productoId = producto.getId();
+        }
+    }
 }
 
 
