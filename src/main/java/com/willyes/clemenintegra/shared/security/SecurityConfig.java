@@ -63,7 +63,8 @@ public class SecurityConfig {
                             "/swagger-resources",
                             "/configuration/ui",
                             "/configuration/security",
-                            "/webjars/**"
+                            "/webjars/**",
+                            "/api/public/version"
                     ).permitAll();
 
                     auth.requestMatchers(
