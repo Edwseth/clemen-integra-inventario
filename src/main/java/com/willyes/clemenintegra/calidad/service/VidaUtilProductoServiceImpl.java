@@ -72,19 +72,19 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
         }
 
         VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoIdPersistencia)
-                .orElseGet(VidaUtilProducto::new);
+                .orElseGet(() -> {
+                    VidaUtilProducto nuevo = new VidaUtilProducto();
+                    nuevo.setProductoId(productoIdPersistencia);
+                    return nuevo;
+                });
 
-        // Sincronizar siempre la relación @MapsId antes de persistir
+        vidaUtil.setProductoId(productoIdPersistencia);
         vidaUtil.setProducto(producto);
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
         Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();
         vidaUtil.setActualizadoPor(usuarioActual);
         vidaUtil.setFechaActualizacion(LocalDateTime.now());
-
-        if (vidaUtil.getProductoId() == null && (vidaUtil.getProducto() == null || vidaUtil.getProducto().getId() == null)) {
-            throw new IllegalStateException("Intento de guardar VidaUtilProducto sin PK configurada (productoId=" + productoId + ")");
-        }
 
         return vidaUtilProductoRepository.save(vidaUtil);
     }
