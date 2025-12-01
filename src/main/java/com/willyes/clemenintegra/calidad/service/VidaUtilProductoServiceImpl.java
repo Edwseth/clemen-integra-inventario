@@ -72,19 +72,10 @@ public class VidaUtilProductoServiceImpl implements VidaUtilProductoService {
         }
 
         VidaUtilProducto vidaUtil = vidaUtilProductoRepository.findById(productoIdPersistencia)
-                .orElseGet(() -> {
-                    VidaUtilProducto nuevo = new VidaUtilProducto();
-                    nuevo.setProductoId(productoIdPersistencia);
-                    nuevo.setProducto(producto);
-                    return nuevo;
-                });
+                .orElseGet(VidaUtilProducto::new);
 
-        if (vidaUtil.getProductoId() == null) {
-            vidaUtil.setProductoId(productoIdPersistencia);
-        }
-        if (vidaUtil.getProducto() == null) {
-            vidaUtil.setProducto(producto);
-        }
+        // Sincronizar siempre la relación @MapsId antes de persistir
+        vidaUtil.setProducto(producto);
         vidaUtil.setSemanasVigencia(semanasVigencia);
 
         Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();
