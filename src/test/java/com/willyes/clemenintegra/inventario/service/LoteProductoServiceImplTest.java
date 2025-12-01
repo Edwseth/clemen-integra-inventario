@@ -9,6 +9,8 @@ import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
+import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
@@ -42,6 +44,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -79,7 +82,7 @@ class LoteProductoServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(service, "estadoLiberadoConf", "DISPONIBLE");
+        ReflectionTestUtils.setField(service, "estadoLiberadoConf", "LIBERADO");
         ReflectionTestUtils.setField(service, "clasificacionLiberacionConf", "LIBERACION_CALIDAD");
         ReflectionTestUtils.setField(service, "clasificacionRechazoCalidad", "RECHAZO_CALIDAD");
 
@@ -105,7 +108,7 @@ class LoteProductoServiceImplTest {
 
         service.liberarLotePorCalidad(10L, jefeCalidad);
 
-        assertThat(lote.getEstado()).isEqualTo(EstadoLote.DISPONIBLE);
+        assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
         assertThat(lote.getAlmacen().getId()).isEqualTo(2L);
 
         ArgumentCaptor<com.willyes.clemenintegra.inventario.model.MovimientoInventario> movCaptor = ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.model.MovimientoInventario.class);
@@ -130,13 +133,94 @@ class LoteProductoServiceImplTest {
 
         service.liberarLotePorCalidad(20L, jefeCalidad);
 
-        assertThat(lote.getEstado()).isEqualTo(EstadoLote.DISPONIBLE);
+        assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
         assertThat(lote.getAlmacen().getId()).isEqualTo(8L);
 
         ArgumentCaptor<com.willyes.clemenintegra.inventario.model.MovimientoInventario> movCaptor = ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.model.MovimientoInventario.class);
         verify(movimientoInventarioRepository).save(movCaptor.capture());
         assertThat(movCaptor.getValue().getAlmacenDestino().getId()).isEqualTo(8L);
         assertThat(movCaptor.getValue().getAlmacenOrigen().getId()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("Crear lote sin análisis de calidad lo deja DISPONIBLE")
+    void crearLoteSinAnalisisQuedaDisponible() {
+        LoteProductoRequestDTO request = LoteProductoRequestDTO.builder()
+                .productoId(1L)
+                .almacenId(2L)
+                .codigoLote("L-001")
+                .stockLote(BigDecimal.ONE)
+                .fechaVencimiento(LocalDateTime.now().plusDays(30))
+                .build();
+
+        Producto producto = new Producto();
+        producto.setId(1);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO);
+        Almacen almacen = almacenConId(2);
+        Usuario usuario = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
+
+        LoteProducto entidad = new LoteProducto();
+
+        when(productoRepo.findById(1L)).thenReturn(Optional.of(producto));
+        when(almacenRepo.findById(2L)).thenReturn(Optional.of(almacen));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(loteProductoMapper.toEntity(request, producto, almacen, usuario)).thenReturn(entidad);
+        when(loteProductoRepository.saveAndFlush(entidad)).thenReturn(entidad);
+        when(loteProductoMapper.toResponseDTO(entidad)).thenAnswer(inv -> LoteProductoResponseDTO.builder()
+                .estado(entidad.getEstado())
+                .build());
+
+        LoteProductoResponseDTO respuesta = service.crearLote(request);
+
+        assertThat(entidad.getEstado()).isEqualTo(EstadoLote.DISPONIBLE);
+        assertThat(respuesta.getEstado()).isEqualTo(EstadoLote.DISPONIBLE);
+    }
+
+    @Test
+    @DisplayName("Crear y liberar lote con análisis cambia de CUARENTENA a LIBERADO")
+    void crearYLiberarLoteConAnalisis() {
+        LoteProductoRequestDTO request = LoteProductoRequestDTO.builder()
+                .productoId(5L)
+                .almacenId(9L)
+                .codigoLote("L-002")
+                .stockLote(BigDecimal.TEN)
+                .fechaVencimiento(LocalDateTime.now().plusDays(60))
+                .build();
+
+        Producto producto = new Producto();
+        producto.setId(5);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.FISICO);
+        Almacen almacen = almacenConId(9);
+        Usuario usuario = usuarioConRol(RolUsuario.ROL_ANALISTA_CALIDAD);
+
+        LoteProducto entidad = LoteProducto.builder()
+                .id(44L)
+                .estado(null)
+                .stockReservado(BigDecimal.ZERO)
+                .build();
+
+        when(productoRepo.findById(5L)).thenReturn(Optional.of(producto));
+        when(almacenRepo.findById(9L)).thenReturn(Optional.of(almacen));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(loteProductoMapper.toEntity(request, producto, almacen, usuario)).thenReturn(entidad);
+        when(loteProductoRepository.saveAndFlush(entidad)).thenReturn(entidad);
+        when(loteProductoMapper.toResponseDTO(entidad)).thenAnswer(inv -> LoteProductoResponseDTO.builder()
+                .estado(entidad.getEstado())
+                .build());
+        when(loteProductoRepository.findById(44L)).thenReturn(Optional.of(entidad));
+        when(evaluacionRepository.findByLoteProductoId(44L)).thenReturn(evaluacionesConforme());
+
+        LoteProductoResponseDTO creado = service.crearLote(request);
+
+        assertThat(entidad.getEstado()).isEqualTo(EstadoLote.EN_CUARENTENA);
+        assertThat(creado.getEstado()).isEqualTo(EstadoLote.EN_CUARENTENA);
+
+        LoteProductoResponseDTO liberado = service.liberarLote(44L);
+
+        assertThat(entidad.getEstado()).isEqualTo(EstadoLote.LIBERADO);
+        assertThat(entidad.getFechaLiberacion()).isNotNull();
+        assertThat(entidad.getUsuarioLiberador()).isEqualTo(usuario);
+        assertThat(liberado.getEstado()).isEqualTo(EstadoLote.LIBERADO);
     }
 
     private void mockCatalogosBasicos(Long motivoId, Long tipoDetalleId) {

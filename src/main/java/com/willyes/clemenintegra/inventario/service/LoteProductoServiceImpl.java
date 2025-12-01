@@ -515,6 +515,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                     Map.of("loteId", id, "estadoActual", lote.getEstado() != null ? lote.getEstado().name() : null));
         }
         lote.setEstado(EstadoLote.LIBERADO);
+        lote.setFechaLiberacion(LocalDateTime.now());
         lote.setUsuarioLiberador(usuarioService.obtenerUsuarioAutenticado());
         loteRepo.save(lote);
         return loteProductoMapper.toResponseDTO(lote);
