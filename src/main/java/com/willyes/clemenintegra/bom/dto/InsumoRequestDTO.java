@@ -1,10 +1,14 @@
 package com.willyes.clemenintegra.bom.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.*;
+import lombok.Data;
 
 /**
  * DTO que representa cada insumo incluido en la creación de una fórmula.
  */
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class InsumoRequestDTO {
 
     @NotNull
