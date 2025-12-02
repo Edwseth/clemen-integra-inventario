@@ -231,33 +231,36 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        // Lee la propiedad y convierte a lista (por comas). Filtra vacíos.
-        final java.util.Set<String> originPatterns = new java.util.LinkedHashSet<>(
-                java.util.Arrays.stream(allowedOriginsProp.split(","))
-                        .map(String::trim)
-                        .filter(s -> !s.isBlank())
-                        .toList()
-        );
-        if (originPatterns.isEmpty()) {
-            originPatterns.add("http://localhost:5173");
-            originPatterns.add("http://127.0.0.1:5173");
+
+        // 1. Orígenes configurados por propiedad (si existen)
+        java.util.Set<String> originPatterns = new java.util.LinkedHashSet<>();
+        if (allowedOriginsProp != null && !allowedOriginsProp.trim().isEmpty()) {
+            originPatterns.addAll(
+                    java.util.Arrays.stream(allowedOriginsProp.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty()) // antes: isBlank()
+                            .toList()
+            );
         }
-        final boolean hasExternalOrigin = originPatterns.stream().anyMatch(origin ->
+
+        // 2. Siempre permitir localhost para trabajo local,
+        //    sin importar si la propiedad vino o no.
+        originPatterns.add("http://localhost:5173");
+        originPatterns.add("http://127.0.0.1:5173");
+
+        // 3. Si hay al menos un origen externo, agregar túnel y Vercel
+        boolean hasExternalOrigin = originPatterns.stream().anyMatch(origin ->
                 !(origin.contains("://localhost") || origin.contains("://127.") || origin.contains("://0.0.0.0"))
         );
-        if (!hasExternalOrigin) {
-            // Quick tunnel y front demo necesitan salir permitidos incluso si olvidaste el perfil.
+        if (hasExternalOrigin) {
             originPatterns.add("https://*.trycloudflare.com");
             originPatterns.add("https://clemen-integra-demo-front.vercel.app");
         }
+
         configuration.setAllowedOriginPatterns(new java.util.ArrayList<>(originPatterns));
-        // Fallback para dev si la propiedad no vino (evita bloquearte localmente).
-
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-
-        configuration.setAllowedHeaders(List.of("*"));
-
-        configuration.setExposedHeaders(List.of("Content-Disposition","Location"));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setExposedHeaders(java.util.List.of("Content-Disposition", "Location"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
