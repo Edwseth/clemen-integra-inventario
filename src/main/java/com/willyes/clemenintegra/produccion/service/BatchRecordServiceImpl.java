@@ -119,7 +119,7 @@ public class BatchRecordServiceImpl implements BatchRecordService {
         BatchRecordDTO dto = new BatchRecordDTO();
         dto.op = mapOp(ordenProduccion);
         dto.formula = mapFormula(ordenProduccion);
-        dto.consumos = mapConsumos(ordenProduccionId);
+        dto.consumos = mapConsumos(ordenProduccion);
         dto.reservas = mapReservas(ordenProduccionId);
         dto.cierres = mapCierres(ordenProduccionId);
         dto.produccionFinal = mapProduccionFinal(ordenProduccion, dto.cierres);
@@ -257,7 +257,8 @@ public class BatchRecordServiceImpl implements BatchRecordService {
                 && detalle.getInsumo().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO;
     }
 
-    private List<BatchRecordDTO.ConsumoDTO> mapConsumos(Long ordenProduccionId) {
+    private List<BatchRecordDTO.ConsumoDTO> mapConsumos(OrdenProduccion ordenProduccion) {
+        Long ordenProduccionId = ordenProduccion != null ? ordenProduccion.getId() : null;
         List<MovimientoInventario> movimientos = movimientoInventarioRepository
                 .findByOrdenProduccionIdAndClasificacion(
                         ordenProduccionId,
@@ -265,28 +266,123 @@ public class BatchRecordServiceImpl implements BatchRecordService {
                         Pageable.unpaged())
                 .getContent();
         List<BatchRecordDTO.ConsumoDTO> consumos = new ArrayList<>();
+        List<MovimientoInventario> consumosPs = new ArrayList<>();
+
+        List<Long> productosSemiElaborados = obtenerProductosSemiElaboradosEnFormula(ordenProduccion);
         for (MovimientoInventario movimiento : movimientos) {
             // Solo se consideran consumos reales de producción (SALIDA_PRODUCCION desde Pre-Bodega)
             if (movimiento.getTipoMovimiento() != TipoMovimiento.SALIDA) {
                 continue;
             }
-            BatchRecordDTO.ConsumoDTO consumoDTO = new BatchRecordDTO.ConsumoDTO();
-            consumoDTO.tipoMovimiento = movimiento.getTipoMovimiento() != null ? movimiento.getTipoMovimiento().name() : null;
-            consumoDTO.clasificacionMovimiento = movimiento.getClasificacion() != null ? movimiento.getClasificacion().name() : null;
-            consumoDTO.productoId = movimiento.getProducto() != null ? movimiento.getProducto().getId().longValue() : null;
-            consumoDTO.codigoSku = movimiento.getProducto() != null ? movimiento.getProducto().getCodigoSku() : null;
-            consumoDTO.nombreProducto = movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null;
-            consumoDTO.loteId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
-            consumoDTO.codigoLote = movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null;
-            consumoDTO.almacenOrigen = movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getNombre() : null;
-            consumoDTO.cantidad = movimiento.getCantidad();
-            consumoDTO.unidad = movimiento.getProducto() != null && movimiento.getProducto().getUnidadMedida() != null
-                    ? movimiento.getProducto().getUnidadMedida().getNombre()
-                    : null;
-            consumoDTO.fechaMovimiento = movimiento.getFechaIngreso();
+            if (esMovimientoDePs(movimiento, productosSemiElaborados)) {
+                consumosPs.add(movimiento);
+                continue;
+            }
+            consumos.add(crearConsumoDtoDesdeMovimiento(movimiento));
+        }
+
+        for (MovimientoInventario movimientoPs : consumosPs) {
+            List<BatchRecordDTO.ConsumoDTO> consumosExpandido = expandirConsumoPs(movimientoPs);
+            if (consumosExpandido == null) {
+                consumos.add(crearConsumoDtoDesdeMovimiento(movimientoPs));
+                continue;
+            }
+            consumos.addAll(consumosExpandido);
+        }
+        return consumos;
+    }
+
+    private List<BatchRecordDTO.ConsumoDTO> expandirConsumoPs(MovimientoInventario movimientoPs) {
+        if (movimientoPs == null || movimientoPs.getProducto() == null || movimientoPs.getProducto().getId() == null) {
+            return null;
+        }
+        FormulaProducto formulaPs = obtenerFormulaProducto(movimientoPs.getProducto());
+        if (formulaPs == null || formulaPs.getDetalles() == null || formulaPs.getDetalles().isEmpty()) {
+            return null;
+        }
+        List<BatchRecordDTO.ConsumoDTO> consumos = new ArrayList<>();
+        for (DetalleFormula detalle : formulaPs.getDetalles()) {
+            BigDecimal cantidadTeorica = calcularCantidadDesdeConsumoPs(movimientoPs.getCantidad(), detalle.getCantidadNecesaria());
+            BatchRecordDTO.ConsumoDTO consumoDTO = crearConsumoDesdeDetallePs(detalle, movimientoPs, cantidadTeorica);
             consumos.add(consumoDTO);
         }
         return consumos;
+    }
+
+    private List<Long> obtenerProductosSemiElaboradosEnFormula(OrdenProduccion ordenProduccion) {
+        List<Long> productosPs = new ArrayList<>();
+        if (ordenProduccion == null || ordenProduccion.getProducto() == null) {
+            return productosPs;
+        }
+        FormulaProducto formulaPt = obtenerFormulaProducto(ordenProduccion.getProducto());
+        if (formulaPt == null || formulaPt.getDetalles() == null) {
+            return productosPs;
+        }
+        for (DetalleFormula detalle : formulaPt.getDetalles()) {
+            if (detalle.getInsumo() != null
+                    && detalle.getInsumo().getId() != null
+                    && esProductoSemiElaborado(detalle)) {
+                productosPs.add(detalle.getInsumo().getId().longValue());
+            }
+        }
+        return productosPs;
+    }
+
+    private boolean esMovimientoDePs(MovimientoInventario movimiento, List<Long> productosPs) {
+        if (movimiento == null || movimiento.getProducto() == null || movimiento.getProducto().getId() == null) {
+            return false;
+        }
+        return productosPs.contains(movimiento.getProducto().getId().longValue());
+    }
+
+    private BatchRecordDTO.ConsumoDTO crearConsumoDtoDesdeMovimiento(MovimientoInventario movimiento) {
+        BatchRecordDTO.ConsumoDTO consumoDTO = new BatchRecordDTO.ConsumoDTO();
+        consumoDTO.tipoMovimiento = movimiento.getTipoMovimiento() != null ? movimiento.getTipoMovimiento().name() : null;
+        consumoDTO.clasificacionMovimiento = movimiento.getClasificacion() != null ? movimiento.getClasificacion().name() : null;
+        consumoDTO.productoId = movimiento.getProducto() != null ? movimiento.getProducto().getId().longValue() : null;
+        consumoDTO.codigoSku = movimiento.getProducto() != null ? movimiento.getProducto().getCodigoSku() : null;
+        consumoDTO.nombreProducto = movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null;
+        consumoDTO.loteId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
+        consumoDTO.codigoLote = movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null;
+        consumoDTO.almacenOrigen = movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getNombre() : null;
+        consumoDTO.cantidad = movimiento.getCantidad();
+        consumoDTO.unidad = movimiento.getProducto() != null && movimiento.getProducto().getUnidadMedida() != null
+                ? movimiento.getProducto().getUnidadMedida().getNombre()
+                : null;
+        consumoDTO.fechaMovimiento = movimiento.getFechaIngreso();
+        return consumoDTO;
+    }
+
+    private BatchRecordDTO.ConsumoDTO crearConsumoDesdeDetallePs(DetalleFormula detalle,
+                                                                 MovimientoInventario movimientoPs,
+                                                                 BigDecimal cantidadTeorica) {
+        BatchRecordDTO.ConsumoDTO consumoDTO = new BatchRecordDTO.ConsumoDTO();
+        consumoDTO.tipoMovimiento = movimientoPs.getTipoMovimiento() != null ? movimientoPs.getTipoMovimiento().name() : null;
+        consumoDTO.clasificacionMovimiento = movimientoPs.getClasificacion() != null ? movimientoPs.getClasificacion().name() : null;
+        consumoDTO.productoId = detalle.getInsumo() != null ? detalle.getInsumo().getId().longValue() : null;
+        consumoDTO.codigoSku = detalle.getInsumo() != null ? detalle.getInsumo().getCodigoSku() : null;
+        consumoDTO.nombreProducto = detalle.getInsumo() != null ? detalle.getInsumo().getNombre() : null;
+        consumoDTO.loteId = movimientoPs.getLote() != null ? movimientoPs.getLote().getId() : null;
+        consumoDTO.codigoLote = movimientoPs.getLote() != null ? movimientoPs.getLote().getCodigoLote() : null;
+        consumoDTO.almacenOrigen = movimientoPs.getAlmacenOrigen() != null ? movimientoPs.getAlmacenOrigen().getNombre() : null;
+        consumoDTO.cantidad = cantidadTeorica;
+        consumoDTO.unidad = detalle.getUnidadMedida() != null
+                ? detalle.getUnidadMedida().getNombre()
+                : movimientoPs.getProducto() != null && movimientoPs.getProducto().getUnidadMedida() != null
+                ? movimientoPs.getProducto().getUnidadMedida().getNombre()
+                : null;
+        consumoDTO.fechaMovimiento = movimientoPs.getFechaIngreso();
+        consumoDTO.fromPs = true;
+        consumoDTO.psDescripcion = movimientoPs.getProducto() != null ? movimientoPs.getProducto().getNombre() : null;
+        consumoDTO.psCodigoSku = movimientoPs.getProducto() != null ? movimientoPs.getProducto().getCodigoSku() : null;
+        return consumoDTO;
+    }
+
+    private BigDecimal calcularCantidadDesdeConsumoPs(BigDecimal cantidadPsConsumida, BigDecimal cantidadDetalle) {
+        if (cantidadPsConsumida == null || cantidadDetalle == null) {
+            return null;
+        }
+        return cantidadPsConsumida.multiply(cantidadDetalle);
     }
 
     private List<BatchRecordDTO.ReservaDTO> mapReservas(Long ordenProduccionId) {

@@ -65,6 +65,9 @@ public class BatchRecordDTO {
         public BigDecimal cantidad;
         public String unidad;
         public LocalDateTime fechaMovimiento;
+        public Boolean fromPs;
+        public String psDescripcion;
+        public String psCodigoSku;
     }
 
     public static class ReservaDTO {
