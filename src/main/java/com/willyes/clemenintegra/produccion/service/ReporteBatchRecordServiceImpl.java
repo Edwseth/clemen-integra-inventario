@@ -68,7 +68,6 @@ public class ReporteBatchRecordServiceImpl implements ReporteBatchRecordService 
                 .replace("${op.responsable}", escape(nz(op != null ? op.responsableNombre : "")))
                 .replace("${op.porcentajeCumplimiento}", escape(formatDecimal(op != null ? op.porcentajeCumplimiento : null)));
 
-        template = template.replace("${formulaRows}", buildFormulaRows(batchRecord.formula));
         template = template.replace("${consumoRows}", buildConsumoRows(batchRecord.consumos));
         template = template.replace("${reservaRows}", buildReservaRows(batchRecord.reservas));
         template = template.replace("${controlProcesoRows}", buildControlProcesoRows(batchRecord.controlesProceso));
@@ -100,23 +99,6 @@ public class ReporteBatchRecordServiceImpl implements ReporteBatchRecordService 
                 .replace("${batchRecord.observacionesCalidad!'-'}",
                         escape(defaultWithDash(batchRecord != null ? batchRecord.observacionesCalidad : null)));
         return template;
-    }
-
-    private String buildFormulaRows(BatchRecordDTO.FormulaDTO formula) {
-        StringBuilder sb = new StringBuilder();
-        List<BatchRecordDTO.DetalleFormulaDTO> detalles = formula != null ? formula.detalles : null;
-        if (detalles != null) {
-            for (BatchRecordDTO.DetalleFormulaDTO detalle : detalles) {
-                sb.append("<tr>")
-                        .append(td(detalle.codigoSku))
-                        .append(td(detalle.nombre))
-                        .append(td(detalle.unidad))
-                        .append(td(formatDecimal(detalle.cantidadNecesaria)))
-                        .append(td(detalle.obligatorio ? "Sí" : "No"))
-                        .append("</tr>");
-            }
-        }
-        return sb.toString();
     }
 
     private String buildConsumoRows(List<BatchRecordDTO.ConsumoDTO> consumos) {
