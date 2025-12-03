@@ -12,10 +12,12 @@ import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
@@ -137,6 +139,125 @@ class BatchRecordServiceImplTest {
         assertThat(result.reservas).isEmpty();
         assertThat(result.cierres).isEmpty();
         assertThat(result.calidad.evaluaciones).isEmpty();
+    }
+
+    @Test
+    @DisplayName("mapFormula mantiene el detalle cuando el insumo no es PS")
+    void mapFormulaSinProductoSemielaborado() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto mp = productoConCategoria(20, "MP-1", "Materia prima", TipoCategoria.MATERIA_PRIMA);
+        FormulaProducto formula = buildFormulaConDetalle(orden.getProducto(), mp, BigDecimal.TEN);
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        assertThat(result.formula.detalles).hasSize(1);
+        assertThat(result.formula.detalles.get(0).codigoSku).isEqualTo("MP-1");
+        assertThat(result.formula.detalles.get(0).cantidadNecesaria).isEqualByComparingTo(BigDecimal.TEN);
+    }
+
+    @Test
+    @DisplayName("mapFormula expande PS y calcula cantidades teóricas según la OP PT")
+    void mapFormulaConProductoSemielaborado() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        orden.setCantidadProgramada(new BigDecimal("3"));
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto ps = productoConCategoria(30, "PS-1", "Semi", TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        FormulaProducto formulaPt = buildFormulaConDetalle(orden.getProducto(), ps, new BigDecimal("2"));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPt));
+
+        Producto mp1 = productoConCategoria(40, "MP-1", "Materia 1", TipoCategoria.MATERIA_PRIMA);
+        Producto mp2 = productoConCategoria(41, "MP-2", "Materia 2", TipoCategoria.MATERIA_PRIMA);
+        FormulaProducto formulaPs = new FormulaProducto();
+        formulaPs.setProducto(ps);
+        formulaPs.setDetalles(List.of(
+                detalleFormula(mp1, new BigDecimal("0.5")),
+                detalleFormula(mp2, new BigDecimal("1.25"))
+        ));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(30L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPs));
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        assertThat(result.formula.detalles)
+                .extracting(d -> d.codigoSku)
+                .containsExactlyInAnyOrder("MP-1", "MP-2");
+        assertThat(result.formula.detalles)
+                .extracting(d -> d.cantidadNecesaria)
+                .containsExactlyInAnyOrder(
+                        new BigDecimal("3.0"), // 0.5 * 2 * 3
+                        new BigDecimal("7.50")  // 1.25 * 2 * 3
+                );
+    }
+
+    @Test
+    @DisplayName("mapFormula mantiene PS cuando no tiene fórmula")
+    void mapFormulaPsSinFormulaDisponible() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto ps = productoConCategoria(30, "PS-1", "Semi", TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        FormulaProducto formulaPt = buildFormulaConDetalle(orden.getProducto(), ps, BigDecimal.ONE);
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPt));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(30L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.empty());
+        when(formulaProductoRepository.findByProductoId(30L)).thenReturn(Optional.empty());
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        assertThat(result.formula.detalles).hasSize(1);
+        assertThat(result.formula.detalles.get(0).codigoSku).isEqualTo("PS-1");
     }
 
     @Test
@@ -326,6 +447,40 @@ class BatchRecordServiceImplTest {
                 "ROL_JEFE_CALIDAD");
         token.setAuthenticated(true);
         return token;
+    }
+
+    private Producto productoConCategoria(Integer id, String sku, String nombre, TipoCategoria tipoCategoria) {
+        Producto producto = new Producto();
+        producto.setId(id);
+        producto.setCodigoSku(sku);
+        producto.setNombre(nombre);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(tipoCategoria);
+        producto.setCategoriaProducto(categoria);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setNombre("UND");
+        producto.setUnidadMedida(unidad);
+        return producto;
+    }
+
+    private FormulaProducto buildFormulaConDetalle(Producto producto, Producto insumo, BigDecimal cantidad) {
+        FormulaProducto formula = new FormulaProducto();
+        formula.setProducto(producto);
+        formula.setVersion("v1");
+        formula.setEstado(EstadoFormula.APROBADA);
+        formula.setDetalles(List.of(detalleFormula(insumo, cantidad)));
+        return formula;
+    }
+
+    private DetalleFormula detalleFormula(Producto insumo, BigDecimal cantidad) {
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setNombre("UND");
+        return DetalleFormula.builder()
+                .cantidadNecesaria(cantidad)
+                .insumo(insumo)
+                .unidadMedida(unidad)
+                .obligatorio(true)
+                .build();
     }
 
     private FormulaProducto buildFormula(Producto producto) {

@@ -11,9 +11,11 @@ import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.ReservaLote;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
@@ -41,6 +43,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -162,31 +165,87 @@ public class BatchRecordServiceImpl implements BatchRecordService {
             formulaDTO.detalles = detalles;
             return formulaDTO;
         }
-        Optional<FormulaProducto> formulaOpt = formulaProductoRepository
-                .findByProductoIdAndEstadoAndActivoTrue(ordenProduccion.getProducto().getId().longValue(), EstadoFormula.APROBADA);
-        FormulaProducto formula = formulaOpt.orElseGet(() -> formulaProductoRepository
-                .findByProductoId(ordenProduccion.getProducto().getId().longValue()).orElse(null));
+        FormulaProducto formula = obtenerFormulaProducto(ordenProduccion.getProducto());
         if (formula == null) {
             log.warn("No se encontró fórmula activa para el producto {}", ordenProduccion.getProducto().getId());
             formulaDTO.detalles = detalles;
             return formulaDTO;
         }
         formulaDTO.version = formula.getVersion();
+        BigDecimal cantidadProgramada = ordenProduccion.getCantidadProgramada() != null
+                ? ordenProduccion.getCantidadProgramada()
+                : BigDecimal.ONE;
         if (formula.getDetalles() != null) {
             for (DetalleFormula detalle : formula.getDetalles()) {
-                BatchRecordDTO.DetalleFormulaDTO detalleDTO = new BatchRecordDTO.DetalleFormulaDTO();
-                // Mostrar todos los insumos declarados en el BOM, incluso los que no generan reservas (p.ej. SIN_CONTROL_STOCK)
-                detalleDTO.insumoId = detalle.getInsumo() != null ? detalle.getInsumo().getId().longValue() : null;
-                detalleDTO.codigoSku = detalle.getInsumo() != null ? detalle.getInsumo().getCodigoSku() : null;
-                detalleDTO.nombre = detalle.getInsumo() != null ? detalle.getInsumo().getNombre() : null;
-                detalleDTO.unidad = detalle.getUnidadMedida() != null ? detalle.getUnidadMedida().getNombre() : null;
-                detalleDTO.cantidadNecesaria = detalle.getCantidadNecesaria();
-                detalleDTO.obligatorio = Boolean.TRUE.equals(detalle.getObligatorio());
-                detalles.add(detalleDTO);
+                if (esProductoSemiElaborado(detalle)) {
+                    boolean expandido = expandirProductoSemiElaborado(detalle, cantidadProgramada, detalles);
+                    if (expandido) {
+                        continue;
+                    }
+                }
+                detalles.add(crearDetalleFormulaDTO(detalle, detalle.getCantidadNecesaria()));
             }
         }
         formulaDTO.detalles = detalles;
         return formulaDTO;
+    }
+
+    private boolean expandirProductoSemiElaborado(DetalleFormula detallePs,
+                                                  BigDecimal cantidadProgramada,
+                                                  List<BatchRecordDTO.DetalleFormulaDTO> detalles) {
+        if (detallePs.getInsumo() == null || detallePs.getInsumo().getId() == null) {
+            return false;
+        }
+        FormulaProducto formulaPs = obtenerFormulaProducto(detallePs.getInsumo());
+        if (formulaPs == null || formulaPs.getDetalles() == null || formulaPs.getDetalles().isEmpty()) {
+            return false;
+        }
+        for (DetalleFormula detalleMp : formulaPs.getDetalles()) {
+            BigDecimal cantidadTeorica = calcularCantidadTeoricaPs(detalleMp.getCantidadNecesaria(),
+                    detallePs.getCantidadNecesaria(), cantidadProgramada);
+            detalles.add(crearDetalleFormulaDTO(detalleMp, cantidadTeorica));
+        }
+        return true;
+    }
+
+    private BigDecimal calcularCantidadTeoricaPs(BigDecimal cantidadMpPorPs,
+                                                 BigDecimal cantidadPsPorPt,
+                                                 BigDecimal cantidadProgramadaPt) {
+        if (cantidadMpPorPs == null) {
+            return null;
+        }
+        BigDecimal psPorPt = cantidadPsPorPt != null ? cantidadPsPorPt : BigDecimal.ZERO;
+        BigDecimal cantidadPt = cantidadProgramadaPt != null ? cantidadProgramadaPt : BigDecimal.ONE;
+        return cantidadMpPorPs.multiply(psPorPt).multiply(cantidadPt);
+    }
+
+    private BatchRecordDTO.DetalleFormulaDTO crearDetalleFormulaDTO(DetalleFormula detalle, BigDecimal cantidadNecesaria) {
+        BatchRecordDTO.DetalleFormulaDTO detalleDTO = new BatchRecordDTO.DetalleFormulaDTO();
+        // Mostrar todos los insumos declarados en el BOM, incluso los que no generan reservas (p.ej. SIN_CONTROL_STOCK)
+        detalleDTO.insumoId = detalle.getInsumo() != null ? detalle.getInsumo().getId().longValue() : null;
+        detalleDTO.codigoSku = detalle.getInsumo() != null ? detalle.getInsumo().getCodigoSku() : null;
+        detalleDTO.nombre = detalle.getInsumo() != null ? detalle.getInsumo().getNombre() : null;
+        detalleDTO.unidad = detalle.getUnidadMedida() != null ? detalle.getUnidadMedida().getNombre() : null;
+        detalleDTO.cantidadNecesaria = cantidadNecesaria;
+        detalleDTO.obligatorio = Boolean.TRUE.equals(detalle.getObligatorio());
+        return detalleDTO;
+    }
+
+    private FormulaProducto obtenerFormulaProducto(Producto producto) {
+        if (producto == null || producto.getId() == null) {
+            return null;
+        }
+        Optional<FormulaProducto> formulaOpt = formulaProductoRepository
+                .findByProductoIdAndEstadoAndActivoTrue(producto.getId().longValue(), EstadoFormula.APROBADA);
+        return formulaOpt.orElseGet(() -> formulaProductoRepository
+                .findByProductoId(producto.getId().longValue()).orElse(null));
+    }
+
+    private boolean esProductoSemiElaborado(DetalleFormula detalle) {
+        return detalle != null
+                && detalle.getInsumo() != null
+                && detalle.getInsumo().getCategoriaProducto() != null
+                && detalle.getInsumo().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO;
     }
 
     private List<BatchRecordDTO.ConsumoDTO> mapConsumos(Long ordenProduccionId) {
