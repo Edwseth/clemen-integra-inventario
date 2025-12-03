@@ -183,7 +183,8 @@ public class BatchRecordServiceImpl implements BatchRecordService {
                         continue;
                     }
                 }
-                detalles.add(crearDetalleFormulaDTO(detalle, detalle.getCantidadNecesaria()));
+                detalles.add(crearDetalleFormulaDTO(detalle, calcularCantidadTeoricaPt(detalle.getCantidadNecesaria(),
+                        cantidadProgramada)));
             }
         }
         formulaDTO.detalles = detalles;
@@ -217,6 +218,14 @@ public class BatchRecordServiceImpl implements BatchRecordService {
         BigDecimal psPorPt = cantidadPsPorPt != null ? cantidadPsPorPt : BigDecimal.ZERO;
         BigDecimal cantidadPt = cantidadProgramadaPt != null ? cantidadProgramadaPt : BigDecimal.ONE;
         return cantidadMpPorPs.multiply(psPorPt).multiply(cantidadPt);
+    }
+
+    private BigDecimal calcularCantidadTeoricaPt(BigDecimal cantidadNecesariaPorUnidad, BigDecimal cantidadProgramadaPt) {
+        if (cantidadNecesariaPorUnidad == null) {
+            return null;
+        }
+        BigDecimal cantidadPt = cantidadProgramadaPt != null ? cantidadProgramadaPt : BigDecimal.ONE;
+        return cantidadNecesariaPorUnidad.multiply(cantidadPt);
     }
 
     private BatchRecordDTO.DetalleFormulaDTO crearDetalleFormulaDTO(DetalleFormula detalle, BigDecimal cantidadNecesaria) {

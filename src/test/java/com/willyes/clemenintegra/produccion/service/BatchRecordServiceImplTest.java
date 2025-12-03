@@ -50,7 +50,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -171,7 +173,8 @@ class BatchRecordServiceImplTest {
 
         assertThat(result.formula.detalles).hasSize(1);
         assertThat(result.formula.detalles.get(0).codigoSku).isEqualTo("MP-1");
-        assertThat(result.formula.detalles.get(0).cantidadNecesaria).isEqualByComparingTo(BigDecimal.TEN);
+        assertThat(result.formula.detalles.get(0).cantidadNecesaria)
+                .isEqualByComparingTo(new BigDecimal("100"));
     }
 
     @Test
@@ -223,6 +226,115 @@ class BatchRecordServiceImplTest {
                         new BigDecimal("3.0"), // 0.5 * 2 * 3
                         new BigDecimal("7.50")  // 1.25 * 2 * 3
                 );
+    }
+
+    @Test
+    @DisplayName("mapFormula escala componentes directos del PT por cantidad programada cuando no hay PS")
+    void mapFormulaEscalaComponentesDirectosSinPs() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        orden.setCantidadProgramada(new BigDecimal("100"));
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto capsula = productoConCategoria(21, "ME-CAP", "Cápsula", TipoCategoria.MATERIA_PRIMA);
+        Producto etiqueta = productoConCategoria(22, "ME-ETI", "Etiqueta", TipoCategoria.MATERIA_PRIMA);
+        Producto linner = productoConCategoria(23, "ME-LIN", "Linner", TipoCategoria.MATERIA_PRIMA);
+
+        FormulaProducto formula = buildFormulaConDetalles(orden.getProducto(), List.of(
+                detalleFormula(capsula, BigDecimal.ONE),
+                detalleFormula(etiqueta, BigDecimal.ONE),
+                detalleFormula(linner, BigDecimal.ONE)
+        ));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        Map<String, BigDecimal> cantidades = result.formula.detalles.stream()
+                .collect(Collectors.toMap(d -> d.codigoSku, d -> d.cantidadNecesaria));
+
+        assertThat(cantidades)
+                .containsEntry("ME-CAP", new BigDecimal("100"))
+                .containsEntry("ME-ETI", new BigDecimal("100"))
+                .containsEntry("ME-LIN", new BigDecimal("100"));
+    }
+
+    @Test
+    @DisplayName("mapFormula escala insumos directos y mantiene expansión de PS sin duplicar cantidades")
+    void mapFormulaEscalaComponentesConPs() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        orden.setCantidadProgramada(new BigDecimal("30"));
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto envase = productoConCategoria(24, "ME-ENV", "Envase", TipoCategoria.MATERIA_PRIMA);
+        Producto etiqueta = productoConCategoria(25, "ME-ETQ", "Etiqueta", TipoCategoria.MATERIA_PRIMA);
+        Producto linner = productoConCategoria(26, "ME-LIN", "Linner", TipoCategoria.MATERIA_PRIMA);
+        Producto tapa = productoConCategoria(27, "ME-TAP", "Tapa", TipoCategoria.MATERIA_PRIMA);
+        Producto capsula = productoConCategoria(28, "ME-CAP", "Cápsula", TipoCategoria.MATERIA_PRIMA);
+        Producto ps = productoConCategoria(30, "PS-1", "Semi", TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+
+        FormulaProducto formulaPt = buildFormulaConDetalles(orden.getProducto(), List.of(
+                detalleFormula(envase, BigDecimal.ONE),
+                detalleFormula(etiqueta, BigDecimal.ONE),
+                detalleFormula(linner, BigDecimal.ONE),
+                detalleFormula(tapa, BigDecimal.ONE),
+                detalleFormula(capsula, BigDecimal.ONE),
+                detalleFormula(ps, BigDecimal.ONE)
+        ));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPt));
+
+        Producto uva = productoConCategoria(40, "MP-UVA", "UVA", TipoCategoria.MATERIA_PRIMA);
+        Producto maltodextrina = productoConCategoria(41, "MP-MAL", "Maltodextrina", TipoCategoria.MATERIA_PRIMA);
+        FormulaProducto formulaPs = buildFormulaConDetalles(ps, List.of(
+                detalleFormula(uva, new BigDecimal("0.5")),
+                detalleFormula(maltodextrina, new BigDecimal("0.25"))
+        ));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(30L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPs));
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        Map<String, BigDecimal> cantidades = result.formula.detalles.stream()
+                .collect(Collectors.toMap(d -> d.codigoSku, d -> d.cantidadNecesaria));
+
+        assertThat(cantidades)
+                .containsEntry("ME-ENV", new BigDecimal("30"))
+                .containsEntry("ME-ETQ", new BigDecimal("30"))
+                .containsEntry("ME-LIN", new BigDecimal("30"))
+                .containsEntry("ME-TAP", new BigDecimal("30"))
+                .containsEntry("ME-CAP", new BigDecimal("30"))
+                .containsEntry("MP-UVA", new BigDecimal("15.0"))
+                .containsEntry("MP-MAL", new BigDecimal("7.50"));
     }
 
     @Test
@@ -464,11 +576,15 @@ class BatchRecordServiceImplTest {
     }
 
     private FormulaProducto buildFormulaConDetalle(Producto producto, Producto insumo, BigDecimal cantidad) {
+        return buildFormulaConDetalles(producto, List.of(detalleFormula(insumo, cantidad)));
+    }
+
+    private FormulaProducto buildFormulaConDetalles(Producto producto, List<DetalleFormula> detalles) {
         FormulaProducto formula = new FormulaProducto();
         formula.setProducto(producto);
         formula.setVersion("v1");
         formula.setEstado(EstadoFormula.APROBADA);
-        formula.setDetalles(List.of(detalleFormula(insumo, cantidad)));
+        formula.setDetalles(detalles);
         return formula;
     }
 

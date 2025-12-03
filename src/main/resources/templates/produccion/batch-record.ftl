@@ -35,21 +35,7 @@
     <div><span class="label">Fin:</span> ${op.fechaFin}</div>
 </div>
 
-<h2>1. Fórmula / Componentes requeridos</h2>
-<table>
-    <thead>
-    <tr>
-        <th>Código insumo</th>
-        <th>Nombre</th>
-        <th>Unidad</th>
-        <th>Cantidad necesaria</th>
-        <th>Obligatorio</th>
-    </tr>
-    </thead>
-    <tbody>${formulaRows}</tbody>
-</table>
-
-<h2>2. Consumos reales / reservas</h2>
+<h2>1. Materiales utilizados (consumos y reservas)</h2>
 <table>
     <thead>
     <tr>
@@ -76,7 +62,7 @@
     <tbody>${reservaRows}</tbody>
 </table>
 
-<h2>3. Controles en proceso</h2>
+<h2>2. Controles en proceso</h2>
 <table>
     <thead>
     <tr>
@@ -93,7 +79,7 @@
     <tbody>${controlProcesoRows}</tbody>
 </table>
 
-<h2>4. Controles de empaque</h2>
+<h2>3. Controles de empaque</h2>
 <table>
     <thead>
     <tr>
@@ -109,7 +95,7 @@
     <tbody>${controlEmpaqueRows}</tbody>
 </table>
 
-<h2>5. Producción final y calidad</h2>
+<h2>4. Producción final y calidad</h2>
 <table>
     <thead>
     <tr>
@@ -178,7 +164,7 @@
     <tbody>${retencionRows}</tbody>
 </table>
 
-<h2>6. Revisión y aprobación de Calidad</h2>
+<h2>5. Revisión y aprobación de Calidad</h2>
 <table>
     <tbody>
     <tr>
@@ -200,7 +186,7 @@
     </tbody>
 </table>
 
-<h2>7. Observaciones</h2>
+<h2>6. Observaciones</h2>
 <table>
     <thead>
     <tr>
