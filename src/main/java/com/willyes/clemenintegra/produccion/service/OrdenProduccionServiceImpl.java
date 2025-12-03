@@ -556,7 +556,20 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     public Optional<OrdenProduccion> buscarPorId(Long id) {
-        return repository.findById(id);
+        return repository.findById(id).map(this::adjuntarFechaVencimientoLotePt);
+    }
+
+    private OrdenProduccion adjuntarFechaVencimientoLotePt(OrdenProduccion orden) {
+        if (orden == null || orden.getProducto() == null || orden.getProducto().getId() == null) {
+            orden.setFechaVencimientoLotePt(null);
+            return orden;
+        }
+
+        Optional<LoteProducto> lotePt = loteProductoRepository
+                .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue());
+
+        orden.setFechaVencimientoLotePt(lotePt.map(LoteProducto::getFechaVencimiento).orElse(null));
+        return orden;
     }
 
     public void eliminar(Long id) {

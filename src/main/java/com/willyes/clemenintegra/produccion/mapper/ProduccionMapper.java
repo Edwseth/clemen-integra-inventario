@@ -49,6 +49,7 @@ public class ProduccionMapper {
         dto.unidadMedida = entidad.getUnidadMedida() != null ? entidad.getUnidadMedida().getNombre() : null;
         dto.unidadMedidaSimbolo = entidad.getUnidadMedida() != null ? entidad.getUnidadMedida().getSimbolo() : null;
         dto.nombreResponsable = entidad.getResponsable() != null ? entidad.getResponsable().getNombreCompleto() : null;
+        dto.fechaVencimientoLotePt = entidad.getFechaVencimientoLotePt();
         return dto;
     }
 
