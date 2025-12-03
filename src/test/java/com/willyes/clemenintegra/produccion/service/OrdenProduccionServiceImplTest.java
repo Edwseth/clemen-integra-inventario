@@ -28,12 +28,14 @@ import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
@@ -1298,6 +1300,58 @@ class OrdenProduccionServiceImplTest {
 
         assertThat(productosSolicitados)
                 .containsExactlyInAnyOrder(401L, 402L);
+    }
+
+    @Test
+    @DisplayName("buscarPorId retorna fecha de vencimiento del lote PT cuando existe")
+    void buscarPorId_conLotePtIncluyeFechaVencimiento() {
+        Producto producto = new Producto();
+        producto.setId(1);
+
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(10L)
+                .producto(producto)
+                .estado(EstadoProduccion.CREADA)
+                .build();
+
+        LocalDateTime fechaVencimiento = LocalDateTime.now().plusMonths(6);
+        LoteProducto lote = LoteProducto.builder()
+                .id(5L)
+                .fechaVencimiento(fechaVencimiento)
+                .build();
+
+        when(ordenProduccionRepository.findById(10L)).thenReturn(Optional.of(orden));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(10L, 1L))
+                .thenReturn(Optional.of(lote));
+
+        Optional<OrdenProduccion> resultado = service.buscarPorId(10L);
+
+        assertThat(resultado).isPresent();
+        OrdenProduccionResponseDTO dto = ProduccionMapper.toResponse(resultado.get());
+        assertThat(dto.fechaVencimientoLotePt).isEqualTo(fechaVencimiento);
+    }
+
+    @Test
+    @DisplayName("buscarPorId deja fecha de vencimiento del lote PT en null cuando no hay lote")
+    void buscarPorId_sinLotePtDevuelveFechaNull() {
+        Producto producto = new Producto();
+        producto.setId(2);
+
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(20L)
+                .producto(producto)
+                .estado(EstadoProduccion.CREADA)
+                .build();
+
+        when(ordenProduccionRepository.findById(20L)).thenReturn(Optional.of(orden));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(20L, 2L))
+                .thenReturn(Optional.empty());
+
+        Optional<OrdenProduccion> resultado = service.buscarPorId(20L);
+
+        assertThat(resultado).isPresent();
+        OrdenProduccionResponseDTO dto = ProduccionMapper.toResponse(resultado.get());
+        assertThat(dto.fechaVencimientoLotePt).isNull();
     }
 
     private void stubInfraReserva() {

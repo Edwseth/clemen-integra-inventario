@@ -27,6 +27,9 @@ public class OrdenProduccion {
     @Column(name = "lote_producto_id")
     private Long loteId;
 
+    @Transient
+    private LocalDateTime fechaVencimientoLotePt;
+
     @Column(nullable = false)
     private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;

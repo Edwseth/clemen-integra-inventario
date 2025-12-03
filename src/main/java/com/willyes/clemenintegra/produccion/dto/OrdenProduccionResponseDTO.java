@@ -24,4 +24,5 @@ public class OrdenProduccionResponseDTO {
     public String unidadMedidaSimbolo;
     public String unidadMedidaBaseSimbolo;
     public String nombreResponsable;
+    public LocalDateTime fechaVencimientoLotePt;
 }
