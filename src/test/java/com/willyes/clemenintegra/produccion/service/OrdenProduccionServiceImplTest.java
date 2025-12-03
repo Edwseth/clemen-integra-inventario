@@ -13,6 +13,8 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
@@ -63,20 +65,28 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -1176,6 +1186,233 @@ class OrdenProduccionServiceImplTest {
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.VIDA_UTIL_NO_CONFIGURADA);
+    }
+
+    @Test
+    @DisplayName("reservarInsumosParaOP incluye MP y ME para OP de producto semielaborado")
+    void reservarInsumosParaOP_psIncluyeTodosLosInsumos() {
+        doCallRealMethod().when(service).reservarInsumosParaOP(anyLong(), any());
+        ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA");
+
+        Producto productoPs = productoConCategoria(100, TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(500L);
+        orden.setProducto(productoPs);
+        orden.setCantidadProgramada(BigDecimal.TEN);
+
+        when(ordenProduccionRepository.findById(500L)).thenReturn(Optional.of(orden));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(crearFormulaPs());
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(100L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        stubInfraReserva();
+        stubDisponibilidadGenerica();
+
+        service.reservarInsumosParaOP(500L, null);
+
+        ArgumentCaptor<SolicitudMovimientoRequestDTO> captor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
+        verify(solicitudMovimientoService, times(6)).registrarSolicitud(captor.capture());
+
+        List<Long> productosSolicitados = captor.getAllValues().stream()
+                .map(SolicitudMovimientoRequestDTO::getProductoId)
+                .toList();
+
+        assertThat(productosSolicitados)
+                .containsExactlyInAnyOrder(201L, 202L, 203L, 204L, 205L, 206L);
+    }
+
+    @Test
+    @DisplayName("reservarInsumosParaOP en PT con PS omite MP y conserva PS + ME")
+    void reservarInsumosParaOP_ptConPsIncluyePsYMe() {
+        doCallRealMethod().when(service).reservarInsumosParaOP(anyLong(), any());
+        ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA");
+
+        Producto productoPt = productoConCategoria(101, TipoCategoria.PRODUCTO_TERMINADO);
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(600L);
+        orden.setProducto(productoPt);
+        orden.setCantidadProgramada(BigDecimal.TEN);
+
+        when(ordenProduccionRepository.findById(600L)).thenReturn(Optional.of(orden));
+
+        DetalleFormula insumoPs = detalleFormula(301L, TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        DetalleFormula insumoMe = detalleFormula(302L, TipoCategoria.MATERIAL_EMPAQUE);
+        DetalleFormula insumoMp = detalleFormula(303L, TipoCategoria.MATERIA_PRIMA);
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(insumoPs, insumoMe, insumoMp));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(101L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        stubInfraReserva();
+        stubDisponibilidadGenerica();
+
+        service.reservarInsumosParaOP(600L, null);
+
+        ArgumentCaptor<SolicitudMovimientoRequestDTO> captor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
+        verify(solicitudMovimientoService, times(2)).registrarSolicitud(captor.capture());
+
+        List<Long> productosSolicitados = captor.getAllValues().stream()
+                .map(SolicitudMovimientoRequestDTO::getProductoId)
+                .toList();
+
+        assertThat(productosSolicitados)
+                .containsExactlyInAnyOrder(301L, 302L);
+    }
+
+    @Test
+    @DisplayName("reservarInsumosParaOP conserva comportamiento para PT sin PS")
+    void reservarInsumosParaOP_ptSinPsReservaTodos() {
+        doCallRealMethod().when(service).reservarInsumosParaOP(anyLong(), any());
+        ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA");
+
+        Producto productoPt = productoConCategoria(102, TipoCategoria.PRODUCTO_TERMINADO);
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(700L);
+        orden.setProducto(productoPt);
+        orden.setCantidadProgramada(BigDecimal.ONE);
+
+        when(ordenProduccionRepository.findById(700L)).thenReturn(Optional.of(orden));
+
+        DetalleFormula insumoMp = detalleFormula(401L, TipoCategoria.MATERIA_PRIMA);
+        DetalleFormula insumoMe = detalleFormula(402L, TipoCategoria.MATERIAL_EMPAQUE);
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(insumoMp, insumoMe));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(102L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        stubInfraReserva();
+        stubDisponibilidadGenerica();
+
+        service.reservarInsumosParaOP(700L, null);
+
+        ArgumentCaptor<SolicitudMovimientoRequestDTO> captor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
+        verify(solicitudMovimientoService, times(2)).registrarSolicitud(captor.capture());
+
+        List<Long> productosSolicitados = captor.getAllValues().stream()
+                .map(SolicitudMovimientoRequestDTO::getProductoId)
+                .toList();
+
+        assertThat(productosSolicitados)
+                .containsExactlyInAnyOrder(401L, 402L);
+    }
+
+    private void stubInfraReserva() {
+        Usuario usuario = usuarioBasico();
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(55L);
+        when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(Optional.of(motivo));
+
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(66L);
+        when(tipoMovimientoDetalleRepository.findById(66L)).thenReturn(Optional.of(tipoDetalle));
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(66L);
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(77L);
+
+        when(solicitudMovimientoRepository.findWithDetalles(anyLong(), any(), any(), any(), eq(false), any()))
+                .thenReturn(List.of());
+
+        AtomicLong secuencia = new AtomicLong(1);
+        Map<Long, SolicitudMovimiento> solicitudes = new HashMap<>();
+
+        when(solicitudMovimientoService.registrarSolicitud(any())).thenAnswer(invocation -> {
+            SolicitudMovimientoRequestDTO req = invocation.getArgument(0);
+            long id = secuencia.getAndIncrement();
+
+            SolicitudMovimientoResponseDTO dto = new SolicitudMovimientoResponseDTO();
+            dto.setId(id);
+
+            SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                    .id(id)
+                    .tipoMovimiento(req.getTipoMovimiento())
+                    .cantidad(req.getCantidad())
+                    .producto(crearProducto(req.getProductoId().intValue(), TipoCategoria.MATERIA_PRIMA))
+                    .almacenDestino(new Almacen(Math.toIntExact(req.getAlmacenDestinoId())))
+                    .detalles(new ArrayList<>())
+                    .build();
+            solicitudes.put(id, solicitud);
+            return dto;
+        });
+
+        when(solicitudMovimientoRepository.findById(anyLong()))
+                .thenAnswer(invocation -> Optional.ofNullable(solicitudes.get(invocation.getArgument(0))));
+        when(solicitudMovimientoRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        doNothing().when(reservaLoteService).sincronizarReservasSolicitud(any());
+    }
+
+    private void stubDisponibilidadGenerica() {
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(any()))
+                .thenReturn(List.of(90L));
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(anyLong(), any(BigDecimal.class), anyList(), anyBoolean()))
+                .thenAnswer(invocation -> distribucionGenerica(
+                        invocation.getArgument(0),
+                        invocation.getArgument(1),
+                        90L));
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(anyLong(), any(BigDecimal.class), anyList(), anyBoolean(), any(), anyBoolean()))
+                .thenAnswer(invocation -> distribucionGenerica(
+                        invocation.getArgument(0),
+                        invocation.getArgument(1),
+                        90L));
+    }
+
+    private DistribucionFefoResult distribucionGenerica(Long productoId, BigDecimal requerida, Long almacenId) {
+        BigDecimal requeridaEscala = requerida.setScale(6, RoundingMode.HALF_UP);
+        DistribucionFefoDetalle detalle = DistribucionFefoDetalle.builder()
+                .loteProductoId(productoId * 10)
+                .almacenId(almacenId)
+                .cantidadCalculo(requeridaEscala.setScale(8, RoundingMode.HALF_UP))
+                .cantidadReserva(requeridaEscala)
+                .build();
+
+        return DistribucionFefoResult.builder()
+                .productoInsumoId(productoId)
+                .requerido(requeridaEscala)
+                .stockFisicoTotal(requeridaEscala)
+                .stockReservadoTotal(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP))
+                .stockLibreTotal(requeridaEscala)
+                .faltante(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP))
+                .suficiente(true)
+                .detalles(List.of(detalle))
+                .build();
+    }
+
+    private List<DetalleFormula> crearFormulaPs() {
+        DetalleFormula mp1 = detalleFormula(201L, TipoCategoria.MATERIA_PRIMA);
+        DetalleFormula mp2 = detalleFormula(202L, TipoCategoria.MATERIA_PRIMA);
+        DetalleFormula me1 = detalleFormula(203L, TipoCategoria.MATERIAL_EMPAQUE);
+        DetalleFormula me2 = detalleFormula(204L, TipoCategoria.MATERIAL_EMPAQUE);
+        DetalleFormula me3 = detalleFormula(205L, TipoCategoria.MATERIAL_EMPAQUE);
+        DetalleFormula me4 = detalleFormula(206L, TipoCategoria.MATERIAL_EMPAQUE);
+        return List.of(mp1, mp2, me1, me2, me3, me4);
+    }
+
+    private DetalleFormula detalleFormula(Long productoId, TipoCategoria categoria) {
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(crearProducto(productoId.intValue(), categoria));
+        detalle.setCantidadNecesaria(BigDecimal.ONE);
+        return detalle;
+    }
+
+    private Producto productoConCategoria(int id, TipoCategoria tipoCategoria) {
+        return crearProducto(id, tipoCategoria);
+    }
+
+    private Producto crearProducto(int id, TipoCategoria tipoCategoria) {
+        Producto producto = new Producto();
+        producto.setId(id);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(tipoCategoria);
+        producto.setCategoriaProducto(categoria);
+        producto.setModoControlInventario(ModoControlInventario.CONTROL_STOCK);
+        return producto;
     }
 
     private DistribucionFefoResult crearDistribucionJarabe() {
