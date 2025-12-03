@@ -1089,6 +1089,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findById(catalogResolver.getTipoDetalleSalidaId())
                 .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
 
+        TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
+        boolean esProductoSemiElaborado = tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO;
+        boolean tieneInsumoPsEnFormula = insumoPsId != null;
+
         for (DetalleFormula insumo : detallesFormula) {
             if (insumo == null || insumo.getInsumo() == null) {
                 continue;
@@ -1109,6 +1113,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 log.debug("OP-reserva: insumo {} configurado sin control de stock, se omite reserva e inventario", insumoId);
                 continue;
             }
+
+            TipoCategoria tipoInsumo = Optional.ofNullable(insumo.getInsumo().getCategoriaProducto())
+                    .map(CategoriaProducto::getTipo)
+                    .orElse(null);
+
+            if (!esProductoSemiElaborado && tieneInsumoPsEnFormula
+                    && !Objects.equals(insumoId, insumoPsId)
+                    && tipoInsumo == TipoCategoria.MATERIA_PRIMA) {
+                log.debug("OP-reserva: MP {} omitida en OP con PS para evitar doble consumo", insumoId);
+                continue;
+            }
+
             BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
 
