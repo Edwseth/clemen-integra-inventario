@@ -1,7 +1,9 @@
 package com.willyes.clemenintegra.planeacion.service;
 
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionSemanalDTO;
+import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
+import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -18,5 +20,5 @@ public interface PlanProduccionService {
 
     Optional<PlanProduccionSemanal> buscarPorId(Long id);
 
-    Page<PlanProduccionSemanal> listar(LocalDate semanaInicio, LocalDate semanaFin, String estado, Pageable pageable);
+    Page<PlanProduccionResumenDTO> listar(LocalDate semanaInicioDesde, LocalDate semanaInicioHasta, EstadoPlanProduccion estado, Pageable pageable);
 }

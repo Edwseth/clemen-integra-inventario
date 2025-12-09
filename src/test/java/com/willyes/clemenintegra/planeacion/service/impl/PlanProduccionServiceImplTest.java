@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.planeacion.service.impl;
 
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionSemanalDTO;
+import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.repository.PlanProduccionSemanalRepository;
@@ -8,14 +9,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @ExtendWith(MockitoExtension.class)
 class PlanProduccionServiceImplTest {
@@ -150,5 +161,80 @@ class PlanProduccionServiceImplTest {
         when(planProduccionSemanalRepository.findById(60L)).thenReturn(Optional.of(existente));
 
         assertThrows(IllegalStateException.class, () -> service.cerrar(60L));
+    }
+
+    @Test
+    void listarSinFiltrosUsaOrdenPorSemanaDesc() {
+        PlanProduccionSemanal planReciente = PlanProduccionSemanal.builder()
+                .id(1L)
+                .semanaInicio(LocalDate.of(2024, 1, 8))
+                .semanaFin(LocalDate.of(2024, 1, 14))
+                .estado(EstadoPlanProduccion.CONFIRMADO)
+                .build();
+        PlanProduccionSemanal planAnterior = PlanProduccionSemanal.builder()
+                .id(2L)
+                .semanaInicio(LocalDate.of(2023, 12, 31))
+                .semanaFin(LocalDate.of(2024, 1, 6))
+                .estado(EstadoPlanProduccion.CERRADO)
+                .build();
+
+        when(planProduccionSemanalRepository.buscarPorFiltros(any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(planReciente, planAnterior)));
+
+        Page<PlanProduccionResumenDTO> resultado = service.listar(null, null, null, PageRequest.of(0, 10));
+
+        assertEquals(2, resultado.getContent().size());
+        assertEquals(planReciente.getSemanaInicio(), resultado.getContent().get(0).getSemanaInicio());
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(planProduccionSemanalRepository, times(1))
+                .buscarPorFiltros(eq(null), eq(null), eq(null), pageableCaptor.capture());
+        Sort.Order sortOrder = pageableCaptor.getValue().getSort().getOrderFor("semanaInicio");
+        assertNotNull(sortOrder);
+        assertEquals(Sort.Direction.DESC, sortOrder.getDirection());
+    }
+
+    @Test
+    void listarFiltradoPorEstado() {
+        PlanProduccionSemanal planConfirmado = PlanProduccionSemanal.builder()
+                .id(3L)
+                .semanaInicio(LocalDate.of(2024, 2, 5))
+                .semanaFin(LocalDate.of(2024, 2, 11))
+                .estado(EstadoPlanProduccion.CONFIRMADO)
+                .build();
+
+        when(planProduccionSemanalRepository.buscarPorFiltros(any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(planConfirmado)));
+
+        service.listar(null, null, EstadoPlanProduccion.CONFIRMADO, PageRequest.of(0, 5, Sort.by("semanaInicio")));
+
+        ArgumentCaptor<EstadoPlanProduccion> estadoCaptor = ArgumentCaptor.forClass(EstadoPlanProduccion.class);
+        verify(planProduccionSemanalRepository).buscarPorFiltros(eq(null), eq(null), estadoCaptor.capture(), any(Pageable.class));
+        assertEquals(EstadoPlanProduccion.CONFIRMADO, estadoCaptor.getValue());
+    }
+
+    @Test
+    void listarFiltradoPorRangoSemanaInicio() {
+        LocalDate desde = LocalDate.of(2024, 3, 4);
+        LocalDate hasta = LocalDate.of(2024, 3, 18);
+        PlanProduccionSemanal planDentroDeRango = PlanProduccionSemanal.builder()
+                .id(4L)
+                .semanaInicio(LocalDate.of(2024, 3, 11))
+                .semanaFin(LocalDate.of(2024, 3, 17))
+                .estado(EstadoPlanProduccion.BORRADOR)
+                .build();
+
+        when(planProduccionSemanalRepository.buscarPorFiltros(any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(planDentroDeRango)));
+
+        Page<PlanProduccionResumenDTO> resultado = service.listar(desde, hasta, null, PageRequest.of(0, 5));
+
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals(planDentroDeRango.getSemanaInicio(), resultado.getContent().get(0).getSemanaInicio());
+
+        ArgumentCaptor<LocalDate> fechaCaptor = ArgumentCaptor.forClass(LocalDate.class);
+        verify(planProduccionSemanalRepository).buscarPorFiltros(fechaCaptor.capture(), fechaCaptor.capture(), eq(null), any(Pageable.class));
+        List<LocalDate> capturedDates = fechaCaptor.getAllValues();
+        assertEquals(desde, capturedDates.get(0));
+        assertEquals(hasta, capturedDates.get(1));
     }
 }
