@@ -158,6 +158,30 @@ class PlanProduccionControllerTest {
                 .andExpect(jsonPath("$.detalles[0].unidadMedida.simbolo").value("KG"));
     }
 
+    @Test
+    @WithMockUser(authorities = "ROL_COMPRADOR")
+    void obtenerPlanPermiteComprador() throws Exception {
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .id(10L)
+                .semanaInicio(LocalDate.of(2024, 6, 10))
+                .semanaFin(LocalDate.of(2024, 6, 16))
+                .detalles(List.of())
+                .build();
+
+        when(planProduccionService.buscarPorId(10L)).thenReturn(Optional.of(plan));
+
+        mockMvc.perform(get("/api/planeacion/planes-semanales/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_COMPRADOR")
+    void confirmarPlanRechazaComprador() throws Exception {
+        mockMvc.perform(post("/api/planeacion/planes-semanales/99/confirmar"))
+                .andExpect(status().isForbidden());
+    }
+
     @TestConfiguration
     @EnableMethodSecurity
     static class MethodSecurityTestConfig {
