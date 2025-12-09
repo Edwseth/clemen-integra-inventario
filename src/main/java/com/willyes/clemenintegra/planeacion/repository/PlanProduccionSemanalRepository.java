@@ -13,8 +13,8 @@ import java.time.LocalDate;
 public interface PlanProduccionSemanalRepository extends JpaRepository<PlanProduccionSemanal, Long> {
 
     @Query("select p from PlanProduccionSemanal p where (:inicio is null or p.semanaInicio >= :inicio) " +
-            "and (:fin is null or p.semanaFin <= :fin) " +
-            "and (:estado is null or p.estado = :estado)" )
+            "and (:fin is null or p.semanaInicio <= :fin) " +
+            "and (:estado is null or p.estado = :estado)")
     Page<PlanProduccionSemanal> buscarPorFiltros(@Param("inicio") LocalDate inicio,
                                                  @Param("fin") LocalDate fin,
                                                  @Param("estado") EstadoPlanProduccion estado,

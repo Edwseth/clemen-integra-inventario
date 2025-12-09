@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.planeacion.service.impl;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionSemanalDTO;
+import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
@@ -12,7 +13,9 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,15 +107,25 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PlanProduccionSemanal> listar(LocalDate semanaInicio, LocalDate semanaFin, String estado, Pageable pageable) {
-        EstadoPlanProduccion estadoEnum = null;
-        if (estado != null && !estado.isBlank()) {
-            try {
-                estadoEnum = EstadoPlanProduccion.valueOf(estado.toUpperCase());
-            } catch (IllegalArgumentException ex) {
-                estadoEnum = null;
-            }
+    public Page<PlanProduccionResumenDTO> listar(LocalDate semanaInicioDesde, LocalDate semanaInicioHasta, EstadoPlanProduccion estado, Pageable pageable) {
+        Pageable pageableToUse = pageable;
+        if (pageable.getSort().isUnsorted()) {
+            pageableToUse = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "semanaInicio"));
         }
-        return planProduccionSemanalRepository.buscarPorFiltros(semanaInicio, semanaFin, estadoEnum, pageable);
+
+        return planProduccionSemanalRepository.buscarPorFiltros(semanaInicioDesde, semanaInicioHasta, estado, pageableToUse)
+                .map(this::toResumenDto);
+    }
+
+    private PlanProduccionResumenDTO toResumenDto(PlanProduccionSemanal plan) {
+        return PlanProduccionResumenDTO.builder()
+                .id(plan.getId())
+                .semanaInicio(plan.getSemanaInicio())
+                .semanaFin(plan.getSemanaFin())
+                .estado(plan.getEstado())
+                .creadoPorNombre(plan.getCreadoPor() != null ? plan.getCreadoPor().getNombreCompleto() : null)
+                .fechaCreacion(plan.getFechaCreacion())
+                .fechaConfirmacion(null)
+                .build();
     }
 }
