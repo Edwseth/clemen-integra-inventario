@@ -118,12 +118,22 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
     }
 
     private PlanProduccionResumenDTO toResumenDto(PlanProduccionSemanal plan) {
+        String creadoPorNombre = null;
+        if (plan.getCreadoPor() != null) {
+            String nombreCompleto = plan.getCreadoPor().getNombreCompleto();
+            if (nombreCompleto != null && !nombreCompleto.isBlank()) {
+                creadoPorNombre = nombreCompleto;
+            } else {
+                creadoPorNombre = plan.getCreadoPor().getNombreUsuario();
+            }
+        }
+
         return PlanProduccionResumenDTO.builder()
                 .id(plan.getId())
                 .semanaInicio(plan.getSemanaInicio())
                 .semanaFin(plan.getSemanaFin())
                 .estado(plan.getEstado())
-                .creadoPorNombre(plan.getCreadoPor() != null ? plan.getCreadoPor().getNombreCompleto() : null)
+                .creadoPorNombre(creadoPorNombre)
                 .fechaCreacion(plan.getFechaCreacion())
                 .fechaConfirmacion(null)
                 .build();
