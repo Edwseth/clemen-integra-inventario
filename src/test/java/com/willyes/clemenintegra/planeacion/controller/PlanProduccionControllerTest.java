@@ -1,6 +1,9 @@
 package com.willyes.clemenintegra.planeacion.controller;
 
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
@@ -17,8 +20,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -108,6 +113,49 @@ class PlanProduccionControllerTest {
                         .content("{}")
                         .contentType(APPLICATION_JSON))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    void obtenerDetalleIncluyeProductoYUnidad() throws Exception {
+        PlanProduccionDetalle detalle = PlanProduccionDetalle.builder()
+                .id(1L)
+                .producto(Producto.builder()
+                        .id(807)
+                        .codigoSku("SKU-001")
+                        .nombre("Producto Terminado")
+                        .build())
+                .cantidadPlanificada(BigDecimal.valueOf(2500))
+                .unidadMedida(UnidadMedida.builder()
+                        .id(5L)
+                        .nombre("Kilogramo")
+                        .simbolo("KG")
+                        .build())
+                .prioridad(1)
+                .origenDemanda("Demanda")
+                .observacion("Obs")
+                .build();
+
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .id(5L)
+                .semanaInicio(LocalDate.of(2025, 11, 30))
+                .semanaFin(LocalDate.of(2025, 12, 6))
+                .estado(EstadoPlanProduccion.BORRADOR)
+                .detalles(List.of(detalle))
+                .build();
+
+        when(planProduccionService.buscarPorId(5L)).thenReturn(Optional.of(plan));
+
+        mockMvc.perform(get("/api/planeacion/planes-semanales/5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.detalles[0].productoId").value(807))
+                .andExpect(jsonPath("$.detalles[0].producto.id").value(807))
+                .andExpect(jsonPath("$.detalles[0].producto.codigoSku").value("SKU-001"))
+                .andExpect(jsonPath("$.detalles[0].producto.nombre").value("Producto Terminado"))
+                .andExpect(jsonPath("$.detalles[0].unidadMedidaId").value(5))
+                .andExpect(jsonPath("$.detalles[0].unidadMedida.id").value(5))
+                .andExpect(jsonPath("$.detalles[0].unidadMedida.nombre").value("Kilogramo"))
+                .andExpect(jsonPath("$.detalles[0].unidadMedida.simbolo").value("KG"));
     }
 
     @TestConfiguration

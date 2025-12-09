@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.planeacion.controller;
 
+import com.willyes.clemenintegra.inventario.dto.ProductoResumenDTO;
+import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionSemanalDTO;
@@ -93,6 +95,23 @@ public class PlanProduccionController {
     private PlanProduccionSemanalDTO.PlanProduccionDetalleDTO toDetalleDto(PlanProduccionDetalle detalle) {
         Producto producto = detalle.getProducto();
         UnidadMedida unidad = detalle.getUnidadMedida();
+        ProductoResumenDTO productoDto = null;
+        if (producto != null) {
+            productoDto = ProductoResumenDTO.builder()
+                    .id(producto.getId() != null ? producto.getId().longValue() : null)
+                    .codigoSku(producto.getCodigoSku())
+                    .nombre(producto.getNombre())
+                    .build();
+        }
+
+        UnidadMedidaResponseDTO unidadDto = null;
+        if (unidad != null) {
+            unidadDto = UnidadMedidaResponseDTO.builder()
+                    .id(unidad.getId())
+                    .nombre(unidad.getNombre())
+                    .simbolo(unidad.getSimbolo())
+                    .build();
+        }
         return PlanProduccionSemanalDTO.PlanProduccionDetalleDTO.builder()
                 .id(detalle.getId())
                 .productoId(producto != null && producto.getId() != null ? producto.getId().longValue() : null)
@@ -101,6 +120,8 @@ public class PlanProduccionController {
                 .prioridad(detalle.getPrioridad())
                 .origenDemanda(detalle.getOrigenDemanda())
                 .observacion(detalle.getObservacion())
+                .producto(productoDto)
+                .unidadMedida(unidadDto)
                 .build();
     }
 }
