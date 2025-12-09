@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.planeacion.dto.CorridaMrpResponseDTO;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
+import com.willyes.clemenintegra.planeacion.model.enums.TipoCambioMrp;
 import com.willyes.clemenintegra.planeacion.service.MrpReporteService;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
@@ -48,6 +49,7 @@ class MrpControllerTest {
                 .recepcionesProgramadas(BigDecimal.ZERO)
                 .requerimientoNeto(BigDecimal.ZERO)
                 .nivelBom(1)
+                .tipoCambioMrp(TipoCambioMrp.NUEVO)
                 .build();
 
         DetalleCorridaMrp criticidadAlta = DetalleCorridaMrp.builder()
@@ -58,6 +60,7 @@ class MrpControllerTest {
                 .recepcionesProgramadas(BigDecimal.ZERO)
                 .requerimientoNeto(BigDecimal.valueOf(5))
                 .nivelBom(1)
+                .tipoCambioMrp(TipoCambioMrp.AUMENTO)
                 .build();
 
         DetalleCorridaMrp criticidadMedia = DetalleCorridaMrp.builder()
@@ -68,6 +71,7 @@ class MrpControllerTest {
                 .recepcionesProgramadas(BigDecimal.ZERO)
                 .requerimientoNeto(BigDecimal.valueOf(3))
                 .nivelBom(1)
+                .tipoCambioMrp(TipoCambioMrp.SIN_CAMBIO)
                 .build();
 
         CorridaMrp corrida = CorridaMrp.builder().build();
@@ -81,6 +85,9 @@ class MrpControllerTest {
         assertEquals("BAJA", dto.getDetalles().get(0).getCriticidad());
         assertEquals("ALTA", dto.getDetalles().get(1).getCriticidad());
         assertEquals("MEDIA", dto.getDetalles().get(2).getCriticidad());
+        assertEquals(TipoCambioMrp.NUEVO.name(), dto.getDetalles().get(0).getTipoCambio());
+        assertEquals(TipoCambioMrp.AUMENTO.name(), dto.getDetalles().get(1).getTipoCambio());
+        assertEquals(TipoCambioMrp.SIN_CAMBIO.name(), dto.getDetalles().get(2).getTipoCambio());
     }
 }
 

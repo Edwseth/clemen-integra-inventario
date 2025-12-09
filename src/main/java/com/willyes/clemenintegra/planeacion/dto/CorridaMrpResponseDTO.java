@@ -49,6 +49,7 @@ public class CorridaMrpResponseDTO {
         private String mensajeValidacion;
         private String tipoSugerencia;
         private String criticidad;
+        private String tipoCambio;
     }
 
     @Data

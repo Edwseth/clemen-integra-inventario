@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.planeacion.model;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.planeacion.model.enums.TipoCambioMrp;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,4 +47,7 @@ public class DetalleCorridaMrp {
 
     @OneToOne(mappedBy = "detalleCorrida", cascade = CascadeType.ALL, orphanRemoval = true)
     private SugerenciaAbastecimiento sugerencia;
+
+    @Transient
+    private TipoCambioMrp tipoCambioMrp;
 }
