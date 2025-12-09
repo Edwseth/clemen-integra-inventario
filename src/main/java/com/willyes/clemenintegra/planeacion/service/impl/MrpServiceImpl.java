@@ -17,6 +17,7 @@ import com.willyes.clemenintegra.planeacion.model.enums.EstadoCorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoSugerenciaAbastecimiento;
 import com.willyes.clemenintegra.planeacion.model.enums.TipoSugerenciaAbastecimiento;
+import com.willyes.clemenintegra.planeacion.model.enums.TipoCambioMrp;
 import com.willyes.clemenintegra.planeacion.repository.CorridaMrpRepository;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +56,12 @@ public class MrpServiceImpl implements MrpService {
         }
 
         log.info("Iniciando corrida MRP semanal para el plan {}", plan.getId());
+        Optional<CorridaMrp> corridaAnterior = corridaMrpRepository
+                .findTopByPlanProduccionSemanalAndEstadoOrderByFechaEjecucionDesc(
+                        plan, EstadoCorridaMrp.COMPLETADA
+                );
+        Map<String, BigDecimal> netosAnteriores = construirMapaNetos(corridaAnterior);
+
         CorridaMrp corrida = CorridaMrp.builder()
                 .planProduccionSemanal(plan)
                 .fechaEjecucion(LocalDateTime.now())
@@ -67,7 +74,10 @@ public class MrpServiceImpl implements MrpService {
 
         Map<Producto, BigDecimal> requerimientosBrutos = calcularRequerimientosBrutos(plan);
         List<DetalleCorridaMrp> requerimientosNetos = calcularRequerimientosNetos(requerimientosBrutos);
-        requerimientosNetos.forEach(detalle -> detalle.setCorrida(corrida));
+        requerimientosNetos.forEach(detalle -> {
+            detalle.setCorrida(corrida);
+            asignarTipoCambio(detalle, netosAnteriores);
+        });
         corrida.setDetalles(requerimientosNetos);
 
         generarSugerencias(requerimientosNetos);
@@ -181,6 +191,43 @@ public class MrpServiceImpl implements MrpService {
     public CorridaMrp obtenerCorrida(Long id) {
         return corridaMrpRepository.findWithDetallesById(id)
                 .orElseThrow(() -> new NoSuchElementException("Corrida MRP no encontrada"));
+    }
+
+    private Map<String, BigDecimal> construirMapaNetos(Optional<CorridaMrp> corridaAnterior) {
+        Map<String, BigDecimal> netos = new HashMap<>();
+        if (corridaAnterior.isEmpty() || corridaAnterior.get().getDetalles() == null) {
+            return netos;
+        }
+        for (DetalleCorridaMrp detalle : corridaAnterior.get().getDetalles()) {
+            String clave = construirClaveDetalle(detalle.getProducto(), detalle.getNivelBom());
+            BigDecimal neto = Optional.ofNullable(detalle.getRequerimientoNeto()).orElse(BigDecimal.ZERO);
+            netos.put(clave, neto);
+        }
+        return netos;
+    }
+
+    private void asignarTipoCambio(DetalleCorridaMrp detalle, Map<String, BigDecimal> netosAnteriores) {
+        String clave = construirClaveDetalle(detalle.getProducto(), detalle.getNivelBom());
+        BigDecimal netoActual = Optional.ofNullable(detalle.getRequerimientoNeto()).orElse(BigDecimal.ZERO);
+        BigDecimal netoAnterior = netosAnteriores.get(clave);
+        if (netoAnterior == null) {
+            detalle.setTipoCambioMrp(TipoCambioMrp.NUEVO);
+            return;
+        }
+        int comparacion = netoActual.compareTo(netoAnterior);
+        if (comparacion > 0) {
+            detalle.setTipoCambioMrp(TipoCambioMrp.AUMENTO);
+        } else if (comparacion < 0) {
+            detalle.setTipoCambioMrp(TipoCambioMrp.REDUCCION);
+        } else {
+            detalle.setTipoCambioMrp(TipoCambioMrp.SIN_CAMBIO);
+        }
+    }
+
+    private String construirClaveDetalle(Producto producto, Integer nivelBom) {
+        String productoId = producto != null && producto.getId() != null ? producto.getId().toString() : "null";
+        String nivel = nivelBom != null ? nivelBom.toString() : "";
+        return productoId + "#" + nivel;
     }
 
     private BigDecimal obtenerInventarioDisponible(Producto producto) {

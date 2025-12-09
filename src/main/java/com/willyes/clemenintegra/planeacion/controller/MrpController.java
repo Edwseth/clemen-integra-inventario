@@ -128,6 +128,7 @@ public class MrpController {
                         ? detalle.getSugerencia().getTipo().name()
                         : null)
                 .criticidad(calcularCriticidad(detalle))
+                .tipoCambio(detalle.getTipoCambioMrp() != null ? detalle.getTipoCambioMrp().name() : null)
                 .build();
     }
 
