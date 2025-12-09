@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.repository.PlanProduccionSemanalRepository;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -210,6 +211,49 @@ class PlanProduccionServiceImplTest {
         ArgumentCaptor<EstadoPlanProduccion> estadoCaptor = ArgumentCaptor.forClass(EstadoPlanProduccion.class);
         verify(planProduccionSemanalRepository).buscarPorFiltros(eq(null), eq(null), estadoCaptor.capture(), any(Pageable.class));
         assertEquals(EstadoPlanProduccion.CONFIRMADO, estadoCaptor.getValue());
+    }
+
+    @Test
+    void listarIncluyeNombreCompletoDelCreador() {
+        Usuario creador = Usuario.builder()
+                .nombreCompleto("Juan Pérez")
+                .nombreUsuario("JPEREZ")
+                .build();
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .id(5L)
+                .semanaInicio(LocalDate.of(2024, 4, 1))
+                .semanaFin(LocalDate.of(2024, 4, 7))
+                .estado(EstadoPlanProduccion.BORRADOR)
+                .creadoPor(creador)
+                .build();
+
+        when(planProduccionSemanalRepository.buscarPorFiltros(any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(plan)));
+
+        Page<PlanProduccionResumenDTO> resultado = service.listar(null, null, null, PageRequest.of(0, 1));
+
+        assertEquals("Juan Pérez", resultado.getContent().get(0).getCreadoPorNombre());
+    }
+
+    @Test
+    void listarUsaNombreUsuarioCuandoNoHayNombreCompleto() {
+        Usuario creador = Usuario.builder()
+                .nombreUsuario("JPEREZ")
+                .build();
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .id(6L)
+                .semanaInicio(LocalDate.of(2024, 4, 8))
+                .semanaFin(LocalDate.of(2024, 4, 14))
+                .estado(EstadoPlanProduccion.BORRADOR)
+                .creadoPor(creador)
+                .build();
+
+        when(planProduccionSemanalRepository.buscarPorFiltros(any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(plan)));
+
+        Page<PlanProduccionResumenDTO> resultado = service.listar(null, null, null, PageRequest.of(0, 1));
+
+        assertEquals("JPEREZ", resultado.getContent().get(0).getCreadoPorNombre());
     }
 
     @Test
