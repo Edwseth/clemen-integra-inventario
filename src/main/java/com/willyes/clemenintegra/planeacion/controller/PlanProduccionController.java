@@ -48,6 +48,13 @@ public class PlanProduccionController {
         return ResponseEntity.ok(toDto(plan));
     }
 
+    @PostMapping("/{id}/cerrar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public ResponseEntity<PlanProduccionSemanalDTO> cerrar(@PathVariable Long id) {
+        PlanProduccionSemanal plan = planProduccionService.cerrar(id);
+        return ResponseEntity.ok(toDto(plan));
+    }
+
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<PlanProduccionSemanalDTO>> listar(

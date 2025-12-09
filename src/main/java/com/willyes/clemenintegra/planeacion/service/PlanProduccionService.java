@@ -14,6 +14,8 @@ public interface PlanProduccionService {
 
     PlanProduccionSemanal confirmar(Long id);
 
+    PlanProduccionSemanal cerrar(Long id);
+
     Optional<PlanProduccionSemanal> buscarPorId(Long id);
 
     Page<PlanProduccionSemanal> listar(LocalDate semanaInicio, LocalDate semanaFin, String estado, Pageable pageable);

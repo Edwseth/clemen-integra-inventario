@@ -44,6 +44,12 @@ public class MrpServiceImpl implements MrpService {
         if (plan == null) {
             throw new IllegalArgumentException("El plan semanal es obligatorio");
         }
+        if (plan.getEstado() == EstadoPlanProduccion.BORRADOR) {
+            throw new IllegalStateException("No se puede ejecutar MRP sobre un plan en BORRADOR; primero debe confirmarse");
+        }
+        if (plan.getEstado() == EstadoPlanProduccion.CERRADO) {
+            throw new IllegalStateException("No se puede ejecutar MRP sobre un plan CERRADO");
+        }
         if (plan.getEstado() != EstadoPlanProduccion.CONFIRMADO) {
             throw new IllegalStateException("El plan debe estar confirmado para ejecutar el MRP");
         }
