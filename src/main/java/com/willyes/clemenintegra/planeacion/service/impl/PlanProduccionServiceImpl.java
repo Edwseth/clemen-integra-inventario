@@ -85,6 +85,18 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
     }
 
     @Override
+    public PlanProduccionSemanal cerrar(Long id) {
+        PlanProduccionSemanal plan = planProduccionSemanalRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Plan semanal no encontrado"));
+        if (plan.getEstado() != EstadoPlanProduccion.CONFIRMADO) {
+            throw new IllegalStateException("Solo los planes en CONFIRMADO pueden cerrarse");
+        }
+        plan.setEstado(EstadoPlanProduccion.CERRADO);
+        // TODO: actualizar migración de base de datos si la columna estado usa un check/enum.
+        return planProduccionSemanalRepository.save(plan);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<PlanProduccionSemanal> buscarPorId(Long id) {
         return planProduccionSemanalRepository.findById(id);
