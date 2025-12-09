@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.planeacion.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.willyes.clemenintegra.inventario.dto.ProductoResumenDTO;
+import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -39,5 +41,7 @@ public class PlanProduccionSemanalDTO {
         private Integer prioridad;
         private String origenDemanda;
         private String observacion;
+        private ProductoResumenDTO producto;
+        private UnidadMedidaResponseDTO unidadMedida;
     }
 }
