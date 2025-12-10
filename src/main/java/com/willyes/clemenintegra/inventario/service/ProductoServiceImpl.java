@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.calidad.repository.PlantillaAnalisisMicrobiologicoRepository;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import io.jsonwebtoken.Claims;
@@ -52,6 +53,7 @@ public class ProductoServiceImpl implements ProductoService {
     private final ProductoMapper productoMapper;
     private final JwtTokenService jwtTokenService;
     private final StockQueryService stockQueryService;
+    private final PlantillaAnalisisMicrobiologicoRepository plantillaAnalisisMicrobiologicoRepository;
 
     private Long obtenerUsuarioIdDesdeToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -107,6 +109,14 @@ public class ProductoServiceImpl implements ProductoService {
 
     private BigDecimal normalizeToScale6(BigDecimal value) {
         return value != null ? value.setScale(6, RoundingMode.HALF_UP) : null;
+    }
+
+    private com.willyes.clemenintegra.calidad.model.PlantillaAnalisisMicrobiologico obtenerPlantillaMicro(Long plantillaId) {
+        if (plantillaId == null) {
+            return null;
+        }
+        return plantillaAnalisisMicrobiologicoRepository.findById(plantillaId)
+                .orElseThrow(() -> new IllegalArgumentException("Plantilla microbiológica no encontrada con ID: " + plantillaId));
     }
 
     private ProductoResumenDTO mapToResumenDto(Producto producto) {
@@ -257,6 +267,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .fechaCreacion(LocalDateTime.now())
                 .unidadMedida(unidad)
                 .categoriaProducto(categoria)
+                .plantillaAnalisisMicrobiologico(obtenerPlantillaMicro(dto.getPlantillaAnalisisMicroId()))
                 .creadoPor(usuario)
                 .build();
 
@@ -299,6 +310,7 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setUnidadMedida(unidad);
         producto.setCategoriaProducto(categoria);
         producto.setCreadoPor(usuario);
+        producto.setPlantillaAnalisisMicrobiologico(obtenerPlantillaMicro(dto.getPlantillaAnalisisMicroId()));
 
         producto.setRendimientoUnidad(resolverRendimientoUnidad(dto, categoria));
 
