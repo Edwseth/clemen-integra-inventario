@@ -20,6 +20,10 @@ public interface LoteProductoMapper {
     @Mapping(target = "nombreAlmacen", expression = "java(lote.getAlmacen()!=null ? lote.getAlmacen().getNombre() : null)")
     @Mapping(target = "ubicacionAlmacen", expression = "java(lote.getAlmacen()!=null ? lote.getAlmacen().getUbicacion() : null)")
     @Mapping(target = "nombreProducto", expression = "java(lote.getProducto()!=null ? lote.getProducto().getNombre() : null)")
+    @Mapping(target = "productoId", expression = "java(lote.getProducto()!=null && lote.getProducto().getId()!=null ? lote.getProducto().getId().longValue() : null)")
+    @Mapping(target = "tipoAnalisisCalidad", expression = "java(mapTipoAnalisisCalidadString(lote.getProducto()!=null ? lote.getProducto().getTipoAnalisisCalidad() : null))")
+    @Mapping(target = "plantillaMicroId", expression = "java(lote.getProducto()!=null && lote.getProducto().getPlantillaAnalisisMicrobiologico()!=null ? lote.getProducto().getPlantillaAnalisisMicrobiologico().getId() : null)")
+    @Mapping(target = "requiereAnalisisMicro", ignore = true)
     @Mapping(target = "nombreUsuarioLiberador", expression = "java(lote.getUsuarioLiberador()!=null ? lote.getUsuarioLiberador().getNombreCompleto() : null)")
     @Mapping(target = "evaluaciones", ignore = true)
     @Mapping(target = "lotePsOrigenId", expression = "java(lote.getLotePsOrigen()!=null ? lote.getLotePsOrigen().getId() : null)")
@@ -27,6 +31,10 @@ public interface LoteProductoMapper {
     LoteProductoResponseDTO toResponseDTO(LoteProducto lote);
 
     @Mapping(source = "producto.nombre", target = "nombreProducto")
+    @Mapping(target = "productoId", expression = "java(entity.getProducto()!=null && entity.getProducto().getId()!=null ? entity.getProducto().getId().longValue() : null)")
+    @Mapping(target = "tipoAnalisisCalidad", expression = "java(mapTipoAnalisisCalidadString(entity.getProducto()!=null ? entity.getProducto().getTipoAnalisisCalidad() : null))")
+    @Mapping(target = "plantillaMicroId", expression = "java(entity.getProducto()!=null && entity.getProducto().getPlantillaAnalisisMicrobiologico()!=null ? entity.getProducto().getPlantillaAnalisisMicrobiologico().getId() : null)")
+    @Mapping(target = "requiereAnalisisMicro", ignore = true)
     @Mapping(source = "almacen.nombre", target = "nombreAlmacen")
     @Mapping(source = "almacen.ubicacion", target = "ubicacionAlmacen")
     @Mapping(source = "usuarioLiberador.nombreCompleto", target = "nombreUsuarioLiberador")
@@ -34,6 +42,17 @@ public interface LoteProductoMapper {
     @Mapping(source = "lotePsOrigen.id", target = "lotePsOrigenId")
     @Mapping(source = "lotePsOrigen.codigoLote", target = "codigoLotePsOrigen")
     LoteProductoResponseDTO toDto(LoteProducto entity);
+
+    default String mapTipoAnalisisCalidadString(com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad valor) {
+        if (valor == null) {
+            return null;
+        }
+        return switch (valor) {
+            case FISICO -> "FISICO_QUIMICO";
+            case QUIMICO_MICROBIOLOGICO -> "MICROBIOLOGICO";
+            default -> valor.name();
+        };
+    }
 
 }
 

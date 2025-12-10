@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.PlantillaAnalisisMicroDTO;
 import com.willyes.clemenintegra.calidad.mapper.CondicionUsoMapper;
 import com.willyes.clemenintegra.calidad.model.CondicionUso;
 import com.willyes.clemenintegra.calidad.model.enums.*;
@@ -22,6 +23,7 @@ import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
+import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
 
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -78,6 +80,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final RetencionLoteService retencionLoteService;
     private final NoConformidadService noConformidadService;
     private final CondicionUsoService condicionUsoService;
+    private final PlantillaAnalisisMicroService plantillaAnalisisMicroService;
     private final CondicionUsoRepository condicionUsoRepository;
     private final CondicionUsoMapper mapper;
     private final BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
@@ -166,6 +169,13 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                     dto.setEvaluaciones(evaluaciones.stream()
                             .map(EvaluacionCalidad::getTipoEvaluacion)
                             .toList());
+                    PlantillaAnalisisMicroDTO plantillaDto = plantillaAnalisisMicroService.obtenerPorProducto(lote.getProducto().getId().longValue());
+                    if (plantillaDto != null) {
+                        dto.setRequiereAnalisisMicro(plantillaDto.isRequiereAnalisisMicro());
+                        if (plantillaDto.getId() != null) {
+                            dto.setPlantillaMicroId(plantillaDto.getId());
+                        }
+                    }
                     return dto;
                 })
                 .filter(java.util.Objects::nonNull)

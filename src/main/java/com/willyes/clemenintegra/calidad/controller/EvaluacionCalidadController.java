@@ -3,12 +3,14 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.PlantillaAnalisisMicroDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.service.AnalisisMicroPdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.calidad.service.ResultadoAnalisisMicroService;
+import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -41,6 +43,7 @@ public class EvaluacionCalidadController {
     private final EvaluacionCalidadService service;
     private final ResultadoAnalisisMicroService resultadoAnalisisMicroService;
     private final AnalisisMicroPdfService analisisMicroPdfService;
+    private final PlantillaAnalisisMicroService plantillaAnalisisMicroService;
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping("/consolidadas")
@@ -125,6 +128,19 @@ public class EvaluacionCalidadController {
             @PathVariable Long evaluacionId,
             @RequestBody java.util.List<ResultadoAnalisisMicroRequestDTO> resultados) {
         return ResponseEntity.ok(resultadoAnalisisMicroService.guardarResultados(evaluacionId, resultados));
+    }
+
+    /**
+     * Fuente de verdad para frontend: solo si {@code requiereAnalisisMicro} es true y existe plantilla
+     * se debe renderizar la tabla de parámetros microbiológicos.
+     */
+    @GetMapping("/plantillas/micro/producto/{productoId}")
+    public ResponseEntity<PlantillaAnalisisMicroDTO> obtenerPlantillaMicro(@PathVariable Long productoId) {
+        PlantillaAnalisisMicroDTO dto = plantillaAnalisisMicroService.obtenerPorProducto(productoId);
+        if (dto == null || !dto.isRequiereAnalisisMicro()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping(path = "/{evaluacionId}/resultados-micro")

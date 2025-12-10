@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
 
@@ -17,20 +18,23 @@ public class PlantillaAnalisisMicroServiceImpl implements PlantillaAnalisisMicro
 
     private final ProductoRepository productoRepository;
 
+    /**
+     * El backend decide si corresponde mostrar la tabla microbiológica y entrega los parámetros
+     * únicamente cuando se cumplen las condiciones de negocio.
+     */
+    @Transactional(readOnly = true)
     @Override
     public PlantillaAnalisisMicroDTO obtenerPorProducto(Long productoId) {
         Producto producto = productoRepository.findById(productoId)
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado con ID: " + productoId));
 
-        if (producto.getTipoAnalisisCalidad() == null ||
-                (producto.getTipoAnalisisCalidad() != TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO
-                        && producto.getTipoAnalisisCalidad() != TipoAnalisisCalidad.AMBOS)) {
-            return null;
-        }
-
         PlantillaAnalisisMicrobiologico plantilla = producto.getPlantillaAnalisisMicrobiologico();
-        if (plantilla == null) {
-            return null;
+        boolean requiereAnalisisMicro = requiereAnalisisMicro(producto, plantilla);
+
+        if (!requiereAnalisisMicro) {
+            return PlantillaAnalisisMicroDTO.builder()
+                    .requiereAnalisisMicro(false)
+                    .build();
         }
 
         return PlantillaAnalisisMicroDTO.builder()
@@ -38,6 +42,7 @@ public class PlantillaAnalisisMicroServiceImpl implements PlantillaAnalisisMicro
                 .nombre(plantilla.getNombre())
                 .descripcion(plantilla.getDescripcion())
                 .activo(plantilla.isActivo())
+                .requiereAnalisisMicro(true)
                 .parametros(plantilla.getParametros().stream()
                         .map(p -> ParametroAnalisisMicroDTO.builder()
                                 .id(p.getId())
@@ -49,6 +54,16 @@ public class PlantillaAnalisisMicroServiceImpl implements PlantillaAnalisisMicro
                                 .build())
                         .toList())
                 .build();
+    }
+
+    boolean requiereAnalisisMicro(Producto producto, PlantillaAnalisisMicrobiologico plantilla) {
+        TipoAnalisisCalidad tipo = producto.getTipoAnalisisCalidad();
+        boolean tipoRequiereMicro = tipo == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO
+                || tipo == TipoAnalisisCalidad.AMBOS;
+        boolean plantillaValida = plantilla != null
+                && plantilla.getParametros() != null
+                && !plantilla.getParametros().isEmpty();
+        return tipoRequiereMicro && plantillaValida;
     }
 }
 

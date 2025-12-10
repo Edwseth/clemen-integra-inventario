@@ -22,6 +22,10 @@ public class LoteProductoResponseDTO {
     private Double temperaturaAlmacenamiento;
     private LocalDateTime fechaLiberacion;
     private String nombreProducto;
+    private Long productoId;
+    private String tipoAnalisisCalidad;
+    private Long plantillaMicroId;
+    private boolean requiereAnalisisMicro;
     private String nombreAlmacen;
     private String ubicacionAlmacen;
     private String nombreUsuarioLiberador;
