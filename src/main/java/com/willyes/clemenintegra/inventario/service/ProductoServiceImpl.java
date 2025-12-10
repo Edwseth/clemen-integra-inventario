@@ -140,8 +140,8 @@ public class ProductoServiceImpl implements ProductoService {
         }
         String normalizado = valor.trim().toUpperCase();
         return switch (normalizado) {
-            case "FISICO_QUIMICO" -> TipoAnalisisCalidad.AMBOS;
-            case "MICROBIOLOGICO" -> TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO;
+            case "FISICO", "FISICO_QUIMICO" -> TipoAnalisisCalidad.FISICO;
+            case "MICROBIOLOGICO", "QUIMICO_MICROBIOLOGICO" -> TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO;
             default -> TipoAnalisisCalidad.valueOf(normalizado);
         };
     }

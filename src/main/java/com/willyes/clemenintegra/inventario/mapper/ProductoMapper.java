@@ -30,7 +30,7 @@ public interface ProductoMapper {
     @Mapping(source = "codigoSku", target = "sku")
     @Mapping(target = "unidadMedida", source = "unidadMedida")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
-    @Mapping(target = "tipoAnalisisCalidad", expression = "java(producto.getTipoAnalisisCalidad() != null ? producto.getTipoAnalisisCalidad().name() : null)")
+    @Mapping(target = "tipoAnalisisCalidad", expression = "java(mapTipoAnalisisCalidadString(producto.getTipoAnalisisCalidad()))")
     @Mapping(target = "rendimiento", source = "rendimientoUnidad")
     @Mapping(target = "unidadMedidaId", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null)")
     @Mapping(target = "categoriaProductoId", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null)")
@@ -52,15 +52,22 @@ public interface ProductoMapper {
         }
         String normalizado = valor.trim().toUpperCase();
         return switch (normalizado) {
-            case "FISICO_QUIMICO" -> TipoAnalisisCalidad.AMBOS;
-            case "MICROBIOLOGICO" -> TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO;
+            case "FISICO", "FISICO_QUIMICO" -> TipoAnalisisCalidad.FISICO;
+            case "MICROBIOLOGICO", "QUIMICO_MICROBIOLOGICO" -> TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO;
             default -> TipoAnalisisCalidad.valueOf(normalizado);
         };
     }
 
     @Named("mapTipoAnalisisCalidadString")
     default String mapTipoAnalisisCalidadString(TipoAnalisisCalidad valor) {
-        return valor != null ? valor.name() : null;
+        if (valor == null) {
+            return null;
+        }
+        return switch (valor) {
+            case FISICO -> "FISICO_QUIMICO";
+            case QUIMICO_MICROBIOLOGICO -> "MICROBIOLOGICO";
+            default -> valor.name();
+        };
     }
 
     @AfterMapping
