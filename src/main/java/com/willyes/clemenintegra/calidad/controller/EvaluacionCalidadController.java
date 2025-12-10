@@ -3,8 +3,12 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroRequestDTO;
+import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.service.AnalisisMicroPdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
+import com.willyes.clemenintegra.calidad.service.ResultadoAnalisisMicroService;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -35,6 +39,8 @@ import java.time.LocalDate;
 public class EvaluacionCalidadController {
 
     private final EvaluacionCalidadService service;
+    private final ResultadoAnalisisMicroService resultadoAnalisisMicroService;
+    private final AnalisisMicroPdfService analisisMicroPdfService;
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping("/consolidadas")
@@ -111,6 +117,30 @@ public class EvaluacionCalidadController {
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @PostMapping(path = "/{evaluacionId}/resultados-micro")
+    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<java.util.List<ResultadoAnalisisMicroResponseDTO>> guardarResultadosMicro(
+            @PathVariable Long evaluacionId,
+            @RequestBody java.util.List<ResultadoAnalisisMicroRequestDTO> resultados) {
+        return ResponseEntity.ok(resultadoAnalisisMicroService.guardarResultados(evaluacionId, resultados));
+    }
+
+    @GetMapping(path = "/{evaluacionId}/resultados-micro")
+    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<java.util.List<ResultadoAnalisisMicroResponseDTO>> obtenerResultadosMicro(@PathVariable Long evaluacionId) {
+        return ResponseEntity.ok(resultadoAnalisisMicroService.obtenerPorEvaluacion(evaluacionId));
+    }
+
+    @GetMapping(path = "/{evaluacionId}/microbiologico/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<byte[]> descargarPdfMicro(@PathVariable Long evaluacionId) {
+        byte[] pdf = analisisMicroPdfService.generarPdf(evaluacionId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=analisis_micro_" + evaluacionId + ".pdf")
+                .body(pdf);
     }
 
 }

@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.model;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.shared.model.*;
+import com.willyes.clemenintegra.calidad.model.PlantillaAnalisisMicrobiologico;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -86,6 +87,11 @@ public class Producto {
     private CategoriaProducto categoriaProducto;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plantilla_micro_id",
+            foreignKey = @ForeignKey(name = "fk_productos_plantilla_micro"))
+    private PlantillaAnalisisMicrobiologico plantillaAnalisisMicrobiologico;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuarios_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_productos_usuarios1"))
     private Usuario creadoPor;
@@ -136,6 +142,8 @@ public class Producto {
     public void setUnidadMedida(UnidadMedida unidadMedida) {this.unidadMedida = unidadMedida;}
     public CategoriaProducto getCategoriaProducto() {return categoriaProducto;}
     public void setCategoriaProducto(CategoriaProducto categoriaProducto) {this.categoriaProducto = categoriaProducto;}
+    public PlantillaAnalisisMicrobiologico getPlantillaAnalisisMicrobiologico() {return plantillaAnalisisMicrobiologico;}
+    public void setPlantillaAnalisisMicrobiologico(PlantillaAnalisisMicrobiologico plantillaAnalisisMicrobiologico) {this.plantillaAnalisisMicrobiologico = plantillaAnalisisMicrobiologico;}
     public Usuario getCreadoPor() {return creadoPor;}
     public void setCreadoPor(Usuario creadoPor) {this.creadoPor = creadoPor;}
     public BigDecimal getRendimientoUnidad() {return rendimientoUnidad;}

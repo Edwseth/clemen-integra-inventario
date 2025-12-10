@@ -62,6 +62,8 @@ public class ProductoRequestDTO {
     @DecimalMin(value = "0.00", message = "Debe ser >= 0.00")
     private BigDecimal stockMaximoPlaneacion;
 
+    private Long plantillaAnalisisMicroId;
+
     public String getTipoAnalisisCalidad() {return tipoAnalisisCalidad;}
     public void setTipoAnalisisCalidad(String tipoAnalisisCalidad) {this.tipoAnalisisCalidad = tipoAnalisisCalidad;}
 }

@@ -32,6 +32,8 @@ public class ProductoResponseDTO {
     private BigDecimal rendimiento;
     private UnidadMedidaResponseDTO unidadMedida;
     private String categoria;
+    private Long plantillaAnalisisMicroId;
+    private String plantillaAnalisisMicroNombre;
     private LocalDateTime fechaCreacion;
     // PROD-DETAIL-IDS BEGIN
     private Long unidadMedidaId;
@@ -66,6 +68,10 @@ public class ProductoResponseDTO {
                         producto.getUnidadMedida().getSimbolo())
                 : null;
         this.categoria = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null;
+        this.plantillaAnalisisMicroId = producto.getPlantillaAnalisisMicrobiologico() != null
+                ? producto.getPlantillaAnalisisMicrobiologico().getId() : null;
+        this.plantillaAnalisisMicroNombre = producto.getPlantillaAnalisisMicrobiologico() != null
+                ? producto.getPlantillaAnalisisMicrobiologico().getNombre() : null;
         this.fechaCreacion = producto.getFechaCreacion();
         // PROD-DETAIL-IDS BEGIN
         this.unidadMedidaId = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null;
