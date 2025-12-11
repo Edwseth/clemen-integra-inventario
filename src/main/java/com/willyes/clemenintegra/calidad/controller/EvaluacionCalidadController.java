@@ -122,6 +122,15 @@ public class EvaluacionCalidadController {
         }
     }
 
+    /**
+     * Endpoint para registrar o actualizar resultados microbiológicos de una evaluación existente.
+     * <ul>
+     *     <li><b>Método:</b> POST</li>
+     *     <li><b>Ruta:</b> {@code /api/calidad/evaluaciones/{evaluacionId}/resultados-micro}</li>
+     *     <li><b>Body:</b> arreglo JSON con objetos {@link ResultadoAnalisisMicroRequestDTO} (parametroId, resultado, cumple,
+     *     observaciones).</li>
+     * </ul>
+     */
     @PostMapping(path = "/{evaluacionId}/resultados-micro")
     @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<java.util.List<ResultadoAnalisisMicroResponseDTO>> guardarResultadosMicro(
