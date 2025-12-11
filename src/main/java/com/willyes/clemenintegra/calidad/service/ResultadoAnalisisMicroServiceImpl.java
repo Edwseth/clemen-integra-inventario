@@ -52,6 +52,8 @@ public class ResultadoAnalisisMicroServiceImpl implements ResultadoAnalisisMicro
                 throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                         "El parámetro " + dto.getParametroId() + " no pertenece a la plantilla del producto.");
             }
+            // El resultado siempre queda vinculado a la evaluación recibida y al parámetro de la plantilla
+            // (FKs evaluacion_id y parametro_id en resultados_analisis_microbiologico).
             ResultadoAnalisisMicrobiologico entidad = indexExistentes.getOrDefault(dto.getParametroId(),
                     ResultadoAnalisisMicrobiologico.builder()
                             .evaluacion(evaluacion)
