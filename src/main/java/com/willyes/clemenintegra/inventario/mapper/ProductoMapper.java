@@ -36,6 +36,9 @@ public interface ProductoMapper {
     @Mapping(target = "categoriaProductoId", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null)")
     @Mapping(target = "plantillaAnalisisMicroId", expression = "java(producto.getPlantillaAnalisisMicrobiologico() != null ? producto.getPlantillaAnalisisMicrobiologico().getId() : null)")
     @Mapping(target = "plantillaAnalisisMicroNombre", expression = "java(producto.getPlantillaAnalisisMicrobiologico() != null ? producto.getPlantillaAnalisisMicrobiologico().getNombre() : null)")
+    @Mapping(target = "requiereAnalisisFisico", source = "requiereAnalisisFisico")
+    @Mapping(target = "requiereAnalisisQuimico", source = "requiereAnalisisQuimico")
+    @Mapping(target = "requiereAnalisisMicrobiologico", source = "requiereAnalisisMicrobiologico")
     ProductoResponseDTO toDto(Producto producto);
 
     UnidadMedidaResponseDTO toUnidadMedidaDto(UnidadMedida unidadMedida);

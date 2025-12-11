@@ -5,7 +5,6 @@ import com.willyes.clemenintegra.calidad.model.ParametroAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.PlantillaAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.enums.TipoResultadoAnalisis;
 import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,7 +32,7 @@ class PlantillaAnalisisMicroServiceImplTest {
         PlantillaAnalisisMicrobiologico plantilla = crearPlantilla();
         Producto producto = Producto.builder()
                 .id(1)
-                .tipoAnalisis(TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO)
+                .requiereAnalisisMicrobiologico(true)
                 .plantillaAnalisisMicrobiologico(plantilla)
                 .build();
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
@@ -49,7 +48,8 @@ class PlantillaAnalisisMicroServiceImplTest {
         PlantillaAnalisisMicrobiologico plantilla = crearPlantilla();
         Producto producto = Producto.builder()
                 .id(2)
-                .tipoAnalisis(TipoAnalisisCalidad.FISICO)
+                .requiereAnalisisFisico(true)
+                .requiereAnalisisMicrobiologico(false)
                 .plantillaAnalisisMicrobiologico(plantilla)
                 .build();
         when(productoRepository.findById(2L)).thenReturn(Optional.of(producto));
@@ -65,7 +65,8 @@ class PlantillaAnalisisMicroServiceImplTest {
         PlantillaAnalisisMicrobiologico plantilla = crearPlantilla();
         Producto producto = Producto.builder()
                 .id(3)
-                .tipoAnalisis(TipoAnalisisCalidad.AMBOS)
+                .requiereAnalisisQuimico(true)
+                .requiereAnalisisMicrobiologico(true)
                 .plantillaAnalisisMicrobiologico(plantilla)
                 .build();
         when(productoRepository.findById(3L)).thenReturn(Optional.of(producto));
@@ -80,7 +81,7 @@ class PlantillaAnalisisMicroServiceImplTest {
     void noDebeRequerirAnalisisCuandoNoHayPlantilla() {
         Producto producto = Producto.builder()
                 .id(4)
-                .tipoAnalisis(TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO)
+                .requiereAnalisisMicrobiologico(true)
                 .build();
         when(productoRepository.findById(4L)).thenReturn(Optional.of(producto));
 
@@ -98,7 +99,8 @@ class PlantillaAnalisisMicroServiceImplTest {
                 .build();
         Producto producto = Producto.builder()
                 .id(5)
-                .tipoAnalisis(TipoAnalisisCalidad.AMBOS)
+                .requiereAnalisisQuimico(true)
+                .requiereAnalisisMicrobiologico(true)
                 .plantillaAnalisisMicrobiologico(plantilla)
                 .build();
         when(productoRepository.findById(5L)).thenReturn(Optional.of(producto));

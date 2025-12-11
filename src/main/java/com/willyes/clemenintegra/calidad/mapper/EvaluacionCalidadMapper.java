@@ -15,6 +15,10 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
+
 @Component
 public class EvaluacionCalidadMapper {
 
@@ -104,38 +108,28 @@ public class EvaluacionCalidadMapper {
         boolean algunNoConforme = evals.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.NO_CONFORME);
 
         TipoAnalisisCalidad tipoAnalisis = lote.getProducto().getTipoAnalisisCalidad();
+        boolean requiereFisico = requiereFisico(lote.getProducto());
+        boolean requiereQuimico = requiereQuimico(lote.getProducto());
+        boolean requiereMicro = requiereMicro(lote.getProducto());
 
-        boolean completas;
-        if (tipoAnalisis == null) {
-            completas = false;
-        } else {
-            completas = switch (tipoAnalisis) {
-                case NINGUNO -> true;
-                case FISICO -> fisicoAnyOk;
-                case QUIMICO_MICROBIOLOGICO -> microAnyOk;
-                case AMBOS -> fisicoAnyOk && microAnyOk;
-            };
-        }
+        boolean completas = (requiereFisico ? fisicoAnyOk : true)
+                && ((requiereQuimico || requiereMicro) ? microAnyOk : true);
 
         String resultadoGlobal;
         if (tipoAnalisis == null) {
             resultadoGlobal = "DESCONOCIDO";
-        } else if (tipoAnalisis == TipoAnalisisCalidad.NINGUNO) {
+        } else if (tipoAnalisis == TipoAnalisisCalidad.NINGUNO && !requiereFisico && !requiereQuimico && !requiereMicro) {
             resultadoGlobal = "NO_REQUERIDO";
         } else if (algunNoConforme) {
             resultadoGlobal = ResultadoEvaluacion.NO_CONFORME.name();
-        } else if (switch (tipoAnalisis) {
-            case FISICO -> fisicoConforme;
-            case QUIMICO_MICROBIOLOGICO -> microConforme;
-            case AMBOS -> fisicoConforme && microConforme;
-            default -> false;
-        }) {
+        } else if ((!requiereFisico || fisicoConforme)
+                && (!(requiereQuimico || requiereMicro) || microConforme)) {
             resultadoGlobal = ResultadoEvaluacion.CONFORME.name();
         } else if (completas) {
             resultadoGlobal = ResultadoEvaluacion.CONDICIONADO.name();
         } else {
-            boolean avances = ((tipoAnalisis == TipoAnalisisCalidad.FISICO || tipoAnalisis == TipoAnalisisCalidad.AMBOS) && fisicoCargado)
-                    || ((tipoAnalisis == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || tipoAnalisis == TipoAnalisisCalidad.AMBOS) && microCargado);
+            boolean avances = (requiereFisico && fisicoCargado)
+                    || ((requiereQuimico || requiereMicro) && microCargado);
             resultadoGlobal = avances ? "EN_PROCESO" : "PENDIENTE";
         }
 
