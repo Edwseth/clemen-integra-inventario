@@ -100,15 +100,10 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         validarRolEvaluador(user, dto.getTipoEvaluacion());
 
-        if (archivos == null || archivos.isEmpty()) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "Debe adjuntar al menos un documento.");
-        }
-
         java.util.List<ArchivoEvaluacion> adjuntos = new java.util.ArrayList<>();
         java.util.List<ArchivoEvaluacionDTO> datosArchivos = dto.getArchivosAdjuntos();
 
-        for (int i = 0; i < archivos.size(); i++) {
+        for (int i = 0; archivos != null && i < archivos.size(); i++) {
             MultipartFile archivo = archivos.get(i);
             if (archivo == null || archivo.isEmpty()) continue;
             try {

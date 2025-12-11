@@ -64,6 +64,10 @@ public class ProductoRequestDTO {
 
     private Long plantillaAnalisisMicroId;
 
+    private Boolean requiereAnalisisFisico;
+    private Boolean requiereAnalisisQuimico;
+    private Boolean requiereAnalisisMicrobiologico;
+
     public String getTipoAnalisisCalidad() {return tipoAnalisisCalidad;}
     public void setTipoAnalisisCalidad(String tipoAnalisisCalidad) {this.tipoAnalisisCalidad = tipoAnalisisCalidad;}
 }

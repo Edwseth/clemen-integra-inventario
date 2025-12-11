@@ -35,6 +35,9 @@ public class ProductoResponseDTO {
     private Long plantillaAnalisisMicroId;
     private String plantillaAnalisisMicroNombre;
     private LocalDateTime fechaCreacion;
+    private Boolean requiereAnalisisFisico;
+    private Boolean requiereAnalisisQuimico;
+    private Boolean requiereAnalisisMicrobiologico;
     // PROD-DETAIL-IDS BEGIN
     private Long unidadMedidaId;
     private Long categoriaProductoId;
@@ -73,6 +76,9 @@ public class ProductoResponseDTO {
         this.plantillaAnalisisMicroNombre = producto.getPlantillaAnalisisMicrobiologico() != null
                 ? producto.getPlantillaAnalisisMicrobiologico().getNombre() : null;
         this.fechaCreacion = producto.getFechaCreacion();
+        this.requiereAnalisisFisico = producto.isRequiereAnalisisFisico();
+        this.requiereAnalisisQuimico = producto.isRequiereAnalisisQuimico();
+        this.requiereAnalisisMicrobiologico = producto.isRequiereAnalisisMicrobiologico();
         // PROD-DETAIL-IDS BEGIN
         this.unidadMedidaId = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null;
         this.categoriaProductoId = producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null;

@@ -4,8 +4,9 @@ import com.willyes.clemenintegra.calidad.dto.ParametroAnalisisMicroDTO;
 import com.willyes.clemenintegra.calidad.dto.PlantillaAnalisisMicroDTO;
 import com.willyes.clemenintegra.calidad.model.PlantillaAnalisisMicrobiologico;
 import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,13 +58,11 @@ public class PlantillaAnalisisMicroServiceImpl implements PlantillaAnalisisMicro
     }
 
     boolean requiereAnalisisMicro(Producto producto, PlantillaAnalisisMicrobiologico plantilla) {
-        TipoAnalisisCalidad tipo = producto.getTipoAnalisisCalidad();
-        boolean tipoRequiereMicro = tipo == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO
-                || tipo == TipoAnalisisCalidad.AMBOS;
+        boolean requiereMicro = requiereMicro(producto);
         boolean plantillaValida = plantilla != null
                 && plantilla.getParametros() != null
                 && !plantilla.getParametros().isEmpty();
-        return tipoRequiereMicro && plantillaValida;
+        return requiereMicro && plantillaValida;
     }
 }
 

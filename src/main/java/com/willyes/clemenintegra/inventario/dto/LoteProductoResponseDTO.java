@@ -26,6 +26,9 @@ public class LoteProductoResponseDTO {
     private String tipoAnalisisCalidad;
     private Long plantillaMicroId;
     private boolean requiereAnalisisMicro;
+    private boolean requiereAnalisisFisico;
+    private boolean requiereAnalisisQuimico;
+    private boolean requiereAnalisisMicrobiologico;
     private String nombreAlmacen;
     private String ubicacionAlmacen;
     private String nombreUsuarioLiberador;

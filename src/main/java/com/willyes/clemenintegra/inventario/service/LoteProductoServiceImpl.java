@@ -59,6 +59,10 @@ import static com.willyes.clemenintegra.inventario.service.spec.LoteProductoSpec
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
+
 @Service
 @RequiredArgsConstructor
 public class LoteProductoServiceImpl implements LoteProductoService {
@@ -105,7 +109,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
         LoteProducto lote = loteProductoMapper.toEntity(dto, producto, almacen, usuario);
-        if (producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO) {
+        boolean requiereAnalisis = requiereFisico(producto) || requiereQuimico(producto) || requiereMicro(producto);
+        if (!requiereAnalisis) {
             lote.setEstado(EstadoLote.DISPONIBLE);
         } else {
             lote.setEstado(EstadoLote.EN_CUARENTENA);
@@ -161,7 +166,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .map(lote -> {
                     List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId());
 
-                    if (tieneEvaluacionesRequeridas(lote.getProducto().getTipoAnalisis(), evaluaciones)) {
+                    if (tieneEvaluacionesRequeridas(lote.getProducto(), evaluaciones)) {
                         return null;
                     }
 
@@ -262,12 +267,9 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return loteProductoMapper.toResponseDTO(lote);
     }
 
-    private boolean tieneEvaluacionesRequeridas(TipoAnalisisCalidad requerido, List<EvaluacionCalidad> evaluaciones) {
-        if (requerido == null) {
+    private boolean tieneEvaluacionesRequeridas(Producto producto, List<EvaluacionCalidad> evaluaciones) {
+        if (producto == null) {
             return false;
-        }
-        if (requerido == TipoAnalisisCalidad.NINGUNO) {
-            return true;
         }
         List<EvaluacionCalidad> seguras = evaluaciones == null ? List.of() : evaluaciones;
 
@@ -281,12 +283,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                         (e.getResultado() == ResultadoEvaluacion.CONFORME
                                 || e.getResultado() == ResultadoEvaluacion.CONDICIONADO));
 
-        return switch (requerido) {
-            case FISICO -> fisicoOk;
-            case QUIMICO_MICROBIOLOGICO -> microOk;
-            case AMBOS -> fisicoOk && microOk;
-            default -> false;
-        };
+        boolean requiereFisico = requiereFisico(producto);
+        boolean requiereMicro = requiereMicro(producto) || requiereQuimico(producto);
+
+        return (!requiereFisico || fisicoOk) && (!requiereMicro || microOk);
     }
 
     @Override
@@ -599,12 +599,14 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(loteId);
 
-        TipoAnalisisCalidad tipo = producto.getTipoAnalisisCalidad();
+        boolean requiereFisico = requiereFisico(producto);
+        boolean requiereQuimico = requiereQuimico(producto);
+        boolean requiereMicro = requiereMicro(producto);
 
-        if (tipo == TipoAnalisisCalidad.FISICO || tipo == TipoAnalisisCalidad.AMBOS) {
+        if (requiereFisico) {
             validarEvaluacion(evaluaciones, TipoEvaluacion.FISICO);
         }
-        if (tipo == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || tipo == TipoAnalisisCalidad.AMBOS) {
+        if (requiereQuimico || requiereMicro) {
             validarEvaluacion(evaluaciones, TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
         }
 
@@ -713,6 +715,14 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         if (!existeOk) {
             throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
                     "Se requiere evaluación CONFORME o CONDICIONADO para liberar el lote.",
+                    Map.of("tipoEvaluacion", tipo.name()));
+        }
+
+        boolean conSoportes = filtradas.stream()
+                .anyMatch(e -> e.getArchivosAdjuntos() != null && !e.getArchivosAdjuntos().isEmpty());
+        if (!conSoportes) {
+            throw new CustomBusinessException(ApiErrorCode.EVALUACIONES_FALTANTES,
+                    "Debe adjuntar al menos un soporte antes de liberar el lote.",
                     Map.of("tipoEvaluacion", tipo.name()));
         }
     }

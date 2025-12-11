@@ -76,6 +76,16 @@ public class Producto {
     )
     private TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.NINGUNO;
 
+    // Nuevas banderas por disciplina. Usar estas propiedades para reglas de negocio de calidad.
+    @Column(name = "requiere_analisis_fisico", nullable = false)
+    private boolean requiereAnalisisFisico;
+
+    @Column(name = "requiere_analisis_quimico", nullable = false)
+    private boolean requiereAnalisisQuimico;
+
+    @Column(name = "requiere_analisis_microbiologico", nullable = false)
+    private boolean requiereAnalisisMicrobiologico;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unidades_medida_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_productos_unidades_medida"))
@@ -159,6 +169,13 @@ public class Producto {
     public void setStockSeguridad(BigDecimal stockSeguridad) {this.stockSeguridad = stockSeguridad;}
     public BigDecimal getStockMaximoPlaneacion() {return stockMaximoPlaneacion;}
     public void setStockMaximoPlaneacion(BigDecimal stockMaximoPlaneacion) {this.stockMaximoPlaneacion = stockMaximoPlaneacion;}
+
+    public boolean isRequiereAnalisisFisico() {return requiereAnalisisFisico;}
+    public void setRequiereAnalisisFisico(boolean requiereAnalisisFisico) {this.requiereAnalisisFisico = requiereAnalisisFisico;}
+    public boolean isRequiereAnalisisQuimico() {return requiereAnalisisQuimico;}
+    public void setRequiereAnalisisQuimico(boolean requiereAnalisisQuimico) {this.requiereAnalisisQuimico = requiereAnalisisQuimico;}
+    public boolean isRequiereAnalisisMicrobiologico() {return requiereAnalisisMicrobiologico;}
+    public void setRequiereAnalisisMicrobiologico(boolean requiereAnalisisMicrobiologico) {this.requiereAnalisisMicrobiologico = requiereAnalisisMicrobiologico;}
 
 }
 
