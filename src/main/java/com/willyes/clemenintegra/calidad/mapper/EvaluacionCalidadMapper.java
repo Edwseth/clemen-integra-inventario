@@ -27,6 +27,7 @@ import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.re
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.calcularEstadoEvaluacion;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.validarDisciplinasCompletas;
+import static com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO;
 
 @Component
 public class EvaluacionCalidadMapper {
@@ -136,8 +137,7 @@ public class EvaluacionCalidadMapper {
         boolean tieneAdjuntosFisico = fisicos.stream()
                 .anyMatch(e -> e.getArchivosAdjuntos() != null && !e.getArchivosAdjuntos().isEmpty());
         boolean tieneAdjuntosQuimicoMicro = evaluacionQuimicoMicro
-                .map(EvaluacionCalidad::getArchivosAdjuntos)
-                .map(lista -> lista != null && !lista.isEmpty())
+                .map(this::tienePdfMicro)
                 .orElse(false);
 
         boolean algunNoConforme = evals.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.NO_CONFORME);
@@ -283,5 +283,11 @@ public class EvaluacionCalidadMapper {
                                 .nombreVisible(a.getNombreVisible())
                                 .build())
                         .toList();
+    }
+
+    private boolean tienePdfMicro(EvaluacionCalidad evaluacionCalidad) {
+        return evaluacionCalidad.getArchivosAdjuntos() != null
+                && evaluacionCalidad.getArchivosAdjuntos().stream()
+                .anyMatch(a -> NOMBRE_VISIBLE_MICRO.equalsIgnoreCase(a.getNombreVisible()));
     }
 }

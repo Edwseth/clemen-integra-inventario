@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO;
-import com.willyes.clemenintegra.calidad.service.AnalisisMicroPdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.calidad.service.ResultadoAnalisisMicroService;
 import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
@@ -20,7 +19,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,8 +38,6 @@ class EvaluacionCalidadControllerTest {
     private EvaluacionCalidadService evaluacionCalidadService;
     @MockBean
     private ResultadoAnalisisMicroService resultadoAnalisisMicroService;
-    @MockBean
-    private AnalisisMicroPdfService analisisMicroPdfService;
     @MockBean
     private PlantillaAnalisisMicroService plantillaAnalisisMicroService;
     @MockBean
@@ -75,5 +74,29 @@ class EvaluacionCalidadControllerTest {
 
         mockMvc.perform(get("/api/calidad/evaluaciones/999/detalle"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void descargaPdfMicroExistente() throws Exception {
+        when(resultadoAnalisisMicroService.obtenerPdfMicro(5L)).thenReturn("pdf".getBytes());
+
+        mockMvc.perform(get("/api/calidad/evaluaciones/5/microbiologico/pdf")
+                        .accept(MediaType.APPLICATION_PDF))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isNotEmpty());
+
+        verify(resultadoAnalisisMicroService).obtenerPdfMicro(5L);
+    }
+
+    @Test
+    void generaPdfMicroCuandoNoExisteAdjunto() throws Exception {
+        when(resultadoAnalisisMicroService.obtenerPdfMicro(7L)).thenReturn("nuevo".getBytes());
+
+        mockMvc.perform(get("/api/calidad/evaluaciones/7/micro-pdf")
+                        .accept(MediaType.APPLICATION_PDF))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEqualTo("nuevo".getBytes()));
+
+        verify(resultadoAnalisisMicroService).obtenerPdfMicro(7L);
     }
 }

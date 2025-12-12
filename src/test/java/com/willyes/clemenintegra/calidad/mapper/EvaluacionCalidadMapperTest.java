@@ -90,10 +90,15 @@ class EvaluacionCalidadMapperTest {
                 .resultado(ResultadoEvaluacion.CONFORME)
                 .usuarioEvaluador(usuario)
                 .fechaEvaluacion(LocalDateTime.now())
-                .archivosAdjuntos(List.of(ArchivoEvaluacion.builder()
-                        .nombreArchivo("quim.pdf")
-                        .nombreVisible("Químico")
-                        .build()))
+                .archivosAdjuntos(List.of(
+                        ArchivoEvaluacion.builder()
+                                .nombreArchivo("quim.pdf")
+                                .nombreVisible("Químico")
+                                .build(),
+                        ArchivoEvaluacion.builder()
+                                .nombreArchivo("micro.pdf")
+                                .nombreVisible("Microbiológico")
+                                .build()))
                 .build();
 
         var dto = mapper.toConsolidadoDTO(lote, List.of(evalQuimicoMicro), java.util.Set.of(30L));
@@ -101,7 +106,43 @@ class EvaluacionCalidadMapperTest {
         assertThat(dto.getEvaluacionQuimicoMicroId()).isEqualTo(30L);
         assertThat(dto.isEvaluacionesRequeridasCompletas()).isTrue();
         assertThat(dto.getAdjuntosQuimicoMicro()).extracting(ArchivoEvaluacionDTO::getNombreVisible)
-                .containsExactly("Químico");
+                .containsExactly("Químico", "Microbiológico");
         assertThat(dto.isTieneResultadosMicro()).isTrue();
+        assertThat(dto.isTieneAdjuntosQuimicoMicro()).isTrue();
+    }
+
+    @Test
+    void consolidaResultadosMicroSinPdfMicro() {
+        Producto producto = new Producto();
+        producto.setNombre("Producto C");
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(25L);
+        lote.setCodigoLote("L003");
+        lote.setProducto(producto);
+        lote.setEstado(com.willyes.clemenintegra.inventario.model.enums.EstadoLote.EN_CUARENTENA);
+
+        var usuario = new com.willyes.clemenintegra.shared.model.Usuario();
+        usuario.setNombreCompleto("Micro");
+
+        EvaluacionCalidad evalQuimicoMicro = EvaluacionCalidad.builder()
+                .id(31L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .usuarioEvaluador(usuario)
+                .fechaEvaluacion(LocalDateTime.now())
+                .archivosAdjuntos(List.of(ArchivoEvaluacion.builder()
+                        .nombreArchivo("quim.pdf")
+                        .nombreVisible("Químico")
+                        .build()))
+                .build();
+
+        var dto = mapper.toConsolidadoDTO(lote, List.of(evalQuimicoMicro), java.util.Set.of(31L));
+
+        assertThat(dto.isTieneResultadosMicro()).isTrue();
+        assertThat(dto.isTieneAdjuntosQuimicoMicro()).isFalse();
     }
 }

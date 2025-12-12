@@ -9,5 +9,7 @@ public interface ResultadoAnalisisMicroService {
     List<ResultadoAnalisisMicroResponseDTO> guardarResultados(Long evaluacionId, List<ResultadoAnalisisMicroRequestDTO> payload);
 
     List<ResultadoAnalisisMicroResponseDTO> obtenerPorEvaluacion(Long evaluacionId);
+
+    byte[] obtenerPdfMicro(Long evaluacionId);
 }
 
