@@ -10,6 +10,7 @@ import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroDetalleDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.calcularEstadoEvaluacion;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.validarDisciplinasCompletas;
 
 @Component
@@ -156,6 +158,15 @@ public class EvaluacionCalidadMapper {
                 && (!requiereQuimicoOMicro || microAnyOk)
                 && (!requiereMicro || tieneResultadosMicro);
 
+        boolean microEvaluacionCompleta = microCargado && (!requiereMicro || tieneResultadosMicro);
+        EstadoEvaluacionCalidad estadoEvaluacion = calcularEstadoEvaluacion(
+                requiereFisico,
+                fisicoCargado,
+                requiereQuimico,
+                microCargado,
+                requiereMicro,
+                microEvaluacionCompleta);
+
         String resultadoGlobal;
         if (tipoAnalisis == null) {
             resultadoGlobal = "DESCONOCIDO";
@@ -196,6 +207,7 @@ public class EvaluacionCalidadMapper {
                 .tieneAdjuntosQuimicoMicro(tieneAdjuntosQuimicoMicro)
                 .evaluacionQuimicoMicroId(evaluacionQuimicoMicro.map(EvaluacionCalidad::getId).orElse(null))
                 .evaluacionFisicaId(evaluacionFisica.map(EvaluacionCalidad::getId).orElse(null))
+                .estadoEvaluacion(estadoEvaluacion)
                 .adjuntosQuimicoMicro(evaluacionQuimicoMicro
                         .map(this::mapearArchivos)
                         .orElse(java.util.List.of()))

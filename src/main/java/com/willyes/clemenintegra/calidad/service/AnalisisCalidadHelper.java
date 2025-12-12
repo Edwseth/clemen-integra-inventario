@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import java.util.Optional;
 
@@ -60,6 +61,36 @@ public final class AnalisisCalidadHelper {
                 .faltaEvaluacionQuimica(requiereQuimico && !tieneEvaluacionQuimica)
                 .faltanResultadosMicro(requiereMicro && (!tieneEvaluacionQuimica || !tieneResultadosMicro))
                 .build();
+    }
+
+    /**
+     * Determina el estado consolidado de las evaluaciones de calidad de un lote.
+     * Reglas:
+     * - Si ninguna disciplina es requerida -> NO_REQUIERE
+     * - Si todas las disciplinas requeridas tienen evaluación registrada -> EVALUADO
+     * - En cualquier otro caso -> PENDIENTE
+     */
+    public static EstadoEvaluacionCalidad calcularEstadoEvaluacion(
+            boolean requiereFisico,
+            boolean fisicoTieneEvaluacion,
+            boolean requiereQuimico,
+            boolean quimicoTieneEvaluacion,
+            boolean requiereMicro,
+            boolean microTieneEvaluacion
+    ) {
+        if (!requiereFisico && !requiereQuimico && !requiereMicro) {
+            return EstadoEvaluacionCalidad.NO_REQUIERE;
+        }
+
+        boolean fisicoListo = !requiereFisico || fisicoTieneEvaluacion;
+        boolean quimicoListo = !requiereQuimico || quimicoTieneEvaluacion;
+        boolean microListo = !requiereMicro || microTieneEvaluacion;
+
+        if (fisicoListo && quimicoListo && microListo) {
+            return EstadoEvaluacionCalidad.EVALUADO;
+        }
+
+        return EstadoEvaluacionCalidad.PENDIENTE;
     }
 
     @lombok.Builder
