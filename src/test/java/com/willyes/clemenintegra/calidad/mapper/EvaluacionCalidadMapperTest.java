@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.calidad.mapper;
 
+import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroDetalleDTO;
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
@@ -64,5 +65,43 @@ class EvaluacionCalidadMapperTest {
         assertThat(dto.isTieneResultadosMicro()).isTrue();
         assertThat(dto.getResultadosMicro()).hasSize(1);
         assertThat(dto.getArchivosAdjuntos()).hasSize(1);
+    }
+
+    @Test
+    void consolidaEvaluacionesQMConIdsYAdjuntos() {
+        Producto producto = new Producto();
+        producto.setNombre("Producto B");
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(20L);
+        lote.setCodigoLote("L002");
+        lote.setProducto(producto);
+        lote.setEstado(com.willyes.clemenintegra.inventario.model.enums.EstadoLote.EN_CUARENTENA);
+
+        var usuario = new com.willyes.clemenintegra.shared.model.Usuario();
+        usuario.setNombreCompleto("Micro");
+
+        EvaluacionCalidad evalQuimicoMicro = EvaluacionCalidad.builder()
+                .id(30L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .usuarioEvaluador(usuario)
+                .fechaEvaluacion(LocalDateTime.now())
+                .archivosAdjuntos(List.of(ArchivoEvaluacion.builder()
+                        .nombreArchivo("quim.pdf")
+                        .nombreVisible("Químico")
+                        .build()))
+                .build();
+
+        var dto = mapper.toConsolidadoDTO(lote, List.of(evalQuimicoMicro), java.util.Set.of(30L));
+
+        assertThat(dto.getEvaluacionQuimicoMicroId()).isEqualTo(30L);
+        assertThat(dto.isEvaluacionesRequeridasCompletas()).isTrue();
+        assertThat(dto.getAdjuntosQuimicoMicro()).extracting(ArchivoEvaluacionDTO::getNombreVisible)
+                .containsExactly("Químico");
+        assertThat(dto.isTieneResultadosMicro()).isTrue();
     }
 }

@@ -18,10 +18,13 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.Optional;
 
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.validarDisciplinasCompletas;
 
 @Component
 public class EvaluacionCalidadMapper {
@@ -96,28 +99,44 @@ public class EvaluacionCalidadMapper {
         java.util.List<EvaluacionCalidad> fisicos = agrupado.getOrDefault(TipoEvaluacion.FISICO, java.util.List.of());
         java.util.List<EvaluacionCalidad> micros = agrupado.getOrDefault(TipoEvaluacion.QUIMICO_MICROBIOLOGICO, java.util.List.of());
 
-        boolean fisicoCargado = !fisicos.isEmpty();
-        boolean microCargado = !micros.isEmpty();
+        Optional<EvaluacionCalidad> evaluacionFisica = fisicos.stream()
+                .max(Comparator.comparing(EvaluacionCalidad::getFechaEvaluacion, Comparator.nullsLast(LocalDateTime::compareTo)));
+        Optional<EvaluacionCalidad> evaluacionQuimicoMicro = micros.stream()
+                .max(Comparator.comparing(EvaluacionCalidad::getFechaEvaluacion, Comparator.nullsLast(LocalDateTime::compareTo)));
 
-        boolean fisicoConforme = fisicos.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.CONFORME);
-        boolean microConforme = micros.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.CONFORME);
+        boolean fisicoCargado = evaluacionFisica.isPresent();
+        boolean microCargado = evaluacionQuimicoMicro.isPresent();
 
-        boolean fisicoAnyOk = fisicos.stream().anyMatch(e ->
-                e.getResultado() == ResultadoEvaluacion.CONFORME ||
-                        e.getResultado() == ResultadoEvaluacion.CONDICIONADO);
+        boolean fisicoConforme = evaluacionFisica
+                .map(EvaluacionCalidad::getResultado)
+                .map(r -> r == ResultadoEvaluacion.CONFORME)
+                .orElse(false);
+        boolean microConforme = evaluacionQuimicoMicro
+                .map(EvaluacionCalidad::getResultado)
+                .map(r -> r == ResultadoEvaluacion.CONFORME)
+                .orElse(false);
 
-        boolean microAnyOk = micros.stream().anyMatch(e ->
-                e.getResultado() == ResultadoEvaluacion.CONFORME ||
-                        e.getResultado() == ResultadoEvaluacion.CONDICIONADO);
+        boolean fisicoAnyOk = evaluacionFisica
+                .map(EvaluacionCalidad::getResultado)
+                .map(r -> r == ResultadoEvaluacion.CONFORME || r == ResultadoEvaluacion.CONDICIONADO)
+                .orElse(false);
 
-        boolean tieneResultadosMicro = micros.stream()
+        boolean microAnyOk = evaluacionQuimicoMicro
+                .map(EvaluacionCalidad::getResultado)
+                .map(r -> r == ResultadoEvaluacion.CONFORME || r == ResultadoEvaluacion.CONDICIONADO)
+                .orElse(false);
+
+        boolean tieneResultadosMicro = evaluacionQuimicoMicro
                 .map(EvaluacionCalidad::getId)
-                .anyMatch(id -> evaluacionesConResultadosMicro != null && evaluacionesConResultadosMicro.contains(id));
+                .map(id -> evaluacionesConResultadosMicro != null && evaluacionesConResultadosMicro.contains(id))
+                .orElse(false);
 
         boolean tieneAdjuntosFisico = fisicos.stream()
                 .anyMatch(e -> e.getArchivosAdjuntos() != null && !e.getArchivosAdjuntos().isEmpty());
-        boolean tieneAdjuntosQuimicoMicro = micros.stream()
-                .anyMatch(e -> e.getArchivosAdjuntos() != null && !e.getArchivosAdjuntos().isEmpty());
+        boolean tieneAdjuntosQuimicoMicro = evaluacionQuimicoMicro
+                .map(EvaluacionCalidad::getArchivosAdjuntos)
+                .map(lista -> lista != null && !lista.isEmpty())
+                .orElse(false);
 
         boolean algunNoConforme = evals.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.NO_CONFORME);
 
@@ -128,9 +147,10 @@ public class EvaluacionCalidadMapper {
 
         boolean requiereQuimicoOMicro = requiereQuimico || requiereMicro;
 
-        boolean disciplinasCompletas = (!requiereFisico || fisicoCargado)
-                && (!requiereQuimicoOMicro || microCargado)
-                && (!requiereMicro || tieneResultadosMicro);
+        var validacion = validarDisciplinasCompletas(lote, evals,
+                id -> evaluacionesConResultadosMicro != null && evaluacionesConResultadosMicro.contains(id));
+
+        boolean disciplinasCompletas = validacion.esValido();
 
         boolean evaluacionesCompletas = (!requiereFisico || fisicoAnyOk)
                 && (!requiereQuimicoOMicro || microAnyOk)
@@ -174,6 +194,11 @@ public class EvaluacionCalidadMapper {
                 .tieneResultadosMicro(tieneResultadosMicro)
                 .tieneAdjuntosFisico(tieneAdjuntosFisico)
                 .tieneAdjuntosQuimicoMicro(tieneAdjuntosQuimicoMicro)
+                .evaluacionQuimicoMicroId(evaluacionQuimicoMicro.map(EvaluacionCalidad::getId).orElse(null))
+                .evaluacionFisicaId(evaluacionFisica.map(EvaluacionCalidad::getId).orElse(null))
+                .adjuntosQuimicoMicro(evaluacionQuimicoMicro
+                        .map(this::mapearArchivos)
+                        .orElse(java.util.List.of()))
                 .evaluaciones(evals.stream()
                         .map(this::toSimpleDTO)
                         .toList())

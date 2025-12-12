@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.ParametroAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.PlantillaAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
@@ -14,6 +15,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 @Service
@@ -22,6 +26,7 @@ public class ResultadoAnalisisMicroServiceImpl implements ResultadoAnalisisMicro
 
     private final EvaluacionCalidadRepository evaluacionRepository;
     private final ResultadoAnalisisMicrobiologicoRepository resultadoRepository;
+    private final AnalisisMicroPdfService analisisMicroPdfService;
 
     @Override
     @Transactional
@@ -38,12 +43,18 @@ public class ResultadoAnalisisMicroServiceImpl implements ResultadoAnalisisMicro
                     "El producto asociado no tiene una plantilla microbiológica configurada.");
         }
 
+        if (evaluacion.getTipoEvaluacion() != TipoEvaluacion.QUIMICO_MICROBIOLOGICO) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Solo se pueden registrar resultados microbiológicos sobre evaluaciones QM.");
+        }
+
         Map<Long, ParametroAnalisisMicrobiologico> parametrosValidos = plantilla.getParametros().stream()
                 .collect(java.util.stream.Collectors.toMap(ParametroAnalisisMicrobiologico::getId, p -> p));
 
         List<ResultadoAnalisisMicrobiologico> existentes = resultadoRepository.findByEvaluacionId(evaluacionId);
-        Map<Long, ResultadoAnalisisMicrobiologico> indexExistentes = new HashMap<>();
-        existentes.forEach(r -> indexExistentes.put(r.getParametro().getId(), r));
+        if (!existentes.isEmpty()) {
+            resultadoRepository.deleteAll(existentes);
+        }
 
         List<ResultadoAnalisisMicrobiologico> aGuardar = new ArrayList<>();
         for (ResultadoAnalisisMicroRequestDTO dto : payload) {
@@ -52,13 +63,10 @@ public class ResultadoAnalisisMicroServiceImpl implements ResultadoAnalisisMicro
                 throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                         "El parámetro " + dto.getParametroId() + " no pertenece a la plantilla del producto.");
             }
-            // El resultado siempre queda vinculado a la evaluación recibida y al parámetro de la plantilla
-            // (FKs evaluacion_id y parametro_id en resultados_analisis_microbiologico).
-            ResultadoAnalisisMicrobiologico entidad = indexExistentes.getOrDefault(dto.getParametroId(),
-                    ResultadoAnalisisMicrobiologico.builder()
-                            .evaluacion(evaluacion)
-                            .parametro(parametro)
-                            .build());
+            ResultadoAnalisisMicrobiologico entidad = ResultadoAnalisisMicrobiologico.builder()
+                    .evaluacion(evaluacion)
+                    .parametro(parametro)
+                    .build();
             entidad.setResultado(dto.getResultado());
             entidad.setCumple(dto.getCumple());
             entidad.setObservaciones(dto.getObservaciones());
@@ -66,6 +74,7 @@ public class ResultadoAnalisisMicroServiceImpl implements ResultadoAnalisisMicro
         }
 
         List<ResultadoAnalisisMicrobiologico> guardados = resultadoRepository.saveAll(aGuardar);
+        registrarPdfMicrobiologico(evaluacion);
         return mapear(guardados);
     }
 
@@ -91,6 +100,33 @@ public class ResultadoAnalisisMicroServiceImpl implements ResultadoAnalisisMicro
                         .build())
                 .sorted(Comparator.comparing(ResultadoAnalisisMicroResponseDTO::getOrden, Comparator.nullsLast(Integer::compareTo)))
                 .toList();
+    }
+
+    private void registrarPdfMicrobiologico(EvaluacionCalidad evaluacion) {
+        byte[] pdf = analisisMicroPdfService.generarPdf(evaluacion.getId());
+        String nombreArchivo = System.currentTimeMillis() + "_MICRO_" + evaluacion.getId() + ".pdf";
+
+        try {
+            Path uploadRoot = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones");
+            Files.createDirectories(uploadRoot);
+            Files.write(uploadRoot.resolve(nombreArchivo), pdf);
+        } catch (Exception e) {
+            throw new IllegalStateException("No se pudo almacenar el PDF microbiológico", e);
+        }
+
+        java.util.List<com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion> adjuntos = evaluacion.getArchivosAdjuntos();
+        if (adjuntos == null) {
+            adjuntos = new ArrayList<>();
+        } else {
+            adjuntos = new ArrayList<>(adjuntos);
+        }
+        adjuntos.removeIf(a -> "Microbiológico".equalsIgnoreCase(a.getNombreVisible()));
+        adjuntos.add(com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion.builder()
+                .nombreArchivo(nombreArchivo)
+                .nombreVisible("Microbiológico")
+                .build());
+        evaluacion.setArchivosAdjuntos(adjuntos);
+        evaluacionRepository.save(evaluacion);
     }
 }
 

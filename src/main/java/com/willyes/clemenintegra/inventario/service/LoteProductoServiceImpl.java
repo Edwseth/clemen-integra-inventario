@@ -275,21 +275,13 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             return false;
         }
         List<EvaluacionCalidad> seguras = evaluaciones == null ? List.of() : evaluaciones;
+        LoteProducto loteTemporal = new LoteProducto();
+        loteTemporal.setProducto(producto);
 
-        boolean fisicoOk = seguras.stream().anyMatch(e ->
-                e.getTipoEvaluacion() == TipoEvaluacion.FISICO &&
-                        (e.getResultado() == ResultadoEvaluacion.CONFORME
-                                || e.getResultado() == ResultadoEvaluacion.CONDICIONADO));
+        var validacion = validarDisciplinasCompletas(loteTemporal, seguras,
+                resultadoAnalisisMicrobiologicoRepository::existsByEvaluacionId);
 
-        boolean microOk = seguras.stream().anyMatch(e ->
-                e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO &&
-                        (e.getResultado() == ResultadoEvaluacion.CONFORME
-                                || e.getResultado() == ResultadoEvaluacion.CONDICIONADO));
-
-        boolean requiereFisico = requiereFisico(producto);
-        boolean requiereMicro = requiereMicro(producto) || requiereQuimico(producto);
-
-        return (!requiereFisico || fisicoOk) && (!requiereMicro || microOk);
+        return validacion.esValido();
     }
 
     @Override

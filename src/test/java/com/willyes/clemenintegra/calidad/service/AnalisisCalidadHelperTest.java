@@ -70,4 +70,28 @@ class AnalisisCalidadHelperTest {
         assertThat(resultado.esValido()).isTrue();
         assertThat(resultado.getPrimerMensaje()).isNull();
     }
+
+    @Test
+    void validaFisicoQuimicoMicroCompletos() {
+        Producto producto = new Producto();
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        LoteProducto lote = new LoteProducto();
+        lote.setProducto(producto);
+
+        EvaluacionCalidad evalFisico = EvaluacionCalidad.builder()
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .build();
+        EvaluacionCalidad evalMicro = EvaluacionCalidad.builder()
+                .id(15L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .build();
+
+        AnalisisCalidadHelper.ResultadoValidacionDisciplinas resultado = AnalisisCalidadHelper
+                .validarDisciplinasCompletas(lote, List.of(evalFisico, evalMicro), id -> id == 15L);
+
+        assertThat(resultado.esValido()).isTrue();
+    }
 }
