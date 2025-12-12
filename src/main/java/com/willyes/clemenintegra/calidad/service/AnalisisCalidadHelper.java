@@ -1,10 +1,14 @@
 package com.willyes.clemenintegra.calidad.service;
 
+import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import java.util.Optional;
+
+import static com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO;
 
 /**
  * Utilidades para determinar los análisis de calidad requeridos por producto.
@@ -45,22 +49,48 @@ public final class AnalisisCalidadHelper {
         boolean requiereMicro = requiereMicro(producto);
 
         boolean tieneEvaluacionFisica = evals.stream().anyMatch(e -> e.getTipoEvaluacion() == TipoEvaluacion.FISICO);
-        java.util.Optional<EvaluacionCalidad> evaluacionQuimicaMicro = evals.stream()
+        java.util.List<EvaluacionCalidad> evaluacionesQuimicoMicro = evals.stream()
                 .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
-                .findFirst();
+                .toList();
 
-        boolean tieneEvaluacionQuimica = evaluacionQuimicaMicro.isPresent();
-        boolean tieneResultadosMicro = evaluacionQuimicaMicro
-                .map(EvaluacionCalidad::getId)
-                .filter(id -> existeResultadoMicro != null)
-                .map(existeResultadoMicro::test)
-                .orElse(false);
+        boolean tieneEvaluacionQuimica = !evaluacionesQuimicoMicro.isEmpty();
+
+        boolean evaluacionMicroConResultados = evaluacionesQuimicoMicro.stream()
+                .filter(e -> e.getId() != null)
+                .filter(e -> esEvaluacionAprobada(e.getResultado()))
+                .anyMatch(e -> existeResultadoMicro != null && existeResultadoMicro.test(e.getId()));
+
+        boolean faltaPdfMicro = false;
+        if (requiereMicro && evaluacionMicroConResultados) {
+            faltaPdfMicro = evaluacionesQuimicoMicro.stream()
+                    .filter(e -> e.getId() != null)
+                    .filter(e -> esEvaluacionAprobada(e.getResultado()))
+                    .filter(e -> existeResultadoMicro != null && existeResultadoMicro.test(e.getId()))
+                    .noneMatch(AnalisisCalidadHelper::tienePdfMicro);
+        }
 
         return builder
                 .faltaEvaluacionFisica(requiereFisico && !tieneEvaluacionFisica)
                 .faltaEvaluacionQuimica(requiereQuimico && !tieneEvaluacionQuimica)
-                .faltanResultadosMicro(requiereMicro && (!tieneEvaluacionQuimica || !tieneResultadosMicro))
+                .faltanResultadosMicro(requiereMicro && (!tieneEvaluacionQuimica || !evaluacionMicroConResultados))
+                .faltaPdfMicro(faltaPdfMicro)
                 .build();
+    }
+
+    private static boolean esEvaluacionAprobada(ResultadoEvaluacion resultado) {
+        return resultado == null
+                || resultado == ResultadoEvaluacion.CONFORME
+                || resultado == ResultadoEvaluacion.CONDICIONADO;
+    }
+
+    private static boolean tienePdfMicro(EvaluacionCalidad evaluacion) {
+        if (evaluacion == null || evaluacion.getArchivosAdjuntos() == null) {
+            return false;
+        }
+        return evaluacion.getArchivosAdjuntos().stream()
+                .map(ArchivoEvaluacion::getNombreVisible)
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(nombre -> nombre.equalsIgnoreCase(NOMBRE_VISIBLE_MICRO));
     }
 
     /**
@@ -99,9 +129,10 @@ public final class AnalisisCalidadHelper {
         boolean faltaEvaluacionFisica;
         boolean faltaEvaluacionQuimica;
         boolean faltanResultadosMicro;
+        boolean faltaPdfMicro;
 
         public boolean esValido() {
-            return !faltaEvaluacionFisica && !faltaEvaluacionQuimica && !faltanResultadosMicro;
+            return !faltaEvaluacionFisica && !faltaEvaluacionQuimica && !faltanResultadosMicro && !faltaPdfMicro;
         }
 
         public String getPrimerMensaje() {
@@ -113,6 +144,9 @@ public final class AnalisisCalidadHelper {
             }
             if (faltanResultadosMicro) {
                 return "Faltan resultados microbiológicos";
+            }
+            if (faltaPdfMicro) {
+                return "Falta PDF microbiológico";
             }
             return null;
         }

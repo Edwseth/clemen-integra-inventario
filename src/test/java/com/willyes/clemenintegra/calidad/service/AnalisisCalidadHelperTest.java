@@ -1,6 +1,9 @@
 package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
+import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
@@ -44,6 +47,10 @@ class AnalisisCalidadHelperTest {
         EvaluacionCalidad evaluacionQuimica = EvaluacionCalidad.builder()
                 .id(3L)
                 .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .archivosAdjuntos(List.of(ArchivoEvaluacion.builder()
+                        .nombreVisible(ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO)
+                        .build()))
                 .build();
 
         AnalisisCalidadHelper.ResultadoValidacionDisciplinas resultado = AnalisisCalidadHelper
@@ -87,12 +94,59 @@ class AnalisisCalidadHelperTest {
         EvaluacionCalidad evalMicro = EvaluacionCalidad.builder()
                 .id(15L)
                 .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONDICIONADO)
+                .archivosAdjuntos(List.of(ArchivoEvaluacion.builder()
+                        .nombreVisible(ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO)
+                        .build()))
                 .build();
 
         AnalisisCalidadHelper.ResultadoValidacionDisciplinas resultado = AnalisisCalidadHelper
                 .validarDisciplinasCompletas(lote, List.of(evalFisico, evalMicro), id -> id == 15L);
 
         assertThat(resultado.esValido()).isTrue();
+    }
+
+    @Test
+    void validaMicroSinResultadosBloqueaLiberacion() {
+        Producto producto = new Producto();
+        producto.setRequiereAnalisisMicrobiologico(true);
+        LoteProducto lote = new LoteProducto();
+        lote.setProducto(producto);
+
+        EvaluacionCalidad evalMicro = EvaluacionCalidad.builder()
+                .id(99L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .archivosAdjuntos(List.of(ArchivoEvaluacion.builder()
+                        .nombreVisible(ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO)
+                        .build()))
+                .build();
+
+        AnalisisCalidadHelper.ResultadoValidacionDisciplinas resultado = AnalisisCalidadHelper
+                .validarDisciplinasCompletas(lote, List.of(evalMicro), id -> false);
+
+        assertThat(resultado.esValido()).isFalse();
+        assertThat(resultado.getPrimerMensaje()).isEqualTo("Faltan resultados microbiológicos");
+    }
+
+    @Test
+    void validaMicroSinPdfDevuelveMensajeCorrecto() {
+        Producto producto = new Producto();
+        producto.setRequiereAnalisisMicrobiologico(true);
+        LoteProducto lote = new LoteProducto();
+        lote.setProducto(producto);
+
+        EvaluacionCalidad evalMicro = EvaluacionCalidad.builder()
+                .id(100L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .build();
+
+        AnalisisCalidadHelper.ResultadoValidacionDisciplinas resultado = AnalisisCalidadHelper
+                .validarDisciplinasCompletas(lote, List.of(evalMicro), id -> id == 100L);
+
+        assertThat(resultado.esValido()).isFalse();
+        assertThat(resultado.getPrimerMensaje()).isEqualTo("Falta PDF microbiológico");
     }
 
     @Test
