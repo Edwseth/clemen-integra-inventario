@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
 
 import java.util.List;
 
@@ -32,6 +33,7 @@ public class EvaluacionConsolidadaResponseDTO {
     private boolean tieneAdjuntosQuimicoMicro;
     private Long evaluacionQuimicoMicroId;
     private Long evaluacionFisicaId;
+    private EstadoEvaluacionCalidad estadoEvaluacion;
     private List<ArchivoEvaluacionDTO> adjuntosQuimicoMicro;
     private String resultadoGlobal;
     private List<EvaluacionSimpleDTO> evaluaciones;

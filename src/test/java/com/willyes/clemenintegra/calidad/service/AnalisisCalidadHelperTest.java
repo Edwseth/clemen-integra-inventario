@@ -94,4 +94,32 @@ class AnalisisCalidadHelperTest {
 
         assertThat(resultado.esValido()).isTrue();
     }
+
+    @Test
+    void calculaEstadoNoRequiere() {
+        var estado = AnalisisCalidadHelper.calcularEstadoEvaluacion(false, false, false, false, false, false);
+
+        assertThat(estado.name()).isEqualTo("NO_REQUIERE");
+    }
+
+    @Test
+    void calculaEstadoEvaluadoCuandoTodoCompleto() {
+        var estado = AnalisisCalidadHelper.calcularEstadoEvaluacion(true, true, true, true, true, true);
+
+        assertThat(estado.name()).isEqualTo("EVALUADO");
+    }
+
+    @Test
+    void calculaEstadoPendienteCuandoFaltaUnaDisciplina() {
+        var estado = AnalisisCalidadHelper.calcularEstadoEvaluacion(true, false, true, true, true, true);
+
+        assertThat(estado.name()).isEqualTo("PENDIENTE");
+    }
+
+    @Test
+    void calculaEstadoPendienteSoloMicroRequeridoSinResultados() {
+        var estado = AnalisisCalidadHelper.calcularEstadoEvaluacion(false, false, false, false, true, false);
+
+        assertThat(estado.name()).isEqualTo("PENDIENTE");
+    }
 }
