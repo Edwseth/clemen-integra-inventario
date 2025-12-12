@@ -93,6 +93,31 @@ public final class AnalisisCalidadHelper {
                 .anyMatch(nombre -> nombre.equalsIgnoreCase(NOMBRE_VISIBLE_MICRO));
     }
 
+    public static String calcularCodigoAnalisis(boolean requiereFisico, boolean requiereQuimico, boolean requiereMicro) {
+        if (requiereFisico && requiereQuimico && requiereMicro) {
+            return "FQM";
+        }
+        if (!requiereFisico && requiereQuimico && requiereMicro) {
+            return "QM";
+        }
+        if (requiereFisico && !requiereQuimico && requiereMicro) {
+            return "FM";
+        }
+        if (requiereFisico && requiereQuimico && !requiereMicro) {
+            return "FQ";
+        }
+        if (requiereFisico && !requiereQuimico && !requiereMicro) {
+            return "F";
+        }
+        if (!requiereFisico && requiereQuimico && !requiereMicro) {
+            return "Q";
+        }
+        if (!requiereFisico && !requiereQuimico && requiereMicro) {
+            return "M";
+        }
+        return "—";
+    }
+
     /**
      * Determina el estado consolidado de las evaluaciones de calidad de un lote.
      * Reglas:
@@ -102,19 +127,19 @@ public final class AnalisisCalidadHelper {
      */
     public static EstadoEvaluacionCalidad calcularEstadoEvaluacion(
             boolean requiereFisico,
-            boolean fisicoTieneEvaluacion,
+            boolean fisicoCompleto,
             boolean requiereQuimico,
-            boolean quimicoTieneEvaluacion,
+            boolean quimicoCompleto,
             boolean requiereMicro,
-            boolean microTieneEvaluacion
+            boolean microCompleto
     ) {
         if (!requiereFisico && !requiereQuimico && !requiereMicro) {
             return EstadoEvaluacionCalidad.NO_REQUIERE;
         }
 
-        boolean fisicoListo = !requiereFisico || fisicoTieneEvaluacion;
-        boolean quimicoListo = !requiereQuimico || quimicoTieneEvaluacion;
-        boolean microListo = !requiereMicro || microTieneEvaluacion;
+        boolean fisicoListo = !requiereFisico || fisicoCompleto;
+        boolean quimicoListo = !requiereQuimico || quimicoCompleto;
+        boolean microListo = !requiereMicro || microCompleto;
 
         if (fisicoListo && quimicoListo && microListo) {
             return EstadoEvaluacionCalidad.EVALUADO;

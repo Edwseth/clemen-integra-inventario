@@ -26,11 +26,17 @@ public class EvaluacionConsolidadaResponseDTO {
     private boolean requiereAnalisisFisico;
     private boolean requiereAnalisisQuimico;
     private boolean requiereAnalisisMicrobiologico;
+    private Boolean fisicoConforme;
+    private Boolean quimicoConforme;
+    private Boolean microConforme;
     private boolean tieneEvaluacionFisica;
     private boolean tieneEvaluacionQuimicaMicro;
     private boolean tieneResultadosMicro;
+    private boolean tienePdfMicro;
+    private boolean tienePdfQuimico;
     private boolean tieneAdjuntosFisico;
     private boolean tieneAdjuntosQuimicoMicro;
+    private String codigoAnalisis;
     private Long evaluacionQuimicoMicroId;
     private Long evaluacionFisicaId;
     private EstadoEvaluacionCalidad estadoEvaluacion;

@@ -109,6 +109,12 @@ class EvaluacionCalidadMapperTest {
                 .containsExactly("Químico", "Microbiológico");
         assertThat(dto.isTieneResultadosMicro()).isTrue();
         assertThat(dto.isTieneAdjuntosQuimicoMicro()).isTrue();
+        assertThat(dto.isTienePdfMicro()).isTrue();
+        assertThat(dto.isTienePdfQuimico()).isTrue();
+        assertThat(dto.getCodigoAnalisis()).isEqualTo("QM");
+        assertThat(dto.getQuimicoConforme()).isTrue();
+        assertThat(dto.getMicroConforme()).isTrue();
+        assertThat(dto.getFisicoConforme()).isNull();
     }
 
     @Test
@@ -144,5 +150,8 @@ class EvaluacionCalidadMapperTest {
 
         assertThat(dto.isTieneResultadosMicro()).isTrue();
         assertThat(dto.isTieneAdjuntosQuimicoMicro()).isFalse();
+        assertThat(dto.isTienePdfMicro()).isFalse();
+        assertThat(dto.isTienePdfQuimico()).isTrue();
+        assertThat(dto.getMicroConforme()).isTrue();
     }
 }

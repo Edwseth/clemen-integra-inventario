@@ -22,10 +22,11 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.Optional;
 
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.calcularCodigoAnalisis;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.calcularEstadoEvaluacion;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
-import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.calcularEstadoEvaluacion;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.validarDisciplinasCompletas;
 import static com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO;
 
@@ -110,60 +111,50 @@ public class EvaluacionCalidadMapper {
         boolean fisicoCargado = evaluacionFisica.isPresent();
         boolean microCargado = evaluacionQuimicoMicro.isPresent();
 
-        boolean fisicoConforme = evaluacionFisica
-                .map(EvaluacionCalidad::getResultado)
-                .map(r -> r == ResultadoEvaluacion.CONFORME)
-                .orElse(false);
-        boolean microConforme = evaluacionQuimicoMicro
-                .map(EvaluacionCalidad::getResultado)
-                .map(r -> r == ResultadoEvaluacion.CONFORME)
-                .orElse(false);
+        TipoAnalisisCalidad tipoAnalisis = lote.getProducto().getTipoAnalisisCalidad();
+        boolean requiereFisico = requiereFisico(lote.getProducto());
+        boolean requiereQuimico = requiereQuimico(lote.getProducto());
+        boolean requiereMicro = requiereMicro(lote.getProducto());
+        boolean requiereQuimicoOMicro = requiereQuimico || requiereMicro;
 
-        boolean fisicoAnyOk = evaluacionFisica
-                .map(EvaluacionCalidad::getResultado)
-                .map(r -> r == ResultadoEvaluacion.CONFORME || r == ResultadoEvaluacion.CONDICIONADO)
-                .orElse(false);
-
-        boolean microAnyOk = evaluacionQuimicoMicro
-                .map(EvaluacionCalidad::getResultado)
-                .map(r -> r == ResultadoEvaluacion.CONFORME || r == ResultadoEvaluacion.CONDICIONADO)
-                .orElse(false);
+        Boolean fisicoConforme = requiereFisico
+                ? evaluacionFisica.map(EvaluacionCalidad::getResultado).map(this::mapResultado).orElse(null)
+                : null;
+        Boolean quimicoConforme = requiereQuimico
+                ? evaluacionQuimicoMicro.map(EvaluacionCalidad::getResultado).map(this::mapResultado).orElse(null)
+                : null;
 
         boolean tieneResultadosMicro = evaluacionQuimicoMicro
                 .map(EvaluacionCalidad::getId)
                 .map(id -> evaluacionesConResultadosMicro != null && evaluacionesConResultadosMicro.contains(id))
                 .orElse(false);
+        Boolean microConforme = (requiereMicro && tieneResultadosMicro)
+                ? evaluacionQuimicoMicro.map(EvaluacionCalidad::getResultado).map(this::mapResultado).orElse(null)
+                : null;
 
         boolean tieneAdjuntosFisico = fisicos.stream()
                 .anyMatch(e -> e.getArchivosAdjuntos() != null && !e.getArchivosAdjuntos().isEmpty());
-        boolean tieneAdjuntosQuimicoMicro = evaluacionQuimicoMicro
-                .map(this::tienePdfMicro)
-                .orElse(false);
+        boolean tienePdfMicro = evaluacionQuimicoMicro.map(this::tienePdfMicro).orElse(false);
+        boolean tieneAdjuntosQuimicoMicro = tienePdfMicro;
+        boolean tienePdfQuimico = evaluacionQuimicoMicro.map(this::tienePdfQuimico).orElse(false);
 
         boolean algunNoConforme = evals.stream().anyMatch(e -> e.getResultado() == ResultadoEvaluacion.NO_CONFORME);
-
-        TipoAnalisisCalidad tipoAnalisis = lote.getProducto().getTipoAnalisisCalidad();
-        boolean requiereFisico = requiereFisico(lote.getProducto());
-        boolean requiereQuimico = requiereQuimico(lote.getProducto());
-        boolean requiereMicro = requiereMicro(lote.getProducto());
-
-        boolean requiereQuimicoOMicro = requiereQuimico || requiereMicro;
 
         var validacion = validarDisciplinasCompletas(lote, evals,
                 id -> evaluacionesConResultadosMicro != null && evaluacionesConResultadosMicro.contains(id));
 
         boolean disciplinasCompletas = validacion.esValido();
 
-        boolean evaluacionesCompletas = (!requiereFisico || fisicoAnyOk)
-                && (!requiereQuimicoOMicro || microAnyOk)
+        boolean evaluacionesCompletas = (!requiereFisico || fisicoConforme != null)
+                && (!requiereQuimicoOMicro || quimicoConforme != null)
                 && (!requiereMicro || tieneResultadosMicro);
 
-        boolean microEvaluacionCompleta = microCargado && (!requiereMicro || tieneResultadosMicro);
+        boolean microEvaluacionCompleta = !requiereMicro || tieneResultadosMicro;
         EstadoEvaluacionCalidad estadoEvaluacion = calcularEstadoEvaluacion(
                 requiereFisico,
-                fisicoCargado,
+                fisicoConforme != null,
                 requiereQuimico,
-                microCargado,
+                quimicoConforme != null,
                 requiereMicro,
                 microEvaluacionCompleta);
 
@@ -174,8 +165,9 @@ public class EvaluacionCalidadMapper {
             resultadoGlobal = "NO_REQUERIDO";
         } else if (algunNoConforme) {
             resultadoGlobal = ResultadoEvaluacion.NO_CONFORME.name();
-        } else if ((!requiereFisico || fisicoConforme)
-                && (!requiereQuimicoOMicro || (microConforme && (!requiereMicro || tieneResultadosMicro)))) {
+        } else if ((!requiereFisico || Boolean.TRUE.equals(fisicoConforme))
+                && (!requiereQuimicoOMicro || Boolean.TRUE.equals(quimicoConforme))
+                && (!requiereMicro || (tieneResultadosMicro && (microConforme == null || Boolean.TRUE.equals(microConforme))))) {
             resultadoGlobal = ResultadoEvaluacion.CONFORME.name();
         } else if (evaluacionesCompletas) {
             resultadoGlobal = ResultadoEvaluacion.CONDICIONADO.name();
@@ -185,6 +177,8 @@ public class EvaluacionCalidadMapper {
                     || (requiereMicro && tieneResultadosMicro);
             resultadoGlobal = avances ? "EN_PROCESO" : "PENDIENTE";
         }
+
+        String codigoAnalisis = calcularCodigoAnalisis(requiereFisico, requiereQuimico, requiereMicro);
 
         return EvaluacionConsolidadaResponseDTO.builder()
                 .id(lote.getId())
@@ -200,11 +194,17 @@ public class EvaluacionCalidadMapper {
                 .requiereAnalisisFisico(requiereFisico)
                 .requiereAnalisisQuimico(requiereQuimico)
                 .requiereAnalisisMicrobiologico(requiereMicro)
+                .fisicoConforme(fisicoConforme)
+                .quimicoConforme(quimicoConforme)
+                .microConforme(microConforme)
                 .tieneEvaluacionFisica(fisicoCargado)
                 .tieneEvaluacionQuimicaMicro(microCargado)
                 .tieneResultadosMicro(tieneResultadosMicro)
+                .tienePdfMicro(tienePdfMicro)
+                .tienePdfQuimico(tienePdfQuimico)
                 .tieneAdjuntosFisico(tieneAdjuntosFisico)
                 .tieneAdjuntosQuimicoMicro(tieneAdjuntosQuimicoMicro)
+                .codigoAnalisis(codigoAnalisis)
                 .evaluacionQuimicoMicroId(evaluacionQuimicoMicro.map(EvaluacionCalidad::getId).orElse(null))
                 .evaluacionFisicaId(evaluacionFisica.map(EvaluacionCalidad::getId).orElse(null))
                 .estadoEvaluacion(estadoEvaluacion)
@@ -289,5 +289,21 @@ public class EvaluacionCalidadMapper {
         return evaluacionCalidad.getArchivosAdjuntos() != null
                 && evaluacionCalidad.getArchivosAdjuntos().stream()
                 .anyMatch(a -> NOMBRE_VISIBLE_MICRO.equalsIgnoreCase(a.getNombreVisible()));
+    }
+
+    private boolean tienePdfQuimico(EvaluacionCalidad evaluacionCalidad) {
+        return evaluacionCalidad.getArchivosAdjuntos() != null
+                && evaluacionCalidad.getArchivosAdjuntos().stream()
+                .anyMatch(a -> a.getNombreVisible() != null && !NOMBRE_VISIBLE_MICRO.equalsIgnoreCase(a.getNombreVisible()));
+    }
+
+    private Boolean mapResultado(ResultadoEvaluacion resultado) {
+        if (resultado == null) {
+            return null;
+        }
+        return switch (resultado) {
+            case CONFORME, CONDICIONADO -> true;
+            case NO_CONFORME -> false;
+        };
     }
 }

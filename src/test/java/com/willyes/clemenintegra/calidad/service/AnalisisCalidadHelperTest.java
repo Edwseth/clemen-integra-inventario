@@ -176,4 +176,16 @@ class AnalisisCalidadHelperTest {
 
         assertThat(estado.name()).isEqualTo("PENDIENTE");
     }
+
+    @Test
+    void calculaCodigoAnalisisParaTodasLasCombinaciones() {
+        assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(true, true, true)).isEqualTo("FQM");
+        assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(false, true, true)).isEqualTo("QM");
+        assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(true, false, true)).isEqualTo("FM");
+        assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(true, true, false)).isEqualTo("FQ");
+        assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(true, false, false)).isEqualTo("F");
+        assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(false, true, false)).isEqualTo("Q");
+        assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(false, false, true)).isEqualTo("M");
+        assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(false, false, false)).isEqualTo("—");
+    }
 }
