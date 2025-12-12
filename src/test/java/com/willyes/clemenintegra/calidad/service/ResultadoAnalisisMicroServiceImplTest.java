@@ -21,9 +21,11 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -220,9 +222,27 @@ class ResultadoAnalisisMicroServiceImplTest {
 
         assertThat(resultadoPdf).isEqualTo("nuevoPdf".getBytes());
         verify(analisisMicroPdfService).generarPdf(40L);
+        verify(evaluacionRepository, times(1)).save(any(EvaluacionCalidad.class));
+        verify(resultadoRepository, times(1)).findByEvaluacionId(40L);
         assertThat(evaluacion.getArchivosAdjuntos())
                 .filteredOn(a -> "Microbiológico".equalsIgnoreCase(a.getNombreVisible()))
                 .hasSize(1);
+    }
+
+    @Test
+    void lanzaNotFoundCuandoNoHayResultadosMicro() {
+        EvaluacionCalidad evaluacion = EvaluacionCalidad.builder()
+                .id(55L)
+                .build();
+
+        when(evaluacionRepository.findById(55L)).thenReturn(Optional.of(evaluacion));
+        when(resultadoRepository.findByEvaluacionId(55L)).thenReturn(List.of());
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> service.obtenerPdfMicro(55L));
+
+        verify(analisisMicroPdfService, never()).generarPdf(anyLong());
+        verify(evaluacionRepository, never()).save(any(EvaluacionCalidad.class));
     }
 }
 

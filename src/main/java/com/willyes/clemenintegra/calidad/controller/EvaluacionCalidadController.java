@@ -163,9 +163,9 @@ public class EvaluacionCalidadController {
         return ResponseEntity.ok(resultadoAnalisisMicroService.obtenerPorEvaluacion(evaluacionId));
     }
 
-    @GetMapping(path = "/{evaluacionId}/micro-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @GetMapping(path = "/{evaluacionId}/micro/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> descargarPdfMicroConNombre(@PathVariable Long evaluacionId) {
+    public ResponseEntity<byte[]> descargarPdfMicro(@PathVariable Long evaluacionId) {
         byte[] pdf = resultadoAnalisisMicroService.obtenerPdfMicro(evaluacionId);
         String nombreArchivo = "MICRO_" + evaluacionId + ".pdf";
         try {
@@ -180,16 +180,6 @@ public class EvaluacionCalidadController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + nombreArchivo)
-                .body(pdf);
-    }
-
-    @GetMapping(path = "/{evaluacionId}/microbiologico/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<byte[]> descargarPdfMicro(@PathVariable Long evaluacionId) {
-        byte[] pdf = resultadoAnalisisMicroService.obtenerPdfMicro(evaluacionId);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=analisis_micro_" + evaluacionId + ".pdf")
                 .body(pdf);
     }
 

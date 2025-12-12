@@ -80,10 +80,12 @@ class EvaluacionCalidadControllerTest {
     void descargaPdfMicroExistente() throws Exception {
         when(resultadoAnalisisMicroService.obtenerPdfMicro(5L)).thenReturn("pdf".getBytes());
 
-        mockMvc.perform(get("/api/calidad/evaluaciones/5/microbiologico/pdf")
+        mockMvc.perform(get("/api/calidad/evaluaciones/5/micro/pdf")
                         .accept(MediaType.APPLICATION_PDF))
                 .andExpect(status().isOk())
-                .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isNotEmpty());
+                .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEqualTo("pdf".getBytes()))
+                .andExpect(result -> assertThat(result.getResponse().getHeader("Content-Disposition")).contains("attachment"))
+                .andExpect(result -> assertThat(result.getResponse().getContentType()).isEqualTo(MediaType.APPLICATION_PDF_VALUE));
 
         verify(resultadoAnalisisMicroService).obtenerPdfMicro(5L);
     }
@@ -92,11 +94,21 @@ class EvaluacionCalidadControllerTest {
     void generaPdfMicroCuandoNoExisteAdjunto() throws Exception {
         when(resultadoAnalisisMicroService.obtenerPdfMicro(7L)).thenReturn("nuevo".getBytes());
 
-        mockMvc.perform(get("/api/calidad/evaluaciones/7/micro-pdf")
+        mockMvc.perform(get("/api/calidad/evaluaciones/7/micro/pdf")
                         .accept(MediaType.APPLICATION_PDF))
                 .andExpect(status().isOk())
                 .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEqualTo("nuevo".getBytes()));
 
         verify(resultadoAnalisisMicroService).obtenerPdfMicro(7L);
+    }
+
+    @Test
+    void devuelve404CuandoNoHayResultadosMicro() throws Exception {
+        when(resultadoAnalisisMicroService.obtenerPdfMicro(10L))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No hay resultados microbiológicos para generar el informe"));
+
+        mockMvc.perform(get("/api/calidad/evaluaciones/10/micro/pdf")
+                        .accept(MediaType.ALL))
+                .andExpect(status().isNotFound());
     }
 }
