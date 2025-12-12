@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
+import com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado;
 
 import java.util.List;
 
@@ -36,6 +37,7 @@ public class EvaluacionConsolidadaResponseDTO {
     private boolean tienePdfQuimico;
     private boolean tieneAdjuntosFisico;
     private boolean tieneAdjuntosQuimicoMicro;
+    private DisciplinaEstado estadoMicro;
     private String codigoAnalisis;
     private Long evaluacionQuimicoMicroId;
     private Long evaluacionFisicaId;

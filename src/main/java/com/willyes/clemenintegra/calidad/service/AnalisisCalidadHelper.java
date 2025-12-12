@@ -2,11 +2,14 @@ package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import java.util.Optional;
+import java.util.Comparator;
+import java.time.LocalDateTime;
 
 import static com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO;
 
@@ -75,6 +78,36 @@ public final class AnalisisCalidadHelper {
                 .faltanResultadosMicro(requiereMicro && (!tieneEvaluacionQuimica || !evaluacionMicroConResultados))
                 .faltaPdfMicro(faltaPdfMicro)
                 .build();
+    }
+
+    public static EstadoDisciplinaMicro calcularEstadoMicro(
+            Producto producto,
+            java.util.List<EvaluacionCalidad> evaluaciones,
+            java.util.Set<Long> evaluacionesConResultadosMicro
+    ) {
+        boolean requiereMicro = requiereMicro(producto);
+        java.util.List<EvaluacionCalidad> evals = evaluaciones == null ? java.util.List.of() : evaluaciones;
+
+        Optional<EvaluacionCalidad> evaluacionMicro = evals.stream()
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .max(Comparator.comparing(EvaluacionCalidad::getFechaEvaluacion, Comparator.nullsLast(LocalDateTime::compareTo)));
+
+        boolean tieneResultadosMicro = evaluacionMicro
+                .map(EvaluacionCalidad::getId)
+                .map(id -> evaluacionesConResultadosMicro != null && evaluacionesConResultadosMicro.contains(id))
+                .orElse(false);
+        boolean tienePdfMicro = evaluacionMicro.map(AnalisisCalidadHelper::tienePdfMicro).orElse(false);
+
+        DisciplinaEstado estado;
+        if (!requiereMicro) {
+            estado = DisciplinaEstado.NO_REQUERIDO;
+        } else if (tieneResultadosMicro) {
+            estado = DisciplinaEstado.EVALUADO;
+        } else {
+            estado = DisciplinaEstado.PENDIENTE;
+        }
+
+        return new EstadoDisciplinaMicro(requiereMicro, tieneResultadosMicro, tienePdfMicro, estado);
     }
 
     private static boolean esEvaluacionAprobada(ResultadoEvaluacion resultado) {
@@ -175,5 +208,13 @@ public final class AnalisisCalidadHelper {
             }
             return null;
         }
+    }
+
+    public record EstadoDisciplinaMicro(
+            boolean requiereMicro,
+            boolean tieneResultadosMicro,
+            boolean tienePdfMicro,
+            DisciplinaEstado estado
+    ) {
     }
 }

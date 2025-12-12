@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
+import com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
@@ -218,6 +219,7 @@ class EvaluacionCalidadServiceImplTest {
         assertThat(dto.getMicroConforme()).isTrue();
         assertThat(dto.isTieneResultadosMicro()).isTrue();
         assertThat(dto.isTienePdfMicro()).isTrue();
+        assertThat(dto.getEstadoMicro()).isEqualTo(DisciplinaEstado.EVALUADO);
         assertThat(dto.getEstadoEvaluacion()).isEqualTo(EstadoEvaluacionCalidad.EVALUADO);
     }
 
@@ -252,6 +254,38 @@ class EvaluacionCalidadServiceImplTest {
         var dto = consolidados.get(0);
         assertThat(dto.isTieneResultadosMicro()).isFalse();
         assertThat(dto.getMicroConforme()).isNull();
+        assertThat(dto.getEstadoMicro()).isEqualTo(DisciplinaEstado.PENDIENTE);
         assertThat(dto.getEstadoEvaluacion()).isEqualTo(EstadoEvaluacionCalidad.PENDIENTE);
+    }
+
+    @Test
+    void consolidaMicroNoRequerido() {
+        Producto productoSinMicro = new Producto();
+        productoSinMicro.setId(3);
+        productoSinMicro.setRequiereAnalisisMicrobiologico(false);
+        LoteProducto loteSinMicro = new LoteProducto();
+        loteSinMicro.setId(40L);
+        loteSinMicro.setProducto(productoSinMicro);
+        loteSinMicro.setEstado(EstadoLote.EN_CUARENTENA);
+
+        EvaluacionCalidad evalFisico = EvaluacionCalidad.builder()
+                .id(90L)
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .usuarioEvaluador(evaluador)
+                .loteProducto(loteSinMicro)
+                .fechaEvaluacion(LocalDateTime.now())
+                .build();
+
+        when(repository.findAllWithinFechaEvaluacion(any(), any()))
+                .thenReturn(List.of(evalFisico));
+
+        var consolidados = service.obtenerEvaluacionesConsolidadas(evalFisico.getFechaEvaluacion().toLocalDate(),
+                evalFisico.getFechaEvaluacion().toLocalDate());
+
+        assertThat(consolidados).hasSize(1);
+        var dto = consolidados.get(0);
+        assertThat(dto.getEstadoMicro()).isEqualTo(DisciplinaEstado.NO_REQUERIDO);
+        assertThat(dto.isTieneResultadosMicro()).isFalse();
     }
 }

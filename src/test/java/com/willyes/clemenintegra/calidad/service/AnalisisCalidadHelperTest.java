@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.service;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado;
 import com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
@@ -10,6 +11,7 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -187,5 +189,53 @@ class AnalisisCalidadHelperTest {
         assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(false, true, false)).isEqualTo("Q");
         assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(false, false, true)).isEqualTo("M");
         assertThat(AnalisisCalidadHelper.calcularCodigoAnalisis(false, false, false)).isEqualTo("—");
+    }
+
+    @Test
+    void calculaEstadoMicroNoRequerido() {
+        Producto producto = new Producto();
+
+        var estado = AnalisisCalidadHelper.calcularEstadoMicro(producto, List.of(), Set.of());
+
+        assertThat(estado.estado()).isEqualTo(DisciplinaEstado.NO_REQUERIDO);
+        assertThat(estado.tieneResultadosMicro()).isFalse();
+        assertThat(estado.tienePdfMicro()).isFalse();
+    }
+
+    @Test
+    void calculaEstadoMicroPendienteSinResultados() {
+        Producto producto = new Producto();
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        EvaluacionCalidad evalMicro = EvaluacionCalidad.builder()
+                .id(1L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .build();
+
+        var estado = AnalisisCalidadHelper.calcularEstadoMicro(producto, List.of(evalMicro), Set.of());
+
+        assertThat(estado.estado()).isEqualTo(DisciplinaEstado.PENDIENTE);
+        assertThat(estado.tieneResultadosMicro()).isFalse();
+        assertThat(estado.tienePdfMicro()).isFalse();
+    }
+
+    @Test
+    void calculaEstadoMicroEvaluadoConResultadosYPdf() {
+        Producto producto = new Producto();
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        EvaluacionCalidad evalMicro = EvaluacionCalidad.builder()
+                .id(2L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .archivosAdjuntos(List.of(ArchivoEvaluacion.builder()
+                        .nombreVisible(ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO)
+                        .build()))
+                .build();
+
+        var estado = AnalisisCalidadHelper.calcularEstadoMicro(producto, List.of(evalMicro), Set.of(2L));
+
+        assertThat(estado.estado()).isEqualTo(DisciplinaEstado.EVALUADO);
+        assertThat(estado.tieneResultadosMicro()).isTrue();
+        assertThat(estado.tienePdfMicro()).isTrue();
     }
 }
