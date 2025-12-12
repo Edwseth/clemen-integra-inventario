@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.calcularCodigoAnalisis;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.calcularEstadoEvaluacion;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.calcularEstadoMicro;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
@@ -114,7 +115,8 @@ public class EvaluacionCalidadMapper {
         TipoAnalisisCalidad tipoAnalisis = lote.getProducto().getTipoAnalisisCalidad();
         boolean requiereFisico = requiereFisico(lote.getProducto());
         boolean requiereQuimico = requiereQuimico(lote.getProducto());
-        boolean requiereMicro = requiereMicro(lote.getProducto());
+        var estadoMicro = calcularEstadoMicro(lote.getProducto(), evals, evaluacionesConResultadosMicro);
+        boolean requiereMicro = estadoMicro.requiereMicro();
         boolean requiereQuimicoOMicro = requiereQuimico || requiereMicro;
 
         Boolean fisicoConforme = requiereFisico
@@ -124,17 +126,14 @@ public class EvaluacionCalidadMapper {
                 ? evaluacionQuimicoMicro.map(EvaluacionCalidad::getResultado).map(this::mapResultado).orElse(null)
                 : null;
 
-        boolean tieneResultadosMicro = evaluacionQuimicoMicro
-                .map(EvaluacionCalidad::getId)
-                .map(id -> evaluacionesConResultadosMicro != null && evaluacionesConResultadosMicro.contains(id))
-                .orElse(false);
+        boolean tieneResultadosMicro = estadoMicro.tieneResultadosMicro();
         Boolean microConforme = (requiereMicro && tieneResultadosMicro)
                 ? evaluacionQuimicoMicro.map(EvaluacionCalidad::getResultado).map(this::mapResultado).orElse(null)
                 : null;
 
         boolean tieneAdjuntosFisico = fisicos.stream()
                 .anyMatch(e -> e.getArchivosAdjuntos() != null && !e.getArchivosAdjuntos().isEmpty());
-        boolean tienePdfMicro = evaluacionQuimicoMicro.map(this::tienePdfMicro).orElse(false);
+        boolean tienePdfMicro = estadoMicro.tienePdfMicro();
         boolean tieneAdjuntosQuimicoMicro = tienePdfMicro;
         boolean tienePdfQuimico = evaluacionQuimicoMicro.map(this::tienePdfQuimico).orElse(false);
 
@@ -204,6 +203,7 @@ public class EvaluacionCalidadMapper {
                 .tienePdfQuimico(tienePdfQuimico)
                 .tieneAdjuntosFisico(tieneAdjuntosFisico)
                 .tieneAdjuntosQuimicoMicro(tieneAdjuntosQuimicoMicro)
+                .estadoMicro(estadoMicro.estado())
                 .codigoAnalisis(codigoAnalisis)
                 .evaluacionQuimicoMicroId(evaluacionQuimicoMicro.map(EvaluacionCalidad::getId).orElse(null))
                 .evaluacionFisicaId(evaluacionFisica.map(EvaluacionCalidad::getId).orElse(null))
