@@ -21,7 +21,6 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
@@ -101,6 +100,9 @@ class LoteProductoServiceImplTest {
     void liberarLoteProductoTerminado() {
         Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
         Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         LoteProducto lote = loteEnCuarentena(10L, producto, 7, new BigDecimal("5.50"));
 
         mockCatalogosBasicos(13L, 12L);
@@ -126,6 +128,9 @@ class LoteProductoServiceImplTest {
     void liberarLoteProductoSemielaborado() {
         Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
         Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         LoteProducto lote = loteEnCuarentena(20L, producto, 7, new BigDecimal("3.25"));
 
         mockCatalogosBasicos(13L, 12L);
@@ -159,7 +164,10 @@ class LoteProductoServiceImplTest {
 
         Producto producto = new Producto();
         producto.setId(1);
-        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.NINGUNO);
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         Almacen almacen = almacenConId(2);
         Usuario usuario = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
 
@@ -193,7 +201,10 @@ class LoteProductoServiceImplTest {
 
         Producto producto = new Producto();
         producto.setId(5);
-        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.FISICO);
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         Almacen almacen = almacenConId(9);
         Usuario usuario = usuarioConRol(RolUsuario.ROL_ANALISTA_CALIDAD);
 
@@ -232,8 +243,10 @@ class LoteProductoServiceImplTest {
     void liberarLoteConMicroCompleto() {
         Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
         Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setRequiereAnalisisFisico(false);
         producto.setRequiereAnalisisQuimico(true);
         producto.setRequiereAnalisisMicrobiologico(true);
+        producto.recomputarTipoAnalisisDesdeBanderas();
 
         LoteProducto lote = loteEnCuarentena(30L, producto, 7, BigDecimal.ONE);
         lote.setStockReservado(BigDecimal.ZERO);
@@ -329,7 +342,10 @@ class LoteProductoServiceImplTest {
         Producto producto = new Producto();
         producto.setId(3);
         producto.setCategoriaProducto(categoria);
-        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.AMBOS);
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         return producto;
     }
 

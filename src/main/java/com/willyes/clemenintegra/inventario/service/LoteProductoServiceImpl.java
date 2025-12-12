@@ -15,7 +15,6 @@ import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
@@ -148,18 +147,22 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
             if (jefe || superAdmin) {
                 lotes = loteRepo.findByEstadoIn(estados);
-            } else if (analista) {
-                lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
-                        estados,
-                        List.of(TipoAnalisisCalidad.FISICO, TipoAnalisisCalidad.AMBOS)
-                );
-            } else if (micro) {
-                lotes = loteRepo.findByEstadoInAndProducto_TipoAnalisisIn(
-                        estados,
-                        List.of(TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO, TipoAnalisisCalidad.AMBOS)
-                );
             } else {
-                lotes = loteRepo.findByEstadoIn(estados);
+                lotes = loteRepo.findByEstadoIn(estados).stream()
+                        .filter(l -> l.getProducto() != null)
+                        .filter(lote -> {
+                            Producto producto = lote.getProducto();
+                            boolean requiereFisico = requiereFisico(producto);
+                            boolean requiereQuimicoOMicro = requiereQuimico(producto) || requiereMicro(producto);
+                            if (analista) {
+                                return requiereFisico;
+                            }
+                            if (micro) {
+                                return requiereQuimicoOMicro;
+                            }
+                            return true;
+                        })
+                        .collect(Collectors.toList());
             }
         } else {
             lotes = loteRepo.findByEstadoIn(estados);

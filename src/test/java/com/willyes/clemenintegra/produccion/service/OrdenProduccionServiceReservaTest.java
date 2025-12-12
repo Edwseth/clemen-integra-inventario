@@ -130,7 +130,10 @@ class OrdenProduccionServiceReservaTest {
         UnidadMedida unidad = new UnidadMedida();
         unidad.setSimbolo("kg");
         producto.setUnidadMedida(unidad);
-        producto.setTipoAnalisis(com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.NINGUNO);
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         com.willyes.clemenintegra.inventario.model.CategoriaProducto categoriaPt = new com.willyes.clemenintegra.inventario.model.CategoriaProducto();
         categoriaPt.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
         producto.setCategoriaProducto(categoriaPt);

@@ -5,7 +5,6 @@ import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
@@ -250,14 +249,12 @@ public class DisponibilidadInsumoService {
     }
 
     private EnumSet<EstadoLote> obtenerEstadosPermitidos(Producto producto) {
-        // Regla única:
-        // - Si el producto requiere análisis de calidad (tipoAnalisis != NINGUNO),
-        //   SOLO se pueden consumir lotes LIBERADOS.
-        // - Si no requiere análisis, se aplican los estados "normales" permitidos
-        //   (DISPONIBLE y LIBERADO).
-        if (producto != null
-                && producto.getTipoAnalisis() != null
-                && producto.getTipoAnalisis() != TipoAnalisisCalidad.NINGUNO) {
+        // Regla única basada en banderas por disciplina.
+        // - Si el producto requiere algún análisis de calidad, SOLO se pueden consumir lotes LIBERADOS.
+        // - Si no requiere análisis, se aplican los estados "normales" permitidos (DISPONIBLE y LIBERADO).
+        if (producto != null && (producto.isRequiereAnalisisFisico()
+                || producto.isRequiereAnalisisQuimico()
+                || producto.isRequiereAnalisisMicrobiologico())) {
             return EnumSet.of(EstadoLote.LIBERADO);
         }
         return ESTADOS_FEFO_PERMITIDOS;

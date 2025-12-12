@@ -74,6 +74,10 @@ public class Producto {
             length = 30,
             columnDefinition = "ENUM('NINGUNO','FISICO','QUIMICO_MICROBIOLOGICO','AMBOS')"
     )
+    /**
+     * LEGACY. No usar para reglas; derivado automáticamente de requiereAnalisisFisico/Quimico/Microbiologico.
+     */
+    @Deprecated
     private TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.NINGUNO;
 
     // Nuevas banderas por disciplina. Usar estas propiedades para reglas de negocio de calidad.
@@ -131,6 +135,14 @@ public class Producto {
     // Nuevos alias para mantener compatibilidad con la propiedad renombrada
     public TipoAnalisisCalidad getTipoAnalisisCalidad() {return tipoAnalisis;}
     public void setTipoAnalisisCalidad(TipoAnalisisCalidad tipoAnalisis) {this.tipoAnalisis = tipoAnalisis;}
+
+    public void recomputarTipoAnalisisDesdeBanderas() {
+        this.tipoAnalisis = TipoAnalisisCalidad.fromFlags(
+                this.requiereAnalisisFisico,
+                this.requiereAnalisisQuimico,
+                this.requiereAnalisisMicrobiologico
+        );
+    }
 
     public Integer getId() {return id;}
     public void setId(Integer id) {this.id = id;}

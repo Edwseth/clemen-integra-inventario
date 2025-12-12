@@ -30,7 +30,7 @@ public interface ProductoMapper {
     @Mapping(source = "codigoSku", target = "sku")
     @Mapping(target = "unidadMedida", source = "unidadMedida")
     @Mapping(target = "categoria", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getNombre() : null)")
-    @Mapping(target = "tipoAnalisisCalidad", expression = "java(mapTipoAnalisisCalidadString(producto.getTipoAnalisisCalidad()))")
+    @Mapping(target = "tipoAnalisisCalidad", expression = "java(mapTipoAnalisisCalidadStringDesdeFlags(producto))")
     @Mapping(target = "rendimiento", source = "rendimientoUnidad")
     @Mapping(target = "unidadMedidaId", expression = "java(producto.getUnidadMedida() != null ? producto.getUnidadMedida().getId() : null)")
     @Mapping(target = "categoriaProductoId", expression = "java(producto.getCategoriaProducto() != null ? producto.getCategoriaProducto().getId() : null)")
@@ -46,6 +46,19 @@ public interface ProductoMapper {
     @Named("mapCategoriaProducto")
     default String mapCategoriaProducto(CategoriaProducto categoriaProducto) {
         return (categoriaProducto != null) ? categoriaProducto.getNombre() : null;
+    }
+
+    default String mapTipoAnalisisCalidadStringDesdeFlags(Producto producto) {
+        if (producto == null) {
+            return null;
+        }
+        TipoAnalisisCalidad derivado = TipoAnalisisCalidad.fromFlags(
+                producto.isRequiereAnalisisFisico(),
+                producto.isRequiereAnalisisQuimico(),
+                producto.isRequiereAnalisisMicrobiologico()
+        );
+        // LEGACY: exposiciones actuales siguen usando el enum derivado
+        return mapTipoAnalisisCalidadString(derivado);
     }
 
     @Named("mapTipoAnalisisCalidad")
@@ -86,7 +99,7 @@ public interface ProductoMapper {
     void update(@MappingTarget Producto entity, ProductoRequestDTO dto);
 
     @AfterMapping
-    default void normalizeScale(@MappingTarget Producto entity) {
+    default void normalizeScale(@MappingTarget Producto entity, ProductoRequestDTO dto) {
         if (entity.getRendimientoUnidad() != null) {
             entity.setRendimientoUnidad(
                     entity.getRendimientoUnidad().setScale(2, RoundingMode.HALF_UP)
@@ -98,6 +111,27 @@ public interface ProductoMapper {
         if (entity.getStockMaximoPlaneacion() != null) {
             entity.setStockMaximoPlaneacion(entity.getStockMaximoPlaneacion().setScale(6, RoundingMode.HALF_UP));
         }
+
+        boolean flagsPresentes = dto.getRequiereAnalisisFisico() != null
+                || dto.getRequiereAnalisisQuimico() != null
+                || dto.getRequiereAnalisisMicrobiologico() != null;
+
+        boolean requiereFisico = Boolean.TRUE.equals(dto.getRequiereAnalisisFisico());
+        boolean requiereQuimico = Boolean.TRUE.equals(dto.getRequiereAnalisisQuimico());
+        boolean requiereMicro = Boolean.TRUE.equals(dto.getRequiereAnalisisMicrobiologico());
+
+        if (!flagsPresentes) {
+            // LEGACY: compatibilidad con clientes que aún envían solo tipoAnalisisCalidad
+            TipoAnalisisCalidad legado = mapTipoAnalisisCalidad(dto.getTipoAnalisisCalidad());
+            requiereFisico = legado == TipoAnalisisCalidad.FISICO || legado == TipoAnalisisCalidad.AMBOS;
+            requiereQuimico = legado == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || legado == TipoAnalisisCalidad.AMBOS;
+            requiereMicro = legado == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || legado == TipoAnalisisCalidad.AMBOS;
+        }
+
+        entity.setRequiereAnalisisFisico(requiereFisico);
+        entity.setRequiereAnalisisQuimico(requiereQuimico);
+        entity.setRequiereAnalisisMicrobiologico(requiereMicro);
+        entity.recomputarTipoAnalisisDesdeBanderas();
     }
 
 }

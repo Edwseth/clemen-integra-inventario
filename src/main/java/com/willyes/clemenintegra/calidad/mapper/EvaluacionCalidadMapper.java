@@ -112,12 +112,12 @@ public class EvaluacionCalidadMapper {
         boolean fisicoCargado = evaluacionFisica.isPresent();
         boolean microCargado = evaluacionQuimicoMicro.isPresent();
 
-        TipoAnalisisCalidad tipoAnalisis = lote.getProducto().getTipoAnalisisCalidad();
         boolean requiereFisico = requiereFisico(lote.getProducto());
         boolean requiereQuimico = requiereQuimico(lote.getProducto());
         var estadoMicro = calcularEstadoMicro(lote.getProducto(), evals, evaluacionesConResultadosMicro);
         boolean requiereMicro = estadoMicro.requiereMicro();
         boolean requiereQuimicoOMicro = requiereQuimico || requiereMicro;
+        TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.fromFlags(requiereFisico, requiereQuimico, requiereMicro);
 
         Boolean fisicoConforme = requiereFisico
                 ? evaluacionFisica.map(EvaluacionCalidad::getResultado).map(this::mapResultado).orElse(null)
@@ -158,9 +158,7 @@ public class EvaluacionCalidadMapper {
                 microEvaluacionCompleta);
 
         String resultadoGlobal;
-        if (tipoAnalisis == null) {
-            resultadoGlobal = "DESCONOCIDO";
-        } else if (tipoAnalisis == TipoAnalisisCalidad.NINGUNO && !requiereFisico && !requiereQuimico && !requiereMicro) {
+        if (tipoAnalisis == TipoAnalisisCalidad.NINGUNO && !requiereFisico && !requiereQuimico && !requiereMicro) {
             resultadoGlobal = "NO_REQUERIDO";
         } else if (algunNoConforme) {
             resultadoGlobal = ResultadoEvaluacion.NO_CONFORME.name();

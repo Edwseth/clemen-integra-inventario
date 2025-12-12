@@ -20,7 +20,6 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
@@ -530,7 +529,10 @@ class OrdenProduccionServiceImplTest {
         producto.setNombre("PT-Probador");
         producto.setCodigoSku("PT-005");
         producto.setCategoriaProducto(categoria);
-        producto.setTipoAnalisis(TipoAnalisisCalidad.NINGUNO);
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         orden.setProducto(producto);
 
         EtapaProduccion etapa = EtapaProduccion.builder()
@@ -597,7 +599,10 @@ class OrdenProduccionServiceImplTest {
         producto.setNombre("PS-Probador");
         producto.setCodigoSku("PS-025");
         producto.setCategoriaProducto(categoria);
-        producto.setTipoAnalisis(TipoAnalisisCalidad.FISICO);
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         orden.setProducto(producto);
 
         EtapaProduccion etapa = EtapaProduccion.builder()
@@ -1077,7 +1082,10 @@ class OrdenProduccionServiceImplTest {
         CategoriaProducto categoria = new CategoriaProducto();
         categoria.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
         producto.setCategoriaProducto(categoria);
-        producto.setTipoAnalisis(TipoAnalisisCalidad.NINGUNO);
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         return producto;
     }
 
@@ -1159,7 +1167,10 @@ class OrdenProduccionServiceImplTest {
         Producto producto = new Producto();
         producto.setId(25);
         producto.setCategoriaProducto(categoria);
-        producto.setTipoAnalisis(TipoAnalisisCalidad.NINGUNO);
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         orden.setProducto(producto);
 
         EtapaProduccion etapa = EtapaProduccion.builder()
