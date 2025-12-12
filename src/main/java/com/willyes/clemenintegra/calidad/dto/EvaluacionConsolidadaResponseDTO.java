@@ -30,6 +30,9 @@ public class EvaluacionConsolidadaResponseDTO {
     private boolean tieneResultadosMicro;
     private boolean tieneAdjuntosFisico;
     private boolean tieneAdjuntosQuimicoMicro;
+    private Long evaluacionQuimicoMicroId;
+    private Long evaluacionFisicaId;
+    private List<ArchivoEvaluacionDTO> adjuntosQuimicoMicro;
     private String resultadoGlobal;
     private List<EvaluacionSimpleDTO> evaluaciones;
 

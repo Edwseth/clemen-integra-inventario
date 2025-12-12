@@ -108,41 +108,40 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         validarRolEvaluador(user, dto.getTipoEvaluacion());
 
-        java.util.List<ArchivoEvaluacion> adjuntos = new java.util.ArrayList<>();
-        java.util.List<ArchivoEvaluacionDTO> datosArchivos = dto.getArchivosAdjuntos();
+        java.util.List<ArchivoEvaluacion> adjuntos = guardarAdjuntos(archivos, dto.getArchivosAdjuntos());
 
-        for (int i = 0; archivos != null && i < archivos.size(); i++) {
-            MultipartFile archivo = archivos.get(i);
-            if (archivo == null || archivo.isEmpty()) continue;
-            try {
-                String nombreOriginal = archivo.getOriginalFilename();
-                String nombreSanitizado = (nombreOriginal != null ? nombreOriginal : "archivo")
-                        .replaceAll("[^a-zA-Z0-9._-]", "_");
+        EvaluacionCalidad entidad;
+        if (dto.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO) {
+            entidad = repository.findFirstByLoteProductoIdAndTipoEvaluacion(lote.getId(), TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                    .map(existing -> {
+                        existing.setResultado(dto.getResultado());
+                        existing.setObservaciones(dto.getObservaciones());
+                        existing.setFechaEvaluacion(LocalDateTime.now());
+                        existing.setUsuarioEvaluador(user);
+                        existing.setTipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
+                        existing.setLoteProducto(lote);
 
-                String nombreArchivo = System.currentTimeMillis() + "_" + nombreSanitizado;
-
-                Path uploadRoot = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones");
-                Files.createDirectories(uploadRoot);
-
-                Path destino = uploadRoot.resolve(nombreArchivo);
-                archivo.transferTo(destino.toFile());
-
-                String nombreVisible = (datosArchivos != null && datosArchivos.size() > i)
-                        ? datosArchivos.get(i).getNombreVisible()
-                        : nombreOriginal;
-
-                adjuntos.add(ArchivoEvaluacion.builder()
-                        .nombreArchivo(nombreArchivo)
-                        .nombreVisible(nombreVisible)
-                        .build());
-            } catch (IOException e) {
-                throw new RuntimeException("Error al guardar el archivo adjunto: " + e.getMessage(), e);
-            }
+                        if (adjuntos != null && !adjuntos.isEmpty()) {
+                            java.util.List<ArchivoEvaluacion> actuales = existing.getArchivosAdjuntos();
+                            if (actuales == null) {
+                                actuales = new java.util.ArrayList<>();
+                            }
+                            actuales.addAll(adjuntos);
+                            existing.setArchivosAdjuntos(actuales);
+                        }
+                        return existing;
+                    })
+                    .orElseGet(() -> {
+                        EvaluacionCalidad nueva = mapper.toEntity(dto, lote, user);
+                        nueva.setFechaEvaluacion(LocalDateTime.now());
+                        nueva.setArchivosAdjuntos(adjuntos);
+                        return nueva;
+                    });
+        } else {
+            entidad = mapper.toEntity(dto, lote, user);
+            entidad.setFechaEvaluacion(LocalDateTime.now());
+            entidad.setArchivosAdjuntos(adjuntos);
         }
-
-        EvaluacionCalidad entidad = mapper.toEntity(dto, lote, user);
-        entidad.setFechaEvaluacion(LocalDateTime.now());
-        entidad.setArchivosAdjuntos(adjuntos);
 
         entidad = repository.save(entidad);
 
@@ -221,6 +220,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public EvaluacionCalidadDetalleDTO obtenerDetalle(Long id) {
         EvaluacionCalidad evaluacion = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evaluación no encontrada"));
@@ -265,6 +265,40 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
     public void eliminar(Long id) {
         repository.deleteById(id);
+    }
+
+    private java.util.List<ArchivoEvaluacion> guardarAdjuntos(java.util.List<MultipartFile> archivos,
+                                                              java.util.List<ArchivoEvaluacionDTO> datosArchivos) {
+        java.util.List<ArchivoEvaluacion> adjuntos = new java.util.ArrayList<>();
+        for (int i = 0; archivos != null && i < archivos.size(); i++) {
+            MultipartFile archivo = archivos.get(i);
+            if (archivo == null || archivo.isEmpty()) continue;
+            try {
+                String nombreOriginal = archivo.getOriginalFilename();
+                String nombreSanitizado = (nombreOriginal != null ? nombreOriginal : "archivo")
+                        .replaceAll("[^a-zA-Z0-9._-]", "_");
+
+                String nombreArchivo = System.currentTimeMillis() + "_" + nombreSanitizado;
+
+                Path uploadRoot = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones");
+                Files.createDirectories(uploadRoot);
+
+                Path destino = uploadRoot.resolve(nombreArchivo);
+                archivo.transferTo(destino.toFile());
+
+                String nombreVisible = (datosArchivos != null && datosArchivos.size() > i)
+                        ? datosArchivos.get(i).getNombreVisible()
+                        : nombreOriginal;
+
+                adjuntos.add(ArchivoEvaluacion.builder()
+                        .nombreArchivo(nombreArchivo)
+                        .nombreVisible(nombreVisible)
+                        .build());
+            } catch (IOException e) {
+                throw new RuntimeException("Error al guardar el archivo adjunto: " + e.getMessage(), e);
+            }
+        }
+        return adjuntos;
     }
 
     private String buildOperacion(String prefijo, TipoEvaluacion tipo) {
