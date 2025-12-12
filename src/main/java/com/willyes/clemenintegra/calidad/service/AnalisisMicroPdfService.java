@@ -7,6 +7,8 @@ import com.willyes.clemenintegra.calidad.model.PlantillaAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
@@ -14,6 +16,7 @@ import org.springframework.util.StreamUtils;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +25,19 @@ import java.util.Optional;
 
 @Service
 public class AnalisisMicroPdfService {
+
+    private static final DateTimeFormatter FECHA_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    private static final Map<String, String> METODOS_ISO = Map.ofEntries(
+            Map.entry("Recuento de mesófilos aerobios", "ISO 4833-1"),
+            Map.entry("Recuento de coliformes totales", "ISO 4832"),
+            Map.entry("Recuento de coliformes fecales", "ISO 4832"),
+            Map.entry("Recuento de Bacillus cereus", "ISO 7932"),
+            Map.entry("Presencia de Salmonella spp", "ISO 6579"),
+            Map.entry("Recuento de esporas de Clostridium sulfito reductor", "ISO 15213"),
+            Map.entry("Recuento de mohos y levaduras", "ISO 21527-1"),
+            Map.entry("Presencia de Staphylococcus aureus", "ISO 6888-1")
+    );
 
     private final EvaluacionCalidadRepository evaluacionRepository;
     private final ResultadoAnalisisMicrobiologicoRepository resultadoRepository;
@@ -41,43 +57,31 @@ public class AnalisisMicroPdfService {
                 .map(l -> l.getProducto().getPlantillaAnalisisMicrobiologico())
                 .orElse(null);
 
-        String html = loadTemplate("templates/calidad/analisis_microbiologico.ftl");
-        html = html.replace("${empresa.nombre}", esc("LABORATORIO CLEMEN"))
-                .replace("${empresa.nit}", esc("NIT PENDIENTE"))
-                .replace("${empresa.direccion}", esc("Direccion"))
-                .replace("${empresa.telefono}", esc("Telefono"));
-
-        html = html.replace("${producto}", esc(evaluacion.getLoteProducto().getProducto().getNombre()))
-                .replace("${lote}", esc(evaluacion.getLoteProducto().getCodigoLote()))
-                .replace("${fecha}", evaluacion.getFechaEvaluacion() != null
-                        ? evaluacion.getFechaEvaluacion().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                        : "")
-                .replace("${analista}", evaluacion.getUsuarioEvaluador() != null
-                        ? esc(evaluacion.getUsuarioEvaluador().getNombreCompleto()) : "");
-
-        html = html.replace("${tablaResultados}", construirTabla(resultados, plantilla));
+        String html = construirHtml(evaluacion, resultados, plantilla);
         return renderPdf(html);
     }
 
-    private String construirTabla(List<ResultadoAnalisisMicrobiologico> resultados,
-                                  PlantillaAnalisisMicrobiologico plantilla) {
-        Map<Long, ResultadoAnalisisMicrobiologico> index = new HashMap<>();
-        resultados.forEach(r -> index.put(r.getParametro().getId(), r));
-        StringBuilder sb = new StringBuilder();
-        List<ParametroAnalisisMicrobiologico> parametros = plantilla != null ? plantilla.getParametros() : List.of();
-        for (ParametroAnalisisMicrobiologico p : parametros) {
-            ResultadoAnalisisMicrobiologico res = index.get(p.getId());
-            sb.append("<tr>")
-                    .append("<td>").append(esc(p.getNombreEnsayo())).append("</td>")
-                    .append("<td>").append(esc(p.getUnidad())).append("</td>")
-                    .append("<td>").append(esc(p.getEspecificacion())).append("</td>")
-                    .append("<td>").append(res != null ? esc(res.getResultado()) : "").append("</td>")
-                    .append("<td>").append(res != null && res.getCumple() != null ? (res.getCumple() ? "SI" : "NO") : "")
-                    .append("</td>")
-                    .append("<td>").append(res != null ? esc(res.getObservaciones()) : "").append("</td>")
-                    .append("</tr>");
-        }
-        return sb.toString();
+    String construirHtml(EvaluacionCalidad evaluacion, List<ResultadoAnalisisMicrobiologico> resultados,
+                         PlantillaAnalisisMicrobiologico plantilla) {
+        String html = loadTemplate("templates/calidad/informe-micro.ftl");
+
+        html = html.replace("${codigoProducto}", esc(Optional.ofNullable(evaluacion.getLoteProducto())
+                        .map(l -> l.getProducto().getCodigoSku()).orElse("")))
+                .replace("${descripcionProducto}", esc(Optional.ofNullable(evaluacion.getLoteProducto())
+                        .map(l -> l.getProducto().getNombre()).orElse("")))
+                .replace("${lote}", esc(Optional.ofNullable(evaluacion.getLoteProducto())
+                        .map(LoteProducto::getCodigoLote).orElse("")))
+                .replace("${fechaResultado}", esc(formatearFecha(evaluacion)))
+                .replace("${fechaMuestra}", "")
+                .replace("${cantidadInspeccionada}", "")
+                .replace("${opOc}", "")
+                .replace("${observaciones}", esc(obtenerObservaciones(evaluacion)))
+                .replace("${conclusiones}", esc(obtenerConclusiones(evaluacion)))
+                .replace("${nombreElabora}", esc(obtenerNombreElabora(evaluacion)))
+                .replace("${fechaEvaluacion}", esc(formatearFecha(evaluacion)));
+
+        html = html.replace("${tablaResultados}", construirTabla(resultados, plantilla));
+        return html;
     }
 
     private byte[] renderPdf(String html) {
@@ -93,8 +97,73 @@ public class AnalisisMicroPdfService {
         }
     }
 
+    private String construirTabla(List<ResultadoAnalisisMicrobiologico> resultados,
+                                  PlantillaAnalisisMicrobiologico plantilla) {
+        Map<Long, ResultadoAnalisisMicrobiologico> index = new HashMap<>();
+        resultados.forEach(r -> index.put(r.getParametro().getId(), r));
+
+        StringBuilder sb = new StringBuilder();
+        List<ParametroAnalisisMicrobiologico> parametros = plantilla != null ? plantilla.getParametros() : List.of();
+        parametros.stream()
+                .sorted(Comparator.comparing(ParametroAnalisisMicrobiologico::getOrden, Comparator.nullsLast(Integer::compareTo)))
+                .forEach(p -> {
+                    ResultadoAnalisisMicrobiologico res = index.get(p.getId());
+                    sb.append("<tr>")
+                            .append("<td>").append(esc(p.getNombreEnsayo())).append("</td>")
+                            .append("<td>").append(esc(obtenerMetodoIso(p.getNombreEnsayo()))).append("</td>")
+                            .append("<td>").append(esc(p.getEspecificacion())).append("</td>")
+                            .append("<td>").append(esc(formatearResultado(p, res))).append("</td>")
+                            .append("</tr>");
+                });
+        return sb.toString();
+    }
+
     private String esc(String val) {
         return val == null ? "" : val.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private String formatearFecha(EvaluacionCalidad evaluacion) {
+        return evaluacion.getFechaEvaluacion() != null ? evaluacion.getFechaEvaluacion().format(FECHA_FORMATTER) : "";
+    }
+
+    private String obtenerMetodoIso(String nombreEnsayo) {
+        return METODOS_ISO.getOrDefault(nombreEnsayo, "");
+    }
+
+    private String formatearResultado(ParametroAnalisisMicrobiologico parametro, ResultadoAnalisisMicrobiologico resultado) {
+        if (resultado == null || resultado.getResultado() == null) {
+            return "";
+        }
+        if (parametro != null && parametro.getTipoResultado() == com.willyes.clemenintegra.calidad.model.enums.TipoResultadoAnalisis.NUMERICO) {
+            String unidad = Optional.ofNullable(parametro.getUnidad()).orElse("");
+            return (resultado.getResultado() + (unidad.isBlank() ? "" : " " + unidad)).trim();
+        }
+        return resultado.getResultado();
+    }
+
+    private String obtenerObservaciones(EvaluacionCalidad evaluacion) {
+        if (evaluacion.getObservaciones() == null || evaluacion.getObservaciones().isBlank()) {
+            return "Sin observaciones.";
+        }
+        return evaluacion.getObservaciones();
+    }
+
+    private String obtenerConclusiones(EvaluacionCalidad evaluacion) {
+        if (evaluacion.getResultado() == null) {
+            return "";
+        }
+        return switch (evaluacion.getResultado()) {
+            case CONFORME -> "Lote conforme según criterios microbiológicos.";
+            case NO_CONFORME -> "Lote no conforme según criterios microbiológicos.";
+            case CONDICIONADO -> "Lote condicionado. Revisar observaciones y acciones asociadas.";
+        };
+    }
+
+    private String obtenerNombreElabora(EvaluacionCalidad evaluacion) {
+        return Optional.ofNullable(evaluacion.getUsuarioEvaluador())
+                .map(Usuario::getNombreCompleto)
+                .filter(nombre -> !nombre.isBlank())
+                .orElse("Alexander Baloco");
     }
 
     private String loadTemplate(String path) {

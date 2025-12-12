@@ -44,13 +44,16 @@ class AnalisisMicroPdfServiceTest {
         plantilla.setParametros(List.of(param));
 
         Producto producto = Producto.builder().id(10).nombre("Producto X").plantillaAnalisisMicrobiologico(plantilla).build();
+        producto.setCodigoSku("SKU-123");
         LoteProducto lote = LoteProducto.builder().id(20L).producto(producto).codigoLote("LT-1").build();
         Usuario usuario = Usuario.builder().id(30L).nombreCompleto("Ana Perez").build();
         EvaluacionCalidad evaluacion = EvaluacionCalidad.builder()
                 .id(5L)
                 .loteProducto(lote)
                 .usuarioEvaluador(usuario)
-                .fechaEvaluacion(LocalDateTime.now())
+                .observaciones("Sin novedades")
+                .resultado(com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion.CONFORME)
+                .fechaEvaluacion(LocalDateTime.of(2024, 2, 10, 12, 0))
                 .build();
 
         ResultadoAnalisisMicrobiologico res = ResultadoAnalisisMicrobiologico.builder()
@@ -64,6 +67,11 @@ class AnalisisMicroPdfServiceTest {
         when(resultadoRepository.findByEvaluacionId(5L)).thenReturn(List.of(res));
 
         AnalisisMicroPdfService service = new AnalisisMicroPdfService(evaluacionRepository, resultadoRepository);
+
+        String html = service.construirHtml(evaluacion, List.of(res), plantilla);
+        assertThat(html).contains("LABORATORIO DE MICROBIOLOGÍA CLEMEN");
+        assertThat(html).contains("CÓDIGO: FOR-MIC-009");
+        assertThat(html).contains("Ensayo");
 
         byte[] pdf = service.generarPdf(5L);
 
