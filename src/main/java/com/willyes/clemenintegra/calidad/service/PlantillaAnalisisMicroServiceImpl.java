@@ -48,6 +48,7 @@ public class PlantillaAnalisisMicroServiceImpl implements PlantillaAnalisisMicro
                         .map(p -> ParametroAnalisisMicroDTO.builder()
                                 .id(p.getId())
                                 .nombreEnsayo(p.getNombreEnsayo())
+                                .metodo(p.getMetodo())
                                 .unidad(p.getUnidad())
                                 .especificacion(p.getEspecificacion())
                                 .tipoResultado(p.getTipoResultado())

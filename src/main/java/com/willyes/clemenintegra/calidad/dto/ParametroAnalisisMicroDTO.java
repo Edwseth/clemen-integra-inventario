@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class ParametroAnalisisMicroDTO {
     private Long id;
     private String nombreEnsayo;
+    private String metodo;
     private String unidad;
     private String especificacion;
     private TipoResultadoAnalisis tipoResultado;

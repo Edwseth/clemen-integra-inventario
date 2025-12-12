@@ -24,6 +24,9 @@ public class ParametroAnalisisMicrobiologico {
     @Column(name = "nombre_ensayo", nullable = false, length = 255)
     private String nombreEnsayo;
 
+    @Column(name = "metodo", length = 100)
+    private String metodo;
+
     @Column(name = "unidad", length = 100)
     private String unidad;
 
@@ -37,5 +40,6 @@ public class ParametroAnalisisMicrobiologico {
 
     @Column(name = "orden_parametro")
     private Integer orden;
+
 }
 
