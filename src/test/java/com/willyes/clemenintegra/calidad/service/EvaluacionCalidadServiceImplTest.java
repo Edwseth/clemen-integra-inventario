@@ -162,7 +162,7 @@ class EvaluacionCalidadServiceImplTest {
     }
 
     @Test
-    void obtieneEstadoEvaluacionConsolidado() {
+    void consolidaFqmConDisciplinasConformes() {
         lote.getProducto().setRequiereAnalisisFisico(true);
 
         EvaluacionCalidad evalFisico = EvaluacionCalidad.builder()
@@ -172,6 +172,10 @@ class EvaluacionCalidadServiceImplTest {
                 .usuarioEvaluador(evaluador)
                 .loteProducto(lote)
                 .fechaEvaluacion(LocalDateTime.now())
+                .archivosAdjuntos(List.of(ArchivoEvaluacion.builder()
+                        .nombreVisible("Fisico")
+                        .nombreArchivo("fisico.pdf")
+                        .build()))
                 .build();
 
         EvaluacionCalidad evalQuimicoMicro = EvaluacionCalidad.builder()
@@ -181,6 +185,15 @@ class EvaluacionCalidadServiceImplTest {
                 .usuarioEvaluador(evaluador)
                 .loteProducto(lote)
                 .fechaEvaluacion(LocalDateTime.now())
+                .archivosAdjuntos(List.of(
+                        ArchivoEvaluacion.builder()
+                                .nombreVisible("Químico")
+                                .nombreArchivo("quim.pdf")
+                                .build(),
+                        ArchivoEvaluacion.builder()
+                                .nombreVisible(com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO)
+                                .nombreArchivo("micro.pdf")
+                                .build()))
                 .build();
 
         when(repository.findAllWithinFechaEvaluacion(any(), any()))
@@ -198,6 +211,47 @@ class EvaluacionCalidadServiceImplTest {
                 evalFisico.getFechaEvaluacion().toLocalDate());
 
         assertThat(consolidados).hasSize(1);
-        assertThat(consolidados.get(0).getEstadoEvaluacion()).isEqualTo(EstadoEvaluacionCalidad.EVALUADO);
+        var dto = consolidados.get(0);
+        assertThat(dto.getCodigoAnalisis()).isEqualTo("FQM");
+        assertThat(dto.getFisicoConforme()).isTrue();
+        assertThat(dto.getQuimicoConforme()).isTrue();
+        assertThat(dto.getMicroConforme()).isTrue();
+        assertThat(dto.isTieneResultadosMicro()).isTrue();
+        assertThat(dto.isTienePdfMicro()).isTrue();
+        assertThat(dto.getEstadoEvaluacion()).isEqualTo(EstadoEvaluacionCalidad.EVALUADO);
+    }
+
+    @Test
+    void consolidaMicroPendienteCuandoNoHayResultados() {
+        Producto productoSoloMicro = new Producto();
+        productoSoloMicro.setId(2);
+        productoSoloMicro.setRequiereAnalisisMicrobiologico(true);
+        LoteProducto loteSoloMicro = new LoteProducto();
+        loteSoloMicro.setId(30L);
+        loteSoloMicro.setProducto(productoSoloMicro);
+        loteSoloMicro.setEstado(EstadoLote.EN_CUARENTENA);
+
+        EvaluacionCalidad evalMicro = EvaluacionCalidad.builder()
+                .id(80L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .usuarioEvaluador(evaluador)
+                .loteProducto(loteSoloMicro)
+                .fechaEvaluacion(LocalDateTime.now())
+                .build();
+
+        when(repository.findAllWithinFechaEvaluacion(any(), any()))
+                .thenReturn(List.of(evalMicro));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(any()))
+                .thenReturn(List.of());
+
+        var consolidados = service.obtenerEvaluacionesConsolidadas(evalMicro.getFechaEvaluacion().toLocalDate(),
+                evalMicro.getFechaEvaluacion().toLocalDate());
+
+        assertThat(consolidados).hasSize(1);
+        var dto = consolidados.get(0);
+        assertThat(dto.isTieneResultadosMicro()).isFalse();
+        assertThat(dto.getMicroConforme()).isNull();
+        assertThat(dto.getEstadoEvaluacion()).isEqualTo(EstadoEvaluacionCalidad.PENDIENTE);
     }
 }
