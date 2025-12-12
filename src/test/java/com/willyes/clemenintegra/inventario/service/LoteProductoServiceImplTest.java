@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.CondicionUsoRepository;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
+import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
@@ -42,6 +43,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -76,6 +79,7 @@ class LoteProductoServiceImplTest {
     @Mock private CondicionUsoRepository condicionUsoRepository;
     @Mock private CondicionUsoMapper condicionUsoMapper;
     @Mock private BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
+    @Mock private ResultadoAnalisisMicrobiologicoRepository resultadoAnalisisMicrobiologicoRepository;
 
     @InjectMocks
     private LoteProductoServiceImpl service;
@@ -223,6 +227,65 @@ class LoteProductoServiceImplTest {
         assertThat(liberado.getEstado()).isEqualTo(EstadoLote.LIBERADO);
     }
 
+    @Test
+    @DisplayName("Libera lote cuando existen resultados micro y PDF requeridos")
+    void liberarLoteConMicroCompleto() {
+        Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        LoteProducto lote = loteEnCuarentena(30L, producto, 7, BigDecimal.ONE);
+        lote.setStockReservado(BigDecimal.ZERO);
+
+        EvaluacionCalidad evaluacionMicro = evaluacionMicroCompleta(300L, lote);
+
+        mockCatalogosBasicos(13L, 12L);
+        when(catalogResolver.resolveAlmacenPrincipal(producto)).thenReturn(2L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
+        when(loteProductoRepository.findByIdForUpdate(30L)).thenReturn(Optional.of(lote));
+        when(evaluacionRepository.findByLoteProductoId(30L)).thenReturn(List.of(evaluacionMicro));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(any()))
+                .thenReturn(List.of(com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico.builder()
+                        .id(1L)
+                        .evaluacion(evaluacionMicro)
+                        .build()));
+        when(almacenRepo.findById(2L)).thenReturn(Optional.of(almacenConId(2)));
+
+        service.liberarLotePorCalidad(30L, jefeCalidad);
+
+        assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
+        assertThat(lote.getAlmacen().getId()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("Bloquea liberación si falta resultados microbiológicos")
+    void bloqueaLiberacionSinResultadosMicro() {
+        Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        LoteProducto lote = loteEnCuarentena(31L, producto, 7, BigDecimal.ONE);
+        lote.setStockReservado(BigDecimal.ZERO);
+
+        EvaluacionCalidad evaluacionMicro = evaluacionMicroCompleta(301L, lote);
+
+        mockCatalogosBasicos(13L, 12L);
+        when(catalogResolver.resolveAlmacenPrincipal(producto)).thenReturn(2L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
+        when(loteProductoRepository.findByIdForUpdate(31L)).thenReturn(Optional.of(lote));
+        when(evaluacionRepository.findByLoteProductoId(31L)).thenReturn(List.of(evaluacionMicro));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(any()))
+                .thenReturn(Collections.emptyList());
+
+        ResponseStatusException ex = org.junit.jupiter.api.Assertions.assertThrows(ResponseStatusException.class,
+                () -> service.liberarLotePorCalidad(31L, jefeCalidad));
+
+        assertThat(ex.getStatusCode().value()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(ex.getReason()).isEqualTo("Faltan resultados microbiológicos");
+    }
+
     private void mockCatalogosBasicos(Long motivoId, Long tipoDetalleId) {
         MotivoMovimiento motivo = new MotivoMovimiento();
         motivo.setId(motivoId);
@@ -285,6 +348,20 @@ class LoteProductoServiceImplTest {
         Almacen almacen = new Almacen();
         almacen.setId(id);
         return almacen;
+    }
+
+    private EvaluacionCalidad evaluacionMicroCompleta(Long id, LoteProducto lote) {
+        return EvaluacionCalidad.builder()
+                .id(id)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .observaciones("ok")
+                .loteProducto(lote)
+                .archivosAdjuntos(List.of(com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion.builder()
+                        .nombreVisible(com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO)
+                        .nombreArchivo("micro.pdf")
+                        .build()))
+                .build();
     }
 }
 

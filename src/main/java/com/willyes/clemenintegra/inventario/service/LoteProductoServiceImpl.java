@@ -593,8 +593,9 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         }
 
         List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(loteId);
+        java.util.Set<Long> evaluacionesConResultadosMicro = obtenerEvaluacionesConResultadosMicro(evaluaciones);
         var validacion = validarDisciplinasCompletas(lote, evaluaciones,
-                resultadoAnalisisMicrobiologicoRepository::existsByEvaluacionId);
+                evaluacionId -> evaluacionesConResultadosMicro.contains(evaluacionId));
         if (!validacion.esValido()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, validacion.getPrimerMensaje());
         }
@@ -633,6 +634,24 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         movimientoInventarioRepository.save(mov);
 
         return loteProductoMapper.toResponseDTO(lote);
+    }
+
+    private java.util.Set<Long> obtenerEvaluacionesConResultadosMicro(List<EvaluacionCalidad> evaluaciones) {
+        if (evaluaciones == null || evaluaciones.isEmpty()) {
+            return java.util.Collections.emptySet();
+        }
+        List<Long> ids = evaluaciones.stream()
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .map(EvaluacionCalidad::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (ids.isEmpty()) {
+            return java.util.Collections.emptySet();
+        }
+        return resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(ids).stream()
+                .map(r -> r.getEvaluacion() != null ? r.getEvaluacion().getId() : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     private void registrarBitacoraReapertura(LoteProducto lote,
