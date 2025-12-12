@@ -8,7 +8,6 @@ import com.willyes.clemenintegra.calidad.dto.PlantillaAnalisisMicroDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
-import com.willyes.clemenintegra.calidad.service.AnalisisMicroPdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.calidad.service.ResultadoAnalisisMicroService;
 import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
@@ -43,7 +42,6 @@ public class EvaluacionCalidadController {
 
     private final EvaluacionCalidadService service;
     private final ResultadoAnalisisMicroService resultadoAnalisisMicroService;
-    private final AnalisisMicroPdfService analisisMicroPdfService;
     private final PlantillaAnalisisMicroService plantillaAnalisisMicroService;
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
@@ -168,7 +166,7 @@ public class EvaluacionCalidadController {
     @GetMapping(path = "/{evaluacionId}/micro-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> descargarPdfMicroConNombre(@PathVariable Long evaluacionId) {
-        byte[] pdf = analisisMicroPdfService.generarPdf(evaluacionId);
+        byte[] pdf = resultadoAnalisisMicroService.obtenerPdfMicro(evaluacionId);
         String nombreArchivo = "MICRO_" + evaluacionId + ".pdf";
         try {
             EvaluacionCalidadResponseDTO dto = service.obtenerPorId(evaluacionId);
@@ -188,7 +186,7 @@ public class EvaluacionCalidadController {
     @GetMapping(path = "/{evaluacionId}/microbiologico/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> descargarPdfMicro(@PathVariable Long evaluacionId) {
-        byte[] pdf = analisisMicroPdfService.generarPdf(evaluacionId);
+        byte[] pdf = resultadoAnalisisMicroService.obtenerPdfMicro(evaluacionId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=analisis_micro_" + evaluacionId + ".pdf")
