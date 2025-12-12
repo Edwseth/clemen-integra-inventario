@@ -60,9 +60,11 @@ public class ProductoResponseDTO {
         this.stockSeguridad = producto.getStockSeguridad();
         this.stockMaximoPlaneacion = producto.getStockMaximoPlaneacion();
         this.activo = producto.isActivo();
-        this.tipoAnalisisCalidad = producto.getTipoAnalisisCalidad() != null
-                ? producto.getTipoAnalisisCalidad().name()
-                : null;
+        this.tipoAnalisisCalidad = com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.fromFlags(
+                producto.isRequiereAnalisisFisico(),
+                producto.isRequiereAnalisisQuimico(),
+                producto.isRequiereAnalisisMicrobiologico()
+        ).name();
         this.rendimiento = producto.getRendimientoUnidad() != null ? producto.getRendimientoUnidad() : BigDecimal.ZERO;
         this.unidadMedida = producto.getUnidadMedida() != null
                 ? new UnidadMedidaResponseDTO(

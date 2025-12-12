@@ -13,5 +13,20 @@ public enum TipoAnalisisCalidad {
     NINGUNO,
     FISICO,
     QUIMICO_MICROBIOLOGICO,
-    AMBOS
+    AMBOS;
+
+    public static TipoAnalisisCalidad fromFlags(boolean fisico, boolean quimico, boolean micro) {
+        if (!fisico && !quimico && !micro) {
+            return NINGUNO;
+        }
+        boolean anyQm = quimico || micro;
+        if (fisico && anyQm) {
+            return AMBOS;
+        }
+        if (fisico) {
+            return FISICO;
+        }
+        // Para compatibilidad legacy, cualquier combinación sin físico pero con químico y/o micro
+        return QUIMICO_MICROBIOLOGICO;
+    }
 }

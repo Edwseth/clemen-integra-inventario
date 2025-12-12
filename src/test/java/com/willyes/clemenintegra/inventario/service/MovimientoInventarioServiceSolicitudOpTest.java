@@ -949,7 +949,10 @@ class MovimientoInventarioServiceSolicitudOpTest {
         UnidadMedida unidad = new UnidadMedida();
         unidad.setId(20L);
         producto.setUnidadMedida(unidad);
-        producto.setTipoAnalisis(TipoAnalisisCalidad.FISICO);
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
         return producto;
     }
 

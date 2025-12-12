@@ -98,6 +98,9 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import jakarta.persistence.OptimisticLockException;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
 
 @Service
 @RequiredArgsConstructor
@@ -819,22 +822,20 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             Almacen destino;
             EstadoLote estadoLote;
-            TipoAnalisisCalidad tipoAnalisis = orden.getProducto().getTipoAnalisis();
             TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
+            boolean requiereAnalisis = requiereFisico(orden.getProducto())
+                    || requiereQuimico(orden.getProducto())
+                    || requiereMicro(orden.getProducto());
             if (tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
                 destino = almacenCuarentena;
                 estadoLote = EstadoLote.EN_CUARENTENA;
             } else {
-                switch (tipoAnalisis) {
-                    case NINGUNO -> {
-                        destino = almacenPt;
-                        estadoLote = EstadoLote.DISPONIBLE;
-                    }
-                    case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
-                        destino = almacenCuarentena;
-                        estadoLote = EstadoLote.EN_CUARENTENA;
-                    }
-                    default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
+                if (requiereAnalisis) {
+                    destino = almacenCuarentena;
+                    estadoLote = EstadoLote.EN_CUARENTENA;
+                } else {
+                    destino = almacenPt;
+                    estadoLote = EstadoLote.DISPONIBLE;
                 }
             }
 
@@ -1340,22 +1341,20 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             Almacen destino;
             EstadoLote estadoLote;
-            TipoAnalisisCalidad tipoAnalisis = orden.getProducto().getTipoAnalisis();
             TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
+            boolean requiereAnalisis = requiereFisico(orden.getProducto())
+                    || requiereQuimico(orden.getProducto())
+                    || requiereMicro(orden.getProducto());
             if (tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
                 destino = almacenCuarentena;
                 estadoLote = EstadoLote.EN_CUARENTENA;
             } else {
-                switch (tipoAnalisis) {
-                    case NINGUNO -> {
-                        destino = almacenPt;
-                        estadoLote = EstadoLote.DISPONIBLE;
-                    }
-                    case FISICO, QUIMICO_MICROBIOLOGICO, AMBOS -> {
-                        destino = almacenCuarentena;
-                        estadoLote = EstadoLote.EN_CUARENTENA;
-                    }
-                    default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
+                if (requiereAnalisis) {
+                    destino = almacenCuarentena;
+                    estadoLote = EstadoLote.EN_CUARENTENA;
+                } else {
+                    destino = almacenPt;
+                    estadoLote = EstadoLote.DISPONIBLE;
                 }
             }
 

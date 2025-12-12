@@ -15,7 +15,6 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
-import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -78,6 +77,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
 import java.util.stream.Collectors;
 
 @Service
@@ -1576,15 +1578,17 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         validarFechaVencimientoRecepcion(dto.fechaVencimiento());
 
+        boolean requiereAnalisis = requiereFisico(producto) || requiereQuimico(producto) || requiereMicro(producto);
+
         LoteProducto lote = LoteProducto.builder()
                 .codigoLote(dto.codigoLote())
                 .fechaFabricacion(LocalDateTime.now())
                 .fechaVencimiento(dto.fechaVencimiento())
-                .fechaLiberacion(producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO ? LocalDateTime.now() : null)
+                .fechaLiberacion(!requiereAnalisis ? LocalDateTime.now() : null)
                 .estado(obtenerEstadoInicial(producto))
                 .producto(producto)
                 .almacen(destino)
-                .usuarioLiberador(producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO ? usuario : null)
+                .usuarioLiberador(!requiereAnalisis ? usuario : null)
                 .stockLote(cantidad)
                 .build();
         return loteProductoRepository.save(lote);
@@ -2490,9 +2494,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private EstadoLote obtenerEstadoInicial(Producto producto) {
-        return producto.getTipoAnalisisCalidad() == TipoAnalisisCalidad.NINGUNO
-                ? EstadoLote.DISPONIBLE
-                : EstadoLote.EN_CUARENTENA;
+        boolean requiereAnalisis = requiereFisico(producto) || requiereQuimico(producto) || requiereMicro(producto);
+        return requiereAnalisis ? EstadoLote.EN_CUARENTENA : EstadoLote.DISPONIBLE;
     }
 
     /**

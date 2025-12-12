@@ -134,18 +134,6 @@ public class ProductoServiceImpl implements ProductoService {
                 .build();
     }
 
-    private TipoAnalisisCalidad obtenerTipoAnalisisDesdeDto(String valor) {
-        if (valor == null || valor.isBlank()) {
-            return TipoAnalisisCalidad.NINGUNO;
-        }
-        String normalizado = valor.trim().toUpperCase();
-        return switch (normalizado) {
-            case "FISICO", "FISICO_QUIMICO" -> TipoAnalisisCalidad.FISICO;
-            case "MICROBIOLOGICO", "QUIMICO_MICROBIOLOGICO" -> TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO;
-            default -> TipoAnalisisCalidad.valueOf(normalizado);
-        };
-    }
-
     @Override
     @Transactional(readOnly = true)
     public Page<ProductoResponseDTO> listarTodos(String nombre, String sku, Long categoriaProductoId, Boolean activo, Pageable pageable) {
@@ -263,13 +251,14 @@ public class ProductoServiceImpl implements ProductoService {
                 .stockSeguridad(normalizeToScale6(dto.getStockSeguridad()))
                 .stockMaximoPlaneacion(normalizeToScale6(dto.getStockMaximoPlaneacion()))
                 .activo(true)
-                .tipoAnalisis(obtenerTipoAnalisisDesdeDto(dto.getTipoAnalisisCalidad()))
                 .fechaCreacion(LocalDateTime.now())
                 .unidadMedida(unidad)
                 .categoriaProducto(categoria)
                 .plantillaAnalisisMicrobiologico(obtenerPlantillaMicro(dto.getPlantillaAnalisisMicroId()))
                 .creadoPor(usuario)
                 .build();
+
+        aplicarBanderasCalidadDesdeDto(producto, dto);
 
         producto.setRendimientoUnidad(resolverRendimientoUnidad(dto, categoria));
 
@@ -306,11 +295,12 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setLeadTimeProduccionDias(dto.getLeadTimeProduccionDias());
         producto.setStockSeguridad(normalizeToScale6(dto.getStockSeguridad()));
         producto.setStockMaximoPlaneacion(normalizeToScale6(dto.getStockMaximoPlaneacion()));
-        producto.setTipoAnalisis(obtenerTipoAnalisisDesdeDto(dto.getTipoAnalisisCalidad()));
         producto.setUnidadMedida(unidad);
         producto.setCategoriaProducto(categoria);
         producto.setCreadoPor(usuario);
         producto.setPlantillaAnalisisMicrobiologico(obtenerPlantillaMicro(dto.getPlantillaAnalisisMicroId()));
+
+        aplicarBanderasCalidadDesdeDto(producto, dto);
 
         producto.setRendimientoUnidad(resolverRendimientoUnidad(dto, categoria));
 
@@ -513,6 +503,29 @@ public class ProductoServiceImpl implements ProductoService {
     private ProductoResponseDTO buildDto(Producto producto) {
         BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
         return buildDto(producto, stock);
+    }
+
+    private void aplicarBanderasCalidadDesdeDto(Producto producto, ProductoRequestDTO dto) {
+        boolean flagsPresentes = dto.getRequiereAnalisisFisico() != null
+                || dto.getRequiereAnalisisQuimico() != null
+                || dto.getRequiereAnalisisMicrobiologico() != null;
+
+        boolean requiereFisico = Boolean.TRUE.equals(dto.getRequiereAnalisisFisico());
+        boolean requiereQuimico = Boolean.TRUE.equals(dto.getRequiereAnalisisQuimico());
+        boolean requiereMicro = Boolean.TRUE.equals(dto.getRequiereAnalisisMicrobiologico());
+
+        if (!flagsPresentes) {
+            // LEGACY: compatibilidad con clientes que envían solo tipoAnalisisCalidad
+            TipoAnalisisCalidad legado = productoMapper.mapTipoAnalisisCalidad(dto.getTipoAnalisisCalidad());
+            requiereFisico = legado == TipoAnalisisCalidad.FISICO || legado == TipoAnalisisCalidad.AMBOS;
+            requiereQuimico = legado == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || legado == TipoAnalisisCalidad.AMBOS;
+            requiereMicro = legado == TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO || legado == TipoAnalisisCalidad.AMBOS;
+        }
+
+        producto.setRequiereAnalisisFisico(requiereFisico);
+        producto.setRequiereAnalisisQuimico(requiereQuimico);
+        producto.setRequiereAnalisisMicrobiologico(requiereMicro);
+        producto.recomputarTipoAnalisisDesdeBanderas();
     }
 
     public List<ProductoConEstadoLoteDTO> buscarProductosConLotesPorEstado(String estado) {
