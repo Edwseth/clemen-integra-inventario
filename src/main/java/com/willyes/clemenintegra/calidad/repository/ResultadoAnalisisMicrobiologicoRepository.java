@@ -7,5 +7,9 @@ import java.util.List;
 
 public interface ResultadoAnalisisMicrobiologicoRepository extends JpaRepository<ResultadoAnalisisMicrobiologico, Long> {
     List<ResultadoAnalisisMicrobiologico> findByEvaluacionId(Long evaluacionId);
+
+    List<ResultadoAnalisisMicrobiologico> findByEvaluacionIdIn(List<Long> evaluacionIds);
+
+    boolean existsByEvaluacionId(Long evaluacionId);
 }
 

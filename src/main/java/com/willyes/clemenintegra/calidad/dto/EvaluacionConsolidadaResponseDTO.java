@@ -22,6 +22,14 @@ public class EvaluacionConsolidadaResponseDTO {
     private boolean fisicoQuimicoCargado;
     private boolean microbiologicoCargado;
     private boolean evaluacionesRequeridasCompletas;
+    private boolean requiereAnalisisFisico;
+    private boolean requiereAnalisisQuimico;
+    private boolean requiereAnalisisMicrobiologico;
+    private boolean tieneEvaluacionFisica;
+    private boolean tieneEvaluacionQuimicaMicro;
+    private boolean tieneResultadosMicro;
+    private boolean tieneAdjuntosFisico;
+    private boolean tieneAdjuntosQuimicoMicro;
     private String resultadoGlobal;
     private List<EvaluacionSimpleDTO> evaluaciones;
 
