@@ -1,17 +1,20 @@
 package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.CondicionUsoCreateDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCondicionDTO;
+import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
+import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
@@ -32,6 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -41,6 +46,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -60,6 +66,8 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     private final CondicionUsoService condicionUsoService;
     private final RetencionLoteService retencionLoteService;
     private final NoConformidadService noConformidadService;
+    private final ResultadoAnalisisMicroService resultadoAnalisisMicroService;
+    private final ResultadoAnalisisMicrobiologicoRepository resultadoAnalisisMicrobiologicoRepository;
 
     public Page<EvaluacionCalidadResponseDTO> listar(ResultadoEvaluacion resultado, Pageable pageable) {
         Page<EvaluacionCalidad> page = (resultado != null)
@@ -213,6 +221,15 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     }
 
     @Override
+    public EvaluacionCalidadDetalleDTO obtenerDetalle(Long id) {
+        EvaluacionCalidad evaluacion = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evaluación no encontrada"));
+        java.util.List<ResultadoAnalisisMicroResponseDTO> resultados = resultadoAnalisisMicroService.obtenerPorEvaluacion(id);
+        return mapper.toDetalleDTO(evaluacion, evaluacion.getLoteProducto().getProducto(),
+                mapper.mapearResultadosMicro(resultados));
+    }
+
+    @Override
     public java.util.List<EvaluacionCalidadResponseDTO> listarPorLote(Long loteId) {
         return repository.findByLoteProductoId(loteId)
                 .stream()
@@ -229,8 +246,20 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         java.util.Map<LoteProducto, java.util.List<EvaluacionCalidad>> agrupado = evaluaciones.stream()
                 .collect(java.util.stream.Collectors.groupingBy(EvaluacionCalidad::getLoteProducto));
 
+        java.util.Set<Long> evaluacionesQuimicoMicro = evaluaciones.stream()
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .map(EvaluacionCalidad::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        java.util.Set<Long> evaluacionesConResultadosMicro = evaluacionesQuimicoMicro.isEmpty()
+                ? java.util.Collections.emptySet()
+                : resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(evaluacionesQuimicoMicro.stream().toList())
+                .stream()
+                .map(r -> r.getEvaluacion().getId())
+                .collect(java.util.stream.Collectors.toSet());
+
         return agrupado.entrySet().stream()
-                .map(entry -> mapper.toConsolidadoDTO(entry.getKey(), entry.getValue()))
+                .map(entry -> mapper.toConsolidadoDTO(entry.getKey(), entry.getValue(), evaluacionesConResultadosMicro))
                 .toList();
     }
 

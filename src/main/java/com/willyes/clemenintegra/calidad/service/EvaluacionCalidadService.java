@@ -16,6 +16,7 @@ public interface EvaluacionCalidadService {
     EvaluacionCalidadResponseDTO crear(EvaluacionCalidadRequestDTO dto, List<MultipartFile> archivos);
     EvaluacionCalidadResponseDTO actualizar(Long id, EvaluacionCalidadRequestDTO dto);
     EvaluacionCalidadResponseDTO obtenerPorId(Long id);
+    com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO obtenerDetalle(Long id);
     java.util.List<EvaluacionCalidadResponseDTO> listarPorLote(Long loteId);
     java.util.List<EvaluacionConsolidadaResponseDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio, LocalDate fechaFin);
     void eliminar(Long id);

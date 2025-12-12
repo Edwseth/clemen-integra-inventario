@@ -62,6 +62,8 @@ import org.slf4j.LoggerFactory;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
+import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.validarDisciplinasCompletas;
+import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -76,6 +78,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final UsuarioService usuarioService;
     private final LoteProductoRepository loteProductoRepository;
     private final EvaluacionCalidadRepository evaluacionRepository;
+    private final ResultadoAnalisisMicrobiologicoRepository resultadoAnalisisMicrobiologicoRepository;
     private final StockQueryService stockQueryService;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final MotivoMovimientoRepository motivoMovimientoRepository;
@@ -598,16 +601,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         }
 
         List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(loteId);
-
-        boolean requiereFisico = requiereFisico(producto);
-        boolean requiereQuimico = requiereQuimico(producto);
-        boolean requiereMicro = requiereMicro(producto);
-
-        if (requiereFisico) {
-            validarEvaluacion(evaluaciones, TipoEvaluacion.FISICO);
-        }
-        if (requiereQuimico || requiereMicro) {
-            validarEvaluacion(evaluaciones, TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
+        var validacion = validarDisciplinasCompletas(lote, evaluaciones,
+                resultadoAnalisisMicrobiologicoRepository::existsByEvaluacionId);
+        if (!validacion.esValido()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, validacion.getPrimerMensaje());
         }
 
         validarNoConformidadesParaLiberacion(loteId);

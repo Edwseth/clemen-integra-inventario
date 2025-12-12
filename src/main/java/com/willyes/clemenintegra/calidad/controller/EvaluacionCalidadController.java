@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.calidad.controller;
 
+import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
@@ -71,6 +72,12 @@ public class EvaluacionCalidadController {
     @GetMapping("/{id}")
     public ResponseEntity<EvaluacionCalidadResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
+    }
+
+    @GetMapping("/{id}/detalle")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    public ResponseEntity<EvaluacionCalidadDetalleDTO> obtenerDetalle(@PathVariable Long id) {
+        return ResponseEntity.ok(service.obtenerDetalle(id));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -156,6 +163,26 @@ public class EvaluacionCalidadController {
     @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<java.util.List<ResultadoAnalisisMicroResponseDTO>> obtenerResultadosMicro(@PathVariable Long evaluacionId) {
         return ResponseEntity.ok(resultadoAnalisisMicroService.obtenerPorEvaluacion(evaluacionId));
+    }
+
+    @GetMapping(path = "/{evaluacionId}/micro-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<byte[]> descargarPdfMicroConNombre(@PathVariable Long evaluacionId) {
+        byte[] pdf = analisisMicroPdfService.generarPdf(evaluacionId);
+        String nombreArchivo = "MICRO_" + evaluacionId + ".pdf";
+        try {
+            EvaluacionCalidadResponseDTO dto = service.obtenerPorId(evaluacionId);
+            if (dto != null && dto.getNombreLote() != null) {
+                nombreArchivo = "MICRO_" + dto.getNombreLote() + ".pdf";
+            }
+        } catch (Exception ignored) {
+            // Se mantiene el nombre por defecto si no se puede resolver el lote
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + nombreArchivo)
+                .body(pdf);
     }
 
     @GetMapping(path = "/{evaluacionId}/microbiologico/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
