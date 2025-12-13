@@ -43,6 +43,7 @@ public class PlantillaAnalisisMicroServiceImpl implements PlantillaAnalisisMicro
                 .nombre(plantilla.getNombre())
                 .descripcion(plantilla.getDescripcion())
                 .activo(plantilla.isActivo())
+                .version(plantilla.getVersion())
                 .requiereAnalisisMicro(true)
                 .parametros(plantilla.getParametros().stream()
                         .map(p -> ParametroAnalisisMicroDTO.builder()

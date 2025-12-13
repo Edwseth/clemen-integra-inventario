@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -29,8 +30,9 @@ public class NoConformidadController {
     public ResponseEntity<Page<NoConformidadDTO>> listar(
             @RequestParam(required = false) SeveridadNoConformidad severidad,
             @RequestParam(required = false) OrigenNoConformidad origen,
+            @RequestParam(required = false) TipoIncidente tipoIncidente,
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(service.listar(severidad, origen, pageable));
+        return ResponseEntity.ok(service.listar(severidad, origen, tipoIncidente, pageable));
     }
 
     @GetMapping("/{id}")

@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
@@ -44,14 +45,23 @@ public class NoConformidadServiceImpl implements NoConformidadService {
 
     public Page<NoConformidadDTO> listar(SeveridadNoConformidad severidad,
                                          OrigenNoConformidad origen,
+                                         TipoIncidente tipoIncidente,
                                          Pageable pageable) {
         Page<NoConformidad> page;
-        if (severidad != null && origen != null) {
+        if (severidad != null && origen != null && tipoIncidente != null) {
+            page = repository.findBySeveridadAndOrigenAndTipoIncidente(severidad, origen, tipoIncidente, pageable);
+        } else if (severidad != null && origen != null) {
             page = repository.findBySeveridadAndOrigen(severidad, origen, pageable);
+        } else if (severidad != null && tipoIncidente != null) {
+            page = repository.findBySeveridadAndTipoIncidente(severidad, tipoIncidente, pageable);
+        } else if (origen != null && tipoIncidente != null) {
+            page = repository.findByOrigenAndTipoIncidente(origen, tipoIncidente, pageable);
         } else if (severidad != null) {
             page = repository.findBySeveridad(severidad, pageable);
         } else if (origen != null) {
             page = repository.findByOrigen(origen, pageable);
+        } else if (tipoIncidente != null) {
+            page = repository.findByTipoIncidente(tipoIncidente, pageable);
         } else {
             page = repository.findAll(pageable);
         }
@@ -89,6 +99,9 @@ public class NoConformidadServiceImpl implements NoConformidadService {
             }
             if (entity.getEstado() == null) {
                 entity.setEstado(EstadoNoConformidad.ABIERTA);
+            }
+            if (entity.getTipoIncidente() == null) {
+                entity.setTipoIncidente(com.willyes.clemenintegra.calidad.model.enums.TipoIncidente.NO_CONFORMIDAD);
             }
             if (entity.getFechaRegistro() == null) {
                 entity.setFechaRegistro(LocalDateTime.now());
@@ -131,6 +144,9 @@ public class NoConformidadServiceImpl implements NoConformidadService {
         existing.setSeveridad(dto.getSeveridad());
         if (dto.getEstado() != null) {
             existing.setEstado(dto.getEstado());
+        }
+        if (dto.getTipoIncidente() != null) {
+            existing.setTipoIncidente(dto.getTipoIncidente());
         }
         existing.setDescripcion(dto.getDescripcion());
         existing.setEvidencia(dto.getEvidencia());

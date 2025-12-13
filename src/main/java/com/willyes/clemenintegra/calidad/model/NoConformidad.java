@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.model;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
@@ -41,6 +42,11 @@ public class NoConformidad {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, columnDefinition = "ENUM('ABIERTA','CERRADA')")
     private EstadoNoConformidad estado;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_incidente", nullable = false, columnDefinition = "ENUM('NO_CONFORMIDAD','DESVIACION')")
+    @Builder.Default
+    private TipoIncidente tipoIncidente = TipoIncidente.NO_CONFORMIDAD;
 
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;

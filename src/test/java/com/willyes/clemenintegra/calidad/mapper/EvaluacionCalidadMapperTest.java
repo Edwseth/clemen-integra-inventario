@@ -101,7 +101,8 @@ class EvaluacionCalidadMapperTest {
                                 .build()))
                 .build();
 
-        var dto = mapper.toConsolidadoDTO(lote, List.of(evalQuimicoMicro), java.util.Set.of(30L));
+        var dto = mapper.toConsolidadoDTO(lote, List.of(evalQuimicoMicro),
+                java.util.Set.of(30L), java.util.Map.of(30L, Boolean.TRUE));
 
         assertThat(dto.getEvaluacionQuimicoMicroId()).isEqualTo(30L);
         assertThat(dto.isEvaluacionesRequeridasCompletas()).isTrue();
@@ -146,7 +147,8 @@ class EvaluacionCalidadMapperTest {
                         .build()))
                 .build();
 
-        var dto = mapper.toConsolidadoDTO(lote, List.of(evalQuimicoMicro), java.util.Set.of(31L));
+        var dto = mapper.toConsolidadoDTO(lote, List.of(evalQuimicoMicro),
+                java.util.Set.of(31L), java.util.Map.of(31L, Boolean.TRUE));
 
         assertThat(dto.isTieneResultadosMicro()).isTrue();
         assertThat(dto.isTieneAdjuntosQuimicoMicro()).isFalse();

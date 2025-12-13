@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,6 +23,21 @@ public interface NoConformidadRepository extends JpaRepository<NoConformidad, Lo
     Page<NoConformidad> findBySeveridadAndOrigen(SeveridadNoConformidad severidad,
                                                  OrigenNoConformidad origen,
                                                  Pageable pageable);
+
+    Page<NoConformidad> findByTipoIncidente(TipoIncidente tipoIncidente, Pageable pageable);
+
+    Page<NoConformidad> findBySeveridadAndTipoIncidente(SeveridadNoConformidad severidad,
+                                                         TipoIncidente tipoIncidente,
+                                                         Pageable pageable);
+
+    Page<NoConformidad> findByOrigenAndTipoIncidente(OrigenNoConformidad origen,
+                                                     TipoIncidente tipoIncidente,
+                                                     Pageable pageable);
+
+    Page<NoConformidad> findBySeveridadAndOrigenAndTipoIncidente(SeveridadNoConformidad severidad,
+                                                                 OrigenNoConformidad origen,
+                                                                 TipoIncidente tipoIncidente,
+                                                                 Pageable pageable);
 
     Optional<NoConformidad> findFirstByLote_IdAndEstadoOrderByFechaRegistroDesc(Long loteId, EstadoNoConformidad estado);
 

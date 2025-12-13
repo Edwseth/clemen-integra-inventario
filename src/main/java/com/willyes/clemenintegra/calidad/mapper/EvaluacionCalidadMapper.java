@@ -91,7 +91,8 @@ public class EvaluacionCalidadMapper {
 
     public EvaluacionConsolidadaResponseDTO toConsolidadoDTO(LoteProducto lote,
                                                              java.util.List<EvaluacionCalidad> evaluaciones,
-                                                             java.util.Set<Long> evaluacionesConResultadosMicro) {
+                                                             java.util.Set<Long> evaluacionesConResultadosMicro,
+                                                             java.util.Map<Long, Boolean> conformidadMicroPorEvaluacion) {
         if (lote == null) return null;
 
         java.util.List<EvaluacionCalidad> evals = (evaluaciones == null)
@@ -128,7 +129,9 @@ public class EvaluacionCalidadMapper {
 
         boolean tieneResultadosMicro = estadoMicro.tieneResultadosMicro();
         Boolean microConforme = (requiereMicro && tieneResultadosMicro)
-                ? evaluacionQuimicoMicro.map(EvaluacionCalidad::getResultado).map(this::mapResultado).orElse(null)
+                ? evaluacionQuimicoMicro.map(EvaluacionCalidad::getId)
+                .map(id -> conformidadMicroPorEvaluacion != null ? conformidadMicroPorEvaluacion.get(id) : null)
+                .orElse(null)
                 : null;
 
         boolean tieneAdjuntosFisico = fisicos.stream()

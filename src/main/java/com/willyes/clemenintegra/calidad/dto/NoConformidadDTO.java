@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.dto;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -26,6 +27,8 @@ public class NoConformidadDTO {
 
     @NotNull(message = "La severidad es obligatoria")
     private SeveridadNoConformidad severidad;
+
+    private TipoIncidente tipoIncidente;
 
     private EstadoNoConformidad estado;
 
