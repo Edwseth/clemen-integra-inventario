@@ -31,6 +31,7 @@ public interface LoteProductoMapper {
     @Mapping(target = "evaluaciones", ignore = true)
     @Mapping(target = "lotePsOrigenId", expression = "java(lote.getLotePsOrigen()!=null ? lote.getLotePsOrigen().getId() : null)")
     @Mapping(target = "codigoLotePsOrigen", expression = "java(lote.getLotePsOrigen()!=null ? lote.getLotePsOrigen().getCodigoLote() : null)")
+    @Mapping(target = "alerta", expression = "java(lote.getAlerta())")
     LoteProductoResponseDTO toResponseDTO(LoteProducto lote);
 
     @Mapping(source = "producto.nombre", target = "nombreProducto")
@@ -47,6 +48,7 @@ public interface LoteProductoMapper {
     @Mapping(target = "evaluaciones", ignore = true)
     @Mapping(source = "lotePsOrigen.id", target = "lotePsOrigenId")
     @Mapping(source = "lotePsOrigen.codigoLote", target = "codigoLotePsOrigen")
+    @Mapping(target = "alerta", expression = "java(entity.getAlerta())")
     LoteProductoResponseDTO toDto(LoteProducto entity);
 
     default String mapTipoAnalisisCalidadString(com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad valor) {

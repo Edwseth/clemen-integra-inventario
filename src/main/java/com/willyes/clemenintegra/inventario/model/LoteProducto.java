@@ -10,6 +10,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -94,6 +95,39 @@ public class LoteProducto {
 
     public LoteProducto(Long id) {
         this.id = id;
+    }
+
+    // LoteProducto.java  (debajo del constructor public LoteProducto(Long id) { ... })
+
+    public String getAlerta() {
+        if (fechaVencimiento == null) {
+            // Sin fecha de vencimiento => no generamos alerta por fecha
+            if (estado == EstadoLote.EN_CUARENTENA || estado == EstadoLote.RETENIDO) {
+                return "PENDIENTE_LIBERAR";
+            }
+            return "OK";
+        }
+
+        LocalDate hoy = LocalDate.now();
+        LocalDate fechaVto = fechaVencimiento.toLocalDate();
+
+        // 1) Vencido
+        if (fechaVto.isBefore(hoy)) {
+            return "VENCIDO";
+        }
+
+        // 2) Próximo a vencer (<= 7 días)
+        if (!fechaVto.isAfter(hoy.plusDays(7))) {
+            return "PROXIMO_A_VENCER";
+        }
+
+        // 3) Pendiente de liberar por estado
+        if (estado == EstadoLote.EN_CUARENTENA || estado == EstadoLote.RETENIDO) {
+            return "PENDIENTE_LIBERAR";
+        }
+
+        // 4) Sin alerta
+        return "OK";
     }
 
     @PrePersist

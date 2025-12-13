@@ -35,6 +35,7 @@ public class LoteProductoResponseDTO {
     private List<TipoEvaluacion> evaluaciones;
     private Long lotePsOrigenId;
     private String codigoLotePsOrigen;
+    private String alerta;
 
     public String getNombreProducto() {
         return nombreProducto;}
