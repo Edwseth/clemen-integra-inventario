@@ -74,7 +74,8 @@ public class ResultadoAnalisisMicroServiceImpl implements ResultadoAnalisisMicro
                     .parametro(parametro)
                     .build();
             entidad.setResultado(dto.getResultado());
-            entidad.setCumple(dto.getCumple());
+            entidad.setCumple(ResultadoMicroValidador.calcularCumplimiento(parametro,
+                    dto.getResultado(), dto.getCumple()));
             entidad.setObservaciones(dto.getObservaciones());
             aGuardar.add(entidad);
         }

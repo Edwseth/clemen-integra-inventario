@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
+import com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
@@ -258,8 +259,18 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .map(r -> r.getEvaluacion().getId())
                 .collect(java.util.stream.Collectors.toSet());
 
+        java.util.Map<Long, Boolean> conformidadMicro = resultadoAnalisisMicrobiologicoRepository
+                .findByEvaluacionIdIn(evaluacionesQuimicoMicro.stream().toList())
+                .stream()
+                .collect(java.util.stream.Collectors.groupingBy(r -> r.getEvaluacion().getId(),
+                        java.util.stream.Collectors.mapping(ResultadoAnalisisMicrobiologico::getCumple,
+                                java.util.stream.Collectors.collectingAndThen(
+                                        java.util.stream.Collectors.toList(),
+                                        lista -> lista.isEmpty() ? null : lista.stream().allMatch(Boolean.TRUE::equals)))));
+
         return agrupado.entrySet().stream()
-                .map(entry -> mapper.toConsolidadoDTO(entry.getKey(), entry.getValue(), evaluacionesConResultadosMicro))
+                .map(entry -> mapper.toConsolidadoDTO(entry.getKey(), entry.getValue(),
+                        evaluacionesConResultadosMicro, conformidadMicro))
                 .toList();
     }
 

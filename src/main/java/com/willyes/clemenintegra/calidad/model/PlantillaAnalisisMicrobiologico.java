@@ -35,6 +35,10 @@ public class PlantillaAnalisisMicrobiologico {
     @Column(name = "created_by_id")
     private Long createdById;
 
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Integer version = 1;
+
     @OneToMany(mappedBy = "plantilla", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orden ASC")
     @Builder.Default

@@ -203,6 +203,7 @@ class EvaluacionCalidadServiceImplTest {
         ResultadoAnalisisMicrobiologico resultadoMicro = ResultadoAnalisisMicrobiologico.builder()
                 .id(200L)
                 .evaluacion(evalQuimicoMicro)
+                .cumple(true)
                 .build();
 
         when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(any()))

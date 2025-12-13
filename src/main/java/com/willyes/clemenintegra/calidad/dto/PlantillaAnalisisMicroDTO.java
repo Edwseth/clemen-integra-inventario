@@ -16,6 +16,7 @@ public class PlantillaAnalisisMicroDTO {
     private String nombre;
     private String descripcion;
     private boolean activo;
+    private Integer version;
     private List<ParametroAnalisisMicroDTO> parametros;
     private boolean requiereAnalisisMicro;
 }
