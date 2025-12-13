@@ -169,6 +169,15 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
     })
     List<MovimientoInventario> findAllByRecepcionOcIdOrderByFechaIngresoAsc(Long recepcionOcId);
 
+    @EntityGraph(attributePaths = {
+            "almacenOrigen",
+            "almacenDestino",
+            "motivoMovimiento",
+            "registradoPor",
+            "ordenProduccion"
+    })
+    List<MovimientoInventario> findByLote_IdOrderByFechaIngresoDesc(Long loteId);
+
     @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m " +
             "where m.solicitudMovimiento.id = :solicitudId " +
             "and m.producto.id = :productoId " +

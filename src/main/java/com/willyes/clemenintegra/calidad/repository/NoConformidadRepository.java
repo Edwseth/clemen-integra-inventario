@@ -44,4 +44,6 @@ public interface NoConformidadRepository extends JpaRepository<NoConformidad, Lo
     Optional<NoConformidad> findFirstByLote_IdAndEvaluacion_IdAndEstado(Long loteId,
                                                                         Long evaluacionId,
                                                                         EstadoNoConformidad estado);
+
+    java.util.List<NoConformidad> findByLote_Id(Long loteId);
 }
