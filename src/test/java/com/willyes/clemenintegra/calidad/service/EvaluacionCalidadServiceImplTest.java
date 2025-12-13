@@ -22,6 +22,7 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,7 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -288,5 +290,43 @@ class EvaluacionCalidadServiceImplTest {
         var dto = consolidados.get(0);
         assertThat(dto.getEstadoMicro()).isEqualTo(DisciplinaEstado.NO_REQUERIDO);
         assertThat(dto.isTieneResultadosMicro()).isFalse();
+    }
+
+    @Test
+    void generaExcelEvaluacionesConFilaDeDatos() throws Exception {
+        Producto producto = new Producto();
+        producto.setId(8);
+        producto.setNombre("Producto Excel");
+        producto.setTipoAnalisisCalidad(com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.FISICO);
+
+        LoteProducto loteExcel = new LoteProducto();
+        loteExcel.setId(22L);
+        loteExcel.setCodigoLote("LOT-EXCEL");
+        loteExcel.setProducto(producto);
+        loteExcel.setEstado(EstadoLote.EN_CUARENTENA);
+
+        EvaluacionCalidad eval = new EvaluacionCalidad();
+        eval.setId(11L);
+        eval.setFechaEvaluacion(LocalDateTime.now());
+        eval.setResultado(ResultadoEvaluacion.CONFORME);
+        eval.setTipoEvaluacion(TipoEvaluacion.FISICO);
+        eval.setLoteProducto(loteExcel);
+        eval.setUsuarioEvaluador(evaluador);
+        eval.setArchivosAdjuntos(List.of(ArchivoEvaluacion.builder().nombreArchivo("a.pdf").build()));
+
+        when(repository.findAllWithRelations()).thenReturn(List.of(eval));
+        when(noConformidadService.obtenerActivaPorLoteYEvaluacion(any(), any())).thenReturn(Optional.empty());
+
+        byte[] excel = service.generarReporteEvaluacionesExcel(null, null, null);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(excel))) {
+            var sheet = workbook.getSheetAt(0);
+            var header = sheet.getRow(0);
+            assertThat(header.getCell(0).getStringCellValue()).isEqualTo("Fecha evaluación");
+            var dataRow = sheet.getRow(1);
+            assertThat((Object) dataRow).isNotNull();
+            assertThat(dataRow.getCell(1).getStringCellValue()).isEqualTo("LOT-EXCEL");
+            assertThat(dataRow.getCell(9).getStringCellValue()).isEqualTo("SI");
+        }
     }
 }

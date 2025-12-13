@@ -20,4 +20,6 @@ public interface EvaluacionCalidadService {
     java.util.List<EvaluacionCalidadResponseDTO> listarPorLote(Long loteId);
     java.util.List<EvaluacionConsolidadaResponseDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio, LocalDate fechaFin);
     void eliminar(Long id);
+
+    byte[] generarReporteEvaluacionesExcel(LocalDate fechaInicio, LocalDate fechaFin, ResultadoEvaluacion resultado);
 }

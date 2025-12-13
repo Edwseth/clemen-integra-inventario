@@ -33,14 +33,19 @@ import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -419,6 +424,75 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
             }
             default -> {
             }
+        }
+    }
+
+    @Override
+    public byte[] generarReporteEvaluacionesExcel(LocalDate fechaInicio, LocalDate fechaFin, ResultadoEvaluacion resultado) {
+        LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
+        LocalDateTime fin = fechaFin != null ? fechaFin.atTime(LocalTime.MAX) : null;
+
+        java.util.List<EvaluacionCalidad> evaluaciones = repository.findAllWithRelations();
+
+        java.util.stream.Stream<EvaluacionCalidad> stream = evaluaciones.stream();
+        if (inicio != null) {
+            stream = stream.filter(e -> e.getFechaEvaluacion() != null && !e.getFechaEvaluacion().isBefore(inicio));
+        }
+        if (fin != null) {
+            stream = stream.filter(e -> e.getFechaEvaluacion() != null && !e.getFechaEvaluacion().isAfter(fin));
+        }
+        if (resultado != null) {
+            stream = stream.filter(e -> e.getResultado() == resultado);
+        }
+
+        java.util.List<EvaluacionCalidad> filtradas = stream.toList();
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Evaluaciones Calidad");
+
+        String[] headers = {
+                "Fecha evaluación", "Código Lote", "Producto", "Tipo análisis requerido", "Tipo de evaluación",
+                "Resultado evaluación", "Resultado global del lote", "Estado lote", "Analista/Evaluador", "Tiene adjuntos", "Código NC asociada"
+        };
+        Row header = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            header.createCell(i).setCellValue(headers[i]);
+        }
+
+        int rowIdx = 1;
+        for (EvaluacionCalidad eval : filtradas) {
+            Row row = sheet.createRow(rowIdx++);
+            row.createCell(0).setCellValue(eval.getFechaEvaluacion() != null ? eval.getFechaEvaluacion().toString() : "");
+            row.createCell(1).setCellValue(eval.getLoteProducto() != null ? eval.getLoteProducto().getCodigoLote() : "");
+            row.createCell(2).setCellValue(eval.getLoteProducto() != null && eval.getLoteProducto().getProducto() != null
+                    ? eval.getLoteProducto().getProducto().getNombre() : "");
+            row.createCell(3).setCellValue(eval.getLoteProducto() != null && eval.getLoteProducto().getProducto() != null
+                    && eval.getLoteProducto().getProducto().getTipoAnalisisCalidad() != null
+                    ? eval.getLoteProducto().getProducto().getTipoAnalisisCalidad().name() : "");
+            row.createCell(4).setCellValue(eval.getTipoEvaluacion() != null ? eval.getTipoEvaluacion().name() : "");
+            row.createCell(5).setCellValue(eval.getResultado() != null ? eval.getResultado().name() : "");
+            row.createCell(6).setCellValue(eval.getResultado() != null ? eval.getResultado().name() : "");
+            row.createCell(7).setCellValue(eval.getLoteProducto() != null && eval.getLoteProducto().getEstado() != null
+                    ? eval.getLoteProducto().getEstado().name() : "");
+            row.createCell(8).setCellValue(eval.getUsuarioEvaluador() != null ? eval.getUsuarioEvaluador().getNombreCompleto() : "");
+            boolean tieneAdjuntos = eval.getArchivosAdjuntos() != null && !eval.getArchivosAdjuntos().isEmpty();
+            row.createCell(9).setCellValue(tieneAdjuntos ? "SI" : "NO");
+            String codigoNc = noConformidadService.obtenerActivaPorLoteYEvaluacion(
+                    eval.getLoteProducto() != null ? eval.getLoteProducto().getId() : null,
+                    eval.getId()).map(com.willyes.clemenintegra.calidad.model.NoConformidad::getCodigo).orElse("");
+            row.createCell(10).setCellValue(codigoNc);
+        }
+
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            workbook.write(out);
+            workbook.close();
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new IllegalStateException("No se pudo generar el Excel de evaluaciones", e);
         }
     }
 
