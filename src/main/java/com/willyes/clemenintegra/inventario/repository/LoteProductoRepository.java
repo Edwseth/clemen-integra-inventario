@@ -100,6 +100,9 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
                                                                 Integer almacenId,
                                                                 Collection<EstadoLote> estados);
 
+    @EntityGraph(attributePaths = {"producto", "almacen"})
+    List<LoteProducto> findByOrdenProduccionId(Long ordenProduccionId);
+
     @Query("""
       select l
       from LoteProducto l
