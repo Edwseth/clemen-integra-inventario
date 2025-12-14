@@ -46,6 +46,7 @@ public class SolicitudMovimientoController {
             @RequestParam(required = false) String busqueda,
             @RequestParam(required = false) Long almacenOrigenId,
             @RequestParam(required = false) Long almacenDestinoId,
+            @RequestParam(required = false) Long ordenProduccionId,
             @RequestParam(required = false) String fechaDesde,
             @RequestParam(required = false) String fechaHasta
     ) {
@@ -63,7 +64,15 @@ public class SolicitudMovimientoController {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fechaDesde no puede ser mayor a fechaHasta");
                 }
             }
-            Page<SolicitudMovimientoListadoDTO> page = service.listarSolicitudes(estado, busqueda, almacenOrigenId, almacenDestinoId, inicio, fin, sanitized);
+            Page<SolicitudMovimientoListadoDTO> page = service.listarSolicitudes(
+                    estado,
+                    busqueda,
+                    almacenOrigenId,
+                    almacenDestinoId,
+                    ordenProduccionId,
+                    inicio,
+                    fin,
+                    sanitized);
             return ResponseEntity.ok(page);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
