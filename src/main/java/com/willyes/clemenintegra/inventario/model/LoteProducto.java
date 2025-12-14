@@ -63,6 +63,12 @@ public class LoteProducto {
     @Column(name = "temperatura_almacenamiento")
     private Double temperaturaAlmacenamiento;
 
+    @Column(name = "codigo_ubicacion_interna", length = 50)
+    private String codigoUbicacionInterna;
+
+    @Column(name = "descripcion_ubicacion_interna", length = 255)
+    private String descripcionUbicacionInterna;
+
     @Column(name = "fecha_liberacion")
     private LocalDateTime fechaLiberacion;
 

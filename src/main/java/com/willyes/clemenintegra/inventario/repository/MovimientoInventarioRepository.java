@@ -197,5 +197,30 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                                                        LocalDateTime fechaInicio,
                                                                        LocalDateTime fechaFin);
 
+    @EntityGraph(attributePaths = {
+            "producto",
+            "lote",
+            "almacenOrigen",
+            "almacenDestino",
+            "registradoPor",
+            "motivoMovimiento",
+            "ordenProduccion"
+    })
+    @Query("""
+        select m
+          from MovimientoInventario m
+         where (:productoId is null or m.producto.id = :productoId)
+           and (:loteId is null or m.lote.id = :loteId)
+           and (:inicio is null or m.fechaIngreso >= :inicio)
+           and (:fin is null or m.fechaIngreso <= :fin)
+           and (:almacenId is null or m.almacenOrigen.id = :almacenId or m.almacenDestino.id = :almacenId)
+         order by m.fechaIngreso asc, m.id asc
+    """)
+    List<MovimientoInventario> buscarParaKardex(@Param("inicio") LocalDateTime inicio,
+                                                @Param("fin") LocalDateTime fin,
+                                                @Param("productoId") Long productoId,
+                                                @Param("loteId") Long loteId,
+                                                @Param("almacenId") Long almacenId);
+
 }
 
