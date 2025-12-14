@@ -26,8 +26,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Slf4j
@@ -180,6 +182,19 @@ public class MrpServiceImpl implements MrpService {
                     .leadTimeDias(leadTime)
                     .estado(EstadoSugerenciaAbastecimiento.PENDIENTE)
                     .build();
+            // Métricas de consumo y cobertura para exponer al frontend.
+            BigDecimal consumoTotal = Optional.ofNullable(detalle.getRequerimientoNeto()).orElse(BigDecimal.ZERO);
+            sugerencia.setConsumoTotalPeriodo(consumoTotal);
+
+            BigDecimal horizonteSemanas = calcularHorizonteSemanas(detalle.getCorrida());
+            BigDecimal consumoSemanalPromedio = calcularConsumoSemanalPromedio(consumoTotal, horizonteSemanas);
+            sugerencia.setConsumoSemanalPromedio(consumoSemanalPromedio);
+
+            BigDecimal semanasCobertura = calcularSemanasCobertura(detalle, consumoSemanalPromedio);
+            sugerencia.setSemanasCobertura(semanasCobertura);
+
+            // Determinar criticidad basada en la cobertura y lead time.
+            asignarCriticidad(sugerencia, leadTime);
             detalle.setSugerencia(sugerencia);
             sugerencias.add(sugerencia);
         }
@@ -263,5 +278,69 @@ public class MrpServiceImpl implements MrpService {
             return producto.getLeadTimeProduccionDias();
         }
         return producto.getLeadTimeCompraDias();
+    }
+
+    private BigDecimal calcularHorizonteSemanas(CorridaMrp corrida) {
+        if (corrida == null || corrida.getHorizonteInicio() == null || corrida.getHorizonteFin() == null) {
+            return null;
+        }
+        long dias = ChronoUnit.DAYS.between(corrida.getHorizonteInicio(), corrida.getHorizonteFin()) + 1;
+        if (dias <= 0) {
+            return null;
+        }
+        return BigDecimal.valueOf(dias)
+                .divide(BigDecimal.valueOf(7), 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calcularConsumoSemanalPromedio(BigDecimal consumoTotal, BigDecimal horizonteSemanas) {
+        if (horizonteSemanas == null || horizonteSemanas.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        return consumoTotal.divide(horizonteSemanas, 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calcularSemanasCobertura(DetalleCorridaMrp detalle, BigDecimal consumoSemanalPromedio) {
+        if (consumoSemanalPromedio == null || consumoSemanalPromedio.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        BigDecimal inventario = Optional.ofNullable(detalle.getInventarioDisponible()).orElse(BigDecimal.ZERO);
+        BigDecimal recepciones = Optional.ofNullable(detalle.getRecepcionesProgramadas()).orElse(BigDecimal.ZERO);
+        return inventario.add(recepciones)
+                .divide(consumoSemanalPromedio, 2, RoundingMode.HALF_UP);
+    }
+
+    private void asignarCriticidad(SugerenciaAbastecimiento sugerencia, Integer leadTimeDias) {
+        BigDecimal semanasCobertura = sugerencia.getSemanasCobertura();
+        if (semanasCobertura == null) {
+            sugerencia.setNivelCriticidad("ALTO");
+            sugerencia.setEsCritico(false);
+            return;
+        }
+
+        BigDecimal leadTimeSemanas = leadTimeDias != null && leadTimeDias > 0
+                ? BigDecimal.valueOf(leadTimeDias).divide(BigDecimal.valueOf(7), 2, RoundingMode.HALF_UP)
+                : null;
+
+        if (semanasCobertura.compareTo(BigDecimal.ONE) < 0
+                || (leadTimeSemanas != null && semanasCobertura.compareTo(leadTimeSemanas) < 0)) {
+            sugerencia.setNivelCriticidad("CRITICO");
+            sugerencia.setEsCritico(true);
+            return;
+        }
+
+        if (semanasCobertura.compareTo(BigDecimal.ONE) >= 0 && semanasCobertura.compareTo(BigDecimal.valueOf(3)) < 0) {
+            sugerencia.setNivelCriticidad("ALTO");
+            sugerencia.setEsCritico(true);
+            return;
+        }
+
+        if (semanasCobertura.compareTo(BigDecimal.valueOf(3)) >= 0 && semanasCobertura.compareTo(BigDecimal.valueOf(6)) < 0) {
+            sugerencia.setNivelCriticidad("MEDIO");
+            sugerencia.setEsCritico(false);
+            return;
+        }
+
+        sugerencia.setNivelCriticidad("BAJO");
+        sugerencia.setEsCritico(false);
     }
 }

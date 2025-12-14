@@ -18,6 +18,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,6 +26,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -124,5 +127,95 @@ class MrpServiceImplTest {
         assertEquals(TipoCambioMrp.AUMENTO, cambios.get(insumoAumenta));
         assertEquals(TipoCambioMrp.REDUCCION, cambios.get(insumoReduce));
         assertEquals(TipoCambioMrp.SIN_CAMBIO, cambios.get(insumoIgual));
+    }
+
+    @Test
+    void calculaProyeccionYCriticidadCritica() {
+        CorridaMrp corrida = CorridaMrp.builder()
+                .horizonteInicio(LocalDate.of(2024, 1, 1))
+                .horizonteFin(LocalDate.of(2024, 1, 7))
+                .build();
+        Producto producto = Producto.builder()
+                .id(1)
+                .leadTimeCompraDias(14)
+                .build();
+        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
+                .corrida(corrida)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.valueOf(120))
+                .inventarioDisponible(BigDecimal.valueOf(40))
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.valueOf(100))
+                .nivelBom(1)
+                .build();
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias = service.generarSugerencias(List.of(detalle));
+
+        assertEquals(1, sugerencias.size());
+        com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
+        assertEquals(BigDecimal.valueOf(100), sugerencia.getConsumoTotalPeriodo());
+        assertEquals(BigDecimal.valueOf(100.00).setScale(2), sugerencia.getConsumoSemanalPromedio());
+        assertEquals(BigDecimal.valueOf(0.40).setScale(2), sugerencia.getSemanasCobertura());
+        assertEquals("CRITICO", sugerencia.getNivelCriticidad());
+        assertEquals(Boolean.TRUE, sugerencia.getEsCritico());
+    }
+
+    @Test
+    void calculaCriticidadBajaCuandoCoberturaAlta() {
+        CorridaMrp corrida = CorridaMrp.builder()
+                .horizonteInicio(LocalDate.of(2024, 1, 1))
+                .horizonteFin(LocalDate.of(2024, 1, 28))
+                .build();
+        Producto producto = Producto.builder()
+                .id(2)
+                .leadTimeCompraDias(7)
+                .build();
+        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
+                .corrida(corrida)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.valueOf(10))
+                .inventarioDisponible(BigDecimal.valueOf(1000))
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.TEN)
+                .nivelBom(1)
+                .build();
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias = service.generarSugerencias(List.of(detalle));
+
+        assertEquals(1, sugerencias.size());
+        com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
+        assertEquals("BAJO", sugerencia.getNivelCriticidad());
+        assertEquals(Boolean.FALSE, sugerencia.getEsCritico());
+    }
+
+    @Test
+    void manejaHorizonteInvalidoSinDividirPorCero() {
+        CorridaMrp corrida = CorridaMrp.builder()
+                .horizonteInicio(null)
+                .horizonteFin(null)
+                .build();
+        Producto producto = Producto.builder()
+                .id(3)
+                .leadTimeCompraDias(7)
+                .build();
+        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
+                .corrida(corrida)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.TEN)
+                .inventarioDisponible(BigDecimal.ZERO)
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.TEN)
+                .nivelBom(1)
+                .build();
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias = service.generarSugerencias(List.of(detalle));
+
+        assertEquals(1, sugerencias.size());
+        com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
+        assertNotNull(sugerencia.getConsumoTotalPeriodo());
+        assertNull(sugerencia.getConsumoSemanalPromedio());
+        assertNull(sugerencia.getSemanasCobertura());
+        assertEquals("ALTO", sugerencia.getNivelCriticidad());
+        assertEquals(Boolean.FALSE, sugerencia.getEsCritico());
     }
 }

@@ -49,4 +49,19 @@ public class SugerenciaAbastecimiento {
 
     @Column(name = "orden_produccion_id")
     private Long ordenProduccionId;
+
+    @Transient
+    private BigDecimal consumoTotalPeriodo;
+
+    @Transient
+    private BigDecimal consumoSemanalPromedio;
+
+    @Transient
+    private BigDecimal semanasCobertura;
+
+    @Transient
+    private String nivelCriticidad;
+
+    @Transient
+    private Boolean esCritico;
 }
