@@ -67,6 +67,11 @@ public class CorridaMrpResponseDTO {
         private LocalDate fechaNecesidad;
         private LocalDate fechaSugeridaLanzamiento;
         private Integer leadTimeDias;
+        private BigDecimal consumoTotalPeriodo;
+        private BigDecimal consumoSemanalPromedio;
+        private BigDecimal semanasCobertura;
+        private String nivelCriticidad;
+        private Boolean esCritico;
         private String estado;
     }
 }

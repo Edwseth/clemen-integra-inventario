@@ -160,6 +160,11 @@ public class MrpController {
                 .fechaNecesidad(sugerencia.getFechaNecesidad())
                 .fechaSugeridaLanzamiento(sugerencia.getFechaSugeridaLanzamiento())
                 .leadTimeDias(sugerencia.getLeadTimeDias())
+                .consumoTotalPeriodo(sugerencia.getConsumoTotalPeriodo())
+                .consumoSemanalPromedio(sugerencia.getConsumoSemanalPromedio())
+                .semanasCobertura(sugerencia.getSemanasCobertura())
+                .nivelCriticidad(sugerencia.getNivelCriticidad())
+                .esCritico(sugerencia.getEsCritico())
                 .estado(sugerencia.getEstado() != null ? sugerencia.getEstado().name() : null)
                 .build();
     }
