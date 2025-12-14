@@ -671,6 +671,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ErrorResponseException(HttpStatus.CONFLICT, problem, null);
             }
 
+            Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+
+            movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), usuario.getId());
+
             List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
             parseEstados(estadosSolicitudConcluyentesConf);
 
@@ -790,7 +794,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 orden.setTipoCierre(null);
             }
 
-            Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
             CierreProduccion cierre = ProduccionMapper.toEntity(dto, orden);
             cierre.setUsuarioId(usuario.getId());
             cierre.setUsuarioNombre(usuario.getNombreCompleto());
@@ -1487,6 +1490,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));
+
+        movimientoInventarioService.consumirInsumosPorOrden(ordenId, usuario.getId());
+
         etapa.setEstado(EstadoEtapa.FINALIZADA);
         etapa.setFechaFin(LocalDateTime.now());
         etapa.setUsuarioId(usuario.getId());
@@ -1654,6 +1660,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         if (orden.getProducto() == null || orden.getProducto().getId() == null) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_SIN_PRODUCTO");
         }
+
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+
+        movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), usuario.getId());
 
         orden.setCantidadProducida(cantidadProducida);
         orden.setEstado(EstadoProduccion.FINALIZADA);

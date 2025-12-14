@@ -85,6 +85,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -692,6 +693,69 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("finalizarEtapa ejecuta consumo automático antes de cerrar la etapa")
+    void finalizarEtapa_disparaConsumo() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(50L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(500L)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .ordenProduccion(orden)
+                .build();
+
+        Usuario usuario = usuarioBasico();
+        usuario.setId(7L);
+
+        when(ordenProduccionRepository.findById(50L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(500L)).thenReturn(Optional.of(etapa));
+        when(usuarioRepository.findById(7L)).thenReturn(Optional.of(usuario));
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(50L))
+                .thenReturn(List.of(etapa));
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EtapaProduccion resultado = service.finalizarEtapa(50L, 500L, 7L);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.FINALIZADA);
+        verify(movimientoInventarioService).consumirInsumosPorOrden(50L, 7L);
+        verify(etapaProduccionRepository).save(any(EtapaProduccion.class));
+    }
+
+    @Test
+    @DisplayName("fallo en consumo al finalizar etapa revierte el cambio de estado")
+    void finalizarEtapa_errorConsumoCancelaCambio() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(60L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(600L)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .ordenProduccion(orden)
+                .build();
+
+        Usuario usuario = usuarioBasico();
+        usuario.setId(8L);
+
+        when(ordenProduccionRepository.findById(60L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(600L)).thenReturn(Optional.of(etapa));
+        when(usuarioRepository.findById(8L)).thenReturn(Optional.of(usuario));
+        doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "SIN_STOCK"))
+                .when(movimientoInventarioService).consumirInsumosPorOrden(60L, 8L);
+
+        assertThatThrownBy(() -> service.finalizarEtapa(60L, 600L, 8L))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("reason")
+                .isEqualTo("SIN_STOCK");
+
+        assertThat(etapa.getEstado()).isEqualTo(EstadoEtapa.EN_PROCESO);
+        verify(etapaProduccionRepository, never()).save(any());
+        verify(ordenProduccionRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("iniciarEtapa bloquea el inicio cuando existen solicitudes de movimiento pendientes")
     void iniciarEtapa_conSolicitudesPendientes() {
         OrdenProduccion orden = new OrdenProduccion();
@@ -869,6 +933,43 @@ class OrdenProduccionServiceImplTest {
                 });
 
         assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+    }
+
+    @Test
+    @DisplayName("registrarCierre ejecuta consumo automático antes de cerrar la OP")
+    void registrarCierre_disparaConsumo() {
+        OrdenProduccion orden = crearOrdenBase(250L, new BigDecimal("50"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("50"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        service.registrarCierre(250L, dto);
+
+        verify(movimientoInventarioService).consumirInsumosPorOrden(250L, usuarioBasico().getId());
+        verify(movimientoInventarioService).registrarMovimiento(any());
+    }
+
+    @Test
+    @DisplayName("registrarCierre no re-ejecuta consumo cuando la orden ya está cerrada")
+    void registrarCierre_idempotenciaOrdenFinalizada() {
+        OrdenProduccion orden = crearOrdenBase(255L, new BigDecimal("50"), BigDecimal.ZERO, EstadoProduccion.FINALIZADA);
+        when(ordenProduccionRepository.findById(255L)).thenReturn(Optional.of(orden));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("5"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(255L, dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("reason")
+                .isEqualTo("ORDEN_NO_CERRABLE");
+
+        verify(movimientoInventarioService, never()).consumirInsumosPorOrden(anyLong(), anyLong());
     }
 
     @Test
