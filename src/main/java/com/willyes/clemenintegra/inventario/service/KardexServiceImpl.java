@@ -136,8 +136,7 @@ public class KardexServiceImpl implements KardexService {
         TipoMovimiento tipoMovimiento = movimiento.getTipoMovimiento();
 
         if (CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion) || tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
-            if (almacenId != null && movimiento.getAlmacenDestino() != null
-                    && Objects.equals(movimiento.getAlmacenDestino().getId(), almacenId)) {
+            if (mismoAlmacen(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null, almacenId)) {
                 return obtenerCantidad(movimiento);
             }
             return BigDecimal.ZERO;
@@ -161,8 +160,7 @@ public class KardexServiceImpl implements KardexService {
         TipoMovimiento tipoMovimiento = movimiento.getTipoMovimiento();
 
         if (CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion) || tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
-            if (almacenId != null && movimiento.getAlmacenOrigen() != null
-                    && Objects.equals(movimiento.getAlmacenOrigen().getId(), almacenId)) {
+            if (mismoAlmacen(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null, almacenId)) {
                 return obtenerCantidad(movimiento);
             }
             return BigDecimal.ZERO;
@@ -177,6 +175,13 @@ public class KardexServiceImpl implements KardexService {
         }
 
         return BigDecimal.ZERO;
+    }
+
+    private boolean mismoAlmacen(Number almacenMovimientoId, Long almacenFiltroId) {
+        if (almacenMovimientoId == null || almacenFiltroId == null) {
+            return false;
+        }
+        return Objects.equals(almacenMovimientoId.longValue(), almacenFiltroId);
     }
 
     private BigDecimal obtenerCantidad(MovimientoInventario movimientoInventario) {
