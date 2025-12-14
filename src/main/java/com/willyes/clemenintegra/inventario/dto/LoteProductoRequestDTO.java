@@ -36,5 +36,7 @@ public class LoteProductoRequestDTO {
     private Long usuario_liberador_id;
     private Long orden_produccion_id;
     private Long produccion_id;
+    private String codigoUbicacionInterna;
+    private String descripcionUbicacionInterna;
 }
 
