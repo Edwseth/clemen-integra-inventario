@@ -16,6 +16,7 @@ public interface SolicitudMovimientoService {
                                                           String busqueda,
                                                           Long almacenOrigenId,
                                                           Long almacenDestinoId,
+                                                          Long ordenProduccionId,
                                                           LocalDateTime inicio,
                                                           LocalDateTime fin,
                                                           Pageable pageable);

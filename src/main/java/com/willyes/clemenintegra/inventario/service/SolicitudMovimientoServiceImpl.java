@@ -187,6 +187,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                                                                  String busqueda,
                                                                  Long almacenOrigenId,
                                                                  Long almacenDestinoId,
+                                                                 Long ordenProduccionId,
                                                                  LocalDateTime desde,
                                                                  LocalDateTime hasta,
                                                                  Pageable pageable) {
@@ -208,6 +209,11 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         if (almacenDestinoId != null) {
             Specification<SolicitudMovimiento> filtro = (root, query, cb) ->
                     cb.equal(root.join("almacenDestino", jakarta.persistence.criteria.JoinType.LEFT).get("id"), almacenDestinoId);
+            spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
+        }
+        if (ordenProduccionId != null) {
+            Specification<SolicitudMovimiento> filtro = (root, query, cb) ->
+                    cb.equal(root.join("ordenProduccion", jakarta.persistence.criteria.JoinType.LEFT).get("id"), ordenProduccionId);
             spec = spec == null ? Specification.where(filtro) : spec.and(filtro);
         }
         LocalDateTime inicio = desde;
