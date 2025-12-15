@@ -3,6 +3,8 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -19,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MovimientoInventarioController.class)
@@ -84,5 +87,57 @@ class MovimientoInventarioControllerErrorHandlingTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    @WithMockUser(username = "analista", authorities = "ROL_ALMACENISTA")
+    void cuandoLoteNoLiberadoRetorna422ConCodigo() throws Exception {
+        when(movimientoInventarioService.registrarMovimiento(any()))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO,
+                        "El lote aún no está liberado por Calidad y no puede utilizarse en esta operación."));
+
+        String payload = """
+                {
+                  \"tipoMovimiento\": \"TRANSFERENCIA\",
+                  \"clasificacionMovimientoInventario\": \"TRANSFERENCIA_GENERAL\",
+                  \"productoId\": 8,
+                  \"cantidad\": 10,
+                  \"almacenOrigenId\": 1,
+                  \"almacenDestinoId\": 6
+                }
+                """;
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO.getCode()))
+                .andExpect(jsonPath("$.message").value("El lote aún no está liberado por Calidad y no puede utilizarse en esta operación."));
+    }
+
+    @Test
+    @WithMockUser(username = "analista", authorities = "ROL_ALMACENISTA")
+    void transferenciaLiberadaDevuelveCreated() throws Exception {
+        when(movimientoInventarioService.registrarMovimiento(any()))
+                .thenReturn(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO.builder()
+                        .id(42L)
+                        .build());
+
+        String payload = """
+                {
+                  \"tipoMovimiento\": \"TRANSFERENCIA\",
+                  \"clasificacionMovimientoInventario\": \"TRANSFERENCIA_GENERAL\",
+                  \"productoId\": 12,
+                  \"cantidad\": 5,
+                  \"almacenOrigenId\": 2,
+                  \"almacenDestinoId\": 3
+                }
+                """;
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(42));
     }
 }

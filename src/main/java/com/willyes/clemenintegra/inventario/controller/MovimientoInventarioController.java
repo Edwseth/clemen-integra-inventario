@@ -14,6 +14,7 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -254,6 +255,10 @@ public class MovimientoInventarioController {
             log.warn("[INVENTARIO] acceso no autorizado: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", e.getMessage()));
+
+        } catch (CustomBusinessException e) {
+            log.warn("[INVENTARIO] error funcional de negocio: {}", e.getMessage());
+            throw e;
 
         } catch (Exception e) {
             log.error("[INVENTARIO] error inesperado al registrar movimiento", e);
