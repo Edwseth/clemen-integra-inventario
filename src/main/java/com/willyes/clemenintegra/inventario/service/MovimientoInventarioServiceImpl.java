@@ -1691,6 +1691,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 || !Objects.equals(lote.getAlmacen().getId().longValue(), almacenPtId)) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
+        loteCalidadValidator.validarLoteUtilizable(lote);
         if (!estadosElegibles.contains(lote.getEstado())) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ESTADO_NO_ELEGIBLE");
         }
