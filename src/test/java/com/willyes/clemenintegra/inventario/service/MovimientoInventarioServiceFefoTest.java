@@ -1,6 +1,5 @@
 package com.willyes.clemenintegra.inventario.service;
 
-import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.inventario.dto.LoteConsumoDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.Almacen;
@@ -67,7 +66,7 @@ class MovimientoInventarioServiceFefoTest {
     @Mock
     private RecepcionOCService recepcionOCService;
     @Mock
-    private RetencionLoteService retencionLoteService;
+    private LoteCalidadValidator loteCalidadValidator;
     @Mock
     private EntityManager entityManager;
 

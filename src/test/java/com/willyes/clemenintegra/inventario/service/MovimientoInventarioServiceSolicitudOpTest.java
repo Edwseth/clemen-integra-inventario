@@ -1,6 +1,5 @@
 package com.willyes.clemenintegra.inventario.service;
 
-import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.inventario.dto.AtencionDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
@@ -76,7 +75,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
     @Mock
     private RecepcionOCService recepcionOCService;
     @Mock
-    private RetencionLoteService retencionLoteService;
+    private LoteCalidadValidator loteCalidadValidator;
     @Mock
     private EntityManager entityManager;
 
@@ -883,6 +882,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         });
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuarioBasico());
         given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
+        doThrow(new CustomBusinessException(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO, "BLOQUEO"))
+                .when(loteCalidadValidator).validarLoteUtilizable(lote);
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
         lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
                 .thenReturn(BigDecimal.ZERO);
@@ -890,7 +891,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
-                .isEqualTo(ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA);
+                .isEqualTo(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO);
     }
 
     private void prepararEscenarioComun(MovimientoInventarioDTO dto,

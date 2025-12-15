@@ -70,6 +70,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final ReservaLoteService reservaLoteService;
+    private final LoteCalidadValidator loteCalidadValidator;
 
     @Value("${app.inventario.prebodega.id:6}")
     private Integer preBodegaProduccionId;
@@ -97,6 +98,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                             "No hay stock disponible para el producto: " + producto.getNombre()
                     ));
         }
+
+        loteCalidadValidator.validarLoteUtilizable(lote);
 
         Almacen origen;
         if (dto.getAlmacenOrigenId() != null) {
