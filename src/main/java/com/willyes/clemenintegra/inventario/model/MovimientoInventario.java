@@ -41,6 +41,9 @@ public class MovimientoInventario {
     @Column(name = "doc_referencia", length = 45)
     private String docReferencia;
 
+    @Column(name = "idempotency_key", length = 64, unique = true)
+    private String idempotencyKey;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registrado_por_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_movimientos_inventario_registrado_por"))

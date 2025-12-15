@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
 
@@ -193,9 +194,11 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                      @Param("motivoId") Long motivoId);
 
     boolean existsByLoteIdAndMotivoMovimientoIdAndFechaIngresoBetween(Long loteId,
-                                                                       Long motivoMovimientoId,
-                                                                       LocalDateTime fechaInicio,
-                                                                       LocalDateTime fechaFin);
+                                                                      Long motivoMovimientoId,
+                                                                      LocalDateTime fechaInicio,
+                                                                      LocalDateTime fechaFin);
+
+    Optional<MovimientoInventario> findByIdempotencyKey(String idempotencyKey);
 
     @EntityGraph(attributePaths = {
             "producto",
