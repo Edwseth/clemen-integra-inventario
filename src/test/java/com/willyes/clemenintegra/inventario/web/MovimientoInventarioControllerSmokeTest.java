@@ -31,8 +31,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -93,10 +95,11 @@ class MovimientoInventarioControllerSmokeTest {
                 .fechaIngreso(LocalDateTime.now())
                 .build();
 
-        when(movimientoInventarioService.registrarMovimiento(any())).thenReturn(response);
+        when(movimientoInventarioService.registrarMovimiento(any(), anyString())).thenReturn(response);
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "test-" + UUID.randomUUID())
                         .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))

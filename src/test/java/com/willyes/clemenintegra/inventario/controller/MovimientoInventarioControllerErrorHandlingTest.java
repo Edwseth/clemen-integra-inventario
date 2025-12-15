@@ -18,7 +18,10 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.UUID;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -67,7 +70,7 @@ class MovimientoInventarioControllerErrorHandlingTest {
     @Test
     @WithMockUser(username = "analista", authorities = "ROL_ALMACENISTA")
     void cuandoServicioLanzaResponseStatusExceptionSePropaga() throws Exception {
-        when(movimientoInventarioService.registrarMovimiento(any()))
+        when(movimientoInventarioService.registrarMovimiento(any(), anyString()))
                 .thenThrow(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                         "LOTE_NO_DISPONIBLE_TRANSFERIR"));
 
@@ -85,6 +88,7 @@ class MovimientoInventarioControllerErrorHandlingTest {
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "test-" + UUID.randomUUID())
                         .content(payload))
                 .andExpect(status().isUnprocessableEntity());
     }
@@ -92,7 +96,7 @@ class MovimientoInventarioControllerErrorHandlingTest {
     @Test
     @WithMockUser(username = "analista", authorities = "ROL_ALMACENISTA")
     void cuandoLoteNoLiberadoRetorna422ConCodigo() throws Exception {
-        when(movimientoInventarioService.registrarMovimiento(any()))
+        when(movimientoInventarioService.registrarMovimiento(any(), anyString()))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO,
                         "El lote aún no está liberado por Calidad y no puede utilizarse en esta operación."));
 
@@ -109,6 +113,7 @@ class MovimientoInventarioControllerErrorHandlingTest {
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "test-" + UUID.randomUUID())
                         .content(payload))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO.getCode()))
@@ -118,7 +123,7 @@ class MovimientoInventarioControllerErrorHandlingTest {
     @Test
     @WithMockUser(username = "analista", authorities = "ROL_ALMACENISTA")
     void transferenciaLiberadaDevuelveCreated() throws Exception {
-        when(movimientoInventarioService.registrarMovimiento(any()))
+        when(movimientoInventarioService.registrarMovimiento(any(), anyString()))
                 .thenReturn(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO.builder()
                         .id(42L)
                         .build());
@@ -136,6 +141,7 @@ class MovimientoInventarioControllerErrorHandlingTest {
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "test-" + UUID.randomUUID())
                         .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(42));

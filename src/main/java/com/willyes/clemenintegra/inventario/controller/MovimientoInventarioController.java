@@ -226,6 +226,10 @@ public class MovimientoInventarioController {
 
             // 2) Registrar movimiento
             MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto, idempotencyKey);
+            if (creado == null) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "El servicio de movimientos no devolvió respuesta");
+            }
             log.info("[INVENTARIO] movimiento registrado correctamente: {}", creado.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(creado);
 
