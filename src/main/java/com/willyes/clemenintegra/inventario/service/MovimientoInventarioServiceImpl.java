@@ -1945,12 +1945,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                 detalleContexto != null ? detalleContexto.getId() : null,
                                 loteOrigen.getId(), stockDisponibleEfectivoContextual, stockReservadoTotal,
                                 reservaAjena, reservadoPropio, cantidadSolicitadaContextual, producto.getId());
-                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
+                        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                                tipo == TipoMovimiento.TRANSFERENCIA
+                                        ? "LOTE_NO_DISPONIBLE_TRANSFERIR"
+                                        : "LOTE_STOCK_INSUFICIENTE");
                     }
                 } else if (stockDisponibleEfectivo.compareTo(cantidad) < 0) {
                     log.warn("Stock insuficiente en lote (SIN_SOLICITUD): loteId={} disponible={} reservaPendiente={} solicitado={} productoId={}",
                             loteOrigen.getId(), stockDisponibleEfectivo, reservaPendiente, cantidad, producto.getId());
-                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_STOCK_INSUFICIENTE");
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                            tipo == TipoMovimiento.TRANSFERENCIA
+                                    ? "LOTE_NO_DISPONIBLE_TRANSFERIR"
+                                    : "LOTE_STOCK_INSUFICIENTE");
                 }
             }
         }
@@ -1992,14 +1998,34 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 LoteProducto loteRespuesta = loteProcesadoOp != null ? loteProcesadoOp : loteOrigen;
                 return List.of(new MovimientoLoteDetalle(loteRespuesta, cantidad));
             }
-            if (loteOrigen.getEstado() != EstadoLote.DISPONIBLE) {
+            // Se rechaza la transferencia solo si el lote está agotado/sin disponible, en otro almacén de origen
+            // o su estado no es transferible (calidad ya se valida en LoteCalidadValidator).
+            Long almacenActualId = loteOrigen.getAlmacen() != null
+                    ? loteOrigen.getAlmacen().getId().longValue()
+                    : null;
+            Long almacenOrigenSolicitudId = almacenOrigen != null
+                    ? almacenOrigen.getId().longValue()
+                    : (dto.almacenOrigenId() != null ? dto.almacenOrigenId().longValue() : null);
+            boolean almacenesCoinciden = almacenOrigenSolicitudId == null
+                    || Objects.equals(almacenActualId, almacenOrigenSolicitudId);
+
+            BigDecimal disponibleTransferencia = calcularDisponibleLote(loteOrigen);
+            boolean sinDisponible = loteOrigen.isAgotado()
+                    || disponibleTransferencia.compareTo(cantidad) < 0;
+
+            EnumSet<EstadoLote> estadosTransferibles = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+            boolean estadoNoTransferible = loteOrigen.getEstado() == null
+                    || !estadosTransferibles.contains(loteOrigen.getEstado());
+
+            // BUG: antes se rechazaba incluso con estado LIBERADO en almacén de origen con stock suficiente.
+            if (sinDisponible || !almacenesCoinciden || estadoNoTransferible) {
                 log.warn(
-                        "Transferencia con lote no disponible: loteId={} estado={} origenId={} destinoId={} productoId={} cantidad={}",
-                        loteOrigen.getId(), loteOrigen.getEstado(),
-                        origen != null ? origen.getId() : null,
-                        destino != null ? destino.getId() : null,
-                        producto.getId(), cantidad);
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_DISPONIBLE_TRANSFERIR");
+                        "Transferencia con lote no disponible (almacen/stock/estado inválido): loteId={} estado={} agotado={} disponible={} solicitado={} almacenActualId={} almacenOrigenSolicitudId={} destinoId={} productoId={}",
+                        loteOrigen.getId(), loteOrigen.getEstado(), loteOrigen.isAgotado(), disponibleTransferencia,
+                        cantidad, almacenActualId, almacenOrigenSolicitudId, destino != null ? destino.getId() : null,
+                        producto.getId());
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "LOTE_NO_DISPONIBLE_TRANSFERIR");
             }
 
             if (!requiereAutoSplit) {
