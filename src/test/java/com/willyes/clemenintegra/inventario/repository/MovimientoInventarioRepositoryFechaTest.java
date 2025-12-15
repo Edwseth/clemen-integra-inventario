@@ -1,0 +1,175 @@
+package com.willyes.clemenintegra.inventario.repository;
+
+import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.*;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.test.context.TestPropertySource;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataJpaTest
+@TestPropertySource(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.properties.hibernate.hbm2ddl.auto=create-drop",
+        "spring.flyway.enabled=false",
+        "DB_SECURPASS=dummy",
+        "DB_SECURNAME=dummy"
+})
+class MovimientoInventarioRepositoryFechaTest {
+
+    @Autowired
+    private MovimientoInventarioRepository movimientoInventarioRepository;
+
+    @Autowired
+    private TestEntityManager entityManager;
+
+    private Usuario usuario;
+    private Producto producto;
+    private LoteProducto lote;
+    private MotivoMovimiento motivoMovimiento;
+    private TipoMovimientoDetalle tipoMovimientoDetalle;
+    private Almacen almacen;
+
+    @BeforeEach
+    void setUp() {
+        usuario = entityManager.persist(Usuario.builder()
+                .nombreUsuario("tester")
+                .clave("clave")
+                .nombreCompleto("Usuario Test")
+                .correo("tester@example.com")
+                .rol(RolUsuario.ROL_SUPER_ADMIN)
+                .activo(true)
+                .bloqueado(false)
+                .build());
+
+        UnidadMedida unidad = entityManager.persist(UnidadMedida.builder()
+                .nombre("Unidad")
+                .nombrePlural("Unidades")
+                .simbolo("U")
+                .codigo("U01")
+                .simboloImpresion("U")
+                .build());
+
+        CategoriaProducto categoria = entityManager.persist(CategoriaProducto.builder()
+                .nombre("MP")
+                .tipo(TipoCategoria.MATERIA_PRIMA)
+                .build());
+
+        producto = entityManager.persist(Producto.builder()
+                .codigoSku("SKU-1")
+                .nombre("Producto de prueba")
+                .stockMinimo(BigDecimal.ONE)
+                .stockMinimoProveedor(BigDecimal.ZERO)
+                .leadTimeCompraDias(1)
+                .leadTimeProduccionDias(1)
+                .stockSeguridad(BigDecimal.ZERO)
+                .stockMaximoPlaneacion(BigDecimal.ZERO)
+                .rendimientoUnidad(BigDecimal.ONE)
+                .activo(true)
+                .fechaCreacion(LocalDateTime.now())
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .requiereAnalisisFisico(false)
+                .requiereAnalisisQuimico(false)
+                .requiereAnalisisMicrobiologico(false)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .creadoPor(usuario)
+                .modoControlInventario(ModoControlInventario.CONTROL_STOCK)
+                .build());
+
+        almacen = entityManager.persist(Almacen.builder()
+                .nombre("Principal")
+                .ubicacion("Bodega")
+                .categoria(TipoCategoria.MATERIA_PRIMA)
+                .tipo(TipoAlmacen.PRINCIPAL)
+                .build());
+
+        lote = entityManager.persist(LoteProducto.builder()
+                .codigoLote("L-001")
+                .fechaFabricacion(LocalDateTime.of(2025, 12, 1, 10, 0))
+                .fechaVencimiento(LocalDateTime.of(2026, 1, 1, 10, 0))
+                .stockLote(BigDecimal.TEN)
+                .agotado(false)
+                .stockReservado(BigDecimal.ZERO)
+                .estado(EstadoLote.DISPONIBLE)
+                .producto(producto)
+                .almacen(almacen)
+                .build());
+
+        motivoMovimiento = entityManager.persist(MotivoMovimiento.builder()
+                .descripcion("Compra")
+                .motivo(ClasificacionMovimientoInventario.RECEPCION_COMPRA)
+                .build());
+
+        tipoMovimientoDetalle = entityManager.persist(TipoMovimientoDetalle.builder()
+                .descripcion("Detalle")
+                .build());
+    }
+
+    @Test
+    @DisplayName("filtrar por fechaIngreso respeta rango y orden descendente")
+    void filtrarPorRangoYOrden() {
+        MovimientoInventario movimientoAntiguo = crearMovimiento(
+                LocalDateTime.of(2025, 12, 10, 9, 0),
+                BigDecimal.valueOf(5)
+        );
+        MovimientoInventario movimientoReciente = crearMovimiento(
+                LocalDateTime.of(2025, 12, 15, 15, 30),
+                BigDecimal.valueOf(8)
+        );
+        // Fuera de rango
+        crearMovimiento(LocalDateTime.of(2025, 12, 20, 8, 0), BigDecimal.valueOf(12));
+
+        LocalDateTime inicio = LocalDateTime.of(2025, 12, 9, 0, 0);
+        LocalDateTime fin = LocalDateTime.of(2025, 12, 16, 23, 59, 59);
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("fechaIngreso").descending());
+
+        Page<MovimientoInventario> page = movimientoInventarioRepository.filtrar(
+                inicio, fin, null, null, null, null, pageable
+        );
+
+        List<MovimientoInventario> resultados = page.getContent();
+        assertThat(resultados)
+                .hasSize(2)
+                .extracting(MovimientoInventario::getId)
+                .containsExactly(movimientoReciente.getId(), movimientoAntiguo.getId());
+        assertThat(resultados.get(0).getFechaIngreso()).isAfterOrEqualTo(resultados.get(1).getFechaIngreso());
+    }
+
+    private MovimientoInventario crearMovimiento(LocalDateTime fechaIngreso, BigDecimal cantidad) {
+        MovimientoInventario movimiento = MovimientoInventario.builder()
+                .cantidad(cantidad)
+                .tipoMovimiento(TipoMovimiento.RECEPCION)
+                .clasificacion(ClasificacionMovimientoInventario.RECEPCION_COMPRA)
+                .fechaIngreso(fechaIngreso)
+                .docReferencia("OC-123")
+                .registradoPor(usuario)
+                .producto(producto)
+                .lote(lote)
+                .almacenOrigen(almacen)
+                .almacenDestino(null)
+                .motivoMovimiento(motivoMovimiento)
+                .tipoMovimientoDetalle(tipoMovimientoDetalle)
+                .build();
+
+        movimientoInventarioRepository.save(movimiento);
+        entityManager.flush();
+        entityManager.clear();
+        return movimiento;
+    }
+}
