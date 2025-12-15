@@ -5,6 +5,11 @@ param(
     [string]$LogFile = "C:\\ClemenERP\\logs\\health-watchdog.log"
 )
 
+$logDirectory = Split-Path -Path $LogFile -Parent
+if (-not (Test-Path -Path $logDirectory)) {
+    New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+}
+
 $timestamp = (Get-Date).ToString("s")
 $logPrefix = "[$timestamp]"
 
