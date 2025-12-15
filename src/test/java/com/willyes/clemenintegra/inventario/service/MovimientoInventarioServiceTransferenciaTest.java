@@ -13,6 +13,8 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -144,6 +147,54 @@ class MovimientoInventarioServiceTransferenciaTest {
         assertThat(respuesta).isNotNull();
         assertThat(respuesta.getId()).isEqualTo(200L);
         assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("3000.00"));
+    }
+
+    @Test
+    void transferenciaConLoteEnCuarentenaDevuelveErrorDeCalidad() {
+        Producto producto = crearProducto(18, 2);
+        LoteProducto lote = crearLote(301L, producto, 1, EstadoLote.EN_CUARENTENA,
+                new BigDecimal("4000"), BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("500"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                6,
+                null,
+                null,
+                null,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null
+        );
+
+        configurarMocksBasicos(producto, lote);
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        doThrow(new CustomBusinessException(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO,
+                "Lote no liberado"))
+                .when(loteCalidadValidator).validarLoteUtilizable(lote);
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO));
     }
 
     @Test

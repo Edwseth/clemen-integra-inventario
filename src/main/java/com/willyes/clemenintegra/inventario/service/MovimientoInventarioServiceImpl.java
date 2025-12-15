@@ -2031,12 +2031,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             boolean sinDisponible = loteOrigen.isAgotado()
                     || disponibleTransferencia.compareTo(cantidad) < 0;
 
-            EnumSet<EstadoLote> estadosTransferibles = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
-            boolean estadoNoTransferible = loteOrigen.getEstado() == null
-                    || !estadosTransferibles.contains(loteOrigen.getEstado());
+            boolean estadoTransferible = loteOrigen.getEstado() != null
+                    && EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO).contains(loteOrigen.getEstado());
 
-            // BUG: antes se rechazaba incluso con estado LIBERADO en almacén de origen con stock suficiente.
-            if (sinDisponible || !almacenesCoinciden || estadoNoTransferible) {
+            // BUG: con el nuevo validador de calidad se seguía exigiendo DISPONIBLE y se rechazaban lotes LIBERADO.
+            if (sinDisponible || !almacenesCoinciden || !estadoTransferible) {
                 log.warn(
                         "Transferencia con lote no disponible (almacen/stock/estado inválido): loteId={} estado={} agotado={} disponible={} solicitado={} almacenActualId={} almacenOrigenSolicitudId={} destinoId={} productoId={}",
                         loteOrigen.getId(), loteOrigen.getEstado(), loteOrigen.isAgotado(), disponibleTransferencia,
