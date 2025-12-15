@@ -3,6 +3,10 @@
 ## Publicación detrás de túnel/Reverse Proxy
 El backend se publica detrás de un túnel HTTPS (Cloudflared) que termina TLS públicamente y reenvía al backend por `http://localhost:8080` dentro del servidor.
 
+- **Escucha local en PROD**: el perfil `prod` de Spring Boot queda ligado a `127.0.0.1:8080` (`server.address` + `server.port`).
+- **Cloudflared interno**: el túnel debe apuntar a `http://localhost:8080` (no exponer el puerto directamente).
+- **Acceso externo**: solo se atiende por `https://<DOMINIO>` publicado en Cloudflare; no se debe acceder directamente al puerto local.
+
 - **Encabezados reenviados**: `server.forward-headers-strategy=framework` ya está activo en los perfiles principales para respetar `X-Forwarded-*`/`Forwarded` y conservar el esquema seguro (`https`).
 - **CORS**: define el dominio real del frontend vía `CORS_ALLOWED_ORIGINS` o ajusta `app.cors.allowed-origins` en el perfil correspondiente. En producción el valor por defecto es `https://erp.clemenlab.com`.
 - **Objetivo**: HTTPS público extremo a extremo. Cloudflared termina TLS y reenvía al backend local en 8080; el frontend consume únicamente la URL pública.
