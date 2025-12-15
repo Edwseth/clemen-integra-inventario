@@ -54,6 +54,9 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
                     auth.requestMatchers(
+                            "/actuator/health",
+                            "/actuator/health/**",
+                            "/actuator/info",
                             "/auth/login",
                             "/api/auth/**",
                             "/v3/api-docs/**",
