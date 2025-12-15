@@ -57,7 +57,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleBusiness(CustomBusinessException ex,
                                                            HttpServletRequest request) {
         ApiErrorCode code = ex.getCode() != null ? ex.getCode() : ApiErrorCode.NEGOCIO_GENERICO;
-        return buildResponse(code, ex.getMessage(), ex.getDetails());
+        HttpStatus status = code != null && code.getHttpStatus() != null
+                ? code.getHttpStatus()
+                : HttpStatus.UNPROCESSABLE_ENTITY;
+
+        ErrorResponseDTO body = ErrorResponseDTO.builder()
+                .code(code != null ? code.getCode() : ApiErrorCode.NEGOCIO_GENERICO.getCode())
+                .message(ex.getMessage())
+                .details(ex.getDetails())
+                .build();
+
+        return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
