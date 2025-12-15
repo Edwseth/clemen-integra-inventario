@@ -64,7 +64,8 @@ public class MovimientoInventarioController {
     @ApiResponse(responseCode = "500", description = "Error interno del servidor")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
     @PostMapping
-    public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto) {
+    public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto,
+                                       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         dto = normalizarMovimientoDto(dto);
         try {
             int atenciones = dto.atenciones() != null ? dto.atenciones().size() : 0;
@@ -224,7 +225,7 @@ public class MovimientoInventarioController {
             }
 
             // 2) Registrar movimiento
-            MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto);
+            MovimientoInventarioResponseDTO creado = service.registrarMovimiento(dto, idempotencyKey);
             log.info("[INVENTARIO] movimiento registrado correctamente: {}", creado.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(creado);
 

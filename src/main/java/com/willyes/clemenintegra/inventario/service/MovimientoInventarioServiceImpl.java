@@ -18,6 +18,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import org.springframework.util.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import com.willyes.clemenintegra.inventario.repository.*;
@@ -156,11 +157,25 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     @Transactional(rollbackFor = Exception.class)
     @Override
     public MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto) {
+        return registrarMovimiento(dto, null);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto, String idempotencyKey) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || "anonymousUser".equals(authentication.getPrincipal())) {
             log.warn("Intento de registrar movimiento sin autenticación válida");
             throw new AuthenticationCredentialsNotFoundException("No se encontró autenticación válida");
+        }
+
+        if (StringUtils.hasText(idempotencyKey)) {
+            repository.findByIdempotencyKey(idempotencyKey).ifPresent(existing -> {
+                log.warn("Movimiento duplicado detectado para idempotencyKey={}", idempotencyKey);
+                throw new CustomBusinessException(ApiErrorCode.MOVIMIENTO_DUPLICADO,
+                        "El movimiento ya fue registrado para esta operación");
+            });
         }
 
         if (dto.tipoMovimiento() == TipoMovimiento.ENTRADA
@@ -171,6 +186,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         MovimientoInventario movimiento = mapper.toEntity(dto);
+        if (StringUtils.hasText(idempotencyKey)) {
+            movimiento.setIdempotencyKey(idempotencyKey);
+        }
         LocalDateTime fechaIngreso = movimiento.getFechaIngreso();
         if (fechaIngreso == null) {
             fechaIngreso = ZonedDateTime.now(ZONA_BOGOTA).toLocalDateTime();

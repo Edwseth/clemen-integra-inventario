@@ -20,6 +20,7 @@ import java.util.List;
 public interface MovimientoInventarioService {
 
     MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto);
+    MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto, String idempotencyKey);
     void consumirInsumosPorOrden(Long ordenProduccionId, Long usuarioId);
 
     List<LoteConsumoDTO> simulateFefo(Long productoId, BigDecimal cantidad, Long almacenId);

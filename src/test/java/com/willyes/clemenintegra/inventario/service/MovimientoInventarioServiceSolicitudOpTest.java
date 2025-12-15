@@ -941,6 +941,20 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
     }
 
+    @Test
+    void registrarMovimiento_conIdempotencyKeyExistente_evitaDuplicarOperacion() {
+        MovimientoInventarioDTO dto = mock(MovimientoInventarioDTO.class);
+        given(movimientoInventarioRepository.findByIdempotencyKey("dup-key"))
+                .willReturn(Optional.of(new MovimientoInventario()));
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto, "dup-key"))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.MOVIMIENTO_DUPLICADO);
+
+        verify(movimientoInventarioRepository, never()).save(any(MovimientoInventario.class));
+    }
+
     private Producto productoSemiElaborado() {
         Producto producto = new Producto();
         producto.setId(200);
