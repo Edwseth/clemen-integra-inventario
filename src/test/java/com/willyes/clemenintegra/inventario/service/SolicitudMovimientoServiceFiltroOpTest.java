@@ -56,6 +56,8 @@ class SolicitudMovimientoServiceFiltroOpTest {
     private MovimientoInventarioRepository movimientoInventarioRepository;
     @Mock
     private ReservaLoteService reservaLoteService;
+    @Mock
+    private LoteCalidadValidator loteCalidadValidator;
 
     @InjectMocks
     private SolicitudMovimientoServiceImpl service;

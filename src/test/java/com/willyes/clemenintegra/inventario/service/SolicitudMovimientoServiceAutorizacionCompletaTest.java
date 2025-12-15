@@ -57,6 +57,8 @@ class SolicitudMovimientoServiceAutorizacionCompletaTest {
     private MovimientoInventarioRepository movimientoInventarioRepository;
     @Mock
     private ReservaLoteService reservaLoteService;
+    @Mock
+    private LoteCalidadValidator loteCalidadValidator;
 
     @InjectMocks
     private SolicitudMovimientoServiceImpl service;

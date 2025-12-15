@@ -26,8 +26,6 @@ import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoReposi
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
-import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
-import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import jakarta.annotation.Resource;
@@ -143,7 +141,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final ReservaLoteService reservaLoteService;
     private final ReservaLoteRepository reservaLoteRepository;
     private final RecepcionOCService recepcionOCService;
-    private final RetencionLoteService retencionLoteService;
+    private final LoteCalidadValidator loteCalidadValidator;
     //private final Long motivoSalidaProdId = catalogResolver.getMotivoSalidaProduccionId();
     //private final Long tipoDetSalidaProdId = catalogResolver.getTipoDetalleSalidaProduccionId();
 
@@ -1067,38 +1065,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return valor.setScale(6, RoundingMode.HALF_UP);
     }
 
-    void validarEstadoLoteParaMovimiento(LoteProducto lote,
-                                         TipoMovimiento tipoMovimiento,
-                                         ClasificacionMovimientoInventario clasificacion,
-                                         boolean esLoteOrigen) {
-        EstadoLote estado = lote != null ? lote.getEstado() : null;
-        boolean esEntradaProduccion = !esLoteOrigen
-                && tipoMovimiento == TipoMovimiento.ENTRADA
-                && clasificacion == ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO;
-
-        boolean estadoRestringido = estado == EstadoLote.RECHAZADO
-                || estado == EstadoLote.VENCIDO
-                || (esLoteOrigen && (estado == EstadoLote.EN_CUARENTENA || estado == EstadoLote.RETENIDO));
-
-        if (!estadoRestringido || esEntradaProduccion) {
-            return;
-        }
-
-        if (estado == EstadoLote.RETENIDO) {
-            retencionLoteService.obtenerActivaPorLote(lote.getId()).ifPresent(ret -> {
-                if (ret.getMotivo() == MotivoRetencion.NO_CONFORMIDAD) {
-                    throw new CustomBusinessException(ApiErrorCode.BLOQUEO_RETENCION_NC,
-                            "El lote está retenido por una no conformidad abierta.",
-                            Map.of("loteId", lote.getId(), "retencionId", ret.getId()));
-                }
-            });
-        }
-
-        throw new CustomBusinessException(ApiErrorCode.BLOQUEO_ESTADO_CUARENTENA,
-                "El lote no se encuentra en un estado válido para movimientos.",
-                Map.of("loteId", lote.getId(), "estado", estado != null ? estado.name() : null));
-    }
-
     private void actualizarStockLote(LoteProducto lote, BigDecimal cantidad, Producto producto) {
         BigDecimal stockActual = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO);
         BigDecimal cantidadStock = Optional.ofNullable(cantidad).orElse(BigDecimal.ZERO);
@@ -1756,7 +1722,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 solicitud != null ? solicitud.getId() : null, tipo);
 
         boolean esLoteOrigen = tipo != TipoMovimiento.ENTRADA;
-        validarEstadoLoteParaMovimiento(loteOrigen, tipo, clasificacion, esLoteOrigen);
+        if (esLoteOrigen) {
+            loteCalidadValidator.validarLoteUtilizable(loteOrigen);
+        }
 
         Almacen almacenOrigen = origen != null
                 ? origen
@@ -2985,6 +2953,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     continue;
                 }
                 final LoteProducto lotePreBodega = lotePreBodegaOpt.get();
+
+                loteCalidadValidator.validarLoteUtilizable(lotePreBodega);
 
                 // Idempotencia: resta SALIDAS ya emitidas para esta solicitud/producto/lote y tipo-detalle
                 final BigDecimal yaConsumido = Optional.ofNullable(
