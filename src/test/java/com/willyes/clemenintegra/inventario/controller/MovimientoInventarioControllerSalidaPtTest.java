@@ -21,10 +21,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -85,7 +87,7 @@ class MovimientoInventarioControllerSalidaPtTest {
                 .clasificacion(ClasificacionMovimientoInventario.SALIDA_CLIENTE.name())
                 .cantidad(BigDecimal.valueOf(50))
                 .build();
-        when(movimientoInventarioService.registrarMovimiento(any(MovimientoInventarioDTO.class)))
+        when(movimientoInventarioService.registrarMovimiento(any(MovimientoInventarioDTO.class), anyString()))
                 .thenReturn(response);
 
         String payload = """
@@ -105,12 +107,13 @@ class MovimientoInventarioControllerSalidaPtTest {
 
         mockMvc.perform(post("/api/movimientos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "test-" + UUID.randomUUID())
                         .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1));
 
         ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
-        verify(movimientoInventarioService).registrarMovimiento(captor.capture());
+        verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
         assertThat(captor.getValue().fechaVencimiento()).as("fechaVencimiento debe ser opcional para salida PT")
                 .isNull();
     }
