@@ -673,7 +673,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("LOTE_STOCK_INSUFICIENTE");
+                .hasMessageContaining("LOTE_NO_DISPONIBLE_TRANSFERIR");
     }
 
     @Test
@@ -760,7 +760,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("LOTE_STOCK_INSUFICIENTE");
+                .hasMessageContaining("LOTE_NO_DISPONIBLE_TRANSFERIR");
 
         verify(solicitudMovimientoRepository, never()).findByIdWithLock(anyLong());
     }

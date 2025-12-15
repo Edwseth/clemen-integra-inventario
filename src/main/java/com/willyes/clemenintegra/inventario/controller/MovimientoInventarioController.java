@@ -227,6 +227,9 @@ public class MovimientoInventarioController {
             log.info("[INVENTARIO] movimiento registrado correctamente: {}", creado.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(creado);
 
+        } catch (ResponseStatusException e) {
+            log.warn("[INVENTARIO] error funcional al registrar movimiento: {}", e.getReason());
+            throw e;
         } catch (NoSuchElementException e) {
             log.warn("[INVENTARIO] entidad no encontrada: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
