@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico;
 import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleRequestDTO;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,12 +21,15 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
+
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -144,5 +148,61 @@ class ConteoCiclicoControllerTest {
                         .param("estado", "INVALIDO"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.SOLICITUD_INVALIDA.name()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void actualizarConteoDevuelve200() throws Exception {
+        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
+                .id(4L)
+                .almacenId(3)
+                .estado(EstadoConteoCiclico.BORRADOR)
+                .build();
+        when(conteoCiclicoService.actualizarConteo(eq(4L), ArgumentMatchers.anyList())).thenReturn(response);
+
+        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
+        detalle.setProductoId(11L);
+        detalle.setConteoFisico(new BigDecimal("2.00"));
+
+        mockMvc.perform(put("/api/inventario/conteos/4")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.List.of(detalle))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(4))
+                .andExpect(jsonPath("$.estado").value("BORRADOR"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void actualizarConteoNoEncontradoDevuelve404() throws Exception {
+        when(conteoCiclicoService.actualizarConteo(eq(9L), ArgumentMatchers.anyList()))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
+
+        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
+        detalle.setProductoId(9L);
+        detalle.setConteoFisico(BigDecimal.ONE);
+
+        mockMvc.perform(put("/api/inventario/conteos/9")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.List.of(detalle))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.RECURSO_NO_ENCONTRADO.name()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void actualizarConteoEstadoInvalidoDevuelve409() throws Exception {
+        when(conteoCiclicoService.actualizarConteo(eq(12L), ArgumentMatchers.anyList()))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO, "Estado no permite edición"));
+
+        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
+        detalle.setProductoId(1L);
+        detalle.setConteoFisico(BigDecimal.ONE);
+
+        mockMvc.perform(put("/api/inventario/conteos/12")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.List.of(detalle))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.CONTEO_ESTADO_INVALIDO.name()));
     }
 }
