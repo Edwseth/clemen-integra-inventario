@@ -69,6 +69,13 @@ public class ConteoCiclicoController {
         return ResponseEntity.ok(respuesta);
     }
 
+    @PostMapping("/{id}/iniciar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    public ResponseEntity<ConteoCiclicoResponseDTO> iniciar(@PathVariable Long id) {
+        ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.marcarEnConteo(id);
+        return ResponseEntity.ok(respuesta);
+    }
+
     @PostMapping("/{id}/en-conteo")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
     public ResponseEntity<ConteoCiclicoResponseDTO> marcarEnConteo(@PathVariable Long id) {

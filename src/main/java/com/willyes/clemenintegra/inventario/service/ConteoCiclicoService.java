@@ -206,11 +206,9 @@ public class ConteoCiclicoService {
         if (estadoActual == destino) {
             return conteo;
         }
-        if (estadoActual == EstadoConteoCiclico.BORRADOR && destino == EstadoConteoCiclico.EN_CONTEO) {
+        if (destino == EstadoConteoCiclico.EN_CONTEO && estadoActual == EstadoConteoCiclico.BORRADOR) {
             conteo.setEstado(destino);
-        } else if (estadoActual == EstadoConteoCiclico.EN_CONTEO && destino == EstadoConteoCiclico.CERRADO) {
-            conteo.setEstado(destino);
-        } else if (estadoActual == EstadoConteoCiclico.BORRADOR && destino == EstadoConteoCiclico.CERRADO) {
+        } else if (destino == EstadoConteoCiclico.CERRADO && estadoActual == EstadoConteoCiclico.EN_CONTEO) {
             conteo.setEstado(destino);
         } else {
             throw new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO,
