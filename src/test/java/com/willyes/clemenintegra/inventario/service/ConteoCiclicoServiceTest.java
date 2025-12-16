@@ -23,6 +23,7 @@ import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -305,5 +307,40 @@ class ConteoCiclicoServiceTest {
         ConteoCiclicoDetalle guardado = conteo.getDetalles().get(0);
         assertThat(guardado.getStockSistema()).isEqualByComparingTo(new BigDecimal("15.50"));
         assertThat(guardado.getDiferencia()).isEqualByComparingTo(new BigDecimal("-5.50"));
+    }
+
+    @Test
+    void listarLotesIncluyeEstadosNoOperables() {
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(2L)
+                .almacen(new Almacen(7))
+                .build();
+        Producto producto = new Producto();
+        producto.setId(3);
+
+        LoteProducto loteRetenido = LoteProducto.builder()
+                .id(15L)
+                .producto(producto)
+                .almacen(conteo.getAlmacen())
+                .codigoLote("RET-001")
+                .estado(EstadoLote.RETENIDO)
+                .stockLote(BigDecimal.ZERO)
+                .build();
+
+        when(conteoCiclicoRepository.findById(2L)).thenReturn(Optional.of(conteo));
+        when(productoRepository.findById(3L)).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.buscarParaConteo(eq(3L), eq(7), isNull(), isNull(), anyCollection()))
+                .thenReturn(List.of(loteRetenido));
+
+        ArgumentCaptor<Collection<EstadoLote>> estadosCaptor = ArgumentCaptor.forClass(Collection.class);
+
+        List<com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
+                .listarLotesParaConteo(2L, 3L, null, null);
+
+        assertThat(respuesta).hasSize(1);
+        assertThat(respuesta.getFirst().getId()).isEqualTo(15L);
+
+        verify(loteProductoRepository).buscarParaConteo(eq(3L), eq(7), isNull(), isNull(), estadosCaptor.capture());
+        assertThat(estadosCaptor.getValue()).containsExactlyInAnyOrder(EstadoLote.values());
     }
 }
