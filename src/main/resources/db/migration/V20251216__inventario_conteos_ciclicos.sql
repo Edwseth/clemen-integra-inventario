@@ -17,7 +17,7 @@ CREATE TABLE conteos_ciclicos (
 CREATE TABLE conteos_ciclicos_detalle (
     id BIGINT NOT NULL AUTO_INCREMENT,
     conteo_id BIGINT NOT NULL,
-    producto_id BIGINT NOT NULL,
+    producto_id INT NOT NULL,
     lote_producto_id BIGINT NULL,
     ubicacion_fisica_id BIGINT NULL,
     stock_sistema DECIMAL(10, 2) NOT NULL,
