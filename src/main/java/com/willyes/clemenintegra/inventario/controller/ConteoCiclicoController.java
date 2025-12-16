@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoUpdateRequestDTO;
 import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
 import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import jakarta.validation.Valid;
@@ -63,8 +64,8 @@ public class ConteoCiclicoController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
     public ResponseEntity<ConteoCiclicoResponseDTO> actualizar(@PathVariable Long id,
-                                                               @Valid @RequestBody List<ConteoCiclicoDetalleRequestDTO> detalles) {
-        ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.actualizarConteo(id, detalles);
+                                                               @Valid @RequestBody ConteoCiclicoUpdateRequestDTO request) {
+        ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.actualizarConteo(id, request != null ? request.getDetalles() : null);
         return ResponseEntity.ok(respuesta);
     }
 
