@@ -105,6 +105,33 @@ public class ConteoCiclicoService {
     }
 
     @Transactional
+    public ConteoCiclicoResponseDTO actualizarConteo(Long conteoId, List<ConteoCiclicoDetalleRequestDTO> detallesRequest) {
+        if (CollectionUtils.isEmpty(detallesRequest)) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Debe enviar al menos un detalle");
+        }
+
+        ConteoCiclico conteo = conteoRepository.findByIdWithDetallesForUpdate(conteoId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Conteo no encontrado"));
+
+        if (conteo.getEstado() == EstadoConteoCiclico.CERRADO || conteo.getEstado() == EstadoConteoCiclico.APLICADO) {
+            throw new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO,
+                    "No se pueden modificar detalles en el estado actual");
+        }
+
+        conteo.getDetalles().clear();
+
+        Integer almacenId = conteo.getAlmacen() != null ? conteo.getAlmacen().getId() : null;
+        for (ConteoCiclicoDetalleRequestDTO req : detallesRequest) {
+            ConteoCiclicoDetalle detalle = construirDetalle(conteo, req, almacenId);
+            conteo.getDetalles().add(detalle);
+        }
+
+        ConteoCiclico actualizado = conteoRepository.save(conteo);
+        return mapper.toResponse(actualizado);
+    }
+
+    @Transactional
     public ConteoCiclicoResponseDTO marcarEnConteo(Long conteoId) {
         ConteoCiclico conteo = cambiarEstado(conteoId, EstadoConteoCiclico.EN_CONTEO);
         return mapper.toResponse(conteo);

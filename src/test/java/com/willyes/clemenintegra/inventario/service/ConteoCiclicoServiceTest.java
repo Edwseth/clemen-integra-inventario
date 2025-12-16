@@ -197,4 +197,73 @@ class ConteoCiclicoServiceTest {
                 .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
                         assertThat(ex.getCode()).isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
     }
+
+    @Test
+    void actualizarConteoReemplazaDetallesYRecalcula() {
+        Almacen almacen = new Almacen(1);
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(10L)
+                .almacen(almacen)
+                .estado(EstadoConteoCiclico.BORRADOR)
+                .detalles(new java.util.ArrayList<>(List.of(ConteoCiclicoDetalle.builder().id(99L).build())))
+                .build();
+
+        Producto productoUno = new Producto();
+        productoUno.setId(3);
+        Producto productoDos = new Producto();
+        productoDos.setId(4);
+
+        ConteoCiclicoDetalleRequestDTO detalleUno = new ConteoCiclicoDetalleRequestDTO();
+        detalleUno.setProductoId(3L);
+        detalleUno.setStockSistema(new BigDecimal("10.00"));
+        detalleUno.setConteoFisico(new BigDecimal("12.00"));
+
+        ConteoCiclicoDetalleRequestDTO detalleDos = new ConteoCiclicoDetalleRequestDTO();
+        detalleDos.setProductoId(4L);
+        detalleDos.setConteoFisico(new BigDecimal("5.00"));
+
+        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(10L)).thenReturn(Optional.of(conteo));
+        when(productoRepository.findById(3L)).thenReturn(Optional.of(productoUno));
+        when(productoRepository.findById(4L)).thenReturn(Optional.of(productoDos));
+        when(loteProductoRepository.sumarStockPorProductoYAlmacen(4L, almacen.getId(), null))
+                .thenReturn(new BigDecimal("2.00"));
+        when(conteoCiclicoRepository.save(any(ConteoCiclico.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.actualizarConteo(10L, List.of(detalleUno, detalleDos));
+
+        assertThat(conteo.getDetalles())
+                .hasSize(2)
+                .allSatisfy(det -> assertThat(det.getDiferencia()).isNotNull());
+        assertThat(conteo.getDetalles())
+                .anySatisfy(det -> {
+                    assertThat(det.getProducto().getId()).isEqualTo(3);
+                    assertThat(det.getDiferencia()).isEqualByComparingTo(new BigDecimal("2.00"));
+                })
+                .anySatisfy(det -> {
+                    assertThat(det.getProducto().getId()).isEqualTo(4);
+                    assertThat(det.getDiferencia()).isEqualByComparingTo(new BigDecimal("3.00"));
+                });
+        assertThat(conteo.getDetalles().stream().noneMatch(det -> Long.valueOf(99L).equals(det.getId()))).isTrue();
+        assertThat(respuesta.getDetalles()).hasSize(2);
+    }
+
+    @Test
+    void actualizarConteoRechazaCuandoEstadoEsCerrado() {
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(11L)
+                .estado(EstadoConteoCiclico.CERRADO)
+                .build();
+        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(11L)).thenReturn(Optional.of(conteo));
+
+        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
+        detalle.setProductoId(1L);
+        detalle.setConteoFisico(BigDecimal.ONE);
+
+        assertThatThrownBy(() -> conteoCiclicoService.actualizarConteo(11L, List.of(detalle)))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.CONTEO_ESTADO_INVALIDO));
+
+        verify(conteoCiclicoRepository, never()).save(any());
+    }
 }

@@ -60,6 +60,14 @@ public class ConteoCiclicoController {
         return ResponseEntity.ok(respuesta);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    public ResponseEntity<ConteoCiclicoResponseDTO> actualizar(@PathVariable Long id,
+                                                               @Valid @RequestBody List<ConteoCiclicoDetalleRequestDTO> detalles) {
+        ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.actualizarConteo(id, detalles);
+        return ResponseEntity.ok(respuesta);
+    }
+
     @PostMapping("/{id}/en-conteo")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
     public ResponseEntity<ConteoCiclicoResponseDTO> marcarEnConteo(@PathVariable Long id) {
