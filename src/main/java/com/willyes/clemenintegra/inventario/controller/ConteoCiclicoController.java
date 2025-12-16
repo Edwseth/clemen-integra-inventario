@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoUpdateRequestDTO;
@@ -43,6 +44,18 @@ public class ConteoCiclicoController {
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
     public ResponseEntity<ConteoCiclicoResponseDTO> obtenerPorId(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.obtenerPorId(id);
+        return ResponseEntity.ok(respuesta);
+    }
+
+    @GetMapping("/{id}/lotes")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    public ResponseEntity<List<ConteoCiclicoLoteResponseDTO>> listarLotes(
+            @PathVariable Long id,
+            @RequestParam Long productoId,
+            @RequestParam(required = false) Long ubicacionFisicaId,
+            @RequestParam(required = false, name = "q") String texto) {
+        List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
+                .listarLotesParaConteo(id, productoId, ubicacionFisicaId, texto);
         return ResponseEntity.ok(respuesta);
     }
 

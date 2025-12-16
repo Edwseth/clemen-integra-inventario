@@ -266,4 +266,44 @@ class ConteoCiclicoServiceTest {
 
         verify(conteoCiclicoRepository, never()).save(any());
     }
+
+    @Test
+    void actualizarConteoConLoteUsaStockDelLote() {
+        Almacen almacen = new Almacen(5);
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(31L)
+                .almacen(almacen)
+                .estado(EstadoConteoCiclico.BORRADOR)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        Producto producto = new Producto();
+        producto.setId(22);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(77L)
+                .producto(producto)
+                .almacen(almacen)
+                .stockLote(new BigDecimal("15.50"))
+                .build();
+
+        ConteoCiclicoDetalleRequestDTO detalleRequest = new ConteoCiclicoDetalleRequestDTO();
+        detalleRequest.setProductoId(22L);
+        detalleRequest.setLoteProductoId(77L);
+        detalleRequest.setStockSistema(new BigDecimal("99.99"));
+        detalleRequest.setConteoFisico(new BigDecimal("10.00"));
+
+        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(31L)).thenReturn(Optional.of(conteo));
+        when(productoRepository.findById(22L)).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.findById(77L)).thenReturn(Optional.of(lote));
+        when(conteoCiclicoRepository.save(any(ConteoCiclico.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        conteoCiclicoService.actualizarConteo(31L, List.of(detalleRequest));
+
+        assertThat(conteo.getDetalles()).hasSize(1);
+        ConteoCiclicoDetalle guardado = conteo.getDetalles().get(0);
+        assertThat(guardado.getStockSistema()).isEqualByComparingTo(new BigDecimal("15.50"));
+        assertThat(guardado.getDiferencia()).isEqualByComparingTo(new BigDecimal("-5.50"));
+    }
 }
