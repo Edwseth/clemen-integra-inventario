@@ -185,4 +185,22 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     BigDecimal sumarStockPorProductoYAlmacen(@Param("productoId") Long productoId,
                                              @Param("almacenId") Integer almacenId,
                                              @Param("ubicacionId") Long ubicacionId);
+
+    @Query("""
+        select lp
+        from LoteProducto lp
+        left join lp.ubicacionFisica uf
+        where lp.producto.id = :productoId
+          and lp.almacen.id = :almacenId
+          and lp.estado in :estados
+          and (lp.agotado = false or lp.agotado is null)
+          and (:ubicacionId is null or uf.id = :ubicacionId)
+          and (:texto is null or :texto = '' or upper(lp.codigoLote) like concat('%', upper(:texto), '%'))
+        order by lp.fechaVencimiento asc nulls last, lp.codigoLote asc
+    """)
+    List<LoteProducto> buscarParaConteo(@Param("productoId") Long productoId,
+                                        @Param("almacenId") Integer almacenId,
+                                        @Param("ubicacionId") Long ubicacionId,
+                                        @Param("texto") String texto,
+                                        @Param("estados") Collection<EstadoLote> estados);
 }

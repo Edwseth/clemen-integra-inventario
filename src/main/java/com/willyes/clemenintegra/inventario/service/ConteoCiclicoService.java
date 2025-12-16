@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
@@ -60,6 +61,59 @@ public class ConteoCiclicoService {
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Conteo no encontrado"));
         return mapper.toResponse(conteo);
+    }
+
+    public List<ConteoCiclicoLoteResponseDTO> listarLotesParaConteo(Long conteoId,
+                                                                   Long productoId,
+                                                                   Long ubicacionFisicaId,
+                                                                   String texto) {
+        if (productoId == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Debe especificar el producto a contar");
+        }
+
+        ConteoCiclico conteo = conteoRepository.findById(conteoId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Conteo no encontrado"));
+
+        Producto producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Producto no encontrado"));
+
+        Integer almacenId = conteo.getAlmacen() != null ? conteo.getAlmacen().getId() : null;
+        if (almacenId == null) {
+            throw new CustomBusinessException(ApiErrorCode.ERROR_INTERNO, "El conteo no tiene almacén asociado");
+        }
+
+        UbicacionFisica ubicacion = null;
+        if (ubicacionFisicaId != null) {
+            ubicacion = ubicacionFisicaRepository.findByIdAndActivoTrue(ubicacionFisicaId)
+                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.UBICACION_NO_ENCONTRADA,
+                            "Ubicación no encontrada"));
+            if (ubicacion.getAlmacen() == null || !Objects.equals(ubicacion.getAlmacen().getId(), almacenId)) {
+                throw new CustomBusinessException(ApiErrorCode.UBICACION_NO_PERTENECE_ALMACEN,
+                        "La ubicación no pertenece al almacén del conteo");
+            }
+        }
+
+        String filtroTexto = StringUtils.hasText(texto) ? texto.trim() : null;
+
+        List<LoteProducto> lotes = loteProductoRepository.buscarParaConteo(
+                producto.getId().longValue(),
+                almacenId,
+                ubicacion != null ? ubicacion.getId() : null,
+                filtroTexto,
+                LOTES_OPERABLES);
+
+        return lotes.stream()
+                .map(lp -> ConteoCiclicoLoteResponseDTO.builder()
+                        .id(lp.getId())
+                        .codigoLote(lp.getCodigoLote())
+                        .stockLote(Optional.ofNullable(lp.getStockLote()).orElse(BigDecimal.ZERO))
+                        .fechaVencimiento(lp.getFechaVencimiento())
+                        .ubicacionFisicaId(lp.getUbicacionFisica() != null ? lp.getUbicacionFisica().getId() : null)
+                        .ubicacionCodigo(lp.getUbicacionFisica() != null ? lp.getUbicacionFisica().getCodigo() : null)
+                        .build())
+                .toList();
     }
 
     @Transactional
@@ -241,16 +295,21 @@ public class ConteoCiclicoService {
                 throw new CustomBusinessException(ApiErrorCode.UBICACION_NO_PERTENECE_ALMACEN,
                         "La ubicación no pertenece al almacén del conteo");
             }
-            if (lote != null && lote.getUbicacionFisica() != null
-                    && !Objects.equals(lote.getUbicacionFisica().getId(), ubicacion.getId())) {
+            if (lote != null && (lote.getUbicacionFisica() == null
+                    || !Objects.equals(lote.getUbicacionFisica().getId(), ubicacion.getId()))) {
                 throw new CustomBusinessException(ApiErrorCode.CONTEO_DETALLE_INVALIDO,
                         "La ubicación del lote difiere de la del detalle");
             }
         }
 
-        BigDecimal stockSistema = req.getStockSistema() != null
-                ? req.getStockSistema()
-                : obtenerStockSnapshot(producto.getId().longValue(), lote, almacenId, ubicacion);
+        BigDecimal stockSistema;
+        if (lote != null) {
+            stockSistema = obtenerStockSnapshot(producto.getId().longValue(), lote, almacenId, ubicacion);
+        } else {
+            stockSistema = req.getStockSistema() != null
+                    ? req.getStockSistema()
+                    : obtenerStockSnapshot(producto.getId().longValue(), null, almacenId, ubicacion);
+        }
 
         BigDecimal conteoFisico = req.getConteoFisico().setScale(2, RoundingMode.HALF_UP);
         BigDecimal diferencia = conteoFisico.subtract(stockSistema).setScale(2, RoundingMode.HALF_UP);

@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico;
 import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
@@ -90,6 +91,26 @@ class ConteoCiclicoControllerTest {
         mockMvc.perform(get("/api/inventario/conteos/15"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("EN_CONTEO"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    void listarLotesParaConteoDevuelve200() throws Exception {
+        ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
+                .id(9L)
+                .codigoLote("L-001")
+                .stockLote(new BigDecimal("5.00"))
+                .build();
+        when(conteoCiclicoService.listarLotesParaConteo(8L, 3L, 2L, "AB"))
+                .thenReturn(List.of(lote));
+
+        mockMvc.perform(get("/api/inventario/conteos/8/lotes")
+                        .param("productoId", "3")
+                        .param("ubicacionFisicaId", "2")
+                        .param("q", "AB"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(9))
+                .andExpect(jsonPath("$[0].codigoLote").value("L-001"));
     }
 
     @Test
