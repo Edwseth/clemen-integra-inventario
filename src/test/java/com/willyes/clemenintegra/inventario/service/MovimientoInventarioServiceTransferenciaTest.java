@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.UbicacionFisica;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
@@ -22,7 +23,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
@@ -41,6 +44,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class MovimientoInventarioServiceTransferenciaTest {
 
     @Mock
@@ -81,6 +85,8 @@ class MovimientoInventarioServiceTransferenciaTest {
     private LoteCalidadValidator loteCalidadValidator;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private UbicacionFisicaRepository ubicacionFisicaRepository;
 
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
@@ -122,6 +128,7 @@ class MovimientoInventarioServiceTransferenciaTest {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null
         );
 
@@ -147,6 +154,76 @@ class MovimientoInventarioServiceTransferenciaTest {
         assertThat(respuesta).isNotNull();
         assertThat(respuesta.getId()).isEqualTo(200L);
         assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("3000.00"));
+    }
+
+    @Test
+    void transferenciaConUbicacionValidaAsignaUbicacionDestino() {
+        Producto producto = crearProducto(9, 2);
+        LoteProducto lote = crearLote(40L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("2000"), BigDecimal.ZERO, false);
+        Almacen almacenDestino = new Almacen(6);
+        UbicacionFisica ubicacion = UbicacionFisica.builder()
+                .id(99L)
+                .almacen(almacenDestino)
+                .codigo("A1")
+                .activo(true)
+                .build();
+        LoteProducto loteDestino = crearLote(401L, producto, almacenDestino.getId(), EstadoLote.DISPONIBLE,
+                BigDecimal.ZERO, BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("500"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                almacenDestino.getId(),
+                null,
+                null,
+                null,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                ubicacion.getId()
+        );
+
+        configurarMocksBasicos(producto, lote);
+        given(ubicacionFisicaRepository.findByIdAndActivoTrue(ubicacion.getId()))
+                .willReturn(Optional.of(ubicacion));
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                lote.getCodigoLote(), producto.getId(), almacenDestino.getId()))
+                .willReturn(Optional.of(loteDestino));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(201L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(201L).build());
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        assertThat(respuesta.getId()).isEqualTo(201L);
+        assertThat(loteDestino.getUbicacionFisica()).isEqualTo(ubicacion);
     }
 
     @Test
@@ -178,6 +255,7 @@ class MovimientoInventarioServiceTransferenciaTest {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null
         );
 
@@ -226,6 +304,7 @@ class MovimientoInventarioServiceTransferenciaTest {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null
         );
 
@@ -239,6 +318,62 @@ class MovimientoInventarioServiceTransferenciaTest {
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("LOTE_NO_DISPONIBLE_TRANSFERIR");
+    }
+
+    @Test
+    void transferenciaConUbicacionDeOtroAlmacenDevuelve422() {
+        Producto producto = crearProducto(10, 2);
+        LoteProducto lote = crearLote(32L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("500"), BigDecimal.ZERO, false);
+        UbicacionFisica ubicacion = UbicacionFisica.builder()
+                .id(123L)
+                .almacen(new Almacen(99))
+                .codigo("X1")
+                .activo(true)
+                .build();
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("100"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                6,
+                null,
+                null,
+                null,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                ubicacion.getId()
+        );
+
+        configurarMocksBasicos(producto, lote);
+        given(ubicacionFisicaRepository.findByIdAndActivoTrue(ubicacion.getId()))
+                .willReturn(Optional.of(ubicacion));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex -> {
+                    assertThat(ex.getCode()).isEqualTo(ApiErrorCode.UBICACION_NO_PERTENECE_ALMACEN);
+                });
     }
 
     private void configurarMocksBasicos(Producto producto, LoteProducto lote) {

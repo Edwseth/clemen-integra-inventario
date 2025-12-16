@@ -412,9 +412,9 @@ public class MovimientoInventarioController {
                 dto.fechaVencimiento(),
                 dto.estadoLote(),
                 dto.autoSplit(),
-                dto.atenciones()
+                dto.atenciones(),
+                dto.ubicacionDestinoId()
         );
     }
 
 }
-

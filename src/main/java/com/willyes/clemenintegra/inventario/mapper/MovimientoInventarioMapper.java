@@ -39,6 +39,7 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "ordenProduccionId", expression = "java(movimiento.getOrdenProduccion() != null ? movimiento.getOrdenProduccion().getId() : null)")
     @Mapping(target = "clasificacionMovimientoInventario", source = "clasificacion")
     @Mapping(target = "atenciones", ignore = true)
+    @Mapping(target = "ubicacionDestinoId", ignore = true)
     MovimientoInventarioDTO toDTO(MovimientoInventario movimiento);
 
     // Conversión segura para respuesta evitando ciclos y proxys
@@ -93,4 +94,3 @@ public interface MovimientoInventarioMapper {
         return dto;
     }
 }
-

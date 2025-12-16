@@ -69,6 +69,8 @@ class MovimientoInventarioServiceFefoTest {
     private LoteCalidadValidator loteCalidadValidator;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private UbicacionFisicaRepository ubicacionFisicaRepository;
 
     @InjectMocks
     private MovimientoInventarioServiceImpl service;

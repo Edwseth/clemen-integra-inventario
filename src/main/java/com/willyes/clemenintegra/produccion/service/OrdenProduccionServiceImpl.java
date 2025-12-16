@@ -918,6 +918,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     null,
                     lote.getEstado(),
                     null,
+                    null,
                     null);
             movimientoInventarioService.registrarMovimiento(movDto);
             log.info("OP-cierre entrada PT op={}, producto={}, lote={}, cantidad={}, usuario={}, destino={}, motivoId={}, tipoDetalleId={}",
