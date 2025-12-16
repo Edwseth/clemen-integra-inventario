@@ -21,6 +21,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -131,13 +132,67 @@ class ConteoCiclicoControllerTest {
                 .id(7L)
                 .almacenId(2)
                 .estado(EstadoConteoCiclico.APLICADO)
+                .aplicadoEn(LocalDateTime.now())
                 .build();
         when(conteoCiclicoService.aplicar(anyLong(), eq("k1"))).thenReturn(response);
 
         mockMvc.perform(post("/api/inventario/conteos/7/aplicar")
                         .header("Idempotency-Key", "k1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("APLICADO"));
+                .andExpect(jsonPath("$.estado").value("APLICADO"))
+                .andExpect(jsonPath("$.aplicadoEn").exists());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void iniciarConteoDevuelve200() throws Exception {
+        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
+                .id(3L)
+                .almacenId(1)
+                .estado(EstadoConteoCiclico.EN_CONTEO)
+                .build();
+        when(conteoCiclicoService.marcarEnConteo(3L)).thenReturn(response);
+
+        mockMvc.perform(post("/api/inventario/conteos/3/iniciar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("EN_CONTEO"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void cerrarConteoDevuelve200() throws Exception {
+        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
+                .id(4L)
+                .almacenId(2)
+                .estado(EstadoConteoCiclico.CERRADO)
+                .build();
+        when(conteoCiclicoService.cerrar(4L)).thenReturn(response);
+
+        mockMvc.perform(post("/api/inventario/conteos/4/cerrar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("CERRADO"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void transicionInvalidaDevuelve409() throws Exception {
+        when(conteoCiclicoService.cerrar(21L))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO, "Transición de estado no permitida"));
+
+        mockMvc.perform(post("/api/inventario/conteos/21/cerrar"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.CONTEO_ESTADO_INVALIDO.name()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void iniciarConteoNoEncontradoDevuelve404() throws Exception {
+        when(conteoCiclicoService.marcarEnConteo(30L))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
+
+        mockMvc.perform(post("/api/inventario/conteos/30/iniciar"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.RECURSO_NO_ENCONTRADO.name()));
     }
 
     @Test
