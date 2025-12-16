@@ -15,6 +15,8 @@ import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,19 @@ public class ConteoCiclicoService {
     private final MovimientoInventarioService movimientoInventarioService;
     private final UsuarioService usuarioService;
     private final ConteoCiclicoMapper mapper;
+
+    public Page<ConteoCiclicoResponseDTO> listar(Integer almacenId, String estado, Pageable pageable) {
+        EstadoConteoCiclico estadoEnum = parseEstado(estado);
+        Page<ConteoCiclico> conteos = conteoRepository.buscar(almacenId, estadoEnum, pageable);
+        return conteos.map(mapper::toResponse);
+    }
+
+    public ConteoCiclicoResponseDTO obtenerPorId(Long conteoId) {
+        ConteoCiclico conteo = conteoRepository.findByIdWithDetalles(conteoId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Conteo no encontrado"));
+        return mapper.toResponse(conteo);
+    }
 
     @Transactional
     public ConteoCiclicoResponseDTO crearConteo(ConteoCiclicoRequestDTO request) {
@@ -331,6 +346,17 @@ public class ConteoCiclicoService {
             movimientoKey = movimientoKey + "-" + idempotencyKey;
         }
         movimientoInventarioService.registrarMovimiento(dto, movimientoKey);
+    }
+
+    private EstadoConteoCiclico parseEstado(String estado) {
+        if (!StringUtils.hasText(estado)) {
+            return null;
+        }
+        try {
+            return EstadoConteoCiclico.valueOf(estado.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Estado de conteo inválido");
+        }
     }
 
     private Long resolverMotivo(ClasificacionMovimientoInventario clasificacion) {

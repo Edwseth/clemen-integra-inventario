@@ -10,6 +10,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -187,5 +189,12 @@ class ConteoCiclicoServiceTest {
 
         assertThatThrownBy(() -> conteoCiclicoService.aplicar(99L, null))
                 .isInstanceOf(CustomBusinessException.class);
+    }
+
+    @Test
+    void listarConEstadoInvalidoLanzaExcepcion() {
+        assertThatThrownBy(() -> conteoCiclicoService.listar(null, "INVALIDO", PageRequest.of(0, 10)))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
     }
 }
