@@ -78,6 +78,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
     private LoteCalidadValidator loteCalidadValidator;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private UbicacionFisicaRepository ubicacionFisicaRepository;
 
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
@@ -185,7 +187,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 Boolean.FALSE,
-                List.of(atencion)
+                List.of(atencion),
+                null
         );
 
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
@@ -344,7 +347,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 Boolean.FALSE,
-                List.of(atencion)
+                List.of(atencion),
+                null
         );
 
         prepararEscenarioComun(dto, producto, solicitud, detalle, lote, loteDestino, movimientoEntidad, usuario);
@@ -439,7 +443,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 Boolean.FALSE,
-                List.of()
+                List.of(),
+                null
         );
 
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
@@ -562,7 +567,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 Boolean.FALSE,
-                List.of(atencion)
+                List.of(atencion),
+                null
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -663,7 +669,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 Boolean.FALSE,
-                List.of(atencion)
+                List.of(atencion),
+                null
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -726,7 +733,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 Boolean.FALSE,
-                List.of(atencion)
+                List.of(atencion),
+                null
         );
 
         Usuario usuario = Usuario.builder()
@@ -793,7 +801,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 Boolean.FALSE,
-                List.of()
+                List.of(),
+                null
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -861,7 +870,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 Boolean.FALSE,
-                List.of()
+                List.of(),
+                null
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -1009,4 +1019,3 @@ class MovimientoInventarioServiceSolicitudOpTest {
         return copia;
     }
 }
-

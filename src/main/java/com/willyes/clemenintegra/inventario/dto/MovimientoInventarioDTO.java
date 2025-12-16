@@ -55,10 +55,11 @@ public record MovimientoInventarioDTO(
         Boolean autoSplit,
 
         @JsonProperty("atenciones")
-        List<AtencionDTO> atenciones
+        List<AtencionDTO> atenciones,
+
+        Long ubicacionDestinoId
 
 
 ) {
 }
-
 

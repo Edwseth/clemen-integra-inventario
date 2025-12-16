@@ -143,6 +143,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final ReservaLoteRepository reservaLoteRepository;
     private final RecepcionOCService recepcionOCService;
     private final LoteCalidadValidator loteCalidadValidator;
+    private final UbicacionFisicaRepository ubicacionFisicaRepository;
     //private final Long motivoSalidaProdId = catalogResolver.getMotivoSalidaProduccionId();
     //private final Long tipoDetSalidaProdId = catalogResolver.getTipoDetalleSalidaProduccionId();
 
@@ -281,6 +282,36 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         OrdenProduccion ordenProduccion = dto.ordenProduccionId() != null
                 ? entityManager.getReference(OrdenProduccion.class, dto.ordenProduccionId())
                 : null;
+        Integer almacenParaUbicacion = almacenDestino != null
+                ? almacenDestino.getId()
+                : (almacenOrigen != null ? almacenOrigen.getId() : null);
+        UbicacionFisica ubicacionFisicaDestino = null;
+        if (dto.ubicacionDestinoId() != null) {
+            Long ubicacionId = dto.ubicacionDestinoId();
+            ubicacionFisicaDestino = ubicacionFisicaRepository.findByIdAndActivoTrue(ubicacionId)
+                    .orElseThrow(() -> new CustomBusinessException(
+                            ApiErrorCode.UBICACION_NO_ENCONTRADA,
+                            "La ubicación destino no existe o está inactiva",
+                            Map.of("ubicacionId", ubicacionId)
+                    ));
+            Integer almacenUbicacion = ubicacionFisicaDestino.getAlmacen() != null
+                    ? ubicacionFisicaDestino.getAlmacen().getId()
+                    : null;
+            Long almacenDestinoDetalle = almacenDestinoIdNormalizado != null
+                    ? almacenDestinoIdNormalizado.longValue()
+                    : almacenOrigenIdNormalizado;
+            if (almacenParaUbicacion == null || !Objects.equals(almacenParaUbicacion, almacenUbicacion)) {
+                throw new CustomBusinessException(
+                        ApiErrorCode.UBICACION_NO_PERTENECE_ALMACEN,
+                        "La ubicación no pertenece al almacén indicado",
+                        Map.of(
+                                "ubicacionId", ubicacionId,
+                                "almacenDestinoId", almacenDestinoDetalle,
+                                "almacenUbicacionId", almacenUbicacion
+                        )
+                );
+            }
+        }
 
         log.debug("MOV-REQ (pre-solicitud) tipo={}, clasificacion={}, prod={}, qty={}, opIdDTO={}",
                 tipoMovimiento, clasificacion, dto.productoId(), dto.cantidad(), dto.ordenProduccionId());
@@ -655,6 +686,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (lotesProcesados == null || lotesProcesados.isEmpty()) {
             throw new IllegalStateException("No se generaron lotes para el movimiento");
+        }
+
+        if (ubicacionFisicaDestino != null && almacenParaUbicacion != null) {
+            for (MovimientoLoteDetalle detalle : lotesProcesados) {
+                LoteProducto loteDestino = detalle.lote();
+                if (loteDestino != null
+                        && loteDestino.getAlmacen() != null
+                        && Objects.equals(loteDestino.getAlmacen().getId(), almacenParaUbicacion)) {
+                    loteDestino.setUbicacionFisica(ubicacionFisicaDestino);
+                    loteProductoRepository.save(loteDestino);
+                }
+            }
         }
 
         boolean solicitudOp = solicitud != null && esContextoOrdenProduccion(dto, solicitud);
@@ -3042,7 +3085,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         null,                               // fechaVencimiento
                         null,                               // estadoLote
                         null,                               // autoSplit
-                        null                                // atenciones
+                        null,                               // atenciones
+                        null                                // ubicacionDestinoId
                 );
 
                 // Usa la rama especial añadida en registrarMovimiento para SALIDA_PRODUCCION
@@ -3056,4 +3100,3 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
 
 }
-

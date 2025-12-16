@@ -88,6 +88,8 @@ class MovimientoInventarioServiceSalidaPtTest {
     private LoteCalidadValidator loteCalidadValidator;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private UbicacionFisicaRepository ubicacionFisicaRepository;
 
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
@@ -129,6 +131,7 @@ class MovimientoInventarioServiceSalidaPtTest {
                 null,
                 null,
                 true,
+                null,
                 null
         );
 
@@ -182,6 +185,7 @@ class MovimientoInventarioServiceSalidaPtTest {
                 null,
                 null,
                 true,
+                null,
                 null
         );
 
@@ -263,4 +267,3 @@ class MovimientoInventarioServiceSalidaPtTest {
         return lote;
     }
 }
-

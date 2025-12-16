@@ -69,6 +69,11 @@ public class LoteProducto {
     @Column(name = "descripcion_ubicacion_interna", length = 255)
     private String descripcionUbicacionInterna;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ubicaciones_fisicas_id",
+            foreignKey = @ForeignKey(name = "fk_lotes_productos_ubicacion_fisica"))
+    private UbicacionFisica ubicacionFisica;
+
     @Column(name = "fecha_liberacion")
     private LocalDateTime fechaLiberacion;
 
@@ -150,5 +155,4 @@ public class LoteProducto {
         }
     }
 }
-
 
