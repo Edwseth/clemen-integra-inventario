@@ -193,7 +193,6 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
         where lp.producto.id = :productoId
           and lp.almacen.id = :almacenId
           and lp.estado in :estados
-          and (lp.agotado = false or lp.agotado is null)
           and (:ubicacionId is null or uf.id = :ubicacionId)
           and (:texto is null or :texto = '' or upper(lp.codigoLote) like concat('%', upper(:texto), '%'))
         order by lp.fechaVencimiento asc nulls last, lp.codigoLote asc

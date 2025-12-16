@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -34,9 +35,11 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ConteoCiclicoService {
 
     private static final EnumSet<EstadoLote> LOTES_OPERABLES = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+    private static final EnumSet<EstadoLote> LOTES_VISIBLES_EN_CONTEO = EnumSet.allOf(EstadoLote.class);
 
     private final ConteoCiclicoRepository conteoRepository;
     private final ConteoCiclicoDetalleRepository detalleRepository;
@@ -97,12 +100,17 @@ public class ConteoCiclicoService {
 
         String filtroTexto = StringUtils.hasText(texto) ? texto.trim() : null;
 
+        log.debug("[ConteoCiclico] listarLotes conteoId={}, almacenId={}, productoId={}, ubicacionFisicaId={}, search={}",
+                conteoId, almacenId, producto.getId(), ubicacion != null ? ubicacion.getId() : null, filtroTexto);
+
         List<LoteProducto> lotes = loteProductoRepository.buscarParaConteo(
                 producto.getId().longValue(),
                 almacenId,
                 ubicacion != null ? ubicacion.getId() : null,
                 filtroTexto,
-                LOTES_OPERABLES);
+                LOTES_VISIBLES_EN_CONTEO);
+
+        log.debug("[ConteoCiclico] lotes encontrados antes de mapear: {}", lotes.size());
 
         return lotes.stream()
                 .map(lp -> ConteoCiclicoLoteResponseDTO.builder()
