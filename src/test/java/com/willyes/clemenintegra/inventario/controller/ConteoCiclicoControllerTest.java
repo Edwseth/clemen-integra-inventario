@@ -7,7 +7,6 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico;
 import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
-import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleRequestDTO;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +21,10 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -63,7 +65,7 @@ class ConteoCiclicoControllerTest {
                 .almacenId(1)
                 .estado(EstadoConteoCiclico.BORRADOR)
                 .build();
-        Page<ConteoCiclicoResponseDTO> page = new PageImpl<>(java.util.List.of(response));
+        Page<ConteoCiclicoResponseDTO> page = new PageImpl<>(List.of(response));
         when(conteoCiclicoService.listar(ArgumentMatchers.isNull(), ArgumentMatchers.isNull(), ArgumentMatchers.any(Pageable.class)))
                 .thenReturn(page);
 
@@ -160,13 +162,15 @@ class ConteoCiclicoControllerTest {
                 .build();
         when(conteoCiclicoService.actualizarConteo(eq(4L), ArgumentMatchers.anyList())).thenReturn(response);
 
-        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
-        detalle.setProductoId(11L);
-        detalle.setConteoFisico(new BigDecimal("2.00"));
+        String body = objectMapper.writeValueAsString(Map.of(
+                "detalles", List.of(Map.of(
+                        "productoId", 11,
+                        "conteoFisico", new BigDecimal("2.00")
+                ))));
 
         mockMvc.perform(put("/api/inventario/conteos/4")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(java.util.List.of(detalle))))
+                        .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(4))
                 .andExpect(jsonPath("$.estado").value("BORRADOR"));
@@ -178,13 +182,15 @@ class ConteoCiclicoControllerTest {
         when(conteoCiclicoService.actualizarConteo(eq(9L), ArgumentMatchers.anyList()))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
 
-        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
-        detalle.setProductoId(9L);
-        detalle.setConteoFisico(BigDecimal.ONE);
+        String body = objectMapper.writeValueAsString(Map.of(
+                "detalles", List.of(Map.of(
+                        "productoId", 9,
+                        "conteoFisico", BigDecimal.ONE
+                ))));
 
         mockMvc.perform(put("/api/inventario/conteos/9")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(java.util.List.of(detalle))))
+                        .content(body))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.RECURSO_NO_ENCONTRADO.name()));
     }
@@ -195,14 +201,65 @@ class ConteoCiclicoControllerTest {
         when(conteoCiclicoService.actualizarConteo(eq(12L), ArgumentMatchers.anyList()))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO, "Estado no permite edición"));
 
-        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
-        detalle.setProductoId(1L);
-        detalle.setConteoFisico(BigDecimal.ONE);
+        String body = objectMapper.writeValueAsString(Map.of(
+                "detalles", List.of(Map.of(
+                        "productoId", 1,
+                        "conteoFisico", BigDecimal.ONE
+                ))));
 
         mockMvc.perform(put("/api/inventario/conteos/12")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(java.util.List.of(detalle))))
+                        .content(body))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.CONTEO_ESTADO_INVALIDO.name()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void actualizarConteoToleraCamposExtras() throws Exception {
+        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
+                .id(14L)
+                .almacenId(1)
+                .estado(EstadoConteoCiclico.BORRADOR)
+                .build();
+        when(conteoCiclicoService.actualizarConteo(eq(14L), ArgumentMatchers.anyList())).thenReturn(response);
+
+        Map<String, Object> detalle = new java.util.LinkedHashMap<>();
+        detalle.put("productoId", 36);
+        detalle.put("loteProductoId", null);
+        detalle.put("ubicacionFisicaId", null);
+        detalle.put("conteoFisico", new BigDecimal("10000"));
+        detalle.put("aplicadoEn", "2024-01-01T00:00:00");
+
+        Map<String, Object> request = new java.util.LinkedHashMap<>();
+        request.put("fechaCreacion", "2023-12-31");
+        request.put("detalles", List.of(detalle));
+
+        String body = objectMapper.writeValueAsString(request);
+
+        mockMvc.perform(put("/api/inventario/conteos/14")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(14))
+                .andExpect(jsonPath("$.estado").value("BORRADOR"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void actualizarConteoConDatoInvalidoDetallaCampo() throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "detalles", List.of(Map.of(
+                        "productoId", 36,
+                        "conteoFisico", "no-numero"
+                ))));
+
+        mockMvc.perform(put("/api/inventario/conteos/20")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.SOLICITUD_INVALIDA.name()))
+                .andExpect(jsonPath("$.message").value(containsString("detalles.[0].conteoFisico")))
+                .andExpect(jsonPath("$.details.field").value("detalles.[0].conteoFisico"));
     }
 }

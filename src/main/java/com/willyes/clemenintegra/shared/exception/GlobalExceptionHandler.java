@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.shared.exception;
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -38,10 +39,35 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, DateTimeParseException.class})
-    public ResponseEntity<ErrorResponseDTO> handleInvalidDateFormat(Exception ex) {
+    public ResponseEntity<ErrorResponseDTO> handleUnreadableMessage(Exception ex) {
+        Throwable root = ex instanceof HttpMessageNotReadableException hmre
+                ? hmre.getMostSpecificCause()
+                : ex;
+
+        if (root instanceof DateTimeParseException) {
+            return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Formato de fecha inválido",
+                    "Use 'YYYY-MM-DDTHH:mm:ss' (ISO-8601). Si el campo no aplica, envíelo nulo u omítalo.");
+        }
+
+        if (root instanceof InvalidFormatException ife) {
+            String path = ife.getPath().stream()
+                    .map(ref -> ref.getFieldName() != null ? ref.getFieldName() : "[" + ref.getIndex() + "]")
+                    .reduce("", (acc, curr) -> acc.isEmpty() ? curr : acc + "." + curr);
+
+            Map<String, Object> details = Map.of(
+                    "field", path,
+                    "rejectedValue", ife.getValue()
+            );
+
+            return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Valor inválido para el campo '" + path + "'",
+                    details);
+        }
+
         return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA,
-                "Formato de fecha inválido",
-                "Use 'YYYY-MM-DDTHH:mm:ss' (ISO-8601). Si el campo no aplica, envíelo nulo u omítalo.");
+                "Solicitud inválida",
+                root != null ? root.getMessage() : ex.getMessage());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
