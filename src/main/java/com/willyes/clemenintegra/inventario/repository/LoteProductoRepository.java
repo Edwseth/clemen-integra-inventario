@@ -174,5 +174,15 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     List<Long> findIdsParaExpirar(@Param("cutoff") LocalDateTime cutoff,
                                   @Param("estadosExcluidos") Collection<EstadoLote> estadosExcluidos,
                                   org.springframework.data.domain.Pageable pageable);
-}
 
+    @Query("""
+        select coalesce(sum(lp.stockLote), 0)
+        from LoteProducto lp
+        where lp.producto.id = :productoId
+          and lp.almacen.id = :almacenId
+          and (:ubicacionId is null or lp.ubicacionFisica.id = :ubicacionId)
+    """)
+    BigDecimal sumarStockPorProductoYAlmacen(@Param("productoId") Long productoId,
+                                             @Param("almacenId") Integer almacenId,
+                                             @Param("ubicacionId") Long ubicacionId);
+}

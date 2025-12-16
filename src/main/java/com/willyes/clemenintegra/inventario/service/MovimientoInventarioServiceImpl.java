@@ -1784,6 +1784,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 solicitud != null ? solicitud.getId() : null, tipo);
 
         boolean esLoteOrigen = tipo != TipoMovimiento.ENTRADA;
+        boolean esAjustePositivo = tipo == TipoMovimiento.AJUSTE
+                && clasificacion == ClasificacionMovimientoInventario.AJUSTE_POSITIVO;
+        boolean esAjusteNegativo = tipo == TipoMovimiento.AJUSTE
+                && clasificacion == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
         if (esLoteOrigen) {
             loteCalidadValidator.validarLoteUtilizable(loteOrigen);
         }
@@ -1980,7 +1984,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 && cantidad.compareTo(stockDisponibleBase) > 0;
 
         if (EnumSet.of(TipoMovimiento.SALIDA, TipoMovimiento.TRANSFERENCIA,
-                TipoMovimiento.DEVOLUCION, TipoMovimiento.AJUSTE).contains(tipo)) {
+                TipoMovimiento.DEVOLUCION, TipoMovimiento.AJUSTE).contains(tipo) && !esAjustePositivo) {
             if (detalleOpGestionado) {
                 // Ya se consumió la reserva del detalle OP en esta misma ejecución.
             } else if (solicitud != null
@@ -2045,6 +2049,24 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         if (tipo == TipoMovimiento.ENTRADA) {
+            BigDecimal nuevo = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
+            loteOrigen.setStockLote(nuevo);
+            if (loteOrigen.isAgotado() && nuevo.compareTo(BigDecimal.ZERO) > 0) {
+                loteOrigen.setAgotado(false);
+                loteOrigen.setFechaAgotado(null);
+            }
+            LoteProducto actualizado = loteProductoRepository.save(loteOrigen);
+            return List.of(new MovimientoLoteDetalle(actualizado, cantidad));
+        }
+
+        if (tipo == TipoMovimiento.AJUSTE) {
+            if (esAjusteNegativo) {
+                log.debug("VAL-ACTUALIZA (AJUSTE-) antes actualizarStockLote loteId={} stockAntes={} req={}",
+                        loteOrigen.getId(), loteOrigen.getStockLote(), cantidad);
+                actualizarStockLote(loteOrigen, cantidad, producto);
+                LoteProducto actualizado = loteProductoRepository.save(loteOrigen);
+                return List.of(new MovimientoLoteDetalle(actualizado, cantidad));
+            }
             BigDecimal nuevo = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
             loteOrigen.setStockLote(nuevo);
             if (loteOrigen.isAgotado() && nuevo.compareTo(BigDecimal.ZERO) > 0) {
