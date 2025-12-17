@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.calidad.dto.AuditoriaLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLoteService;
+import com.willyes.clemenintegra.calidad.service.CarpetaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -27,6 +28,7 @@ public class CalidadAuditoriaController {
     private final AuditoriaLoteService auditoriaLoteService;
     private final AuditoriaLotePdfService auditoriaLotePdfService;
     private final EvaluacionCalidadService evaluacionCalidadService;
+    private final CarpetaLotePdfService carpetaLotePdfService;
 
     @GetMapping("/auditoria-lote/{loteId}")
     public ResponseEntity<AuditoriaLoteResponseDTO> obtenerAuditoriaLote(@PathVariable Long loteId) {
@@ -55,5 +57,14 @@ public class CalidadAuditoriaController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
                 .body(excel);
     }
-}
 
+    @GetMapping(path = "/reportes/lotes/{loteId}/carpeta", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> descargarCarpetaLote(@PathVariable Long loteId) {
+        byte[] pdf = carpetaLotePdfService.generarCarpeta(loteId);
+        String nombreArchivo = "CarpetaLote_" + loteId + ".pdf";
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
+                .body(pdf);
+    }
+}

@@ -10,9 +10,11 @@ import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoCapa;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
 import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
+import com.willyes.clemenintegra.calidad.repository.CapaRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -41,6 +43,7 @@ public class NoConformidadServiceImpl implements NoConformidadService {
     private final RetencionLoteRepository retencionLoteRepository;
     private final RetencionLoteService retencionLoteService;
     private final UsuarioRepository usuarioRepository;
+    private final CapaRepository capaRepository;
     private final NoConformidadMapper mapper;
 
     public Page<NoConformidadDTO> listar(SeveridadNoConformidad severidad,
@@ -183,6 +186,15 @@ public class NoConformidadServiceImpl implements NoConformidadService {
             throw new CustomBusinessException(
                     ApiErrorCode.NC_YA_CERRADA,
                     "La no conformidad ya se encuentra cerrada.",
+                    Map.of("ncId", id));
+        }
+
+        boolean tieneCapaCerrada = capaRepository.existsByNoConformidad_IdAndEstado(
+                id, EstadoCapa.CERRADA);
+        if (!tieneCapaCerrada) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.NC_CAPA_REQUERIDA,
+                    "Debe existir al menos una CAPA cerrada para cerrar la no conformidad.",
                     Map.of("ncId", id));
         }
 
@@ -370,4 +382,3 @@ public class NoConformidadServiceImpl implements NoConformidadService {
         }
     }
 }
-

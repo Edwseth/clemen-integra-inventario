@@ -63,6 +63,7 @@ import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.re
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.validarDisciplinasCompletas;
 import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
+import jakarta.persistence.EntityManager;
 
 @Service
 @RequiredArgsConstructor
@@ -90,6 +91,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final CondicionUsoRepository condicionUsoRepository;
     private final CondicionUsoMapper mapper;
     private final BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
+    @jakarta.persistence.PersistenceContext
+    private EntityManager entityManager;
 
     @Value("${inventory.lote.estadoLiberado}")
     private String estadoLiberadoConf;
@@ -130,67 +133,80 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .collect(Collectors.toList());
     }
 
-    public List<LoteProductoResponseDTO> obtenerLotesPorEvaluar() {
+    public org.springframework.data.domain.Page<LoteProductoResponseDTO> obtenerLotesPorEvaluar(org.springframework.data.domain.Pageable pageable) {
         List<EstadoLote> estados = List.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO);
-
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        List<LoteProducto> lotes;
-        if (auth != null) {
-            java.util.Set<String> authorities = auth.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .collect(Collectors.toSet());
-            boolean jefe = authorities.contains("ROL_JEFE_CALIDAD");
-            boolean superAdmin = authorities.contains("ROL_SUPER_ADMIN");
-            boolean analista = authorities.contains("ROL_ANALISTA_CALIDAD");
-            boolean micro = authorities.contains("ROL_MICROBIOLOGO");
+        java.util.Set<String> authorities = auth != null
+                ? auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toSet())
+                : java.util.Collections.emptySet();
+        boolean jefe = authorities.contains("ROL_JEFE_CALIDAD");
+        boolean superAdmin = authorities.contains("ROL_SUPER_ADMIN");
+        boolean analista = authorities.contains("ROL_ANALISTA_CALIDAD");
+        boolean micro = authorities.contains("ROL_MICROBIOLOGO");
 
-            if (jefe || superAdmin) {
-                lotes = loteRepo.findByEstadoIn(estados);
-            } else {
-                lotes = loteRepo.findByEstadoIn(estados).stream()
-                        .filter(l -> l.getProducto() != null)
-                        .filter(lote -> {
-                            Producto producto = lote.getProducto();
-                            boolean requiereFisico = requiereFisico(producto);
-                            boolean requiereQuimicoOMicro = requiereQuimico(producto) || requiereMicro(producto);
-                            if (analista) {
-                                return requiereFisico;
-                            }
-                            if (micro) {
-                                return requiereQuimicoOMicro;
-                            }
-                            return true;
-                        })
-                        .collect(Collectors.toList());
+        org.springframework.data.domain.Sort sort = pageable.getSort().isSorted()
+                ? pageable.getSort()
+                : org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaFabricacion");
+        org.springframework.data.domain.Pageable effectivePageable = org.springframework.data.domain.PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                sort);
+
+        org.springframework.data.jpa.domain.Specification<LoteProducto> specification = (root, query, builder) -> {
+            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            predicates.add(root.get("estado").in(estados));
+            if (!jefe && !superAdmin) {
+                var productoJoin = root.join("producto");
+                if (analista && micro) {
+                    predicates.add(builder.or(
+                            builder.isTrue(productoJoin.get("requiereAnalisisFisico")),
+                            builder.isTrue(productoJoin.get("requiereAnalisisQuimico")),
+                            builder.isTrue(productoJoin.get("requiereAnalisisMicrobiologico"))
+                    ));
+                } else if (analista) {
+                    predicates.add(builder.isTrue(productoJoin.get("requiereAnalisisFisico")));
+                } else if (micro) {
+                    predicates.add(builder.or(
+                            builder.isTrue(productoJoin.get("requiereAnalisisQuimico")),
+                            builder.isTrue(productoJoin.get("requiereAnalisisMicrobiologico"))
+                    ));
+                }
             }
-        } else {
-            lotes = loteRepo.findByEstadoIn(estados);
-        }
+            return builder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
 
-        return lotes.stream()
+        List<LoteProducto> lotesOrdenados = loteRepo.findAll(specification, sort);
+
+        List<LoteProductoResponseDTO> filtrados = lotesOrdenados.stream()
                 .map(lote -> {
                     List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId());
-
                     if (tieneEvaluacionesRequeridas(lote.getProducto(), evaluaciones)) {
                         return null;
                     }
-
                     LoteProductoResponseDTO dto = loteProductoMapper.toDto(lote);
                     dto.setEvaluaciones(evaluaciones.stream()
                             .map(EvaluacionCalidad::getTipoEvaluacion)
                             .toList());
-                    PlantillaAnalisisMicroDTO plantillaDto = plantillaAnalisisMicroService.obtenerPorProducto(lote.getProducto().getId().longValue());
-                    if (plantillaDto != null) {
-                        dto.setRequiereAnalisisMicro(plantillaDto.isRequiereAnalisisMicro());
-                        if (plantillaDto.getId() != null) {
-                            dto.setPlantillaMicroId(plantillaDto.getId());
+                    if (lote.getProducto() != null) {
+                        PlantillaAnalisisMicroDTO plantillaDto = plantillaAnalisisMicroService.obtenerPorProducto(lote.getProducto().getId().longValue());
+                        if (plantillaDto != null) {
+                            dto.setRequiereAnalisisMicro(plantillaDto.isRequiereAnalisisMicro());
+                            if (plantillaDto.getId() != null) {
+                                dto.setPlantillaMicroId(plantillaDto.getId());
+                            }
                         }
                     }
                     return dto;
                 })
                 .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
+
+        int start = (int) Math.min(effectivePageable.getOffset(), filtrados.size());
+        int end = Math.min(start + effectivePageable.getPageSize(), filtrados.size());
+        List<LoteProductoResponseDTO> pageContent = filtrados.subList(start, end);
+
+        return new org.springframework.data.domain.PageImpl<>(pageContent, effectivePageable, filtrados.size());
     }
 
     @Override
@@ -824,4 +840,3 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .build();
     }
 }
-

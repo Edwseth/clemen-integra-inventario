@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/calidad/capas")
 @RequiredArgsConstructor
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
 public class CapaController {
 
     private final CapaService service;
@@ -47,4 +48,3 @@ public class CapaController {
         return ResponseEntity.noContent().build();
     }
 }
-

@@ -15,7 +15,7 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
     Page<EvaluacionCalidad> findByResultado(ResultadoEvaluacion resultado, Pageable pageable);
 
     @EntityGraph(attributePaths = {"loteProducto.producto", "usuarioEvaluador"})
-    @Query("SELECT e FROM EvaluacionCalidad e WHERE e.fechaEvaluacion BETWEEN :inicio AND :fin")
+    @Query("SELECT e FROM EvaluacionCalidad e WHERE e.fechaEvaluacion BETWEEN :inicio AND :fin ORDER BY e.fechaEvaluacion DESC")
     Page<EvaluacionCalidad> findAllByFechaEvaluacionBetween(
             @Param("inicio") LocalDateTime inicio,
             @Param("fin") LocalDateTime fin,

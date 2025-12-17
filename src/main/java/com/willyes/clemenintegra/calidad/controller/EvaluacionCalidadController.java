@@ -63,7 +63,7 @@ public class EvaluacionCalidadController {
     public ResponseEntity<Page<EvaluacionCalidadResponseDTO>> listarPorFecha(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
-            Pageable pageable) {
+            @PageableDefault(sort = "fechaEvaluacion", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(service.listarPorFecha(fechaInicio, fechaFin, pageable));
     }
 

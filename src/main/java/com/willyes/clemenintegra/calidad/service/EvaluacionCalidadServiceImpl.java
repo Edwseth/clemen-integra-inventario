@@ -85,7 +85,10 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     public Page<EvaluacionCalidadResponseDTO> listarPorFecha(LocalDate fechaInicio, LocalDate fechaFin, Pageable pageable) {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
-        Page<EvaluacionCalidad> page = repository.findAllByFechaEvaluacionBetween(inicio, fin, pageable);
+        Pageable effective = pageable.getSort().isSorted() ? pageable
+                : org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaEvaluacion"));
+        Page<EvaluacionCalidad> page = repository.findAllByFechaEvaluacionBetween(inicio, fin, effective);
         return page.map(mapper::toResponseDTO);
     }
 

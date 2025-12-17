@@ -11,6 +11,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/inventario/bitacora")
 @RequiredArgsConstructor
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
 public class BitacoraCambiosInventarioController {
 
     private final BitacoraCambiosInventarioService service;
@@ -31,4 +32,3 @@ public class BitacoraCambiosInventarioController {
         return ResponseEntity.noContent().build();
     }
 }
-

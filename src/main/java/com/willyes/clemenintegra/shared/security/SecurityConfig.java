@@ -74,7 +74,6 @@ public class SecurityConfig {
                             "/api/productos/**",
                             "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**",
                             "/api/proveedores/**", "/api/unidades/**",
-                            "/api/inventario/bitacora/**",
                             "/api/inventario/historial-ordenes/**",
                             "/api/inventario/ordenes-compra-detalle/**",
                             "/api/inventario/tipos-movimiento-detalle/**"
@@ -146,6 +145,11 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    auth.requestMatchers("/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers("/api/calidad/**",
                             "/api/calidad/evaluaciones/archivo/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
@@ -213,6 +217,10 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    auth.requestMatchers("/actuator/metrics/**").hasAnyAuthority(
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers(
                             "/api/inventarios/solicitudes/**",
                             "/api/inventario/solicitudes/**"
@@ -220,6 +228,11 @@ public class SecurityConfig {
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/inventario/bitacora", "/api/inventario/bitacora/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
