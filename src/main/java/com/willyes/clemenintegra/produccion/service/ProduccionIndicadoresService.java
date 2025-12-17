@@ -10,5 +10,7 @@ public interface ProduccionIndicadoresService {
 
     IndicadoresProduccionResponseDTO calcularIndicadores(LocalDate fechaInicio, LocalDate fechaFin);
 
+    IndicadoresProduccionResponseDTO calcularIndicadores(LocalDate fechaInicio, LocalDate fechaFin, Integer diasAlerta);
+
     List<AlertaOrdenProduccionDTO> obtenerOrdenesConAlertas(LocalDate fechaReferencia, int diasVentana);
 }

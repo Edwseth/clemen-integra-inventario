@@ -27,6 +27,13 @@ public class ProduccionIndicadoresServiceImpl implements ProduccionIndicadoresSe
 
     @Override
     public IndicadoresProduccionResponseDTO calcularIndicadores(LocalDate fechaInicio, LocalDate fechaFin) {
+        return calcularIndicadores(fechaInicio, fechaFin, null);
+    }
+
+    @Override
+    public IndicadoresProduccionResponseDTO calcularIndicadores(LocalDate fechaInicio,
+                                                                LocalDate fechaFin,
+                                                                Integer diasAlerta) {
         LocalDateTime desde = fechaInicio.atStartOfDay();
         LocalDateTime hasta = fechaFin.atTime(LocalTime.MAX);
         List<OrdenProduccion> ordenes = ordenProduccionRepository.findByFechaFinBetween(desde, hasta);
@@ -74,6 +81,8 @@ public class ProduccionIndicadoresServiceImpl implements ProduccionIndicadoresSe
                 .cantidadTotalPlanificada(cantidadPlanificada)
                 .cantidadTotalProducida(cantidadProducida)
                 .ordenesAbiertasConVencimientoVencido(ordenesAbiertasVencidas)
+                .alertas(obtenerOrdenesConAlertas(null, diasAlerta != null ? diasAlerta : 3))
+                .diasAlerta(diasAlerta != null ? diasAlerta : 3)
                 .build();
     }
 
