@@ -19,7 +19,7 @@ import java.util.List;
 public interface LoteProductoService {
     LoteProductoResponseDTO crearLote(LoteProductoRequestDTO dto);
     List<LoteProductoResponseDTO> obtenerLotesPorEstado(String estado);
-    List<LoteProductoResponseDTO> obtenerLotesPorEvaluar();
+    org.springframework.data.domain.Page<LoteProductoResponseDTO> obtenerLotesPorEvaluar(org.springframework.data.domain.Pageable pageable);
     Workbook generarReporteLotesPorVencerExcel(LocalDateTime inicio, LocalDateTime fin);
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
     Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen, Boolean vencidos, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);

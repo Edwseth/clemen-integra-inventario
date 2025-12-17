@@ -16,4 +16,6 @@ public interface CapaRepository extends JpaRepository<Capa, Long> {
                                                       EstadoCapa estado, Pageable pageable);
 
     boolean existsByNoConformidad_Id(Long noConformidadId);
+
+    boolean existsByNoConformidad_IdAndEstado(Long noConformidadId, EstadoCapa estado);
 }

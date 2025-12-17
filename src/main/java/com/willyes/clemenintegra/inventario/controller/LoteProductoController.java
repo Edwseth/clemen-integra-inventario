@@ -116,9 +116,10 @@ public class LoteProductoController {
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping("/por-evaluar")
-    public ResponseEntity<List<LoteProductoResponseDTO>> obtenerLotesPorEvaluar() {
-        List<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar();
-
+    public ResponseEntity<Page<LoteProductoResponseDTO>> obtenerLotesPorEvaluar(
+            @org.springframework.data.web.PageableDefault(size = 10, sort = "fechaFabricacion",
+                    direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        Page<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar(pageable);
         return ResponseEntity.ok(resultado);
     }
 
@@ -147,4 +148,3 @@ public class LoteProductoController {
     }
 
 }
-

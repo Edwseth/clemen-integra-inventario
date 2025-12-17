@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.AuditoriaLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLoteService;
+import com.willyes.clemenintegra.calidad.service.CarpetaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider;
@@ -34,6 +35,8 @@ class CalidadAuditoriaControllerTest {
     private AuditoriaLoteService auditoriaLoteService;
     @MockBean
     private AuditoriaLotePdfService auditoriaLotePdfService;
+    @MockBean
+    private CarpetaLotePdfService carpetaLotePdfService;
     @MockBean
     private EvaluacionCalidadService evaluacionCalidadService;
     @MockBean
@@ -81,5 +84,23 @@ class CalidadAuditoriaControllerTest {
                 .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEqualTo("excel".getBytes()));
     }
-}
 
+    @Test
+    void descargaCarpetaLote() throws Exception {
+        when(carpetaLotePdfService.generarCarpeta(3L)).thenReturn("pdf".getBytes());
+
+        mockMvc.perform(get("/api/calidad/reportes/lotes/3/carpeta"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEqualTo("pdf".getBytes()));
+    }
+
+    @Test
+    void retorna404CuandoNoExisteLoteEnCarpeta() throws Exception {
+        when(carpetaLotePdfService.generarCarpeta(999L))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND));
+
+        mockMvc.perform(get("/api/calidad/reportes/lotes/999/carpeta"))
+                .andExpect(status().isNotFound());
+    }
+}
