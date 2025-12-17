@@ -236,7 +236,7 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
                p.codigo_sku         AS codigoSku,
                lp.almacenes_id      AS almacenId,
                a.nombre             AS nombreAlmacen,
-               COALESCE(lp.stock_lote - COALESCE(lp.stock_reservado, 0), 0) AS stockActual
+               GREATEST(lp.stock_lote - COALESCE(lp.stock_reservado, 0), 0) AS stockActual
         FROM lotes_productos lp
                  JOIN productos p ON p.id = lp.productos_id
                  JOIN almacenes a ON a.id = lp.almacenes_id

@@ -108,6 +108,59 @@ class AlertaInventarioServiceImplTest {
                 });
     }
 
+    @Test
+    @DisplayName("No genera alerta de stock máximo cuando el umbral no está configurado o es cero")
+    void noGeneraStockMaximoCuandoUmbralNoConfigurado() {
+        when(loteProductoRepository.sumarStockParaAlertas()).thenReturn(List.of(
+                new StockRow(1L, "Producto A", "SKU-A", 10L, "Almacén 1",
+                        BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.TEN)
+        ));
+        when(loteProductoRepository.listarLotesConVencimiento()).thenReturn(List.of());
+
+        List<AlertaInventarioResponseDTO> alertas = service.obtenerAlertasInventario(15);
+
+        assertThat(alertas)
+                .extracting(AlertaInventarioResponseDTO::getTipo)
+                .doesNotContain(AlertaInventarioTipo.STOCK_MAXIMO);
+    }
+
+    @Test
+    @DisplayName("Genera alerta de stock máximo cuando el umbral está configurado y el stock lo supera")
+    void generaStockMaximoConUmbralConfigurado() {
+        when(loteProductoRepository.sumarStockParaAlertas()).thenReturn(List.of(
+                new StockRow(1L, "Producto A", "SKU-A", 10L, "Almacén 1",
+                        BigDecimal.ZERO, BigDecimal.valueOf(5), BigDecimal.TEN)
+        ));
+        when(loteProductoRepository.listarLotesConVencimiento()).thenReturn(List.of());
+
+        List<AlertaInventarioResponseDTO> alertas = service.obtenerAlertasInventario(15);
+
+        assertThat(alertas)
+                .filteredOn(a -> a.getTipo() == AlertaInventarioTipo.STOCK_MAXIMO)
+                .singleElement()
+                .satisfies(alerta -> {
+                    assertThat(alerta.getStockActual()).isEqualByComparingTo("10");
+                    assertThat(alerta.getUmbral()).isEqualByComparingTo("5");
+                });
+    }
+
+    @Test
+    @DisplayName("El stock actual del lote en alertas de vencimiento nunca es negativo")
+    void stockActualDeLoteNoEsNegativo() {
+        when(loteProductoRepository.sumarStockParaAlertas()).thenReturn(List.of());
+        when(loteProductoRepository.listarLotesConVencimiento()).thenReturn(List.of(
+                new LoteRow(201L, "L-NEG", LocalDateTime.parse("2025-01-10T00:00:00"), 5L, "Producto Neg", "SKU-N",
+                        20L, "Almacén N", BigDecimal.valueOf(-5))
+        ));
+
+        List<AlertaInventarioResponseDTO> alertas = service.obtenerAlertasInventario(10);
+
+        assertThat(alertas)
+                .filteredOn(a -> a.getTipo() == AlertaInventarioTipo.LOTE_VENCIDO)
+                .singleElement()
+                .satisfies(alerta -> assertThat(alerta.getStockActual()).isEqualByComparingTo(BigDecimal.ZERO));
+    }
+
     private record StockRow(Long productoId, String nombreProducto, String codigoSku, Long almacenId, String nombreAlmacen,
                             BigDecimal stockMinimo, BigDecimal stockMaximoPlaneacion, BigDecimal stockActual)
             implements StockAlertaProjection {
