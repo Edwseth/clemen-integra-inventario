@@ -17,26 +17,27 @@ public class AlertaInventarioController {
     private final AlertaInventarioService alertaService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION')")
-    public ResponseEntity<List<AlertaInventarioResponseDTO>> obtenerAlertas() {
-        return ResponseEntity.ok(alertaService.obtenerAlertasInventario());
+    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA')")
+    public ResponseEntity<List<AlertaInventarioResponseDTO>> obtenerAlertas(
+            @RequestParam(value = "diasVencimiento", required = false, defaultValue = "30") Integer diasVencimiento) {
+        return ResponseEntity.ok(alertaService.obtenerAlertasInventario(diasVencimiento));
     }
 
     @GetMapping("/stock-bajo")
-    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION')")
+    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA')")
     public ResponseEntity<List<ProductoAlertaResponseDTO>> obtenerProductosConStockBajo() {
         List<ProductoAlertaResponseDTO> alertas = alertaService.obtenerProductosConStockBajo();
         return ResponseEntity.ok(alertas);
     }
 
     @GetMapping("/productos-vencidos")
-    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION')")
+    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA')")
     public ResponseEntity<List<LoteAlertaResponseDTO>> obtenerProductosVencidos() {
         return ResponseEntity.ok(alertaService.obtenerLotesVencidos());
     }
 
     @GetMapping("/lotes-retenidos-prolongados")
-    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION', 'ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA')")
     public ResponseEntity<List<LoteEstadoProlongadoResponseDTO>> obtenerLotesEnCuarentenaORetenidosProlongados() {
         return ResponseEntity.ok(alertaService.obtenerLotesRetenidosOCuarentenaProlongados());
     }
