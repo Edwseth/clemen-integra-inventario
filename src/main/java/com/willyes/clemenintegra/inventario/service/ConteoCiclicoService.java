@@ -69,7 +69,7 @@ public class ConteoCiclicoService {
     public List<ConteoCiclicoLoteResponseDTO> listarLotesParaConteo(Long conteoId,
                                                                    Long productoId,
                                                                    Long ubicacionFisicaId,
-                                                                   String texto) {
+                                                                   String q) {
         if (productoId == null) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Debe especificar el producto a contar");
         }
@@ -98,7 +98,7 @@ public class ConteoCiclicoService {
             }
         }
 
-        String filtroTexto = StringUtils.hasText(texto) ? texto.trim() : null;
+        String filtroTexto = (q == null || q.isBlank()) ? null : q.trim();
 
         log.debug("[ConteoCiclico] listarLotes conteoId={}, almacenId={}, productoId={}, ubicacionFisicaId={}, search={}",
                 conteoId, almacenId, producto.getId(), ubicacion != null ? ubicacion.getId() : null, filtroTexto);

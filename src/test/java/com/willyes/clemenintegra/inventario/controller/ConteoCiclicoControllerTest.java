@@ -95,22 +95,40 @@ class ConteoCiclicoControllerTest {
 
     @Test
     @WithMockUser(authorities = "ROL_ALMACENISTA")
-    void listarLotesParaConteoDevuelve200() throws Exception {
+    void listarLotesParaConteoSinQDevuelveListado() throws Exception {
+        ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
+                .id(11L)
+                .codigoLote("FAFAFSAF")
+                .stockLote(new BigDecimal("3.00"))
+                .build();
+        when(conteoCiclicoService.listarLotesParaConteo(8L, 3L, null, null))
+                .thenReturn(List.of(lote));
+
+        mockMvc.perform(get("/api/inventario/conteos/8/lotes")
+                        .param("productoId", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(11))
+                .andExpect(jsonPath("$[0].codigoLote").value("FAFAFSAF"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    void listarLotesParaConteoConQParcialDevuelve200() throws Exception {
         ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
                 .id(9L)
-                .codigoLote("L-001")
+                .codigoLote("L20251003-01")
                 .stockLote(new BigDecimal("5.00"))
                 .build();
-        when(conteoCiclicoService.listarLotesParaConteo(8L, 3L, 2L, "AB"))
+        when(conteoCiclicoService.listarLotesParaConteo(8L, 3L, 2L, "2025"))
                 .thenReturn(List.of(lote));
 
         mockMvc.perform(get("/api/inventario/conteos/8/lotes")
                         .param("productoId", "3")
                         .param("ubicacionFisicaId", "2")
-                        .param("q", "AB"))
+                        .param("q", "2025"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(9))
-                .andExpect(jsonPath("$[0].codigoLote").value("L-001"));
+                .andExpect(jsonPath("$[0].codigoLote").value("L20251003-01"));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.ConteoCiclicoMapper;
@@ -342,5 +343,70 @@ class ConteoCiclicoServiceTest {
 
         verify(loteProductoRepository).buscarParaConteo(eq(3L), eq(7), isNull(), isNull(), estadosCaptor.capture());
         assertThat(estadosCaptor.getValue()).containsExactlyInAnyOrder(EstadoLote.values());
+    }
+
+    @Test
+    void listarLotesParaConteoSinBuscarTextoNoFiltraPorCodigo() {
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(12L)
+                .almacen(new Almacen(5))
+                .build();
+        Producto producto = new Producto();
+        producto.setId(8);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(99L)
+                .producto(producto)
+                .almacen(conteo.getAlmacen())
+                .codigoLote("FAFAFSAF")
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(BigDecimal.ONE)
+                .build();
+
+        when(conteoCiclicoRepository.findById(12L)).thenReturn(Optional.of(conteo));
+        when(productoRepository.findById(8L)).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.buscarParaConteo(eq(8L), eq(5), isNull(), isNull(), anyCollection()))
+                .thenReturn(List.of(lote));
+
+        List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
+                .listarLotesParaConteo(12L, 8L, null, null);
+
+        assertThat(respuesta).hasSize(1);
+        assertThat(respuesta.getFirst().getCodigoLote()).isEqualTo("FAFAFSAF");
+    }
+
+    @Test
+    void listarLotesParaConteoConTextoAplicaFiltro() {
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(13L)
+                .almacen(new Almacen(6))
+                .build();
+        Producto producto = new Producto();
+        producto.setId(9);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(101L)
+                .producto(producto)
+                .almacen(conteo.getAlmacen())
+                .codigoLote("L20251003-01")
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(BigDecimal.TEN)
+                .build();
+
+        when(conteoCiclicoRepository.findById(13L)).thenReturn(Optional.of(conteo));
+        when(productoRepository.findById(9L)).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.buscarParaConteo(eq(9L), eq(6), isNull(), anyString(), anyCollection()))
+                .thenReturn(List.of(lote));
+
+        ArgumentCaptor<String> qCaptor = ArgumentCaptor.forClass(String.class);
+
+        List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
+                .listarLotesParaConteo(13L, 9L, null, " 20251003 ");
+
+        assertThat(respuesta).hasSize(1);
+        assertThat(respuesta.getFirst().getCodigoLote()).isEqualTo("L20251003-01");
+
+        verify(loteProductoRepository).buscarParaConteo(eq(9L), eq(6), isNull(), qCaptor.capture(), anyCollection());
+        assertThat(qCaptor.getValue()).isEqualTo("20251003");
     }
 }

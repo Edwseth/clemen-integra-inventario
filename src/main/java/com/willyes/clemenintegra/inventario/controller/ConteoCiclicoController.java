@@ -53,9 +53,9 @@ public class ConteoCiclicoController {
             @PathVariable Long id,
             @RequestParam Long productoId,
             @RequestParam(required = false) Long ubicacionFisicaId,
-            @RequestParam(required = false, name = "q") String texto) {
+            @RequestParam(name = "q", required = false) String q) {
         List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
-                .listarLotesParaConteo(id, productoId, ubicacionFisicaId, texto);
+                .listarLotesParaConteo(id, productoId, ubicacionFisicaId, q);
         return ResponseEntity.ok(respuesta);
     }
 

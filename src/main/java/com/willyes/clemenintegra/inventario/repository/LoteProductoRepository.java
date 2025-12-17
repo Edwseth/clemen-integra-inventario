@@ -194,12 +194,12 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
           and lp.almacen.id = :almacenId
           and lp.estado in :estados
           and (:ubicacionId is null or uf.id = :ubicacionId)
-          and (:texto is null or :texto = '' or upper(lp.codigoLote) like concat('%', upper(:texto), '%'))
+          and (:q is null or lower(lp.codigoLote) like lower(concat('%', :q, '%')))
         order by lp.fechaVencimiento asc nulls last, lp.codigoLote asc
     """)
     List<LoteProducto> buscarParaConteo(@Param("productoId") Long productoId,
                                         @Param("almacenId") Integer almacenId,
                                         @Param("ubicacionId") Long ubicacionId,
-                                        @Param("texto") String texto,
+                                        @Param("q") String q,
                                         @Param("estados") Collection<EstadoLote> estados);
 }
