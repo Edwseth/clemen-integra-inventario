@@ -216,20 +216,35 @@ class ConteoCiclicoServiceTest {
         Producto productoDos = new Producto();
         productoDos.setId(4);
 
+        LoteProducto loteUno = LoteProducto.builder()
+                .id(101L)
+                .producto(productoUno)
+                .almacen(almacen)
+                .stockLote(new BigDecimal("10.00"))
+                .build();
+        LoteProducto loteDos = LoteProducto.builder()
+                .id(102L)
+                .producto(productoDos)
+                .almacen(almacen)
+                .stockLote(new BigDecimal("2.00"))
+                .build();
+
         ConteoCiclicoDetalleRequestDTO detalleUno = new ConteoCiclicoDetalleRequestDTO();
         detalleUno.setProductoId(3L);
+        detalleUno.setLoteProductoId(101L);
         detalleUno.setStockSistema(new BigDecimal("10.00"));
         detalleUno.setConteoFisico(new BigDecimal("12.00"));
 
         ConteoCiclicoDetalleRequestDTO detalleDos = new ConteoCiclicoDetalleRequestDTO();
         detalleDos.setProductoId(4L);
+        detalleDos.setLoteProductoId(102L);
         detalleDos.setConteoFisico(new BigDecimal("5.00"));
 
         when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(10L)).thenReturn(Optional.of(conteo));
         when(productoRepository.findById(3L)).thenReturn(Optional.of(productoUno));
         when(productoRepository.findById(4L)).thenReturn(Optional.of(productoDos));
-        when(loteProductoRepository.sumarStockPorProductoYAlmacen(4L, almacen.getId(), null))
-                .thenReturn(new BigDecimal("2.00"));
+        when(loteProductoRepository.findById(101L)).thenReturn(Optional.of(loteUno));
+        when(loteProductoRepository.findById(102L)).thenReturn(Optional.of(loteDos));
         when(conteoCiclicoRepository.save(any(ConteoCiclico.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -266,6 +281,79 @@ class ConteoCiclicoServiceTest {
         assertThatThrownBy(() -> conteoCiclicoService.actualizarConteo(11L, List.of(detalle)))
                 .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
                         assertThat(ex.getCode()).isEqualTo(ApiErrorCode.CONTEO_ESTADO_INVALIDO));
+
+        verify(conteoCiclicoRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizarConteoConLoteDeOtroProductoLanzaError() {
+        Almacen almacen = new Almacen(5);
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(41L)
+                .almacen(almacen)
+                .estado(EstadoConteoCiclico.BORRADOR)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        Producto producto = new Producto();
+        producto.setId(8);
+
+        Producto otroProducto = new Producto();
+        otroProducto.setId(99);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(301L)
+                .producto(otroProducto)
+                .almacen(almacen)
+                .build();
+
+        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
+        detalle.setProductoId(8L);
+        detalle.setLoteProductoId(301L);
+        detalle.setConteoFisico(BigDecimal.ONE);
+
+        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(41L)).thenReturn(Optional.of(conteo));
+        when(productoRepository.findById(8L)).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.findById(301L)).thenReturn(Optional.of(lote));
+
+        assertThatThrownBy(() -> conteoCiclicoService.actualizarConteo(41L, List.of(detalle)))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.LOTE_INVALIDO_CONTEO));
+
+        verify(conteoCiclicoRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizarConteoConLoteDeOtroAlmacenLanzaError() {
+        Almacen almacen = new Almacen(6);
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(42L)
+                .almacen(almacen)
+                .estado(EstadoConteoCiclico.BORRADOR)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        Producto producto = new Producto();
+        producto.setId(10);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(302L)
+                .producto(producto)
+                .almacen(new Almacen(99))
+                .build();
+
+        ConteoCiclicoDetalleRequestDTO detalle = new ConteoCiclicoDetalleRequestDTO();
+        detalle.setProductoId(10L);
+        detalle.setLoteProductoId(302L);
+        detalle.setConteoFisico(BigDecimal.TEN);
+
+        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(42L)).thenReturn(Optional.of(conteo));
+        when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.findById(302L)).thenReturn(Optional.of(lote));
+
+        assertThatThrownBy(() -> conteoCiclicoService.actualizarConteo(42L, List.of(detalle)))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.LOTE_INVALIDO_CONTEO));
 
         verify(conteoCiclicoRepository, never()).save(any());
     }
@@ -408,5 +496,40 @@ class ConteoCiclicoServiceTest {
 
         verify(loteProductoRepository).buscarParaConteo(eq(9L), eq(6), isNull(), qCaptor.capture(), anyCollection());
         assertThat(qCaptor.getValue()).isEqualTo("20251003");
+    }
+
+    @Test
+    void mapperIncluyeCodigoDeLoteEnRespuesta() {
+        ConteoCiclicoMapper mapper = new ConteoCiclicoMapper();
+        Almacen almacen = new Almacen(10);
+        Producto producto = new Producto();
+        producto.setId(15);
+        LoteProducto lote = LoteProducto.builder()
+                .id(401L)
+                .producto(producto)
+                .almacen(almacen)
+                .codigoLote("L-0401")
+                .build();
+
+        ConteoCiclicoDetalle detalle = ConteoCiclicoDetalle.builder()
+                .id(501L)
+                .producto(producto)
+                .loteProducto(lote)
+                .stockSistema(BigDecimal.ZERO)
+                .conteoFisico(BigDecimal.ZERO)
+                .diferencia(BigDecimal.ZERO)
+                .build();
+
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(70L)
+                .almacen(almacen)
+                .detalles(new java.util.ArrayList<>(List.of(detalle)))
+                .build();
+        detalle.setConteo(conteo);
+
+        ConteoCiclicoResponseDTO response = mapper.toResponse(conteo);
+
+        assertThat(response.getDetalles()).hasSize(1);
+        assertThat(response.getDetalles().getFirst().getLoteCodigo()).isEqualTo("L-0401");
     }
 }

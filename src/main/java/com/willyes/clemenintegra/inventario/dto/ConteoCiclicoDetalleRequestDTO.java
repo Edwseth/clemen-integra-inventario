@@ -14,6 +14,7 @@ public class ConteoCiclicoDetalleRequestDTO {
 
     @NotNull
     private Long productoId;
+    @NotNull(message = "Debe seleccionar un lote")
     private Long loteProductoId;
     @JsonAlias("ubicacionId")
     private Long ubicacionFisicaId;

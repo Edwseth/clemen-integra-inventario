@@ -11,6 +11,7 @@ public class ConteoCiclicoDetalleResponseDTO {
     Long id;
     Long productoId;
     Long loteProductoId;
+    String loteCodigo;
     Long ubicacionFisicaId;
     BigDecimal stockSistema;
     BigDecimal conteoFisico;
