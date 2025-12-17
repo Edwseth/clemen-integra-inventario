@@ -111,6 +111,15 @@ public class ConteoCiclicoService {
                 LOTES_VISIBLES_EN_CONTEO);
 
         log.debug("[ConteoCiclico] lotes encontrados antes de mapear: {}", lotes.size());
+        lotes.stream()
+                .limit(3)
+                .forEach(lp -> log.debug(
+                        "[ConteoCiclico] lote id={} codigo={} ubicacionId={} estado={} stockLote={}",
+                        lp.getId(),
+                        lp.getCodigoLote(),
+                        lp.getUbicacionFisica() != null ? lp.getUbicacionFisica().getId() : null,
+                        lp.getEstado(),
+                        lp.getStockLote()));
 
         return lotes.stream()
                 .map(lp -> ConteoCiclicoLoteResponseDTO.builder()
