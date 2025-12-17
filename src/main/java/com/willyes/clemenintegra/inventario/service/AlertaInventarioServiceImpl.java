@@ -118,7 +118,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                         .build());
             }
 
-            if (stockMaximo != null && stockActual.compareTo(stockMaximo) > 0) {
+            if (stockMaximo != null && stockMaximo.compareTo(BigDecimal.ZERO) > 0 && stockActual.compareTo(stockMaximo) > 0) {
                 alertas.add(AlertaInventarioResponseDTO.builder()
                         .tipo(AlertaInventarioTipo.STOCK_MAXIMO)
                         .severidad(AlertaInventarioSeveridad.ADVERTENCIA)
@@ -140,7 +140,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                 continue;
             }
 
-            BigDecimal stockActual = defaultBigDecimal(lote.getStockActual());
+            BigDecimal stockActual = defaultBigDecimal(lote.getStockActual()).max(BigDecimal.ZERO);
             if (fechaVencimiento.isBefore(ahora)) {
                 alertas.add(AlertaInventarioResponseDTO.builder()
                         .tipo(AlertaInventarioTipo.LOTE_VENCIDO)
