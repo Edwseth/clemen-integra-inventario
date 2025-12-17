@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.inventario.repository;
 
+import com.willyes.clemenintegra.inventario.dto.LoteAlertaActivaProjection;
+import com.willyes.clemenintegra.inventario.dto.StockAlertaProjection;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
@@ -202,4 +204,43 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
                                         @Param("ubicacionId") Long ubicacionId,
                                         @Param("q") String q,
                                         @Param("estados") Collection<EstadoLote> estados);
+
+    @Query(value = """
+        SELECT lp.productos_id        AS productoId,
+               p.nombre               AS nombreProducto,
+               p.codigo_sku           AS codigoSku,
+               lp.almacenes_id        AS almacenId,
+               a.nombre               AS nombreAlmacen,
+               p.stock_minimo         AS stockMinimo,
+               p.stock_maximo_planeacion AS stockMaximoPlaneacion,
+               COALESCE(SUM(GREATEST(lp.stock_lote - COALESCE(lp.stock_reservado, 0), 0)), 0) AS stockActual
+        FROM lotes_productos lp
+                 JOIN productos p ON p.id = lp.productos_id
+                 JOIN almacenes a ON a.id = lp.almacenes_id
+        GROUP BY lp.productos_id,
+                 p.nombre,
+                 p.codigo_sku,
+                 lp.almacenes_id,
+                 a.nombre,
+                 p.stock_minimo,
+                 p.stock_maximo_planeacion
+        """, nativeQuery = true)
+    List<StockAlertaProjection> sumarStockParaAlertas();
+
+    @Query(value = """
+        SELECT lp.id                AS loteProductoId,
+               lp.codigo_lote       AS codigoLote,
+               lp.fecha_vencimiento AS fechaVencimiento,
+               lp.productos_id      AS productoId,
+               p.nombre             AS nombreProducto,
+               p.codigo_sku         AS codigoSku,
+               lp.almacenes_id      AS almacenId,
+               a.nombre             AS nombreAlmacen,
+               COALESCE(lp.stock_lote - COALESCE(lp.stock_reservado, 0), 0) AS stockActual
+        FROM lotes_productos lp
+                 JOIN productos p ON p.id = lp.productos_id
+                 JOIN almacenes a ON a.id = lp.almacenes_id
+        WHERE lp.fecha_vencimiento IS NOT NULL
+        """, nativeQuery = true)
+    List<LoteAlertaActivaProjection> listarLotesConVencimiento();
 }

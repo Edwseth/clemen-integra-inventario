@@ -9,5 +9,5 @@ public interface AlertaInventarioService {
     List<ProductoAlertaResponseDTO> obtenerProductosConStockBajo();
     List<LoteAlertaResponseDTO> obtenerLotesVencidos();
     List<LoteEstadoProlongadoResponseDTO> obtenerLotesRetenidosOCuarentenaProlongados();
-    List<AlertaInventarioResponseDTO> obtenerAlertasInventario();
+    List<AlertaInventarioResponseDTO> obtenerAlertasInventario(Integer diasVencimiento);
 }
