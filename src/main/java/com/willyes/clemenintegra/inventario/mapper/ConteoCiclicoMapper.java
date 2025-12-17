@@ -47,6 +47,7 @@ public class ConteoCiclicoMapper {
                         ? detalle.getProducto().getId().longValue()
                         : null)
                 .loteProductoId(detalle.getLoteProducto() != null ? detalle.getLoteProducto().getId() : null)
+                .loteCodigo(detalle.getLoteProducto() != null ? detalle.getLoteProducto().getCodigoLote() : null)
                 .ubicacionFisicaId(detalle.getUbicacionFisica() != null ? detalle.getUbicacionFisica().getId() : null)
                 .stockSistema(detalle.getStockSistema())
                 .conteoFisico(detalle.getConteoFisico())

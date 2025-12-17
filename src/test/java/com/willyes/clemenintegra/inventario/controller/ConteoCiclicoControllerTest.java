@@ -259,6 +259,7 @@ class ConteoCiclicoControllerTest {
         String body = objectMapper.writeValueAsString(Map.of(
                 "detalles", List.of(Map.of(
                         "productoId", 11,
+                        "loteProductoId", 5,
                         "conteoFisico", new BigDecimal("2.00")
                 ))));
 
@@ -279,6 +280,7 @@ class ConteoCiclicoControllerTest {
         String body = objectMapper.writeValueAsString(Map.of(
                 "detalles", List.of(Map.of(
                         "productoId", 9,
+                        "loteProductoId", 5,
                         "conteoFisico", BigDecimal.ONE
                 ))));
 
@@ -298,6 +300,7 @@ class ConteoCiclicoControllerTest {
         String body = objectMapper.writeValueAsString(Map.of(
                 "detalles", List.of(Map.of(
                         "productoId", 1,
+                        "loteProductoId", 5,
                         "conteoFisico", BigDecimal.ONE
                 ))));
 
@@ -320,7 +323,7 @@ class ConteoCiclicoControllerTest {
 
         Map<String, Object> detalle = new java.util.LinkedHashMap<>();
         detalle.put("productoId", 36);
-        detalle.put("loteProductoId", null);
+        detalle.put("loteProductoId", 77);
         detalle.put("ubicacionFisicaId", null);
         detalle.put("conteoFisico", new BigDecimal("10000"));
         detalle.put("aplicadoEn", "2024-01-01T00:00:00");
@@ -345,6 +348,7 @@ class ConteoCiclicoControllerTest {
         String body = objectMapper.writeValueAsString(Map.of(
                 "detalles", List.of(Map.of(
                         "productoId", 36,
+                        "loteProductoId", 5,
                         "conteoFisico", "no-numero"
                 ))));
 
@@ -355,5 +359,22 @@ class ConteoCiclicoControllerTest {
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.SOLICITUD_INVALIDA.name()))
                 .andExpect(jsonPath("$.message").value(containsString("detalles.[0].conteoFisico")))
                 .andExpect(jsonPath("$.details.field").value("detalles.[0].conteoFisico"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void actualizarConteoSinLoteDevuelve400() throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "detalles", List.of(Map.of(
+                        "productoId", 36,
+                        "conteoFisico", BigDecimal.ONE
+                ))));
+
+        mockMvc.perform(put("/api/inventario/conteos/25")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.SOLICITUD_INVALIDA.name()))
+                .andExpect(jsonPath("$.details[0].message").value("Debe seleccionar un lote"));
     }
 }

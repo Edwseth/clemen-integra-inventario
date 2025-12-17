@@ -295,13 +295,13 @@ public class ConteoCiclicoService {
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Producto no encontrado"));
 
-        LoteProducto lote = null;
-        if (req.getLoteProductoId() != null) {
-            lote = loteProductoRepository.findById(req.getLoteProductoId())
-                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
-                            "Lote no encontrado"));
-            validarLoteEnConteo(lote, producto, almacenId);
+        if (req.getLoteProductoId() == null) {
+            throw new CustomBusinessException(ApiErrorCode.LOTE_INVALIDO_CONTEO, "Debe seleccionar un lote");
         }
+
+        LoteProducto lote = loteProductoRepository.findById(req.getLoteProductoId())
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.LOTE_INVALIDO_CONTEO,
+                        "Lote no encontrado para el conteo"));
 
         UbicacionFisica ubicacion = null;
         if (req.getUbicacionFisicaId() != null) {
@@ -312,21 +312,11 @@ public class ConteoCiclicoService {
                 throw new CustomBusinessException(ApiErrorCode.UBICACION_NO_PERTENECE_ALMACEN,
                         "La ubicación no pertenece al almacén del conteo");
             }
-            if (lote != null && (lote.getUbicacionFisica() == null
-                    || !Objects.equals(lote.getUbicacionFisica().getId(), ubicacion.getId()))) {
-                throw new CustomBusinessException(ApiErrorCode.CONTEO_DETALLE_INVALIDO,
-                        "La ubicación del lote difiere de la del detalle");
-            }
         }
 
-        BigDecimal stockSistema;
-        if (lote != null) {
-            stockSistema = obtenerStockSnapshot(producto.getId().longValue(), lote, almacenId, ubicacion);
-        } else {
-            stockSistema = req.getStockSistema() != null
-                    ? req.getStockSistema()
-                    : obtenerStockSnapshot(producto.getId().longValue(), null, almacenId, ubicacion);
-        }
+        validarLoteEnConteo(lote, producto, almacenId, req.getUbicacionFisicaId());
+
+        BigDecimal stockSistema = obtenerStockSnapshot(producto.getId().longValue(), lote, almacenId, ubicacion);
 
         BigDecimal conteoFisico = req.getConteoFisico().setScale(2, RoundingMode.HALF_UP);
         BigDecimal diferencia = conteoFisico.subtract(stockSistema).setScale(2, RoundingMode.HALF_UP);
@@ -342,16 +332,25 @@ public class ConteoCiclicoService {
                 .build();
     }
 
-    private void validarLoteEnConteo(LoteProducto lote, Producto producto, Integer almacenId) {
+    private void validarLoteEnConteo(LoteProducto lote,
+                                     Producto producto,
+                                     Integer almacenId,
+                                     Long ubicacionFisicaId) {
         if (lote.getProducto() == null || lote.getProducto().getId() == null
                 || !Objects.equals(lote.getProducto().getId(), producto.getId())) {
-            throw new CustomBusinessException(ApiErrorCode.CONTEO_DETALLE_INVALIDO,
+            throw new CustomBusinessException(ApiErrorCode.LOTE_INVALIDO_CONTEO,
                     "El lote no pertenece al producto indicado");
         }
         if (lote.getAlmacen() == null || lote.getAlmacen().getId() == null
                 || !Objects.equals(lote.getAlmacen().getId(), almacenId)) {
-            throw new CustomBusinessException(ApiErrorCode.UBICACION_NO_PERTENECE_ALMACEN,
+            throw new CustomBusinessException(ApiErrorCode.LOTE_INVALIDO_CONTEO,
                     "El lote no pertenece al almacén del conteo");
+        }
+        if (ubicacionFisicaId != null && (lote.getUbicacionFisica() == null
+                || lote.getUbicacionFisica().getId() == null
+                || !Objects.equals(lote.getUbicacionFisica().getId(), ubicacionFisicaId))) {
+            throw new CustomBusinessException(ApiErrorCode.LOTE_INVALIDO_CONTEO,
+                    "El lote no pertenece a la ubicación indicada");
         }
     }
 
@@ -381,7 +380,8 @@ public class ConteoCiclicoService {
             LoteProducto lote = loteProductoRepository.findByIdForUpdate(detalle.getLoteProducto().getId())
                     .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                             "Lote no encontrado"));
-            validarLoteEnConteo(lote, detalle.getProducto(), almacenId);
+            Long ubicacionId = detalle.getUbicacionFisica() != null ? detalle.getUbicacionFisica().getId() : null;
+            validarLoteEnConteo(lote, detalle.getProducto(), almacenId, ubicacionId);
             return lote;
         }
 
