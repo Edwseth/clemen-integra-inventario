@@ -22,7 +22,10 @@ import java.util.Optional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -121,6 +124,27 @@ public class OrdenCompraService {
         return historialEstadoOrdenRepository.save(historial);
     }
 
+    public List<EstadoOrdenCompra> transicionesPermitidas(OrdenCompra orden,
+                                                          Collection<String> authorities) {
+        if (orden == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "ORDEN_NO_ENCONTRADA");
+        }
+
+        RolUsuario rol = extraerRol(authorities);
+        validarRolModulo(rol);
+
+        List<EstadoOrdenCompra> permitidas = new ArrayList<>();
+        for (EstadoOrdenCompra candidato : EstadoOrdenCompra.values()) {
+            try {
+                validarTransicion(orden, candidato);
+                validarRol(orden.getEstado(), candidato, rol);
+                permitidas.add(candidato);
+            } catch (CustomBusinessException ignored) {
+            }
+        }
+        return permitidas;
+    }
+
     // Métodos adicionales futuros: crear, editar, anular, etc.
 
     private void validarTransicion(OrdenCompra orden, EstadoOrdenCompra nuevoEstado) {
@@ -169,6 +193,10 @@ public class OrdenCompraService {
 
     private void validarRol(CustomUserDetails principal, EstadoOrdenCompra estadoActual, EstadoOrdenCompra nuevoEstado) {
         RolUsuario rol = principal.getUsuario() != null ? principal.getUsuario().getRol() : null;
+        validarRol(estadoActual, nuevoEstado, rol);
+    }
+
+    private void validarRol(EstadoOrdenCompra estadoActual, EstadoOrdenCompra nuevoEstado, RolUsuario rol) {
         if (rol == null) {
             throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE, "ROL_NO_DEFINIDO");
         }
@@ -199,5 +227,26 @@ public class OrdenCompraService {
         }
 
         throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE, "ROL_SIN_PERMISO_ESTADO");
+    }
+
+    private RolUsuario extraerRol(Collection<String> authorities) {
+        if (authorities == null) {
+            return null;
+        }
+        for (String authority : authorities) {
+            try {
+                return RolUsuario.valueOf(authority);
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private void validarRolModulo(RolUsuario rol) {
+        if (!(rol == RolUsuario.ROL_SUPER_ADMIN
+                || rol == RolUsuario.ROL_COMPRADOR
+                || rol == RolUsuario.ROL_JEFE_ALMACENES)) {
+            throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE, "ROL_SIN_PERMISO_ESTADO");
+        }
     }
 }
