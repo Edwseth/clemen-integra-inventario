@@ -86,6 +86,48 @@ class CapaServiceImplTest {
     }
 
     @Test
+    void creaCapaPersisteObservacionesYFechaLimite() {
+        LocalDateTime inicio = LocalDateTime.now();
+        LocalDateTime limite = inicio.plusDays(7);
+        CapaDTO dto = CapaDTO.builder()
+                .noConformidadId(5L)
+                .tipo(TipoCapa.CORRECTIVA)
+                .responsableId(8L)
+                .fechaInicio(inicio)
+                .fechaLimite(limite)
+                .observaciones("Detalle de prueba")
+                .build();
+
+        NoConformidad noConformidad = NoConformidad.builder()
+                .id(5L)
+                .codigo("NC-123")
+                .build();
+        Usuario responsable = Usuario.builder()
+                .id(8L)
+                .nombreCompleto("Responsable QA")
+                .build();
+
+        when(noConformidadRepository.findById(5L)).thenReturn(Optional.of(noConformidad));
+        when(usuarioRepository.findById(8L)).thenReturn(Optional.of(responsable));
+        when(capaRepository.save(any(Capa.class))).thenAnswer(invocation -> {
+            Capa guardada = invocation.getArgument(0);
+            guardada.setId(33L);
+            return guardada;
+        });
+
+        CapaDTO result = service.crear(dto);
+
+        ArgumentCaptor<Capa> captor = ArgumentCaptor.forClass(Capa.class);
+        verify(capaRepository).save(captor.capture());
+        assertThat(captor.getValue().getObservaciones()).isEqualTo("Detalle de prueba");
+        assertThat(captor.getValue().getFechaLimite()).isEqualTo(limite);
+        assertThat(result.getObservaciones()).isEqualTo("Detalle de prueba");
+        assertThat(result.getFechaLimite()).isEqualTo(limite);
+        assertThat(result.getNoConformidadCodigo()).isEqualTo("NC-123");
+        assertThat(result.getResponsableNombre()).isEqualTo("Responsable QA");
+    }
+
+    @Test
     void cerrarCapaActualizaEstadoYFecha() {
         Capa capa = Capa.builder()
                 .id(10L)
@@ -107,6 +149,7 @@ class CapaServiceImplTest {
         assertThat(captor.getValue().getEstado()).isEqualTo(EstadoCapa.CERRADA);
         assertThat(captor.getValue().getFechaCierre()).isNotNull();
         assertThat(respuesta.getEstado()).isEqualTo(EstadoCapa.CERRADA);
+        assertThat(respuesta.getFechaCierre()).isNotNull();
     }
 
     @Test

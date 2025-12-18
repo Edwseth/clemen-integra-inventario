@@ -23,11 +23,14 @@ public class CapaMapper {
     public CapaDTO toDTO(Capa entity, List<CapaArchivo> archivos) {
         return CapaDTO.builder()
                 .id(entity.getId())
+                .noConformidadCodigo(Optional.ofNullable(entity.getNoConformidad()).map(c -> c.getCodigo()).orElse(null))
                 .noConformidadId(entity.getNoConformidad().getId())
                 .tipo(entity.getTipo())
+                .responsableNombre(Optional.ofNullable(entity.getResponsable()).map(Usuario::getNombreCompleto).orElse(null))
                 .responsableId(entity.getResponsable().getId())
                 .fechaInicio(entity.getFechaInicio())
                 .fechaCierre(entity.getFechaCierre())
+                .fechaLimite(entity.getFechaLimite())
                 .estado(entity.getEstado())
                 .observaciones(entity.getObservaciones())
                 .archivosAdjuntos(Optional.ofNullable(archivos).orElse(List.of()).stream()
@@ -53,6 +56,7 @@ public class CapaMapper {
                 .responsable(responsable)
                 .fechaInicio(inicio)
                 .fechaCierre(cierre)
+                .fechaLimite(dto.getFechaLimite())
                 .estado(estado)
                 .observaciones(dto.getObservaciones())
                 .build();
