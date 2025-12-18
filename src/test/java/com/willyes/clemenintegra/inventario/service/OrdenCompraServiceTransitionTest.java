@@ -111,6 +111,58 @@ class OrdenCompraServiceTransitionTest {
         verify(ordenCompraRepository).findAtrasadas(eq(pageable), any(Set.class));
     }
 
+    @Test
+    void transicionesPermitidasParaCompradorEnCreada() {
+        OrdenCompra orden = OrdenCompra.builder()
+                .estado(EstadoOrdenCompra.CREADA)
+                .detalles(List.of(detalle(new BigDecimal("1"), BigDecimal.ZERO)))
+                .build();
+
+        List<EstadoOrdenCompra> result = ordenCompraService.transicionesPermitidas(
+                orden, List.of(RolUsuario.ROL_COMPRADOR.name()));
+
+        assertEquals(List.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.CANCELADA), result);
+    }
+
+    @Test
+    void transicionesPermitidasIncluyenCerradaParaJefeDeAlmacenes() {
+        OrdenCompra orden = OrdenCompra.builder()
+                .estado(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE)
+                .detalles(List.of(detalle(new BigDecimal("1"), new BigDecimal("1"))))
+                .build();
+
+        List<EstadoOrdenCompra> result = ordenCompraService.transicionesPermitidas(
+                orden, List.of(RolUsuario.ROL_JEFE_ALMACENES.name()));
+
+        assertEquals(List.of(EstadoOrdenCompra.CERRADA), result);
+    }
+
+    @Test
+    void transicionesPermitidasRetornaVacioParaCerrada() {
+        OrdenCompra orden = OrdenCompra.builder()
+                .estado(EstadoOrdenCompra.CERRADA)
+                .detalles(List.of(detalle(new BigDecimal("1"), new BigDecimal("1"))))
+                .build();
+
+        List<EstadoOrdenCompra> result = ordenCompraService.transicionesPermitidas(
+                orden, List.of(RolUsuario.ROL_SUPER_ADMIN.name()));
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void transicionesPermitidasConRolNoAutorizadoLanza403() {
+        OrdenCompra orden = OrdenCompra.builder()
+                .estado(EstadoOrdenCompra.CREADA)
+                .detalles(List.of(detalle(new BigDecimal("1"), BigDecimal.ZERO)))
+                .build();
+
+        CustomBusinessException ex = assertThrows(CustomBusinessException.class, () ->
+                ordenCompraService.transicionesPermitidas(orden, List.of("ROL_ALMACENISTA")));
+
+        assertEquals(ApiErrorCode.ROL_INSUFICIENTE, ex.getCode());
+    }
+
     private OrdenCompraDetalle detalle(BigDecimal cantidad, BigDecimal recibida) {
         return OrdenCompraDetalle.builder()
                 .cantidad(cantidad)
@@ -133,4 +185,3 @@ class OrdenCompraServiceTransitionTest {
         return new CustomUserDetails(usuario);
     }
 }
-

@@ -203,6 +203,30 @@ public class OrdenCompraController {
         return ResponseEntity.ok(HistorialEstadoOrdenMapper.toResponse(historial));
     }
 
+    @GetMapping("/{id}/transiciones")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    public ResponseEntity<List<String>> obtenerTransiciones(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
+        if (usuarioAutenticado == null) {
+            throw new ResponseStatusException(FORBIDDEN, "USUARIO_NO_AUTENTICADO");
+        }
+
+        OrdenCompra orden = ordenCompraService.buscarPorIdConDetalles(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Orden no encontrada"));
+
+        List<String> estados = ordenCompraService.transicionesPermitidas(
+                        orden,
+                        usuarioAutenticado.getAuthorities().stream()
+                                .map(a -> a.getAuthority())
+                                .toList())
+                .stream()
+                .map(Enum::name)
+                .toList();
+
+        return ResponseEntity.ok(estados);
+    }
+
     @GetMapping("/{id}/pdf")
     @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> pdf(@PathVariable("id") Long id) {   // <-- Long
