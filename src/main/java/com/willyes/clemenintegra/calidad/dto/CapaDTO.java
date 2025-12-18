@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -28,9 +29,10 @@ public class CapaDTO {
 
     private LocalDateTime fechaCierre;
 
-    @NotNull(message = "El estado es obligatorio")
     private EstadoCapa estado;
 
     private String observaciones;
-}
 
+    @Builder.Default
+    private List<CapaArchivoDTO> archivosAdjuntos = List.of();
+}

@@ -82,5 +82,6 @@ class NoConformidadServiceImplTest {
         ArgumentCaptor<NoConformidad> captor = ArgumentCaptor.forClass(NoConformidad.class);
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getEstado()).isEqualTo(EstadoNoConformidad.CERRADA);
+        assertThat(captor.getValue().getFechaCierre()).isNotNull();
     }
 }
