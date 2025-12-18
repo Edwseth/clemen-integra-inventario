@@ -1305,13 +1305,17 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     @Override
-    public Page<MovimientoInventarioResponseDTO> listarTodos(Pageable pageable) {
+    public Page<MovimientoInventarioResponseDTO> listarTodos(String codigoRecepcion, TipoMovimiento tipoMovimiento, Pageable pageable) {
         Sort sort = pageable.getSort().isEmpty()
                 ? Sort.by(Sort.Direction.DESC, "fechaIngreso")
                 : pageable.getSort();
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-        Page<MovimientoInventario> movimientos = repository.findAll(sortedPageable);
+        Page<MovimientoInventario> movimientos = repository.findAllByCodigoRecepcionAndTipoMovimiento(
+                codigoRecepcion,
+                tipoMovimiento,
+                sortedPageable
+        );
         return movimientos.map(mapper::safeToResponseDTO);
     }
 

@@ -35,7 +35,7 @@ public interface MovimientoInventarioService {
 
     Workbook generarReporteMovimientosExcel(LocalDateTime inicio, LocalDateTime fin);
 
-    Page<MovimientoInventarioResponseDTO> listarTodos(Pageable pageable);
+    Page<MovimientoInventarioResponseDTO> listarTodos(String codigoRecepcion, TipoMovimiento tipoMovimiento, Pageable pageable);
 
     MovimientoInventario registrarRetiroPorVencimiento(LoteProducto lote,
                                                        InventoryVencidosProperties properties,

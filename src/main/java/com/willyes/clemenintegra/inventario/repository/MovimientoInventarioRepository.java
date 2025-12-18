@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -95,6 +96,19 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
     boolean existsBySolicitudMovimientoId(Long solicitudMovimientoId);
 
     Page<MovimientoInventario> findByOrdenProduccionId(Long ordenProduccionId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor"
+    })
+    @Query("""
+            select m
+              from MovimientoInventario m
+             where (:codigoRecepcion is null or :codigoRecepcion = '' or lower(m.codigoRecepcion) like lower(concat('%', :codigoRecepcion, '%')))
+               and (:tipoMovimiento is null or m.tipoMovimiento = :tipoMovimiento)
+            """)
+    Page<MovimientoInventario> findAllByCodigoRecepcionAndTipoMovimiento(@Nullable String codigoRecepcion,
+                                                                         @Nullable TipoMovimiento tipoMovimiento,
+                                                                         Pageable pageable);
 
     Page<MovimientoInventario> findByOrdenProduccionIdAndClasificacion(Long ordenProduccionId,
                                                                        ClasificacionMovimientoInventario clasificacion,
