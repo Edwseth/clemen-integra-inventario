@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.StreamUtils;
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -71,6 +72,8 @@ public class OrdenCompraController {
         }
         
         // 2. Crear orden y detalles dentro de la misma transacción
+        LocalDate fechaCompromisoEntrega = ordenCompraService.calcularFechaCompromisoEntrega(dto.getDetalles());
+
         OrdenCompra orden = OrdenCompra.builder()
                 .proveedor(proveedor)
                 .estado(EstadoOrdenCompra.CREADA)
@@ -81,7 +84,7 @@ public class OrdenCompraController {
                 .descuento(dto.getDescuento() != null
                         ? dto.getDescuento()
                         : BigDecimal.ZERO)
-                .fechaCompromisoEntrega(dto.getFechaCompromisoEntrega())
+                .fechaCompromisoEntrega(fechaCompromisoEntrega)
                 .build();
 
         orden.setCodigoOrden(ordenCompraService.generarCodigoOrdenCompra());
@@ -137,7 +140,7 @@ public class OrdenCompraController {
         }
 
         orden.setObservaciones(dto.getObservaciones());
-        orden.setFechaCompromisoEntrega(dto.getFechaCompromisoEntrega());
+        orden.setFechaCompromisoEntrega(ordenCompraService.calcularFechaCompromisoEntrega(dto.getDetalles()));
 
         // Eliminar detalles anteriores
         detalleRepository.deleteByOrdenCompra_Id(id);
@@ -157,6 +160,7 @@ public class OrdenCompraController {
                     .valorTotal(valorTotal)
                     .iva(d.getIva())
                     .cantidadRecibida(BigDecimal.ZERO)
+                    .fechaNecesidad(d.getFechaNecesidad())
                     .build();
         }).toList();
 
