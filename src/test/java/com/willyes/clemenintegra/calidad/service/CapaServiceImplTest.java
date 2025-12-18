@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.calidad.service;
 
+import com.willyes.clemenintegra.calidad.dto.CapaArchivoDescargaDTO;
 import com.willyes.clemenintegra.calidad.dto.CapaDTO;
 import com.willyes.clemenintegra.calidad.mapper.CapaMapper;
 import com.willyes.clemenintegra.calidad.model.Capa;
@@ -10,6 +11,8 @@ import com.willyes.clemenintegra.calidad.model.enums.TipoCapa;
 import com.willyes.clemenintegra.calidad.repository.CapaArchivoRepository;
 import com.willyes.clemenintegra.calidad.repository.CapaRepository;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -29,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -209,5 +213,50 @@ class CapaServiceImplTest {
 
         Path rutaArchivo = tempDir.resolve(Path.of("uploads", "capas", dto.getNombreArchivo()));
         assertThat(Files.exists(rutaArchivo)).isTrue();
+    }
+
+    @Test
+    void descargarArchivoRetornaContenidoYNombreVisible() throws Exception {
+        System.setProperty("user.dir", tempDir.toString());
+        Files.createDirectories(tempDir.resolve(Path.of("uploads", "capas")));
+        Files.writeString(tempDir.resolve(Path.of("uploads", "capas", "almacenado.txt")), "contenido-archivo");
+
+        CapaArchivo archivo = CapaArchivo.builder()
+                .id(12L)
+                .capa(Capa.builder().id(6L).build())
+                .nombreArchivo("almacenado.txt")
+                .nombreVisible("visible.txt")
+                .contentType("text/plain")
+                .tamanoBytes(20L)
+                .build();
+
+        when(capaRepository.existsById(6L)).thenReturn(true);
+        when(capaArchivoRepository.findByIdAndCapa_Id(12L, 6L)).thenReturn(Optional.of(archivo));
+
+        CapaArchivoDescargaDTO dto = service.descargarArchivo(6L, 12L);
+
+        assertThat(dto.getNombreArchivo()).isEqualTo("visible.txt");
+        assertThat(dto.getContentType()).isEqualTo("text/plain");
+        assertThat(new String(dto.getContenido())).isEqualTo("contenido-archivo");
+    }
+
+    @Test
+    void descargarArchivoInexistenteEnDiscoLanza404() {
+        System.setProperty("user.dir", tempDir.toString());
+
+        CapaArchivo archivo = CapaArchivo.builder()
+                .id(8L)
+                .capa(Capa.builder().id(2L).build())
+                .nombreArchivo("no_existe.txt")
+                .build();
+
+        when(capaRepository.existsById(2L)).thenReturn(true);
+        when(capaArchivoRepository.findByIdAndCapa_Id(8L, 2L)).thenReturn(Optional.of(archivo));
+
+        assertThatThrownBy(() -> service.descargarArchivo(2L, 8L))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("no existe")
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.RECURSO_NO_ENCONTRADO));
     }
 }
