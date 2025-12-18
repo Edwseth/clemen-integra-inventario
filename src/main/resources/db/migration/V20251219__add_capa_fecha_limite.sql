@@ -1,0 +1,2 @@
+ALTER TABLE capa
+    ADD COLUMN fecha_limite DATETIME(6) NULL;

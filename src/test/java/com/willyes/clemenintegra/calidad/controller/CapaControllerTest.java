@@ -19,11 +19,15 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockMultipartFile;
 
+import org.mockito.ArgumentCaptor;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -91,6 +95,56 @@ class CapaControllerTest {
                         .content("{\"noConformidadId\":9,\"tipo\":\"CORRECTIVA\",\"responsableId\":5,\"fechaInicio\":\"2024-05-01T10:00:00\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(2));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void crearCapaAceptaDescripcionComoObservaciones() throws Exception {
+        LocalDateTime inicio = LocalDateTime.of(2024, 5, 1, 10, 0);
+        LocalDateTime limite = inicio.plusDays(5);
+        CapaDTO respuesta = CapaDTO.builder()
+                .id(4L)
+                .noConformidadId(9L)
+                .noConformidadCodigo("NC-9")
+                .responsableId(5L)
+                .responsableNombre("Responsable QA")
+                .tipo(TipoCapa.CORRECTIVA)
+                .estado(EstadoCapa.ACTIVA)
+                .fechaInicio(inicio)
+                .fechaLimite(limite)
+                .observaciones("Texto desde servicio")
+                .build();
+
+        ArgumentCaptor<CapaDTO> captor = ArgumentCaptor.forClass(CapaDTO.class);
+        when(capaService.crear(any(CapaDTO.class))).thenAnswer(invocation -> {
+            CapaDTO dto = invocation.getArgument(0);
+            return CapaDTO.builder()
+                    .id(respuesta.getId())
+                    .noConformidadId(respuesta.getNoConformidadId())
+                    .noConformidadCodigo(respuesta.getNoConformidadCodigo())
+                    .responsableId(respuesta.getResponsableId())
+                    .responsableNombre(respuesta.getResponsableNombre())
+                    .tipo(respuesta.getTipo())
+                    .estado(respuesta.getEstado())
+                    .fechaInicio(respuesta.getFechaInicio())
+                    .fechaLimite(respuesta.getFechaLimite())
+                    .observaciones(dto.getObservaciones())
+                    .build();
+        });
+
+        mockMvc.perform(post("/api/calidad/capas")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"noConformidadId\":9,\"tipo\":\"CORRECTIVA\",\"responsableId\":5," +
+                                "\"fechaInicio\":\"2024-05-01T10:00:00\",\"fechaLimite\":\"2024-05-06T10:00:00\"," +
+                                "\"descripcion\":\"Detalle observado\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.observaciones").value("Detalle observado"))
+                .andExpect(jsonPath("$.fechaLimite").value("2024-05-06T10:00:00"))
+                .andExpect(jsonPath("$.noConformidadCodigo").value("NC-9"))
+                .andExpect(jsonPath("$.responsableNombre").value("Responsable QA"));
+
+        verify(capaService).crear(captor.capture());
+        assertThat(captor.getValue().getObservaciones()).isEqualTo("Detalle observado");
     }
 
     @Test

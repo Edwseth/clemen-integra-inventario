@@ -89,6 +89,7 @@ public class CapaServiceImpl implements CapaService {
         if (dto.getFechaCierre() != null) {
             existing.setFechaCierre(dto.getFechaCierre());
         }
+        existing.setFechaLimite(dto.getFechaLimite());
         if (dto.getEstado() != null) {
             existing.setEstado(dto.getEstado());
             if (EstadoCapa.CERRADA.equals(dto.getEstado()) && existing.getFechaCierre() == null) {

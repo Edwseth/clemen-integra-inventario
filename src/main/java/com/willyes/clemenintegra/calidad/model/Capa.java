@@ -39,6 +39,9 @@ public class Capa {
     @Column(name = "fecha_cierre")
     private LocalDateTime fechaCierre;
 
+    @Column(name = "fecha_limite")
+    private LocalDateTime fechaLimite;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", columnDefinition = "ENUM('ACTIVA','CERRADA','VENCIDA')", nullable = false)
     private EstadoCapa estado;
@@ -46,4 +49,3 @@ public class Capa {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 }
-
