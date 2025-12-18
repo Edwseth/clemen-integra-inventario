@@ -74,7 +74,7 @@ public class CapaController {
         return ResponseEntity.ok(service.listarArchivos(id));
     }
 
-    @GetMapping("/{capaId}/archivos/{archivoId}")
+    @GetMapping({"/{capaId}/archivos/{archivoId}/descargar", "/{capaId}/archivos/{archivoId}"})
     public ResponseEntity<ByteArrayResource> descargarArchivo(@PathVariable Long capaId, @PathVariable Long archivoId) {
         CapaArchivoDescargaDTO archivo = service.descargarArchivo(capaId, archivoId);
         MediaType mediaType = archivo.getContentType() != null

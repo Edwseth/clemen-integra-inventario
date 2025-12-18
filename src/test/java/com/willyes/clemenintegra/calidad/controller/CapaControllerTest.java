@@ -1,10 +1,14 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.CapaArchivoDTO;
+import com.willyes.clemenintegra.calidad.dto.CapaArchivoDescargaDTO;
 import com.willyes.clemenintegra.calidad.dto.CapaDTO;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoCapa;
 import com.willyes.clemenintegra.calidad.model.enums.TipoCapa;
 import com.willyes.clemenintegra.calidad.service.CapaService;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.shared.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -13,6 +17,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -20,7 +25,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockMultipartFile;
 
 import org.mockito.ArgumentCaptor;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,12 +35,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = CapaController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(CapaControllerTest.MethodSecurityTestConfig.class)
+@Import({CapaControllerTest.MethodSecurityTestConfig.class, GlobalExceptionHandler.class})
 class CapaControllerTest {
 
     @Autowired
@@ -188,6 +194,64 @@ class CapaControllerTest {
                         .param("nombreVisible", "plan.txt"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(11));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void flujoAdjuntosListaYDescarga() throws Exception {
+        MockMultipartFile archivo = new MockMultipartFile(
+                "archivo",
+                "plan.txt",
+                "text/plain",
+                "contenido".getBytes()
+        );
+
+        when(capaService.adjuntarArchivo(eq(4L), any(), any(), any()))
+                .thenReturn(CapaArchivoDTO.builder()
+                        .id(11L)
+                        .nombreArchivo("plan_guardado.txt")
+                        .nombreVisible("plan.txt")
+                        .contentType("text/plain")
+                        .build());
+        when(capaService.listarArchivos(4L)).thenReturn(List.of(
+                CapaArchivoDTO.builder()
+                        .id(11L)
+                        .nombreArchivo("plan_guardado.txt")
+                        .nombreVisible("plan legible.txt")
+                        .build()));
+        when(capaService.descargarArchivo(4L, 11L))
+                .thenReturn(CapaArchivoDescargaDTO.builder()
+                        .contenido("contenido".getBytes())
+                        .nombreArchivo("plan legible.txt")
+                        .contentType("text/plain")
+                        .build());
+
+        mockMvc.perform(multipart("/api/calidad/capas/4/archivos")
+                        .file(archivo)
+                        .param("nombreVisible", "plan.txt"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(11));
+
+        mockMvc.perform(get("/api/calidad/capas/4/archivos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(11));
+
+        mockMvc.perform(get("/api/calidad/capas/4/archivos/11/descargar"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"plan legible.txt\""))
+                .andExpect(content().bytes("contenido".getBytes()))
+                .andExpect(header().string("Content-Type", "text/plain"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void descargarArchivoNoEncontradoDevuelve404() throws Exception {
+        when(capaService.descargarArchivo(9L, 77L))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Archivo no encontrado"));
+
+        mockMvc.perform(get("/api/calidad/capas/9/archivos/77/descargar"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("RECURSO_NO_ENCONTRADO"));
     }
 
     @TestConfiguration
