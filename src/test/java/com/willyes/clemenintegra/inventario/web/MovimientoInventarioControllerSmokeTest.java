@@ -141,7 +141,7 @@ class MovimientoInventarioControllerSmokeTest {
         Pageable pageable = PageRequest.of(0, 5);
         Page<MovimientoInventarioResponseDTO> page = new PageImpl<>(List.of(movimiento), pageable, 1);
 
-        when(movimientoInventarioService.listarTodos(any(Pageable.class))).thenReturn(page);
+        when(movimientoInventarioService.listarTodos(any(), any(), any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/movimientos")
                         .param("page", "0")

@@ -334,12 +334,16 @@ public class MovimientoInventarioController {
 
     @GetMapping
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> listarTodos(
+            @RequestParam(required = false) String codigoRecepcion,
+            @RequestParam(required = false, name = "tipoMovimiento") TipoMovimiento tipoMovimiento,
+            @RequestParam(required = false, name = "tipo") TipoMovimiento tipoAlias,
             @PageableDefault(size = 10, sort = "fechaIngreso", direction = Sort.Direction.DESC) Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             return ResponseEntity.badRequest().build();
         }
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaIngreso", "id"), "fechaIngreso");
-        Page<MovimientoInventarioResponseDTO> movimientos = service.listarTodos(sanitized);
+        TipoMovimiento resolvedTipo = tipoMovimiento != null ? tipoMovimiento : tipoAlias;
+        Page<MovimientoInventarioResponseDTO> movimientos = service.listarTodos(codigoRecepcion, resolvedTipo, sanitized);
         return ResponseEntity.ok(movimientos);
     }
 
