@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.OrdenCompraDetalleRequestDTO;
 import com.willyes.clemenintegra.inventario.model.HistorialEstadoOrden;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -163,6 +165,36 @@ class OrdenCompraServiceTransitionTest {
         assertEquals(ApiErrorCode.ROL_INSUFICIENTE, ex.getCode());
     }
 
+    @Test
+    void calculaFechaCompromisoEntregaConUnDetalle() {
+        LocalDate fecha = LocalDate.of(2025, 12, 10);
+        List<OrdenCompraDetalleRequestDTO> detalles = List.of(detalleRequest(fecha));
+
+        LocalDate result = ordenCompraService.calcularFechaCompromisoEntrega(detalles);
+
+        assertEquals(fecha, result);
+    }
+
+    @Test
+    void calculaFechaCompromisoEntregaConDosDetallesEligeLaMasTemprana() {
+        LocalDate fecha1 = LocalDate.of(2025, 12, 10);
+        LocalDate fecha2 = LocalDate.of(2025, 12, 15);
+        List<OrdenCompraDetalleRequestDTO> detalles = List.of(detalleRequest(fecha1), detalleRequest(fecha2));
+
+        LocalDate result = ordenCompraService.calcularFechaCompromisoEntrega(detalles);
+
+        assertEquals(fecha1, result);
+    }
+
+    @Test
+    void calculaFechaCompromisoEntregaConDetallesSinFechaRetornaNull() {
+        List<OrdenCompraDetalleRequestDTO> detalles = List.of(detalleRequest(null), detalleRequest(null));
+
+        LocalDate result = ordenCompraService.calcularFechaCompromisoEntrega(detalles);
+
+        assertNull(result);
+    }
+
     private OrdenCompraDetalle detalle(BigDecimal cantidad, BigDecimal recibida) {
         return OrdenCompraDetalle.builder()
                 .cantidad(cantidad)
@@ -171,6 +203,16 @@ class OrdenCompraServiceTransitionTest {
                 .valorUnitario(BigDecimal.ONE)
                 .iva(BigDecimal.ZERO)
                 .build();
+    }
+
+    private OrdenCompraDetalleRequestDTO detalleRequest(LocalDate fechaNecesidad) {
+        return new OrdenCompraDetalleRequestDTO(
+                1L,
+                new BigDecimal("1.000"),
+                new BigDecimal("2.500"),
+                new BigDecimal("0.00"),
+                fechaNecesidad
+        );
     }
 
     private CustomUserDetails buildUser(Long id, RolUsuario rol) {

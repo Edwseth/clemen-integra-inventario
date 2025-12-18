@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.OrdenCompraDetalleRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
 import com.willyes.clemenintegra.inventario.model.HistorialEstadoOrden;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +67,17 @@ public class OrdenCompraService {
         String prefijo = "OC-CLEMEN-" + fecha;
         Long contador = ordenCompraRepository.countByCodigoOrdenStartingWith(prefijo);
         return prefijo + "-" + String.format("%02d", contador + 1);
+    }
+
+    public LocalDate calcularFechaCompromisoEntrega(List<OrdenCompraDetalleRequestDTO> detalles) {
+        if (detalles == null) {
+            return null;
+        }
+        return detalles.stream()
+                .map(OrdenCompraDetalleRequestDTO::getFechaNecesidad)
+                .filter(Objects::nonNull)
+                .min(LocalDate::compareTo)
+                .orElse(null);
     }
 
     /**
