@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface RecepcionOCRepository extends JpaRepository<RecepcionOC, Long> {
@@ -25,4 +26,16 @@ public interface RecepcionOCRepository extends JpaRepository<RecepcionOC, Long> 
             "detalles.ordenCompraDetalle"
     })
     Optional<RecepcionOC> findWithDetallesByCodigo(String codigo);
+
+    @EntityGraph(attributePaths = {
+            "ordenCompra",
+            "almacenDestino",
+            "proveedor",
+            "usuario",
+            "detalles",
+            "detalles.producto",
+            "detalles.lote",
+            "detalles.ordenCompraDetalle"
+    })
+    List<RecepcionOC> findAllByOrdenCompra_IdOrderByFechaRecepcionAsc(Long ordenCompraId);
 }

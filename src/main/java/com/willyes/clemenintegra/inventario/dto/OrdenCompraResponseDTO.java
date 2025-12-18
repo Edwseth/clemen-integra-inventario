@@ -15,7 +15,12 @@ public class OrdenCompraResponseDTO {
     private String estado;
     private String proveedorNombre;
     private LocalDateTime fechaOrden;
+    private LocalDate fechaCompromisoEntrega;
     private BigDecimal descuento;
+    private BigDecimal totalPedido;
+    private BigDecimal totalRecibido;
+    private BigDecimal totalPendiente;
+    private BigDecimal porcentajeAvance;
 
     public String getEstado() {return estado;}
     public String getProveedorNombre() {return proveedorNombre;}
@@ -30,4 +35,3 @@ public class OrdenCompraResponseDTO {
     public BigDecimal getDescuento() {return descuento;}
     public void setDescuento(BigDecimal descuento) {this.descuento = descuento;}
 }
-

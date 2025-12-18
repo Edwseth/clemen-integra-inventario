@@ -10,6 +10,7 @@ public class OrdenCompraDetalleResponse {
     public BigDecimal valorTotal;
     public BigDecimal iva;
     public BigDecimal cantidadRecibida;
+    public BigDecimal cantidadPendiente;
     public LocalDate fechaNecesidad;
 
     public ProductoMiniDTO producto;

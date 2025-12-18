@@ -8,12 +8,19 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
+import com.willyes.clemenintegra.inventario.service.HistorialEstadoOrdenService;
+import com.willyes.clemenintegra.inventario.mapper.RecepcionOCMapper;
+import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
+import com.willyes.clemenintegra.inventario.dto.RecepcionOCResponseDTO;
+import com.willyes.clemenintegra.inventario.repository.RecepcionOCRepository;
+import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +50,11 @@ public class OrdenCompraController {
     private final ProveedorRepository proveedorRepository;
     private final ProductoRepository productoRepository;
     private final OrdenCompraService ordenCompraService;
+    private final HistorialEstadoOrdenService historialEstadoOrdenService;
+    private final RecepcionOCRepository recepcionOCRepository;
+    private final MovimientoInventarioRepository movimientoInventarioRepository;
+    private final MovimientoInventarioMapper movimientoInventarioMapper;
+    private final RecepcionOCMapper recepcionOCMapper;
     private final OrdenCompraPdfService ordenCompraPdfService;
     private final OrdenCompraMapper mapper;
 
@@ -69,6 +81,7 @@ public class OrdenCompraController {
                 .descuento(dto.getDescuento() != null
                         ? dto.getDescuento()
                         : BigDecimal.ZERO)
+                .fechaCompromisoEntrega(dto.getFechaCompromisoEntrega())
                 .build();
 
         orden.setCodigoOrden(ordenCompraService.generarCodigoOrdenCompra());
@@ -124,6 +137,7 @@ public class OrdenCompraController {
         }
 
         orden.setObservaciones(dto.getObservaciones());
+        orden.setFechaCompromisoEntrega(dto.getFechaCompromisoEntrega());
 
         // Eliminar detalles anteriores
         detalleRepository.deleteByOrdenCompra_Id(id);
@@ -154,8 +168,9 @@ public class OrdenCompraController {
 
     @GetMapping
     public ResponseEntity<Page<OrdenCompraResponseDTO>> listar(
-            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<OrdenCompraResponseDTO> page = ordenCompraService.listar(pageable);
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestParam(name = "atrasadas", required = false, defaultValue = "false") boolean atrasadas) {
+        Page<OrdenCompraResponseDTO> page = ordenCompraService.listar(pageable, atrasadas);
         return ResponseEntity.ok(page);
     }
 
@@ -178,11 +193,12 @@ public class OrdenCompraController {
     @PutMapping("/{id}/estado")
     public ResponseEntity<HistorialEstadoOrdenResponse> cambiarEstado(
             @PathVariable Long id,
-            @RequestBody CambioEstadoOrdenRequest request) {
+            @RequestBody CambioEstadoOrdenRequest request,
+            @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
         var historial = ordenCompraService.cambiarEstado(
                 id,
                 request.estado,
-                request.usuarioId,
+                usuarioAutenticado,
                 request.observaciones);
         return ResponseEntity.ok(HistorialEstadoOrdenMapper.toResponse(historial));
     }
@@ -226,5 +242,27 @@ public class OrdenCompraController {
         return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
     }
 
-}
+    @GetMapping("/{id}/recepciones")
+    public ResponseEntity<List<RecepcionOCResponseDTO>> recepcionesPorOrden(@PathVariable Long id) {
+        List<RecepcionOCResponseDTO> recepciones = recepcionOCRepository
+                .findAllByOrdenCompra_IdOrderByFechaRecepcionAsc(id)
+                .stream()
+                .map(r -> recepcionOCMapper.toResponse(r,
+                        movimientoInventarioRepository.findAllByRecepcionOcIdOrderByFechaIngresoAsc(r.getId())
+                                .stream()
+                                .map(movimientoInventarioMapper::safeToResponseDTO)
+                                .toList()))
+                .toList();
+        return ResponseEntity.ok(recepciones);
+    }
 
+    @GetMapping("/{id}/historial")
+    public ResponseEntity<List<HistorialEstadoOrdenResponse>> historial(@PathVariable Long id) {
+        List<HistorialEstadoOrdenResponse> historial = historialEstadoOrdenService.listarPorOrden(id)
+                .stream()
+                .map(HistorialEstadoOrdenMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(historial);
+    }
+
+}

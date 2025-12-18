@@ -7,6 +7,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
@@ -41,6 +42,9 @@ public class OrdenCompra {
     @Column(name = "observaciones", length = 255)
     private String observaciones;
 
+    @Column(name = "fecha_compromiso_entrega")
+    private LocalDate fechaCompromisoEntrega;
+
     @Builder.Default
     @Column(name = "descuento", nullable = false, precision = 12, scale = 2)
     private BigDecimal descuento = BigDecimal.ZERO;
@@ -66,6 +70,7 @@ public class OrdenCompra {
     public EstadoOrdenCompra getEstado() {return estado;}
     public String getObservaciones() {return observaciones;}
     public List<OrdenCompraDetalle> getDetalles() {return detalles;}
+    public LocalDate getFechaCompromisoEntrega() { return fechaCompromisoEntrega; }
     public CondicionesPago getCondicionesPago() { return condicionesPago; }
     public String getComprador() { return comprador; }
     public BigDecimal getDescuento() { return descuento; }
@@ -79,4 +84,5 @@ public class OrdenCompra {
     public void setProveedor(Proveedor proveedor) {this.proveedor = proveedor;}
     public void setEstado(EstadoOrdenCompra estado) {this.estado = estado;}
     public void setObservaciones(String observaciones) {this.observaciones = observaciones;}
+    public void setFechaCompromisoEntrega(LocalDate fechaCompromisoEntrega) { this.fechaCompromisoEntrega = fechaCompromisoEntrega; }
 }

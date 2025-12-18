@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -26,6 +27,7 @@ public class OrdenCompraRequestDTO {
     private String observaciones;
     @DecimalMin("0") @Digits(integer=10, fraction=2)
     private BigDecimal descuento;
+    private LocalDate fechaCompromisoEntrega;
 
     @NotEmpty
     private List<OrdenCompraDetalleRequestDTO> detalles;
