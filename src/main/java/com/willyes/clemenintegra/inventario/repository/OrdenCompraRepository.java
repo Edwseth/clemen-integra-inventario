@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import java.util.Set;
 
 public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> {
 
@@ -28,4 +29,13 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
 
     List<OrdenCompra> findAllByOrderByIdDesc();
 
+    @Query("""
+            SELECT DISTINCT o FROM OrdenCompra o
+            JOIN o.detalles d
+            WHERE o.fechaCompromisoEntrega IS NOT NULL
+              AND o.fechaCompromisoEntrega < CURRENT_DATE
+              AND o.estado IN :estados
+              AND d.cantidadRecibida < d.cantidad
+            """)
+    Page<OrdenCompra> findAtrasadas(Pageable pageable, @Param("estados") Set<EstadoOrdenCompra> estados);
 }

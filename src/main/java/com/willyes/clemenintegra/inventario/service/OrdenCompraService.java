@@ -7,16 +7,22 @@ import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.HistorialEstadoOrdenRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
+import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.EnumSet;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +41,15 @@ public class OrdenCompraService {
         return ordenCompraRepository.findByIdWithDetalles(id);
     }
 
-    public Page<OrdenCompraResponseDTO> listar(Pageable pageable) {
-        return ordenCompraRepository.findAll(pageable)
-                .map(mapper::toDTO);
+    public Page<OrdenCompraResponseDTO> listar(Pageable pageable, boolean atrasadas) {
+        Page<OrdenCompra> page;
+        if (atrasadas) {
+            page = ordenCompraRepository.findAtrasadas(pageable,
+                    EnumSet.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.PARCIALMENTE_RECIBIDA));
+        } else {
+            page = ordenCompraRepository.findAll(pageable);
+        }
+        return page.map(mapper::toDTO);
     }
 
     public Page<OrdenCompraResponseDTO> listarPorEstado(EstadoOrdenCompra estado, Pageable pageable) {
@@ -76,19 +88,31 @@ public class OrdenCompraService {
         }
     }
 
-    public HistorialEstadoOrden cambiarEstado(Long ordenId, EstadoOrdenCompra estado, Long usuarioId, String observaciones) {
-        OrdenCompra orden = ordenCompraRepository.findById(ordenId)
-                .orElseThrow(() -> new IllegalArgumentException("Orden de compra no encontrada"));
+    public HistorialEstadoOrden cambiarEstado(Long ordenId,
+                                              EstadoOrdenCompra nuevoEstado,
+                                              CustomUserDetails principal,
+                                              String observaciones) {
+        if (principal == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "USUARIO_NO_AUTENTICADO");
+        }
 
-        orden.setEstado(estado);
+        OrdenCompra orden = ordenCompraRepository.findByIdWithDetalles(ordenId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ORDEN_NO_ENCONTRADA"));
+
+        validarTransicion(orden, nuevoEstado);
+        validarRol(principal, orden.getEstado(), nuevoEstado);
+
+        orden.setEstado(nuevoEstado);
         ordenCompraRepository.save(orden);
 
-        Usuario usuario = new Usuario();
-        usuario.setId(usuarioId);
+        Usuario usuario = principal.getUsuario() != null ? principal.getUsuario() : new Usuario();
+        if (usuario.getId() == null) {
+            usuario.setId(principal.getId());
+        }
 
         HistorialEstadoOrden historial = HistorialEstadoOrden.builder()
                 .ordenCompra(orden)
-                .estado(estado)
+                .estado(nuevoEstado)
                 .fechaCambio(LocalDateTime.now())
                 .cambiadoPor(usuario)
                 .observaciones(observaciones)
@@ -98,5 +122,82 @@ public class OrdenCompraService {
     }
 
     // Métodos adicionales futuros: crear, editar, anular, etc.
-}
 
+    private void validarTransicion(OrdenCompra orden, EstadoOrdenCompra nuevoEstado) {
+        EstadoOrdenCompra estadoActual = orden.getEstado();
+        if (estadoActual == null || nuevoEstado == null || estadoActual == nuevoEstado) {
+            throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "TRANSICION_NO_PERMITIDA");
+        }
+
+        BigDecimal totalRecibido = orden.getDetalles() != null
+                ? orden.getDetalles().stream()
+                .map(d -> d.getCantidadRecibida() != null ? d.getCantidadRecibida() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                : BigDecimal.ZERO;
+
+        switch (estadoActual) {
+            case CREADA -> {
+                if (!(nuevoEstado == EstadoOrdenCompra.ENVIADA || nuevoEstado == EstadoOrdenCompra.CANCELADA)) {
+                    throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "TRANSICION_NO_PERMITIDA");
+                }
+            }
+            case ENVIADA -> {
+                if (!(nuevoEstado == EstadoOrdenCompra.CANCELADA || nuevoEstado == EstadoOrdenCompra.RECHAZADA)) {
+                    throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "TRANSICION_NO_PERMITIDA");
+                }
+            }
+            case PARCIALMENTE_RECIBIDA -> {
+                boolean tieneRecibido = totalRecibido.compareTo(BigDecimal.ZERO) > 0;
+                if (nuevoEstado == EstadoOrdenCompra.RECHAZADA && tieneRecibido) {
+                    throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "OC_CON_RECEPCION_NO_PUEDE_RECHAZARSE");
+                }
+                if (nuevoEstado == EstadoOrdenCompra.CANCELADA && tieneRecibido) {
+                    throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "OC_CON_RECEPCION_NO_PUEDE_CANCELARSE");
+                }
+                if (!(nuevoEstado == EstadoOrdenCompra.CANCELADA || nuevoEstado == EstadoOrdenCompra.RECHAZADA)) {
+                    throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "TRANSICION_NO_PERMITIDA");
+                }
+            }
+            case RECIBIDA_COMPLETAMENTE -> {
+                if (nuevoEstado != EstadoOrdenCompra.CERRADA) {
+                    throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "TRANSICION_NO_PERMITIDA");
+                }
+            }
+            default -> throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "ESTADO_FINAL_NO_EDITABLE");
+        }
+    }
+
+    private void validarRol(CustomUserDetails principal, EstadoOrdenCompra estadoActual, EstadoOrdenCompra nuevoEstado) {
+        RolUsuario rol = principal.getUsuario() != null ? principal.getUsuario().getRol() : null;
+        if (rol == null) {
+            throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE, "ROL_NO_DEFINIDO");
+        }
+        boolean esSuper = rol == RolUsuario.ROL_SUPER_ADMIN;
+        boolean esComprador = rol == RolUsuario.ROL_COMPRADOR;
+        boolean esJefeAlmacenes = rol == RolUsuario.ROL_JEFE_ALMACENES;
+
+        if (estadoActual == EstadoOrdenCompra.CREADA) {
+            if ((nuevoEstado == EstadoOrdenCompra.ENVIADA || nuevoEstado == EstadoOrdenCompra.CANCELADA)
+                    && (esComprador || esSuper)) {
+                return;
+            }
+        }
+
+        if (estadoActual == EstadoOrdenCompra.ENVIADA || estadoActual == EstadoOrdenCompra.PARCIALMENTE_RECIBIDA) {
+            if (nuevoEstado == EstadoOrdenCompra.CANCELADA && (esComprador || esSuper)) {
+                return;
+            }
+            if (nuevoEstado == EstadoOrdenCompra.RECHAZADA && esSuper) {
+                return;
+            }
+        }
+
+        if (estadoActual == EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE
+                && nuevoEstado == EstadoOrdenCompra.CERRADA
+                && (esJefeAlmacenes || esSuper)) {
+            return;
+        }
+
+        throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE, "ROL_SIN_PERMISO_ESTADO");
+    }
+}

@@ -13,4 +13,9 @@ public class OrdenCompraConDetallesResponse {
     public ProveedorMinResponse proveedor;
     public BigDecimal descuento;
     public List<OrdenCompraDetalleResponse> detalles;
+    public BigDecimal totalPedido;
+    public BigDecimal totalRecibido;
+    public BigDecimal totalPendiente;
+    public BigDecimal porcentajeAvance;
+    public java.time.LocalDate fechaCompromisoEntrega;
 }
