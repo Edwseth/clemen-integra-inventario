@@ -24,7 +24,11 @@ public class EvaluacionCalidadDetalleDTO {
 
     private boolean requiereAnalisisFisico;
     private boolean requiereAnalisisQuimico;
+    private boolean requiereAnalisisQuimicoMicro;
     private boolean requiereAnalisisMicrobiologico;
+
+    private boolean tieneEvaluacionFisica;
+    private boolean tieneEvaluacionQuimicaMicro;
 
     private boolean tieneResultadosFisicos;
     private boolean tieneResultadosQuimicos;

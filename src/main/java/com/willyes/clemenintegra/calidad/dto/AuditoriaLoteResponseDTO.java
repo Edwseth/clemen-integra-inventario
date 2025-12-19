@@ -43,6 +43,11 @@ public class AuditoriaLoteResponseDTO {
     private List<EvaluacionResumenDTO> evaluaciones;
     private List<IncidenteDTO> incidentes;
     private List<RetencionDTO> retenciones;
+    private boolean tieneNoConformidadAsociada;
+    private boolean tieneNoConformidadActiva;
+    private String codigoNoConformidadPrincipal;
+    private String estadoNoConformidadPrincipal;
+    private String motivoRetencion;
     private CondicionUsoDTO condicionUsoActiva;
     private List<MovimientoDTO> movimientos;
 
@@ -153,6 +158,7 @@ public class AuditoriaLoteResponseDTO {
     public static class MovimientoDTO {
         private Long id;
         private LocalDateTime fechaMovimiento;
+        private LocalDateTime fecha;
         private TipoMovimiento tipoMovimiento;
         private ClasificacionMovimientoInventario clasificacion;
         private BigDecimal cantidad;

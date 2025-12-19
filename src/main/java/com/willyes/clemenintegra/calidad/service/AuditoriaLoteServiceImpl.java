@@ -56,8 +56,12 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
 
         EstadoCalidadLoteResponseDTO estadoCalidad = loteProductoService.obtenerEstadoCalidad(loteId);
 
-        List<AuditoriaLoteResponseDTO.IncidenteDTO> incidentes = noConformidadRepository.findByLote_Id(loteId).stream()
-                .sorted(Comparator.comparing(NoConformidad::getFechaRegistro, Comparator.nullsLast(java.time.LocalDateTime::compareTo)))
+        List<NoConformidad> noConformidades = noConformidadRepository.findByLote_Id(loteId);
+        List<NoConformidad> noConformidadesOrdenadas = noConformidades.stream()
+                .sorted(Comparator.comparing(NoConformidad::getFechaRegistro,
+                        Comparator.nullsLast(java.time.LocalDateTime::compareTo)))
+                .toList();
+        List<AuditoriaLoteResponseDTO.IncidenteDTO> incidentes = noConformidadesOrdenadas.stream()
                 .map(nc -> AuditoriaLoteResponseDTO.IncidenteDTO.builder()
                         .id(nc.getId())
                         .codigo(nc.getCodigo())
@@ -96,6 +100,26 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 lote.getProducto(),
                 evaluacionesLote,
                 evaluacionesConResultadosMicro::contains);
+
+        boolean tieneNoConformidadAsociada = !noConformidadesOrdenadas.isEmpty();
+        boolean tieneNoConformidadActiva = noConformidadesOrdenadas.stream()
+                .anyMatch(nc -> nc.getEstado() == com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad.ABIERTA);
+        Optional<NoConformidad> noConformidadPrincipal = noConformidadesOrdenadas.stream()
+                .filter(nc -> nc.getEstado() == com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad.ABIERTA)
+                .max(Comparator.comparing(NoConformidad::getFechaRegistro,
+                        Comparator.nullsLast(java.time.LocalDateTime::compareTo)));
+        if (noConformidadPrincipal.isEmpty()) {
+            noConformidadPrincipal = noConformidadesOrdenadas.stream()
+                    .max(Comparator.comparing(NoConformidad::getFechaRegistro,
+                            Comparator.nullsLast(java.time.LocalDateTime::compareTo)));
+        }
+
+        String motivoRetencion = null;
+        if (retenciones.isEmpty()
+                && lote.getEstado() == com.willyes.clemenintegra.inventario.model.enums.EstadoLote.RETENIDO
+                && tieneNoConformidadAsociada) {
+            motivoRetencion = "NC";
+        }
 
         String almacenActual = lote.getAlmacen() != null ? lote.getAlmacen().getNombre() : null;
         String ubicacionActual = lote.getAlmacen() != null ? lote.getAlmacen().getUbicacion() : null;
@@ -140,6 +164,14 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .evaluaciones(evaluaciones)
                 .incidentes(incidentes)
                 .retenciones(retenciones)
+                .tieneNoConformidadAsociada(tieneNoConformidadAsociada)
+                .tieneNoConformidadActiva(tieneNoConformidadActiva)
+                .codigoNoConformidadPrincipal(noConformidadPrincipal.map(NoConformidad::getCodigo).orElse(null))
+                .estadoNoConformidadPrincipal(noConformidadPrincipal
+                        .map(NoConformidad::getEstado)
+                        .map(Enum::name)
+                        .orElse(null))
+                .motivoRetencion(motivoRetencion)
                 .condicionUsoActiva(mapCondicion(condicionUso))
                 .movimientos(movimientos)
                 .build();
@@ -172,6 +204,7 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
         return AuditoriaLoteResponseDTO.MovimientoDTO.builder()
                 .id(mov.getId())
                 .fechaMovimiento(mov.getFechaIngreso())
+                .fecha(mov.getFechaIngreso())
                 .tipoMovimiento(mov.getTipoMovimiento())
                 .clasificacion(mov.getClasificacion())
                 .cantidad(mov.getCantidad())
