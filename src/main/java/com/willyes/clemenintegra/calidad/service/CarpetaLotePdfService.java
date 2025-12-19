@@ -4,6 +4,7 @@ import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.willyes.clemenintegra.calidad.dto.AuditoriaLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
+import com.willyes.clemenintegra.shared.exception.PdfGenerationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,7 @@ public class CarpetaLotePdfService {
             builder.run();
             return out.toByteArray();
         } catch (Exception e) {
-            throw new IllegalStateException("No se pudo generar la carpeta de lote", e);
+            throw new PdfGenerationException("No se pudo generar la carpeta de lote", e);
         }
     }
 
@@ -63,7 +64,7 @@ public class CarpetaLotePdfService {
                 return index > 0 ? html.substring(index) : html;
             }
         } catch (Exception e) {
-            throw new IllegalStateException("No se pudo cargar la plantilla de carpeta de lote", e);
+            throw new PdfGenerationException("No se pudo cargar la plantilla de carpeta de lote", e);
         }
     }
 

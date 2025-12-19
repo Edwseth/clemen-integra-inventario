@@ -108,6 +108,12 @@ public class GlobalExceptionHandler {
         return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA, ex.getMessage(), null);
     }
 
+    @ExceptionHandler(PdfGenerationException.class)
+    public ResponseEntity<ErrorResponseDTO> handlePdfGeneration(PdfGenerationException ex,
+                                                                HttpServletRequest request) {
+        return buildResponse(ApiErrorCode.ERROR_INTERNO, ex.getMessage(), null);
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponseDTO> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
                                                                HttpServletRequest request) {

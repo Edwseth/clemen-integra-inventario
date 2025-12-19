@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Carpeta de Lote</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 16px; }
+        @page { size: A4; margin: 20px; }
+        body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 0; }
         h1, h2 { color: #1d3557; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
         th, td { border: 1px solid #b5c3d3; padding: 8px; font-size: 12px; }
