@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.calidad.service.AuditoriaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLoteService;
 import com.willyes.clemenintegra.calidad.service.CarpetaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
+import com.willyes.clemenintegra.calidad.service.ReporteInvimaBpmPdfService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,6 +30,7 @@ public class CalidadAuditoriaController {
     private final AuditoriaLotePdfService auditoriaLotePdfService;
     private final EvaluacionCalidadService evaluacionCalidadService;
     private final CarpetaLotePdfService carpetaLotePdfService;
+    private final ReporteInvimaBpmPdfService reporteInvimaBpmPdfService;
 
     @GetMapping("/auditoria-lote/{loteId}")
     public ResponseEntity<AuditoriaLoteResponseDTO> obtenerAuditoriaLote(@PathVariable Long loteId) {
@@ -62,6 +64,16 @@ public class CalidadAuditoriaController {
     public ResponseEntity<byte[]> descargarCarpetaLote(@PathVariable Long loteId) {
         byte[] pdf = carpetaLotePdfService.generarCarpeta(loteId);
         String nombreArchivo = "CarpetaLote_" + loteId + ".pdf";
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
+                .body(pdf);
+    }
+
+    @GetMapping(path = "/reportes/invima-bpm/lote/{loteId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> descargarReporteInvimaBpm(@PathVariable Long loteId) {
+        byte[] pdf = reporteInvimaBpmPdfService.generarPdf(loteId);
+        String nombreArchivo = "INVIMA_BPM_" + loteId + ".pdf";
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")

@@ -5,14 +5,19 @@ import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.RetencionLote;
+import com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.CapaRepository;
+import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
+import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
 import com.willyes.clemenintegra.inventario.model.Almacen;
+import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
@@ -55,6 +60,10 @@ class AuditoriaLoteServiceImplTest {
     private CondicionUsoService condicionUsoService;
     @Mock
     private MovimientoInventarioRepository movimientoInventarioRepository;
+    @Mock
+    private EvaluacionCalidadRepository evaluacionCalidadRepository;
+    @Mock
+    private ResultadoAnalisisMicrobiologicoRepository resultadoAnalisisMicrobiologicoRepository;
 
     @InjectMocks
     private AuditoriaLoteServiceImpl service;
@@ -102,6 +111,24 @@ class AuditoriaLoteServiceImplTest {
                 .registradoPor(Usuario.builder().nombreCompleto("Analista").build())
                 .build();
 
+        EvaluacionCalidad evaluacion = EvaluacionCalidad.builder()
+                .id(11L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion.CONFORME)
+                .fechaEvaluacion(LocalDateTime.now())
+                .usuarioEvaluador(Usuario.builder().nombreCompleto("Ana").build())
+                .archivosAdjuntos(List.of(com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion.builder()
+                        .nombreArchivo("micro.pdf")
+                        .nombreVisible("Microbiológico")
+                        .build()))
+                .build();
+
+        ResultadoAnalisisMicrobiologico resMicro = ResultadoAnalisisMicrobiologico.builder()
+                .id(99L)
+                .evaluacion(evaluacion)
+                .cumple(true)
+                .build();
+
         when(loteProductoRepository.findById(1L)).thenReturn(Optional.of(lote));
         when(loteProductoService.obtenerEstadoCalidad(1L)).thenReturn(estado);
         when(noConformidadRepository.findByLote_Id(1L)).thenReturn(List.of(nc));
@@ -109,6 +136,9 @@ class AuditoriaLoteServiceImplTest {
         when(retencionLoteService.obtenerRetencionesActivas(1L)).thenReturn(List.of(retencion));
         when(condicionUsoService.getActivasByLote(1L)).thenReturn(List.of(CondicionUsoResponseDTO.builder().id(7L).descripcion("Condición").build()));
         when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(1L)).thenReturn(List.of(mov));
+        when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(1L)).thenReturn(List.of(evaluacion));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(List.of(11L)))
+                .thenReturn(List.of(resMicro));
 
         AuditoriaLoteResponseDTO dto = service.obtenerAuditoriaDeLote(1L);
 
@@ -118,6 +148,8 @@ class AuditoriaLoteServiceImplTest {
         assertThat(dto.getIncidentes().get(0).isTieneCapa()).isTrue();
         assertThat(dto.getRetenciones()).hasSize(1);
         assertThat(dto.getMovimientos()).hasSize(1);
+        assertThat(dto.getEvaluaciones()).hasSize(1);
+        assertThat(dto.getEvaluaciones().get(0).isTieneResultadosMicro()).isTrue();
     }
 
     @Test
@@ -128,4 +160,3 @@ class AuditoriaLoteServiceImplTest {
                 .isInstanceOf(ResponseStatusException.class);
     }
 }
-

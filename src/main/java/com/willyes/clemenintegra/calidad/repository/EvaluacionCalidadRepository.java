@@ -39,4 +39,11 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
     boolean existsByLoteProductoIdAndTipoEvaluacion(Long loteId, TipoEvaluacion tipo);
 
     java.util.List<EvaluacionCalidad> findByLoteProductoId(Long loteId);
+
+    @Query("SELECT DISTINCT e FROM EvaluacionCalidad e " +
+            "LEFT JOIN FETCH e.archivosAdjuntos " +
+            "JOIN FETCH e.usuarioEvaluador " +
+            "JOIN FETCH e.loteProducto l " +
+            "WHERE l.id = :loteId")
+    java.util.List<EvaluacionCalidad> findByLoteProductoIdWithAdjuntos(@Param("loteId") Long loteId);
 }

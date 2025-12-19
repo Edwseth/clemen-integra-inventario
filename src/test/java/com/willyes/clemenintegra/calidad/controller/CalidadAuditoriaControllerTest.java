@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.calidad.service.AuditoriaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLoteService;
 import com.willyes.clemenintegra.calidad.service.CarpetaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
+import com.willyes.clemenintegra.calidad.service.ReporteInvimaBpmPdfService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,8 @@ class CalidadAuditoriaControllerTest {
     private CarpetaLotePdfService carpetaLotePdfService;
     @MockBean
     private EvaluacionCalidadService evaluacionCalidadService;
+    @MockBean
+    private ReporteInvimaBpmPdfService reporteInvimaBpmPdfService;
     @MockBean
     private JwtAuthenticationProvider jwtAuthenticationProvider;
     @MockBean
