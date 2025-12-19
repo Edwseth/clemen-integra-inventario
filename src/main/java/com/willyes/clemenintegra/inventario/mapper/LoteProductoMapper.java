@@ -27,6 +27,13 @@ public interface LoteProductoMapper {
     @Mapping(target = "requiereAnalisisFisico", expression = "java(lote.getProducto() != null && lote.getProducto().isRequiereAnalisisFisico())")
     @Mapping(target = "requiereAnalisisQuimico", expression = "java(lote.getProducto() != null && lote.getProducto().isRequiereAnalisisQuimico())")
     @Mapping(target = "requiereAnalisisMicrobiologico", expression = "java(lote.getProducto() != null && lote.getProducto().isRequiereAnalisisMicrobiologico())")
+    @Mapping(target = "tieneEvaluacionFisica", ignore = true)
+    @Mapping(target = "tieneEvaluacionQuimicoMicro", ignore = true)
+    @Mapping(target = "evaluacionQuimicoMicroId", ignore = true)
+    @Mapping(target = "tieneResultadosMicro", ignore = true)
+    @Mapping(target = "pendienteFisico", ignore = true)
+    @Mapping(target = "pendienteQuimico", ignore = true)
+    @Mapping(target = "pendienteMicro", ignore = true)
     @Mapping(target = "nombreUsuarioLiberador", expression = "java(lote.getUsuarioLiberador()!=null ? lote.getUsuarioLiberador().getNombreCompleto() : null)")
     @Mapping(target = "evaluaciones", ignore = true)
     @Mapping(target = "lotePsOrigenId", expression = "java(lote.getLotePsOrigen()!=null ? lote.getLotePsOrigen().getId() : null)")
@@ -45,6 +52,13 @@ public interface LoteProductoMapper {
     @Mapping(target = "requiereAnalisisFisico", expression = "java(entity.getProducto() != null && entity.getProducto().isRequiereAnalisisFisico())")
     @Mapping(target = "requiereAnalisisQuimico", expression = "java(entity.getProducto() != null && entity.getProducto().isRequiereAnalisisQuimico())")
     @Mapping(target = "requiereAnalisisMicrobiologico", expression = "java(entity.getProducto() != null && entity.getProducto().isRequiereAnalisisMicrobiologico())")
+    @Mapping(target = "tieneEvaluacionFisica", ignore = true)
+    @Mapping(target = "tieneEvaluacionQuimicoMicro", ignore = true)
+    @Mapping(target = "evaluacionQuimicoMicroId", ignore = true)
+    @Mapping(target = "tieneResultadosMicro", ignore = true)
+    @Mapping(target = "pendienteFisico", ignore = true)
+    @Mapping(target = "pendienteQuimico", ignore = true)
+    @Mapping(target = "pendienteMicro", ignore = true)
     @Mapping(source = "almacen.nombre", target = "nombreAlmacen")
     @Mapping(source = "almacen.ubicacion", target = "ubicacionAlmacen")
     @Mapping(source = "usuarioLiberador.nombreCompleto", target = "nombreUsuarioLiberador")
@@ -69,5 +83,4 @@ public interface LoteProductoMapper {
     }
 
 }
-
 

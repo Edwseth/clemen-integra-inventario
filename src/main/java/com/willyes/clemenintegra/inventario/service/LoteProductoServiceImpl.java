@@ -181,13 +181,22 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         List<LoteProductoResponseDTO> filtrados = lotesOrdenados.stream()
                 .map(lote -> {
                     List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId());
-                    if (tieneEvaluacionesRequeridas(lote.getProducto(), evaluaciones)) {
+                    EstadoEvaluacionPendiente estado = calcularEstadoEvaluacionPendiente(lote.getProducto(), evaluaciones);
+                    // Criterio "por evaluar": incluir el lote si falta al menos una disciplina requerida.
+                    if (!estado.estaPendiente()) {
                         return null;
                     }
                     LoteProductoResponseDTO dto = loteProductoMapper.toDto(lote);
                     dto.setEvaluaciones(evaluaciones.stream()
                             .map(EvaluacionCalidad::getTipoEvaluacion)
                             .toList());
+                    dto.setTieneEvaluacionFisica(estado.tieneEvaluacionFisica);
+                    dto.setTieneEvaluacionQuimicoMicro(estado.tieneEvaluacionQuimicoMicro);
+                    dto.setEvaluacionQuimicoMicroId(estado.evaluacionQuimicoMicroId);
+                    dto.setTieneResultadosMicro(estado.tieneResultadosMicro);
+                    dto.setPendienteFisico(estado.pendienteFisico);
+                    dto.setPendienteQuimico(estado.pendienteQuimico);
+                    dto.setPendienteMicro(estado.pendienteMicro);
                     if (lote.getProducto() != null) {
                         PlantillaAnalisisMicroDTO plantillaDto = plantillaAnalisisMicroService.obtenerPorProducto(lote.getProducto().getId().longValue());
                         if (plantillaDto != null) {
@@ -289,18 +298,58 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return loteProductoMapper.toResponseDTO(lote);
     }
 
-    private boolean tieneEvaluacionesRequeridas(Producto producto, List<EvaluacionCalidad> evaluaciones) {
+    private EstadoEvaluacionPendiente calcularEstadoEvaluacionPendiente(Producto producto,
+                                                                        List<EvaluacionCalidad> evaluaciones) {
+        EstadoEvaluacionPendiente estado = new EstadoEvaluacionPendiente();
         if (producto == null) {
-            return false;
+            return estado;
         }
         List<EvaluacionCalidad> seguras = evaluaciones == null ? List.of() : evaluaciones;
-        LoteProducto loteTemporal = new LoteProducto();
-        loteTemporal.setProducto(producto);
+        estado.requiereAnalisisFisico = requiereFisico(producto);
+        estado.requiereAnalisisQuimico = requiereQuimico(producto);
+        estado.requiereAnalisisMicro = requiereMicro(producto);
 
-        var validacion = validarDisciplinasCompletas(loteTemporal, seguras,
-                resultadoAnalisisMicrobiologicoRepository::existsByEvaluacionId);
+        estado.tieneEvaluacionFisica = seguras.stream()
+                .anyMatch(e -> e.getTipoEvaluacion() == TipoEvaluacion.FISICO);
+        List<EvaluacionCalidad> evaluacionesQM = seguras.stream()
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .toList();
+        estado.tieneEvaluacionQuimicoMicro = !evaluacionesQM.isEmpty();
+        estado.evaluacionQuimicoMicroId = evaluacionesQM.stream()
+                .max(java.util.Comparator.comparing(EvaluacionCalidad::getFechaEvaluacion,
+                        java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo)))
+                .map(EvaluacionCalidad::getId)
+                .orElse(null);
 
-        return validacion.esValido();
+        List<Long> evaluacionIds = evaluacionesQM.stream()
+                .map(EvaluacionCalidad::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        estado.tieneResultadosMicro = !evaluacionIds.isEmpty()
+                && !resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(evaluacionIds).isEmpty();
+
+        estado.pendienteFisico = estado.requiereAnalisisFisico && !estado.tieneEvaluacionFisica;
+        estado.pendienteQuimico = estado.requiereAnalisisQuimico && !estado.tieneEvaluacionQuimicoMicro;
+        estado.pendienteMicro = estado.requiereAnalisisMicro
+                && (!estado.tieneEvaluacionQuimicoMicro || !estado.tieneResultadosMicro);
+        return estado;
+    }
+
+    private static class EstadoEvaluacionPendiente {
+        private boolean requiereAnalisisFisico;
+        private boolean requiereAnalisisQuimico;
+        private boolean requiereAnalisisMicro;
+        private boolean tieneEvaluacionFisica;
+        private boolean tieneEvaluacionQuimicoMicro;
+        private Long evaluacionQuimicoMicroId;
+        private boolean tieneResultadosMicro;
+        private boolean pendienteFisico;
+        private boolean pendienteQuimico;
+        private boolean pendienteMicro;
+
+        private boolean estaPendiente() {
+            return pendienteFisico || pendienteQuimico || pendienteMicro;
+        }
     }
 
     @Override
