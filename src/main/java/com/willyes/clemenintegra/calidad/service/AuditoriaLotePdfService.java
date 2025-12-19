@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.calidad.service;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.willyes.clemenintegra.calidad.dto.AuditoriaLoteResponseDTO;
+import com.willyes.clemenintegra.shared.exception.PdfGenerationException;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
@@ -88,7 +89,7 @@ public class AuditoriaLotePdfService {
             builder.run();
             return out.toByteArray();
         } catch (Exception e) {
-            throw new IllegalStateException("No se pudo generar el PDF de auditoría de lote", e);
+            throw new PdfGenerationException("No se pudo generar el PDF de auditoría de lote", e);
         }
     }
 
@@ -101,7 +102,7 @@ public class AuditoriaLotePdfService {
                 return index > 0 ? html.substring(index) : html;
             }
         } catch (Exception e) {
-            throw new IllegalStateException("No se pudo cargar la plantilla de auditoría de lote", e);
+            throw new PdfGenerationException("No se pudo cargar la plantilla de auditoría de lote", e);
         }
     }
 
@@ -116,4 +117,3 @@ public class AuditoriaLotePdfService {
         return fecha == null ? "" : fecha.format(FECHA_FORMATO);
     }
 }
-

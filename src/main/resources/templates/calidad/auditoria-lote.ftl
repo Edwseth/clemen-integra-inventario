@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Auditoría de Lote</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; }
+        @page { size: A4; margin: 20px; }
+        body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 0; }
         h1 { text-align: center; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ccc; padding: 6px; }
