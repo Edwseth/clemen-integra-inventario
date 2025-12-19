@@ -5,8 +5,12 @@ import com.willyes.clemenintegra.calidad.dto.CondicionUsoResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.RetencionLote;
+import com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico;
+import com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants;
+import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.repository.CapaRepository;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
+import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
@@ -20,6 +24,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +38,8 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
     private final RetencionLoteService retencionLoteService;
     private final CondicionUsoService condicionUsoService;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
+    private final EvaluacionCalidadRepository evaluacionCalidadRepository;
+    private final ResultadoAnalisisMicrobiologicoRepository resultadoAnalisisMicrobiologicoRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -68,6 +76,8 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .map(this::mapMovimiento)
                 .toList();
 
+        List<AuditoriaLoteResponseDTO.EvaluacionResumenDTO> evaluaciones = construirResumenEvaluaciones(loteId);
+
         return AuditoriaLoteResponseDTO.builder()
                 .loteId(lote.getId())
                 .codigoLote(lote.getCodigoLote())
@@ -83,6 +93,7 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .nombreAlmacenActual(lote.getAlmacen() != null ? lote.getAlmacen().getNombre() : null)
                 .ubicacionAlmacenActual(lote.getAlmacen() != null ? lote.getAlmacen().getUbicacion() : null)
                 .estadoCalidad(estadoCalidad)
+                .evaluaciones(evaluaciones)
                 .incidentes(incidentes)
                 .retenciones(retenciones)
                 .condicionUsoActiva(mapCondicion(condicionUso))
@@ -125,5 +136,70 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .ordenProduccionCodigo(mov.getOrdenProduccion() != null ? mov.getOrdenProduccion().getCodigoOrden() : null)
                 .build();
     }
-}
 
+    private List<AuditoriaLoteResponseDTO.EvaluacionResumenDTO> construirResumenEvaluaciones(Long loteId) {
+        List<com.willyes.clemenintegra.calidad.model.EvaluacionCalidad> evaluaciones = evaluacionCalidadRepository
+                .findByLoteProductoIdWithAdjuntos(loteId);
+        if (evaluaciones == null || evaluaciones.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> microIds = evaluaciones.stream()
+                .filter(e -> e.getTipoEvaluacion() == com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .map(com.willyes.clemenintegra.calidad.model.EvaluacionCalidad::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        Map<Long, List<ResultadoAnalisisMicrobiologico>> resultadosPorEvaluacion = new java.util.HashMap<>();
+        if (!microIds.isEmpty()) {
+            for (ResultadoAnalisisMicrobiologico resultado : resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(microIds)) {
+                Long evalId = resultado.getEvaluacion() != null ? resultado.getEvaluacion().getId() : null;
+                if (evalId != null) {
+                    resultadosPorEvaluacion.computeIfAbsent(evalId, key -> new java.util.ArrayList<>()).add(resultado);
+                }
+            }
+        }
+
+        return evaluaciones.stream()
+                .map(evaluacion -> {
+                    List<ResultadoAnalisisMicrobiologico> resultados = resultadosPorEvaluacion.getOrDefault(
+                            evaluacion.getId(), List.of());
+                    boolean tieneResultadosMicro = !resultados.isEmpty();
+                    Boolean conformeMicro = null;
+                    if (tieneResultadosMicro) {
+                        boolean anyFalse = resultados.stream().anyMatch(r -> Boolean.FALSE.equals(r.getCumple()));
+                        conformeMicro = !anyFalse;
+                    }
+
+                    List<AuditoriaLoteResponseDTO.EvaluacionAdjuntoDTO> adjuntos = Optional
+                            .ofNullable(evaluacion.getArchivosAdjuntos())
+                            .orElseGet(List::of)
+                            .stream()
+                            .map(a -> AuditoriaLoteResponseDTO.EvaluacionAdjuntoDTO.builder()
+                                    .nombreArchivo(a.getNombreArchivo())
+                                    .nombreVisible(a.getNombreVisible())
+                                    .build())
+                            .toList();
+
+                    boolean pdfMicroDisponible = adjuntos.stream()
+                            .map(AuditoriaLoteResponseDTO.EvaluacionAdjuntoDTO::getNombreVisible)
+                            .filter(java.util.Objects::nonNull)
+                            .anyMatch(nombre -> nombre.equalsIgnoreCase(ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO));
+
+                    return AuditoriaLoteResponseDTO.EvaluacionResumenDTO.builder()
+                            .id(evaluacion.getId())
+                            .tipoEvaluacion(evaluacion.getTipoEvaluacion())
+                            .resultado(evaluacion.getResultado() != null ? evaluacion.getResultado().name() : null)
+                            .fechaEvaluacion(evaluacion.getFechaEvaluacion())
+                            .usuarioEvaluador(evaluacion.getUsuarioEvaluador() != null
+                                    ? evaluacion.getUsuarioEvaluador().getNombreCompleto() : null)
+                            .tieneAdjuntos(!adjuntos.isEmpty())
+                            .tieneResultadosMicro(tieneResultadosMicro)
+                            .conformeMicro(conformeMicro)
+                            .pdfMicroDisponible(pdfMicroDisponible)
+                            .adjuntos(adjuntos)
+                            .build();
+                })
+                .toList();
+    }
+}

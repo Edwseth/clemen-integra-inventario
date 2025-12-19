@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoCondicionUso;
 import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import lombok.AllArgsConstructor;
@@ -36,10 +37,37 @@ public class AuditoriaLoteResponseDTO {
 
     private EstadoCalidadLoteResponseDTO estadoCalidad;
 
+    private List<EvaluacionResumenDTO> evaluaciones;
     private List<IncidenteDTO> incidentes;
     private List<RetencionDTO> retenciones;
     private CondicionUsoDTO condicionUsoActiva;
     private List<MovimientoDTO> movimientos;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EvaluacionResumenDTO {
+        private Long id;
+        private TipoEvaluacion tipoEvaluacion;
+        private String resultado;
+        private LocalDateTime fechaEvaluacion;
+        private String usuarioEvaluador;
+        private boolean tieneAdjuntos;
+        private boolean tieneResultadosMicro;
+        private Boolean conformeMicro;
+        private boolean pdfMicroDisponible;
+        private List<EvaluacionAdjuntoDTO> adjuntos;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EvaluacionAdjuntoDTO {
+        private String nombreArchivo;
+        private String nombreVisible;
+    }
 
     @Data
     @Builder
@@ -95,4 +123,3 @@ public class AuditoriaLoteResponseDTO {
         private String ordenProduccionCodigo;
     }
 }
-
