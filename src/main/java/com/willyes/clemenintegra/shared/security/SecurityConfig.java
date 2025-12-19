@@ -150,6 +150,17 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    auth.requestMatchers(
+                            "/api/calidad/plantillas-micro/**",
+                            "/api/calidad/evaluaciones/plantillas/micro/**",
+                            "/api/calidad/evaluaciones/**/resultados-micro",
+                            "/api/calidad/evaluaciones/**/micro/pdf"
+                    ).hasAnyAuthority(
+                            RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers("/api/calidad/**",
                             "/api/calidad/evaluaciones/archivo/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/calidad/plantillas-micro")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+@PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
 public class PlantillaAnalisisMicroController {
 
     private final PlantillaAnalisisMicroService plantillaAnalisisMicroService;
@@ -23,4 +23,3 @@ public class PlantillaAnalisisMicroController {
         return ResponseEntity.ok(plantillaAnalisisMicroService.obtenerPorProducto(productoId));
     }
 }
-
