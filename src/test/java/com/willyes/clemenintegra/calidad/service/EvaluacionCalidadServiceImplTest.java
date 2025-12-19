@@ -293,6 +293,73 @@ class EvaluacionCalidadServiceImplTest {
     }
 
     @Test
+    void detalleEvaluacionFisicaMarcaEstados() {
+        Producto producto = new Producto();
+        producto.setId(10);
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+
+        LoteProducto loteDetalle = new LoteProducto();
+        loteDetalle.setId(100L);
+        loteDetalle.setCodigoLote("LOT-FIS");
+        loteDetalle.setProducto(producto);
+
+        EvaluacionCalidad evalFisico = EvaluacionCalidad.builder()
+                .id(300L)
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .usuarioEvaluador(evaluador)
+                .loteProducto(loteDetalle)
+                .fechaEvaluacion(LocalDateTime.now())
+                .build();
+
+        when(repository.findById(300L)).thenReturn(Optional.of(evalFisico));
+        when(repository.findByLoteProductoId(100L)).thenReturn(List.of(evalFisico));
+        when(resultadoAnalisisMicroService.obtenerPorEvaluacion(300L)).thenReturn(List.of());
+
+        var detalle = service.obtenerDetalle(300L);
+
+        assertThat(detalle.getEstadoFisico()).isEqualTo("EVALUADO");
+        assertThat(detalle.getEstadoQuimicoMicrobiologico()).isEqualTo("NO_REQUERIDO");
+        assertThat(detalle.getEstadoMicrobiologico()).isEqualTo("NO_REQUERIDO");
+    }
+
+    @Test
+    void detalleEvaluacionMarcaMicroPendienteSinResultados() {
+        Producto producto = new Producto();
+        producto.setId(11);
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        LoteProducto loteDetalle = new LoteProducto();
+        loteDetalle.setId(110L);
+        loteDetalle.setCodigoLote("LOT-QM");
+        loteDetalle.setProducto(producto);
+
+        EvaluacionCalidad evalQM = EvaluacionCalidad.builder()
+                .id(310L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .usuarioEvaluador(evaluador)
+                .loteProducto(loteDetalle)
+                .fechaEvaluacion(LocalDateTime.now())
+                .build();
+
+        when(repository.findById(310L)).thenReturn(Optional.of(evalQM));
+        when(repository.findByLoteProductoId(110L)).thenReturn(List.of(evalQM));
+        when(resultadoAnalisisMicroService.obtenerPorEvaluacion(310L)).thenReturn(List.of());
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(List.of(310L)))
+                .thenReturn(List.of());
+
+        var detalle = service.obtenerDetalle(310L);
+
+        assertThat(detalle.getEstadoQuimicoMicrobiologico()).isEqualTo("EVALUADO");
+        assertThat(detalle.getEstadoMicrobiologico()).isEqualTo("PENDIENTE");
+    }
+
+    @Test
     void generaExcelEvaluacionesConFilaDeDatos() throws Exception {
         Producto producto = new Producto();
         producto.setId(8);

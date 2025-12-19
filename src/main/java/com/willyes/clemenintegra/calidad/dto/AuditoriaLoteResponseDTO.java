@@ -35,6 +35,9 @@ public class AuditoriaLoteResponseDTO {
     private String nombreAlmacenActual;
     private String ubicacionAlmacenActual;
 
+    private DatosLoteDTO datosLote;
+    private CalidadLoteAuditoriaDTO calidad;
+
     private EstadoCalidadLoteResponseDTO estadoCalidad;
 
     private List<EvaluacionResumenDTO> evaluaciones;
@@ -67,6 +70,43 @@ public class AuditoriaLoteResponseDTO {
     public static class EvaluacionAdjuntoDTO {
         private String nombreArchivo;
         private String nombreVisible;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DatosLoteDTO {
+        private String codigoLote;
+        private String productoNombre;
+        private String estado;
+        private LocalDateTime fechaIngreso;
+        private LocalDateTime fechaVencimiento;
+        private String almacen;
+        private String tipoAnalisisRequerido;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CalidadLoteAuditoriaDTO {
+        private String tipoAnalisisRequerido;
+        private DisciplinaCalidadDTO fisico;
+        private DisciplinaCalidadDTO quimicoMicrobiologico;
+        private DisciplinaCalidadDTO microbiologico;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DisciplinaCalidadDTO {
+        private boolean requerido;
+        private String estado;
+        private String resultado;
+        private LocalDateTime fechaUltimaEvaluacion;
+        private String evaluador;
     }
 
     @Data
@@ -118,6 +158,8 @@ public class AuditoriaLoteResponseDTO {
         private BigDecimal cantidad;
         private String almacenOrigenNombre;
         private String almacenDestinoNombre;
+        private String almacenOrigen;
+        private String almacenDestino;
         private String motivoMovimientoNombre;
         private String registradoPorNombre;
         private String ordenProduccionCodigo;

@@ -54,7 +54,8 @@ class EvaluacionCalidadMapperTest {
                         .build()
         );
 
-        EvaluacionCalidadDetalleDTO dto = mapper.toDetalleDTO(evaluacion, producto, resultadosMicro);
+        EvaluacionCalidadDetalleDTO dto = mapper.toDetalleDTO(evaluacion, producto,
+                List.of(evaluacion), java.util.Set.of(5L), resultadosMicro);
 
         assertThat(dto.getIdEvaluacion()).isEqualTo(5L);
         assertThat(dto.getCodigoLote()).isEqualTo("L001");

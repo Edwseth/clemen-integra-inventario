@@ -12,6 +12,7 @@ import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
+import com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
@@ -231,6 +232,8 @@ public class EvaluacionCalidadMapper {
 
     public EvaluacionCalidadDetalleDTO toDetalleDTO(EvaluacionCalidad evaluacion,
                                                     Producto producto,
+                                                    java.util.List<EvaluacionCalidad> evaluacionesLote,
+                                                    java.util.Set<Long> evaluacionesConResultadosMicro,
                                                     java.util.List<ResultadoAnalisisMicroDetalleDTO> resultadosMicro) {
         if (evaluacion == null || producto == null) {
             return null;
@@ -238,6 +241,11 @@ public class EvaluacionCalidadMapper {
 
         boolean esFisico = evaluacion.getTipoEvaluacion() == TipoEvaluacion.FISICO;
         boolean esQuimicoMicro = evaluacion.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO;
+
+        AnalisisCalidadHelper.EstadoDisciplinasCalidad estadoDisciplinas = AnalisisCalidadHelper.calcularEstadoDisciplinas(
+                producto,
+                evaluacionesLote,
+                evaluacionesConResultadosMicro::contains);
 
         return EvaluacionCalidadDetalleDTO.builder()
                 .idEvaluacion(evaluacion.getId())
@@ -254,6 +262,9 @@ public class EvaluacionCalidadMapper {
                 .tieneResultadosFisicos(esFisico)
                 .tieneResultadosQuimicos(esQuimicoMicro)
                 .tieneResultadosMicro(resultadosMicro != null && !resultadosMicro.isEmpty())
+                .estadoFisico(estadoDisciplinas.fisico().estado().name())
+                .estadoQuimicoMicrobiologico(estadoDisciplinas.quimicoMicrobiologico().estado().name())
+                .estadoMicrobiologico(estadoDisciplinas.microbiologico().estado().name())
                 .resultadosMicro(resultadosMicro == null ? java.util.List.of() : resultadosMicro)
                 .archivosAdjuntos(mapearArchivos(evaluacion))
                 .build();

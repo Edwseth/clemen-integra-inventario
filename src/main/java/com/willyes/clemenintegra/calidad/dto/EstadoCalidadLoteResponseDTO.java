@@ -20,6 +20,9 @@ public class EstadoCalidadLoteResponseDTO {
     private Long loteId;
     private String codigoLote;
     private String estadoLote;
+    private boolean tieneRetencionActiva;
+    private boolean tieneNoConformidadActiva;
+    private boolean tieneCondicionUsoActiva;
     private boolean retencionActiva;
     private MotivoRetencion motivoRetencion;
     private NcResumen nc;
