@@ -153,8 +153,8 @@ public class SecurityConfig {
                     auth.requestMatchers(
                             "/api/calidad/plantillas-micro/**",
                             "/api/calidad/evaluaciones/plantillas/micro/**",
-                            "/api/calidad/evaluaciones/**/resultados-micro",
-                            "/api/calidad/evaluaciones/**/micro/pdf"
+                            "/api/calidad/evaluaciones/*/resultados-micro",
+                            "/api/calidad/evaluaciones/*/micro/pdf"
                     ).hasAnyAuthority(
                             RolUsuario.ROL_MICROBIOLOGO.name(),
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
