@@ -137,7 +137,7 @@ public class EvaluacionCalidadController {
      * </ul>
      */
     @PostMapping(path = "/{evaluacionId}/resultados-micro")
-    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<java.util.List<ResultadoAnalisisMicroResponseDTO>> guardarResultadosMicro(
             @PathVariable Long evaluacionId,
             @RequestBody java.util.List<ResultadoAnalisisMicroRequestDTO> resultados) {
@@ -147,8 +147,9 @@ public class EvaluacionCalidadController {
     /**
      * Fuente de verdad para frontend: solo si {@code requiereAnalisisMicro} es true y existe plantilla
      * se debe renderizar la tabla de parámetros microbiológicos.
-     */
+    */
     @GetMapping("/plantillas/micro/producto/{productoId}")
+    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlantillaAnalisisMicroDTO> obtenerPlantillaMicro(@PathVariable Long productoId) {
         PlantillaAnalisisMicroDTO dto = plantillaAnalisisMicroService.obtenerPorProducto(productoId);
         if (dto == null || !dto.isRequiereAnalisisMicro()) {
@@ -158,13 +159,13 @@ public class EvaluacionCalidadController {
     }
 
     @GetMapping(path = "/{evaluacionId}/resultados-micro")
-    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<java.util.List<ResultadoAnalisisMicroResponseDTO>> obtenerResultadosMicro(@PathVariable Long evaluacionId) {
         return ResponseEntity.ok(resultadoAnalisisMicroService.obtenerPorEvaluacion(evaluacionId));
     }
 
     @GetMapping(path = "/{evaluacionId}/micro/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> descargarPdfMicro(@PathVariable Long evaluacionId) {
         byte[] pdf = resultadoAnalisisMicroService.obtenerPdfMicro(evaluacionId);
         String nombreArchivo = "MICRO_" + evaluacionId + ".pdf";
