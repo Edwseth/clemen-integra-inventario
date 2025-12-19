@@ -10,6 +10,7 @@ import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiolog
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
+import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
@@ -34,6 +35,7 @@ import com.willyes.clemenintegra.shared.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -41,6 +43,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -50,10 +59,13 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
@@ -75,6 +87,7 @@ class LoteProductoServiceImplTest {
     @Mock private RetencionLoteService retencionLoteService;
     @Mock private NoConformidadService noConformidadService;
     @Mock private CondicionUsoService condicionUsoService;
+    @Mock private PlantillaAnalisisMicroService plantillaAnalisisMicroService;
     @Mock private CondicionUsoRepository condicionUsoRepository;
     @Mock private CondicionUsoMapper condicionUsoMapper;
     @Mock private BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
@@ -93,6 +106,11 @@ class LoteProductoServiceImplTest {
         when(noConformidadService.obtenerActivaPorLote(anyLong())).thenReturn(Optional.empty());
         when(movimientoInventarioRepository.existsByTipoMovimientoAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoIdAndClasificacion(
                 any(), anyLong(), anyLong(), anyLong(), any())).thenReturn(false);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -272,6 +290,111 @@ class LoteProductoServiceImplTest {
     }
 
     @Test
+    @DisplayName("Lista por evaluar mantiene lote F+M hasta completar microbiológico")
+    void listarPorEvaluarMantieneLoteFisicoMicroIncompleto() {
+        mockAuthWithRoles("ROL_SUPER_ADMIN");
+
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(true);
+        producto.recomputarTipoAnalisisDesdeBanderas();
+
+        LoteProducto lote = loteEnCuarentena(40L, producto, 7, BigDecimal.ONE);
+
+        EvaluacionCalidad evalFisico = evaluacionFisica(400L, lote);
+        EvaluacionCalidad evalQM = evaluacionQuimicoMicro(401L, lote);
+
+        when(loteProductoRepository.findAll(any(Specification.class), any(Sort.class)))
+                .thenReturn(List.of(lote), List.of(lote), List.of(lote));
+        when(evaluacionRepository.findByLoteProductoId(40L))
+                .thenReturn(List.of(), List.of(evalFisico), List.of(evalFisico, evalQM));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(anyList()))
+                .thenReturn(List.of(com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico.builder()
+                        .id(1L)
+                        .evaluacion(evalQM)
+                        .build()));
+        when(loteProductoMapper.toDto(any())).thenAnswer(inv -> LoteProductoResponseDTO.builder()
+                .id(((LoteProducto) inv.getArgument(0)).getId())
+                .build());
+        when(plantillaAnalisisMicroService.obtenerPorProducto(anyLong())).thenReturn(null);
+
+        Page<LoteProductoResponseDTO> sinEvaluaciones = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        assertThat(sinEvaluaciones.getContent()).hasSize(1);
+        assertThat(sinEvaluaciones.getContent().get(0).isPendienteMicro()).isTrue();
+
+        Page<LoteProductoResponseDTO> conFisico = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        assertThat(conFisico.getContent()).hasSize(1);
+        assertThat(conFisico.getContent().get(0).isPendienteMicro()).isTrue();
+
+        Page<LoteProductoResponseDTO> completo = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        assertThat(completo.getContent()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Lista por evaluar incluye lote Q+M sin resultados micro y lo excluye al completarlos")
+    void listarPorEvaluarLoteQuimicoMicro() {
+        mockAuthWithRoles("ROL_SUPER_ADMIN");
+
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.setRequiereAnalisisMicrobiologico(true);
+        producto.recomputarTipoAnalisisDesdeBanderas();
+
+        LoteProducto lote = loteEnCuarentena(41L, producto, 7, BigDecimal.ONE);
+        EvaluacionCalidad evalQM = evaluacionQuimicoMicro(402L, lote);
+
+        when(loteProductoRepository.findAll(any(Specification.class), any(Sort.class)))
+                .thenReturn(List.of(lote), List.of(lote));
+        when(evaluacionRepository.findByLoteProductoId(41L))
+                .thenReturn(List.of(evalQM), List.of(evalQM));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(anyList()))
+                .thenReturn(Collections.emptyList(), List.of(com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico.builder()
+                        .id(2L)
+                        .evaluacion(evalQM)
+                        .build()));
+        when(loteProductoMapper.toDto(any())).thenAnswer(inv -> LoteProductoResponseDTO.builder()
+                .id(((LoteProducto) inv.getArgument(0)).getId())
+                .build());
+        when(plantillaAnalisisMicroService.obtenerPorProducto(anyLong())).thenReturn(null);
+
+        Page<LoteProductoResponseDTO> sinResultados = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        assertThat(sinResultados.getContent()).hasSize(1);
+        assertThat(sinResultados.getContent().get(0).isPendienteMicro()).isTrue();
+
+        Page<LoteProductoResponseDTO> conResultados = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        assertThat(conResultados.getContent()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Lista por evaluar excluye lote solo físico cuando ya tiene evaluación física")
+    void listarPorEvaluarLoteSoloFisico() {
+        mockAuthWithRoles("ROL_SUPER_ADMIN");
+
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.recomputarTipoAnalisisDesdeBanderas();
+
+        LoteProducto lote = loteEnCuarentena(42L, producto, 7, BigDecimal.ONE);
+        EvaluacionCalidad evalFisico = evaluacionFisica(403L, lote);
+
+        when(loteProductoRepository.findAll(any(Specification.class), any(Sort.class)))
+                .thenReturn(List.of(lote));
+        when(evaluacionRepository.findByLoteProductoId(42L))
+                .thenReturn(List.of(evalFisico));
+        when(loteProductoMapper.toDto(any())).thenAnswer(inv -> LoteProductoResponseDTO.builder()
+                .id(((LoteProducto) inv.getArgument(0)).getId())
+                .build());
+        when(plantillaAnalisisMicroService.obtenerPorProducto(anyLong())).thenReturn(null);
+
+        Page<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        assertThat(resultado.getContent()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Bloquea liberación si falta resultados microbiológicos")
     void bloqueaLiberacionSinResultadosMicro() {
         Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
@@ -379,5 +502,32 @@ class LoteProductoServiceImplTest {
                         .build()))
                 .build();
     }
-}
 
+    private EvaluacionCalidad evaluacionFisica(Long id, LoteProducto lote) {
+        return EvaluacionCalidad.builder()
+                .id(id)
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .observaciones("ok")
+                .loteProducto(lote)
+                .build();
+    }
+
+    private EvaluacionCalidad evaluacionQuimicoMicro(Long id, LoteProducto lote) {
+        return EvaluacionCalidad.builder()
+                .id(id)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .observaciones("ok")
+                .loteProducto(lote)
+                .build();
+    }
+
+    private void mockAuthWithRoles(String... roles) {
+        var authorities = Stream.of(roles)
+                .map(SimpleGrantedAuthority::new)
+                .toList();
+        SecurityContextHolder.getContext()
+                .setAuthentication(new UsernamePasswordAuthenticationToken("user", "pass", authorities));
+    }
+}

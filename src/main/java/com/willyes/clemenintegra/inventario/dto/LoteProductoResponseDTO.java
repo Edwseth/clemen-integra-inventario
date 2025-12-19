@@ -29,6 +29,13 @@ public class LoteProductoResponseDTO {
     private boolean requiereAnalisisFisico;
     private boolean requiereAnalisisQuimico;
     private boolean requiereAnalisisMicrobiologico;
+    private boolean tieneEvaluacionFisica;
+    private boolean tieneEvaluacionQuimicoMicro;
+    private Long evaluacionQuimicoMicroId;
+    private boolean tieneResultadosMicro;
+    private boolean pendienteFisico;
+    private boolean pendienteQuimico;
+    private boolean pendienteMicro;
     private String nombreAlmacen;
     private String ubicacionAlmacen;
     private String nombreUsuarioLiberador;
