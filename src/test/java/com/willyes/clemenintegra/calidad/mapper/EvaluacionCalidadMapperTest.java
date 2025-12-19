@@ -61,7 +61,10 @@ class EvaluacionCalidadMapperTest {
         assertThat(dto.getCodigoLote()).isEqualTo("L001");
         assertThat(dto.isRequiereAnalisisFisico()).isTrue();
         assertThat(dto.isRequiereAnalisisQuimico()).isTrue();
+        assertThat(dto.isRequiereAnalisisQuimicoMicro()).isTrue();
         assertThat(dto.isRequiereAnalisisMicrobiologico()).isTrue();
+        assertThat(dto.isTieneEvaluacionFisica()).isFalse();
+        assertThat(dto.isTieneEvaluacionQuimicaMicro()).isTrue();
         assertThat(dto.isTieneResultadosQuimicos()).isTrue();
         assertThat(dto.isTieneResultadosMicro()).isTrue();
         assertThat(dto.getResultadosMicro()).hasSize(1);

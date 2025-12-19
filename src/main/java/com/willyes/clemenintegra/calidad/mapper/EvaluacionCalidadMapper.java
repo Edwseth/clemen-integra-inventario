@@ -241,6 +241,11 @@ public class EvaluacionCalidadMapper {
 
         boolean esFisico = evaluacion.getTipoEvaluacion() == TipoEvaluacion.FISICO;
         boolean esQuimicoMicro = evaluacion.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO;
+        java.util.List<EvaluacionCalidad> evaluacionesSeguras = evaluacionesLote == null ? java.util.List.of() : evaluacionesLote;
+        boolean tieneEvaluacionFisica = evaluacionesSeguras.stream()
+                .anyMatch(e -> e.getTipoEvaluacion() == TipoEvaluacion.FISICO);
+        boolean tieneEvaluacionQuimicoMicro = evaluacionesSeguras.stream()
+                .anyMatch(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
 
         AnalisisCalidadHelper.EstadoDisciplinasCalidad estadoDisciplinas = AnalisisCalidadHelper.calcularEstadoDisciplinas(
                 producto,
@@ -258,7 +263,10 @@ public class EvaluacionCalidadMapper {
                 .observaciones(evaluacion.getObservaciones())
                 .requiereAnalisisFisico(requiereFisico(producto))
                 .requiereAnalisisQuimico(requiereQuimico(producto))
+                .requiereAnalisisQuimicoMicro(requiereQuimico(producto))
                 .requiereAnalisisMicrobiologico(requiereMicro(producto))
+                .tieneEvaluacionFisica(tieneEvaluacionFisica)
+                .tieneEvaluacionQuimicaMicro(tieneEvaluacionQuimicoMicro)
                 .tieneResultadosFisicos(esFisico)
                 .tieneResultadosQuimicos(esQuimicoMicro)
                 .tieneResultadosMicro(resultadosMicro != null && !resultadosMicro.isEmpty())

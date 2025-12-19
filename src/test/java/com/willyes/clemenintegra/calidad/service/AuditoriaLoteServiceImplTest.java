@@ -154,8 +154,13 @@ class AuditoriaLoteServiceImplTest {
         assertThat(dto.getIncidentes().get(0).isTieneCapa()).isTrue();
         assertThat(dto.getRetenciones()).hasSize(1);
         assertThat(dto.getMovimientos()).hasSize(1);
+        assertThat(dto.getMovimientos().get(0).getFecha()).isEqualTo(mov.getFechaIngreso());
         assertThat(dto.getEvaluaciones()).hasSize(1);
         assertThat(dto.getEvaluaciones().get(0).isTieneResultadosMicro()).isTrue();
+        assertThat(dto.isTieneNoConformidadAsociada()).isTrue();
+        assertThat(dto.isTieneNoConformidadActiva()).isTrue();
+        assertThat(dto.getCodigoNoConformidadPrincipal()).isEqualTo("NC-001");
+        assertThat(dto.getEstadoNoConformidadPrincipal()).isEqualTo("ABIERTA");
     }
 
     @Test
@@ -262,7 +267,13 @@ class AuditoriaLoteServiceImplTest {
 
         when(loteProductoRepository.findById(4L)).thenReturn(Optional.of(lote));
         when(loteProductoService.obtenerEstadoCalidad(4L)).thenReturn(estado);
-        when(noConformidadRepository.findByLote_Id(4L)).thenReturn(List.of());
+        NoConformidad nc = NoConformidad.builder()
+                .id(8L)
+                .codigo("NC-RET-01")
+                .estado(EstadoNoConformidad.ABIERTA)
+                .fechaRegistro(LocalDateTime.now())
+                .build();
+        when(noConformidadRepository.findByLote_Id(4L)).thenReturn(List.of(nc));
         when(retencionLoteService.obtenerRetencionesActivas(4L)).thenReturn(List.of());
         when(condicionUsoService.getActivasByLote(4L)).thenReturn(List.of());
         when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(4L)).thenReturn(List.of());
@@ -273,6 +284,9 @@ class AuditoriaLoteServiceImplTest {
         assertThat(dto.getEstadoLote()).isEqualTo("RETENIDO");
         assertThat(dto.getEstadoCalidad().getEstadoLote()).isEqualTo("RETENIDO");
         assertThat(dto.getEstadoCalidad().isTieneRetencionActiva()).isFalse();
+        assertThat(dto.getMotivoRetencion()).isEqualTo("NC");
+        assertThat(dto.isTieneNoConformidadAsociada()).isTrue();
+        assertThat(dto.isTieneNoConformidadActiva()).isTrue();
     }
 
     @Test
