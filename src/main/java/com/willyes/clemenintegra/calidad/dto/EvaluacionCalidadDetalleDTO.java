@@ -30,6 +30,10 @@ public class EvaluacionCalidadDetalleDTO {
     private boolean tieneResultadosQuimicos;
     private boolean tieneResultadosMicro;
 
+    private String estadoFisico;
+    private String estadoQuimicoMicrobiologico;
+    private String estadoMicrobiologico;
+
     private List<ResultadoAnalisisMicroDetalleDTO> resultadosMicro;
     private List<ArchivoEvaluacionDTO> archivosAdjuntos;
 }

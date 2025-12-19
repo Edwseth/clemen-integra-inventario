@@ -20,6 +20,7 @@ import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
@@ -70,12 +71,17 @@ class AuditoriaLoteServiceImplTest {
 
     @Test
     void armaAuditoriaConDatosBasicos() {
+        Producto producto = new Producto();
+        producto.setNombre("Producto");
+        producto.setRequiereAnalisisFisico(true);
+
         LoteProducto lote = LoteProducto.builder()
                 .id(1L)
                 .codigoLote("LOT-01")
                 .estado(EstadoLote.EN_CUARENTENA)
                 .stockLote(BigDecimal.TEN)
                 .almacen(Almacen.builder().nombre("Principal").ubicacion("A1").build())
+                .producto(producto)
                 .build();
 
         EstadoCalidadLoteResponseDTO estado = EstadoCalidadLoteResponseDTO.builder()
@@ -150,6 +156,123 @@ class AuditoriaLoteServiceImplTest {
         assertThat(dto.getMovimientos()).hasSize(1);
         assertThat(dto.getEvaluaciones()).hasSize(1);
         assertThat(dto.getEvaluaciones().get(0).isTieneResultadosMicro()).isTrue();
+    }
+
+    @Test
+    void auditoriaSoloFisicoMarcaDisciplinas() {
+        Producto producto = new Producto();
+        producto.setNombre("Etiqueta");
+        producto.setRequiereAnalisisFisico(true);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(2L)
+                .codigoLote("L-191225-02")
+                .estado(EstadoLote.EN_CUARENTENA)
+                .producto(producto)
+                .almacen(Almacen.builder().nombre("Cuarentena").build())
+                .build();
+
+        EvaluacionCalidad evaluacionFisico = EvaluacionCalidad.builder()
+                .id(12L)
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .resultado(com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion.CONFORME)
+                .fechaEvaluacion(LocalDateTime.now())
+                .usuarioEvaluador(Usuario.builder().nombreCompleto("Analista").build())
+                .build();
+
+        when(loteProductoRepository.findById(2L)).thenReturn(Optional.of(lote));
+        when(loteProductoService.obtenerEstadoCalidad(2L))
+                .thenReturn(EstadoCalidadLoteResponseDTO.builder().estadoLote("EN_CUARENTENA").build());
+        when(noConformidadRepository.findByLote_Id(2L)).thenReturn(List.of());
+        when(retencionLoteService.obtenerRetencionesActivas(2L)).thenReturn(List.of());
+        when(condicionUsoService.getActivasByLote(2L)).thenReturn(List.of());
+        when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(2L)).thenReturn(List.of());
+        when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(2L)).thenReturn(List.of(evaluacionFisico));
+
+        AuditoriaLoteResponseDTO dto = service.obtenerAuditoriaDeLote(2L);
+
+        assertThat(dto.getDatosLote().getProductoNombre()).isEqualTo("Etiqueta");
+        assertThat(dto.getDatosLote().getEstado()).isEqualTo("EN_CUARENTENA");
+        assertThat(dto.getDatosLote().getAlmacen()).isEqualTo("Cuarentena");
+        assertThat(dto.getCalidad().getFisico().isRequerido()).isTrue();
+        assertThat(dto.getCalidad().getFisico().getEstado()).isEqualTo("EVALUADO");
+        assertThat(dto.getCalidad().getFisico().getResultado()).isEqualTo("CONFORME");
+        assertThat(dto.getCalidad().getQuimicoMicrobiologico().isRequerido()).isFalse();
+        assertThat(dto.getCalidad().getQuimicoMicrobiologico().getEstado()).isEqualTo("NO_REQUERIDO");
+        assertThat(dto.getCalidad().getMicrobiologico().isRequerido()).isFalse();
+        assertThat(dto.getCalidad().getMicrobiologico().getEstado()).isEqualTo("NO_REQUERIDO");
+    }
+
+    @Test
+    void auditoriaMarcaMicroPendienteCuandoNoHayResultados() {
+        Producto producto = new Producto();
+        producto.setNombre("Producto QM");
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(true);
+        producto.setRequiereAnalisisMicrobiologico(true);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(3L)
+                .codigoLote("L-QM-01")
+                .estado(EstadoLote.EN_CUARENTENA)
+                .producto(producto)
+                .build();
+
+        EvaluacionCalidad evalQM = EvaluacionCalidad.builder()
+                .id(13L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion.CONFORME)
+                .fechaEvaluacion(LocalDateTime.now())
+                .usuarioEvaluador(Usuario.builder().nombreCompleto("Micro").build())
+                .build();
+
+        when(loteProductoRepository.findById(3L)).thenReturn(Optional.of(lote));
+        when(loteProductoService.obtenerEstadoCalidad(3L))
+                .thenReturn(EstadoCalidadLoteResponseDTO.builder().estadoLote("EN_CUARENTENA").build());
+        when(noConformidadRepository.findByLote_Id(3L)).thenReturn(List.of());
+        when(retencionLoteService.obtenerRetencionesActivas(3L)).thenReturn(List.of());
+        when(condicionUsoService.getActivasByLote(3L)).thenReturn(List.of());
+        when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(3L)).thenReturn(List.of());
+        when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(3L)).thenReturn(List.of(evalQM));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(List.of(13L)))
+                .thenReturn(List.of());
+
+        AuditoriaLoteResponseDTO dto = service.obtenerAuditoriaDeLote(3L);
+
+        assertThat(dto.getCalidad().getQuimicoMicrobiologico().isRequerido()).isTrue();
+        assertThat(dto.getCalidad().getQuimicoMicrobiologico().getEstado()).isEqualTo("EVALUADO");
+        assertThat(dto.getCalidad().getMicrobiologico().isRequerido()).isTrue();
+        assertThat(dto.getCalidad().getMicrobiologico().getEstado()).isEqualTo("PENDIENTE");
+    }
+
+    @Test
+    void auditoriaExponeEstadoRetenidoYRetencionActiva() {
+        LoteProducto lote = LoteProducto.builder()
+                .id(4L)
+                .codigoLote("RET-01")
+                .estado(EstadoLote.RETENIDO)
+                .build();
+
+        EstadoCalidadLoteResponseDTO estado = EstadoCalidadLoteResponseDTO.builder()
+                .estadoLote("RETENIDO")
+                .tieneRetencionActiva(false)
+                .build();
+
+        when(loteProductoRepository.findById(4L)).thenReturn(Optional.of(lote));
+        when(loteProductoService.obtenerEstadoCalidad(4L)).thenReturn(estado);
+        when(noConformidadRepository.findByLote_Id(4L)).thenReturn(List.of());
+        when(retencionLoteService.obtenerRetencionesActivas(4L)).thenReturn(List.of());
+        when(condicionUsoService.getActivasByLote(4L)).thenReturn(List.of());
+        when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(4L)).thenReturn(List.of());
+        when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(4L)).thenReturn(List.of());
+
+        AuditoriaLoteResponseDTO dto = service.obtenerAuditoriaDeLote(4L);
+
+        assertThat(dto.getEstadoLote()).isEqualTo("RETENIDO");
+        assertThat(dto.getEstadoCalidad().getEstadoLote()).isEqualTo("RETENIDO");
+        assertThat(dto.getEstadoCalidad().isTieneRetencionActiva()).isFalse();
     }
 
     @Test

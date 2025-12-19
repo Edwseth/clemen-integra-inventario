@@ -10,6 +10,8 @@ import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import java.util.Optional;
 import java.util.Comparator;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.function.LongPredicate;
 
 import static com.willyes.clemenintegra.calidad.service.ArchivoEvaluacionConstants.NOMBRE_VISIBLE_MICRO;
 
@@ -82,7 +84,7 @@ public final class AnalisisCalidadHelper {
 
     public static EstadoDisciplinaMicro calcularEstadoMicro(
             Producto producto,
-            java.util.List<EvaluacionCalidad> evaluaciones,
+            List<EvaluacionCalidad> evaluaciones,
             java.util.Set<Long> evaluacionesConResultadosMicro
     ) {
         boolean requiereMicro = requiereMicro(producto);
@@ -108,6 +110,51 @@ public final class AnalisisCalidadHelper {
         }
 
         return new EstadoDisciplinaMicro(requiereMicro, tieneResultadosMicro, tienePdfMicro, estado);
+    }
+
+    public static EstadoDisciplinasCalidad calcularEstadoDisciplinas(
+            Producto producto,
+            List<EvaluacionCalidad> evaluaciones,
+            LongPredicate tieneResultadosMicroPredicate) {
+        List<EvaluacionCalidad> evals = evaluaciones == null ? List.of() : evaluaciones;
+
+        boolean requiereFisico = requiereFisico(producto);
+        boolean requiereQuimico = requiereQuimico(producto);
+        boolean requiereMicro = requiereMicro(producto);
+
+        EvaluacionCalidad evaluacionFisico = evals.stream()
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.FISICO)
+                .max(Comparator.comparing(EvaluacionCalidad::getFechaEvaluacion,
+                        Comparator.nullsLast(LocalDateTime::compareTo)))
+                .orElse(null);
+
+        EvaluacionCalidad evaluacionQuimicoMicro = evals.stream()
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .max(Comparator.comparing(EvaluacionCalidad::getFechaEvaluacion,
+                        Comparator.nullsLast(LocalDateTime::compareTo)))
+                .orElse(null);
+
+        DisciplinaCalidadEstado fisico = construirDisciplina(
+                requiereFisico,
+                evaluacionFisico,
+                requiereFisico && evaluacionFisico != null);
+
+        DisciplinaCalidadEstado quimico = construirDisciplina(
+                requiereQuimico,
+                evaluacionQuimicoMicro,
+                requiereQuimico && evaluacionQuimicoMicro != null);
+
+        boolean tieneResultadosMicro = evaluacionQuimicoMicro != null
+                && evaluacionQuimicoMicro.getId() != null
+                && tieneResultadosMicroPredicate != null
+                && tieneResultadosMicroPredicate.test(evaluacionQuimicoMicro.getId());
+
+        DisciplinaCalidadEstado micro = construirDisciplina(
+                requiereMicro,
+                evaluacionQuimicoMicro,
+                requiereMicro && tieneResultadosMicro);
+
+        return new EstadoDisciplinasCalidad(fisico, quimico, micro);
     }
 
     private static boolean esEvaluacionAprobada(ResultadoEvaluacion resultado) {
@@ -216,5 +263,44 @@ public final class AnalisisCalidadHelper {
             boolean tienePdfMicro,
             DisciplinaEstado estado
     ) {
+    }
+
+    public record DisciplinaCalidadEstado(
+            boolean requerido,
+            DisciplinaEstado estado,
+            String resultado,
+            LocalDateTime fechaUltimaEvaluacion,
+            String evaluador
+    ) {
+    }
+
+    public record EstadoDisciplinasCalidad(
+            DisciplinaCalidadEstado fisico,
+            DisciplinaCalidadEstado quimicoMicrobiologico,
+            DisciplinaCalidadEstado microbiologico
+    ) {
+    }
+
+    private static DisciplinaCalidadEstado construirDisciplina(boolean requerido,
+                                                               EvaluacionCalidad evaluacion,
+                                                               boolean completo) {
+        DisciplinaEstado estado;
+        if (!requerido) {
+            estado = DisciplinaEstado.NO_REQUERIDO;
+        } else if (completo) {
+            estado = DisciplinaEstado.EVALUADO;
+        } else {
+            estado = DisciplinaEstado.PENDIENTE;
+        }
+
+        return new DisciplinaCalidadEstado(
+                requerido,
+                estado,
+                evaluacion != null && evaluacion.getResultado() != null ? evaluacion.getResultado().name() : null,
+                evaluacion != null ? evaluacion.getFechaEvaluacion() : null,
+                evaluacion != null && evaluacion.getUsuarioEvaluador() != null
+                        ? evaluacion.getUsuarioEvaluador().getNombreCompleto()
+                        : null
+        );
     }
 }

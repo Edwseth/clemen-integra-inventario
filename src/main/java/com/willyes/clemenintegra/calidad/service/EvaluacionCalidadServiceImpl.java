@@ -234,7 +234,27 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         EvaluacionCalidad evaluacion = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evaluación no encontrada"));
         java.util.List<ResultadoAnalisisMicroResponseDTO> resultados = resultadoAnalisisMicroService.obtenerPorEvaluacion(id);
-        return mapper.toDetalleDTO(evaluacion, evaluacion.getLoteProducto().getProducto(),
+        java.util.List<EvaluacionCalidad> evaluacionesLote = repository.findByLoteProductoId(
+                evaluacion.getLoteProducto().getId());
+        java.util.List<Long> evaluacionMicroIds = evaluacionesLote == null ? java.util.List.of()
+                : evaluacionesLote.stream()
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .map(EvaluacionCalidad::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        java.util.Set<Long> evaluacionesConResultadosMicro = evaluacionMicroIds.isEmpty()
+                ? java.util.Set.of()
+                : resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(evaluacionMicroIds)
+                .stream()
+                .map(r -> r.getEvaluacion() != null ? r.getEvaluacion().getId() : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
+        return mapper.toDetalleDTO(evaluacion,
+                evaluacion.getLoteProducto().getProducto(),
+                evaluacionesLote,
+                evaluacionesConResultadosMicro,
                 mapper.mapearResultadosMicro(resultados));
     }
 

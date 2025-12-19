@@ -11,8 +11,10 @@ import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.repository.CapaRepository;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
 import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
+import com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
@@ -47,6 +49,11 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
         LoteProducto lote = loteProductoRepository.findById(loteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
 
+        boolean requiereFisico = lote.getProducto() != null && lote.getProducto().isRequiereAnalisisFisico();
+        boolean requiereQuimico = lote.getProducto() != null && lote.getProducto().isRequiereAnalisisQuimico();
+        boolean requiereMicro = lote.getProducto() != null && lote.getProducto().isRequiereAnalisisMicrobiologico();
+        TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.fromFlags(requiereFisico, requiereQuimico, requiereMicro);
+
         EstadoCalidadLoteResponseDTO estadoCalidad = loteProductoService.obtenerEstadoCalidad(loteId);
 
         List<AuditoriaLoteResponseDTO.IncidenteDTO> incidentes = noConformidadRepository.findByLote_Id(loteId).stream()
@@ -71,12 +78,48 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .findFirst()
                 .orElse(null);
 
-        List<AuditoriaLoteResponseDTO.MovimientoDTO> movimientos = movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(loteId)
+        List<AuditoriaLoteResponseDTO.MovimientoDTO> movimientos = movimientoInventarioRepository
+                .findByLote_IdOrderByFechaIngresoDesc(loteId)
                 .stream()
                 .map(this::mapMovimiento)
                 .toList();
 
-        List<AuditoriaLoteResponseDTO.EvaluacionResumenDTO> evaluaciones = construirResumenEvaluaciones(loteId);
+        List<com.willyes.clemenintegra.calidad.model.EvaluacionCalidad> evaluacionesLote =
+                evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(loteId);
+        List<AuditoriaLoteResponseDTO.EvaluacionResumenDTO> evaluaciones = construirResumenEvaluaciones(evaluacionesLote);
+
+        java.util.Set<Long> evaluacionesConResultadosMicro = evaluacionesLote == null
+                ? java.util.Set.of()
+                : resultadosMicroPorEvaluacion(evaluacionesLote).keySet();
+
+        AnalisisCalidadHelper.EstadoDisciplinasCalidad estadoDisciplinas = AnalisisCalidadHelper.calcularEstadoDisciplinas(
+                lote.getProducto(),
+                evaluacionesLote,
+                evaluacionesConResultadosMicro::contains);
+
+        String almacenActual = lote.getAlmacen() != null ? lote.getAlmacen().getNombre() : null;
+        String ubicacionActual = lote.getAlmacen() != null ? lote.getAlmacen().getUbicacion() : null;
+        String almacenDetalle = almacenActual;
+        if (almacenDetalle != null && ubicacionActual != null && !ubicacionActual.isBlank()) {
+            almacenDetalle = almacenDetalle + " (" + ubicacionActual + ")";
+        }
+
+        AuditoriaLoteResponseDTO.DatosLoteDTO datosLote = AuditoriaLoteResponseDTO.DatosLoteDTO.builder()
+                .codigoLote(lote.getCodigoLote())
+                .productoNombre(lote.getProducto() != null ? lote.getProducto().getNombre() : null)
+                .estado(lote.getEstado() != null ? lote.getEstado().name() : null)
+                .fechaIngreso(lote.getFechaFabricacion())
+                .fechaVencimiento(lote.getFechaVencimiento())
+                .almacen(almacenDetalle)
+                .tipoAnalisisRequerido(tipoAnalisis != null ? tipoAnalisis.name() : null)
+                .build();
+
+        AuditoriaLoteResponseDTO.CalidadLoteAuditoriaDTO calidad = AuditoriaLoteResponseDTO.CalidadLoteAuditoriaDTO.builder()
+                .tipoAnalisisRequerido(tipoAnalisis != null ? tipoAnalisis.name() : null)
+                .fisico(mapDisciplina(estadoDisciplinas.fisico()))
+                .quimicoMicrobiologico(mapDisciplina(estadoDisciplinas.quimicoMicrobiologico()))
+                .microbiologico(mapDisciplina(estadoDisciplinas.microbiologico()))
+                .build();
 
         return AuditoriaLoteResponseDTO.builder()
                 .loteId(lote.getId())
@@ -84,14 +127,15 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .nombreProducto(lote.getProducto() != null ? lote.getProducto().getNombre() : null)
                 .categoriaProducto(lote.getProducto() != null && lote.getProducto().getCategoriaProducto() != null
                         ? lote.getProducto().getCategoriaProducto().getNombre() : null)
-                .tipoAnalisisCalidad(lote.getProducto() != null && lote.getProducto().getTipoAnalisisCalidad() != null
-                        ? lote.getProducto().getTipoAnalisisCalidad().name() : null)
+                .tipoAnalisisCalidad(tipoAnalisis != null ? tipoAnalisis.name() : null)
                 .estadoLote(lote.getEstado() != null ? lote.getEstado().name() : null)
                 .fechaFabricacion(lote.getFechaFabricacion())
                 .fechaVencimiento(lote.getFechaVencimiento())
                 .stockLote(lote.getStockLote())
-                .nombreAlmacenActual(lote.getAlmacen() != null ? lote.getAlmacen().getNombre() : null)
-                .ubicacionAlmacenActual(lote.getAlmacen() != null ? lote.getAlmacen().getUbicacion() : null)
+                .nombreAlmacenActual(almacenActual)
+                .ubicacionAlmacenActual(ubicacionActual)
+                .datosLote(datosLote)
+                .calidad(calidad)
                 .estadoCalidad(estadoCalidad)
                 .evaluaciones(evaluaciones)
                 .incidentes(incidentes)
@@ -123,42 +167,31 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
     }
 
     private AuditoriaLoteResponseDTO.MovimientoDTO mapMovimiento(MovimientoInventario mov) {
+        String almacenOrigen = mov.getAlmacenOrigen() != null ? mov.getAlmacenOrigen().getNombre() : null;
+        String almacenDestino = mov.getAlmacenDestino() != null ? mov.getAlmacenDestino().getNombre() : null;
         return AuditoriaLoteResponseDTO.MovimientoDTO.builder()
                 .id(mov.getId())
                 .fechaMovimiento(mov.getFechaIngreso())
                 .tipoMovimiento(mov.getTipoMovimiento())
                 .clasificacion(mov.getClasificacion())
                 .cantidad(mov.getCantidad())
-                .almacenOrigenNombre(mov.getAlmacenOrigen() != null ? mov.getAlmacenOrigen().getNombre() : null)
-                .almacenDestinoNombre(mov.getAlmacenDestino() != null ? mov.getAlmacenDestino().getNombre() : null)
+                .almacenOrigenNombre(almacenOrigen)
+                .almacenDestinoNombre(almacenDestino)
+                .almacenOrigen(almacenOrigen)
+                .almacenDestino(almacenDestino)
                 .motivoMovimientoNombre(mov.getMotivoMovimiento() != null ? mov.getMotivoMovimiento().getDescripcion() : null)
                 .registradoPorNombre(mov.getRegistradoPor() != null ? mov.getRegistradoPor().getNombreCompleto() : null)
                 .ordenProduccionCodigo(mov.getOrdenProduccion() != null ? mov.getOrdenProduccion().getCodigoOrden() : null)
                 .build();
     }
 
-    private List<AuditoriaLoteResponseDTO.EvaluacionResumenDTO> construirResumenEvaluaciones(Long loteId) {
-        List<com.willyes.clemenintegra.calidad.model.EvaluacionCalidad> evaluaciones = evaluacionCalidadRepository
-                .findByLoteProductoIdWithAdjuntos(loteId);
+    private List<AuditoriaLoteResponseDTO.EvaluacionResumenDTO> construirResumenEvaluaciones(
+            List<com.willyes.clemenintegra.calidad.model.EvaluacionCalidad> evaluaciones) {
         if (evaluaciones == null || evaluaciones.isEmpty()) {
             return List.of();
         }
 
-        List<Long> microIds = evaluaciones.stream()
-                .filter(e -> e.getTipoEvaluacion() == com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
-                .map(com.willyes.clemenintegra.calidad.model.EvaluacionCalidad::getId)
-                .filter(java.util.Objects::nonNull)
-                .toList();
-
-        Map<Long, List<ResultadoAnalisisMicrobiologico>> resultadosPorEvaluacion = new java.util.HashMap<>();
-        if (!microIds.isEmpty()) {
-            for (ResultadoAnalisisMicrobiologico resultado : resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(microIds)) {
-                Long evalId = resultado.getEvaluacion() != null ? resultado.getEvaluacion().getId() : null;
-                if (evalId != null) {
-                    resultadosPorEvaluacion.computeIfAbsent(evalId, key -> new java.util.ArrayList<>()).add(resultado);
-                }
-            }
-        }
+        Map<Long, List<ResultadoAnalisisMicrobiologico>> resultadosPorEvaluacion = resultadosMicroPorEvaluacion(evaluaciones);
 
         return evaluaciones.stream()
                 .map(evaluacion -> {
@@ -201,5 +234,39 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                             .build();
                 })
                 .toList();
+    }
+
+    private Map<Long, List<ResultadoAnalisisMicrobiologico>> resultadosMicroPorEvaluacion(
+            List<com.willyes.clemenintegra.calidad.model.EvaluacionCalidad> evaluaciones) {
+        List<Long> microIds = evaluaciones.stream()
+                .filter(e -> e.getTipoEvaluacion() == com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .map(com.willyes.clemenintegra.calidad.model.EvaluacionCalidad::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        Map<Long, List<ResultadoAnalisisMicrobiologico>> resultadosPorEvaluacion = new java.util.HashMap<>();
+        if (!microIds.isEmpty()) {
+            for (ResultadoAnalisisMicrobiologico resultado : resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(microIds)) {
+                Long evalId = resultado.getEvaluacion() != null ? resultado.getEvaluacion().getId() : null;
+                if (evalId != null) {
+                    resultadosPorEvaluacion.computeIfAbsent(evalId, key -> new java.util.ArrayList<>()).add(resultado);
+                }
+            }
+        }
+        return resultadosPorEvaluacion;
+    }
+
+    private AuditoriaLoteResponseDTO.DisciplinaCalidadDTO mapDisciplina(
+            AnalisisCalidadHelper.DisciplinaCalidadEstado estado) {
+        if (estado == null) {
+            return null;
+        }
+        return AuditoriaLoteResponseDTO.DisciplinaCalidadDTO.builder()
+                .requerido(estado.requerido())
+                .estado(estado.estado() != null ? estado.estado().name() : null)
+                .resultado(estado.resultado())
+                .fechaUltimaEvaluacion(estado.fechaUltimaEvaluacion())
+                .evaluador(estado.evaluador())
+                .build();
     }
 }
