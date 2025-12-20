@@ -13,6 +13,8 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -50,13 +52,48 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
 
     @Transactional
     public RetencionLoteDTO crear(RetencionLoteDTO dto) {
+        if (dto == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Debe enviar el detalle de la retención.");
+        }
+        if (dto.getLoteId() == null) {
+            throw new CustomBusinessException(ApiErrorCode.RETENCION_LOTE_REQUERIDO, "Debe seleccionar un lote.");
+        }
+        if (dto.getMotivo() == null) {
+            throw new CustomBusinessException(ApiErrorCode.RETENCION_MOTIVO_INVALIDO, "Debe seleccionar un motivo válido.");
+        }
+        if (dto.getAprobadoPorId() == null) {
+            throw new CustomBusinessException(ApiErrorCode.RETENCION_APROBADOR_REQUERIDO, "El aprobador es obligatorio.");
+        }
+        if (dto.getCausa() == null || dto.getCausa().isBlank()) {
+            throw new CustomBusinessException(ApiErrorCode.RETENCION_CAUSA_REQUERIDA, "La causa de la retención es obligatoria.");
+        }
+
         LoteProducto lote = loteRepository.findById(dto.getLoteId())
-                .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteId()));
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RETENCION_LOTE_NO_ENCONTRADO,
+                        "Lote no encontrado con ID: " + dto.getLoteId()));
+        if (lote.getEstado() == EstadoLote.RECHAZADO || lote.getEstado() == EstadoLote.VENCIDO) {
+            throw new CustomBusinessException(ApiErrorCode.RETENCION_ESTADO_NO_PERMITIDO,
+                    "El estado del lote no permite retenciones.",
+                    java.util.Map.of("loteId", lote.getId(), "estado", lote.getEstado().name()));
+        }
         Usuario user = usuarioRepository.findById(dto.getAprobadoPorId())
-                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + dto.getAprobadoPorId()));
-        RetencionLote entity = mapper.toEntity(dto, lote, user);
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RETENCION_APROBADOR_NO_ENCONTRADO,
+                        "Usuario no encontrado con ID: " + dto.getAprobadoPorId()));
+        RetencionLote entity = RetencionLote.builder()
+                .lote(lote)
+                .causa(dto.getCausa().trim())
+                .fechaRetencion(LocalDateTime.now())
+                .fechaLiberacion(dto.getFechaLiberacion())
+                .estado(EstadoRetencion.RETENIDO)
+                .motivo(dto.getMotivo())
+                .noConformidad(dto.getNoConformidadId() != null
+                        ? NoConformidad.builder().id(dto.getNoConformidadId()).build()
+                        : null)
+                .aprobadoPor(user)
+                .build();
         RetencionLote guardada = repository.save(entity);
         sincronizarEstadoRetenido(guardada.getLote(), guardada);
+        asegurarAlmacenCuarentena(guardada.getLote());
         return mapper.toDTO(guardada);
     }
 
