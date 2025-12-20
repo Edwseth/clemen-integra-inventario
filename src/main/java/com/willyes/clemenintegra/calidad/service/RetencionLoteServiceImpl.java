@@ -10,6 +10,9 @@ import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,8 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
 
     private final RetencionLoteRepository repository;
     private final LoteProductoRepository loteRepository;
+    private final AlmacenRepository almacenRepository;
+    private final InventoryCatalogResolver catalogResolver;
     private final UsuarioRepository usuarioRepository;
     private final RetencionLoteMapper mapper;
 
@@ -50,7 +55,9 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         Usuario user = usuarioRepository.findById(dto.getAprobadoPorId())
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + dto.getAprobadoPorId()));
         RetencionLote entity = mapper.toEntity(dto, lote, user);
-        return mapper.toDTO(repository.save(entity));
+        RetencionLote guardada = repository.save(entity);
+        sincronizarEstadoRetenido(guardada.getLote(), guardada);
+        return mapper.toDTO(guardada);
     }
 
     @Transactional
@@ -73,7 +80,16 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
 
         existing.setEstado(dto.getEstado());
         existing.setAprobadoPor(user);
-        return mapper.toDTO(repository.save(existing));
+        RetencionLote guardada = repository.save(existing);
+        if (guardada.getEstado() == EstadoRetencion.RETENIDO) {
+            sincronizarEstadoRetenido(lote, guardada);
+        } else if (guardada.getEstado() == EstadoRetencion.LIBERADO) {
+            List<RetencionLote> activas = repository.findByLote_IdAndEstado(lote.getId(), EstadoRetencion.RETENIDO);
+            if (activas.isEmpty()) {
+                actualizarEstadoPostLevantamiento(lote);
+            }
+        }
+        return mapper.toDTO(guardada);
     }
 
     public RetencionLoteDTO obtenerPorId(Long id) {
@@ -93,6 +109,17 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
                                  String descripcion,
                                  NoConformidad noConformidad,
                                  Usuario usuario) {
+        return retenerLote(loteId, motivo, descripcion, noConformidad, usuario, false);
+    }
+
+    @Override
+    @Transactional
+    public RetencionLote retenerLote(Long loteId,
+                                     MotivoRetencion motivo,
+                                     String descripcion,
+                                     NoConformidad noConformidad,
+                                     Usuario usuario,
+                                     boolean moverACuarentena) {
         if (loteId == null) {
             throw new IllegalArgumentException("Lote requerido");
         }
@@ -136,7 +163,10 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
             resultado = repository.save(nueva);
         }
 
-        asegurarEstadoRetenido(lote);
+        sincronizarEstadoRetenido(lote, resultado);
+        if (moverACuarentena) {
+            asegurarAlmacenCuarentena(lote);
+        }
         return resultado;
     }
 
@@ -155,6 +185,12 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
     @Override
     @Transactional
     public RetencionLote levantar(Long retencionId, Usuario usuario) {
+        return levantarRetencion(retencionId, usuario);
+    }
+
+    @Override
+    @Transactional
+    public RetencionLote levantarRetencion(Long retencionId, Usuario usuario) {
         if (!esJefeOSuper()) {
             throw new AccessDeniedException("Solo Jefe de Calidad o Super Admin pueden levantar retenciones");
         }
@@ -177,7 +213,15 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         }
         retencion.setEstado(EstadoRetencion.LIBERADO);
         retencion.setFechaLiberacion(LocalDateTime.now());
-        return repository.save(retencion);
+        RetencionLote guardada = repository.save(retencion);
+        LoteProducto lote = guardada.getLote();
+        if (lote != null) {
+            List<RetencionLote> activas = repository.findByLote_IdAndEstado(lote.getId(), EstadoRetencion.RETENIDO);
+            if (activas.isEmpty()) {
+                actualizarEstadoPostLevantamiento(lote);
+            }
+        }
+        return guardada;
     }
 
     @Override
@@ -198,9 +242,48 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         return repository.findByLote_IdAndEstado(loteId, EstadoRetencion.RETENIDO);
     }
 
-    private void asegurarEstadoRetenido(LoteProducto lote) {
-        if (lote != null && lote.getEstado() != EstadoLote.RETENIDO) {
+    private void sincronizarEstadoRetenido(LoteProducto lote, RetencionLote retencion) {
+        if (lote == null || lote.getEstado() == null) {
+            return;
+        }
+        if (lote.getEstado() == EstadoLote.RECHAZADO || lote.getEstado() == EstadoLote.VENCIDO) {
+            return;
+        }
+        if (lote.getEstado() != EstadoLote.RETENIDO && retencion != null
+                && retencion.getEstado() == EstadoRetencion.RETENIDO) {
             lote.setEstado(EstadoLote.RETENIDO);
+            loteRepository.save(lote);
+        }
+    }
+
+    private void actualizarEstadoPostLevantamiento(LoteProducto lote) {
+        if (lote == null || lote.getEstado() == null) {
+            return;
+        }
+        if (lote.getEstado() == EstadoLote.RECHAZADO || lote.getEstado() == EstadoLote.VENCIDO) {
+            return;
+        }
+        boolean requiereAnalisis = AnalisisCalidadHelper.requiereFisico(lote.getProducto())
+                || AnalisisCalidadHelper.requiereQuimico(lote.getProducto())
+                || AnalisisCalidadHelper.requiereMicro(lote.getProducto());
+        lote.setEstado(requiereAnalisis ? EstadoLote.EN_CUARENTENA : EstadoLote.DISPONIBLE);
+        if (requiereAnalisis) {
+            asegurarAlmacenCuarentena(lote);
+        }
+        loteRepository.save(lote);
+    }
+
+    private void asegurarAlmacenCuarentena(LoteProducto lote) {
+        if (lote == null) {
+            return;
+        }
+        Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+        if (cuarentenaId == null) {
+            return;
+        }
+        if (lote.getAlmacen() == null || !cuarentenaId.equals(lote.getAlmacen().getId().longValue())) {
+            lote.setAlmacen(almacenRepository.findById(cuarentenaId)
+                    .orElseGet(() -> new com.willyes.clemenintegra.inventario.model.Almacen(Math.toIntExact(cuarentenaId))));
             loteRepository.save(lote);
         }
     }
@@ -223,4 +306,3 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         return false;
     }
 }
-

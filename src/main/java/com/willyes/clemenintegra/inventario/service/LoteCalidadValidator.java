@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
+import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
+import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
@@ -24,9 +26,25 @@ public class LoteCalidadValidator {
     );
 
     private final RetencionLoteService retencionLoteService;
+    private final NoConformidadService noConformidadService;
+    private final CondicionUsoService condicionUsoService;
 
     public void validarLoteUtilizable(LoteProducto lote) {
         EstadoLote estado = lote != null ? lote.getEstado() : null;
+
+        if (lote != null && lote.getId() != null) {
+            noConformidadService.obtenerActivaPorLote(lote.getId()).ifPresent(nc -> {
+                throw new CustomBusinessException(ApiErrorCode.BLOQUEO_NC_ACTIVA,
+                        "El lote tiene una no conformidad abierta y no puede utilizarse.",
+                        Map.of("loteId", lote.getId(), "ncId", nc.getId()));
+            });
+
+            if (!condicionUsoService.getActivasByLote(lote.getId()).isEmpty()) {
+                throw new CustomBusinessException(ApiErrorCode.BLOQUEO_CONDICION_USO,
+                        "El lote tiene una condición de uso activa y no puede utilizarse.",
+                        Map.of("loteId", lote.getId()));
+            }
+        }
 
         if (!ESTADOS_NO_PERMITIDOS.contains(estado)) {
             return;
@@ -48,4 +66,3 @@ public class LoteCalidadValidator {
                         "estado", estado != null ? estado.name() : null));
     }
 }
-

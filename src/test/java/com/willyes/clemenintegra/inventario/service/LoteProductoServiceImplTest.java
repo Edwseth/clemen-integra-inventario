@@ -104,6 +104,7 @@ class LoteProductoServiceImplTest {
 
         when(retencionLoteService.obtenerRetencionesActivas(anyLong())).thenReturn(Collections.emptyList());
         when(noConformidadService.obtenerActivaPorLote(anyLong())).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(anyLong())).thenReturn(Collections.emptyList());
         when(movimientoInventarioRepository.existsByTipoMovimientoAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoIdAndClasificacion(
                 any(), anyLong(), anyLong(), anyLong(), any())).thenReturn(false);
     }
@@ -229,6 +230,9 @@ class LoteProductoServiceImplTest {
         LoteProducto entidad = LoteProducto.builder()
                 .id(44L)
                 .estado(null)
+                .stockLote(BigDecimal.TEN)
+                .producto(producto)
+                .almacen(almacen)
                 .stockReservado(BigDecimal.ZERO)
                 .build();
 
@@ -240,8 +244,12 @@ class LoteProductoServiceImplTest {
         when(loteProductoMapper.toResponseDTO(entidad)).thenAnswer(inv -> LoteProductoResponseDTO.builder()
                 .estado(entidad.getEstado())
                 .build());
-        when(loteProductoRepository.findById(44L)).thenReturn(Optional.of(entidad));
+        mockCatalogosBasicos(13L, 12L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(9L);
+        when(catalogResolver.resolveAlmacenPrincipal(producto)).thenReturn(2L);
+        when(loteProductoRepository.findByIdForUpdate(44L)).thenReturn(Optional.of(entidad));
         when(evaluacionRepository.findByLoteProductoId(44L)).thenReturn(evaluacionesConforme());
+        when(almacenRepo.findById(2L)).thenReturn(Optional.of(almacenConId(2)));
 
         LoteProductoResponseDTO creado = service.crearLote(request);
 
@@ -253,6 +261,7 @@ class LoteProductoServiceImplTest {
         assertThat(entidad.getEstado()).isEqualTo(EstadoLote.LIBERADO);
         assertThat(entidad.getFechaLiberacion()).isNotNull();
         assertThat(entidad.getUsuarioLiberador()).isEqualTo(usuario);
+        assertThat(entidad.getAlmacen().getId()).isEqualTo(2L);
         assertThat(liberado.getEstado()).isEqualTo(EstadoLote.LIBERADO);
     }
 
@@ -287,6 +296,37 @@ class LoteProductoServiceImplTest {
 
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
         assertThat(lote.getAlmacen().getId()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("Reabrir lote crea retención de reevaluación y mantiene trazabilidad")
+    void reabrirLoteCreaRetencionReevaluacion() {
+        Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        LoteProducto lote = LoteProducto.builder()
+                .id(60L)
+                .estado(EstadoLote.LIBERADO)
+                .producto(producto)
+                .almacen(almacenConId(2))
+                .build();
+
+        when(loteProductoRepository.findByIdForUpdate(60L)).thenReturn(Optional.of(lote));
+        when(loteProductoRepository.findById(60L)).thenReturn(Optional.of(lote));
+
+        com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO dto =
+                com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO.builder()
+                        .motivo("Reevaluación por desviación")
+                        .build();
+
+        service.reabrirParaReevaluacion(60L, dto, jefeCalidad);
+
+        verify(retencionLoteService).retenerLote(
+                60L,
+                com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion.REEVALUACION,
+                "Reevaluación por desviación",
+                null,
+                jefeCalidad,
+                true);
     }
 
     @Test

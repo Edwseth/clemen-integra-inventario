@@ -43,6 +43,7 @@ public class AuditoriaLoteResponseDTO {
     private List<EvaluacionResumenDTO> evaluaciones;
     private List<IncidenteDTO> incidentes;
     private List<RetencionDTO> retenciones;
+    private boolean inconsistenciaRetencion;
     private boolean tieneNoConformidadAsociada;
     private boolean tieneNoConformidadActiva;
     private String codigoNoConformidadPrincipal;
