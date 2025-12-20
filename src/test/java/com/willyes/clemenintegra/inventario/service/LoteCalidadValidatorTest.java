@@ -119,4 +119,24 @@ class LoteCalidadValidatorTest {
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.BLOQUEO_CONDICION_USO);
     }
+
+    @Test
+    void bloqueaLoteRetenidoConRetencionManual() {
+        LoteProducto lote = new LoteProducto();
+        lote.setId(60L);
+        lote.setEstado(EstadoLote.RETENIDO);
+
+        RetencionLote retencion = new RetencionLote();
+        retencion.setId(70L);
+        retencion.setMotivo(MotivoRetencion.OTRO);
+
+        when(retencionLoteService.obtenerActivaPorLote(60L)).thenReturn(Optional.of(retencion));
+        when(noConformidadService.obtenerActivaPorLote(60L)).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(60L)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> validator.validarLoteUtilizable(lote))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO);
+    }
 }

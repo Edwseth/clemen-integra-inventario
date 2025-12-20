@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.shared.exception;
 
+import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -14,7 +15,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,18 +42,37 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, DateTimeParseException.class})
-    public ResponseEntity<ErrorResponseDTO> handleUnreadableMessage(Exception ex) {
+    public ResponseEntity<ErrorResponseDTO> handleUnreadableMessage(Exception ex, HttpServletRequest request) {
         Throwable root = ex instanceof HttpMessageNotReadableException hmre
                 ? hmre.getMostSpecificCause()
                 : ex;
+        boolean esRetencionRequest = request != null
+                && request.getRequestURI() != null
+                && request.getRequestURI().startsWith("/api/calidad/retenciones");
 
         if (root instanceof DateTimeParseException) {
+            if (esRetencionRequest) {
+                return buildResponse(ApiErrorCode.RETENCION_FECHA_INVALIDA,
+                        "Formato de fecha inválido",
+                        "Use 'YYYY-MM-DDTHH:mm:ss' (ISO-8601). Si el campo no aplica, envíelo nulo u omítalo.");
+            }
             return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA,
                     "Formato de fecha inválido",
                     "Use 'YYYY-MM-DDTHH:mm:ss' (ISO-8601). Si el campo no aplica, envíelo nulo u omítalo.");
         }
 
         if (root instanceof InvalidFormatException ife) {
+            if (esRetencionRequest && MotivoRetencion.class.equals(ife.getTargetType())) {
+                return buildResponse(ApiErrorCode.RETENCION_MOTIVO_INVALIDO,
+                        "Motivo de retención inválido",
+                        Map.of("field", "motivo",
+                                "acceptedValues", Arrays.toString(MotivoRetencion.values())));
+            }
+            if (esRetencionRequest && LocalDateTime.class.equals(ife.getTargetType())) {
+                return buildResponse(ApiErrorCode.RETENCION_FECHA_INVALIDA,
+                        "Formato de fecha inválido",
+                        "Use 'YYYY-MM-DDTHH:mm:ss' (ISO-8601). Si el campo no aplica, envíelo nulo u omítalo.");
+            }
             String path = ife.getPath().stream()
                     .map(ref -> ref.getFieldName() != null ? ref.getFieldName() : "[" + ref.getIndex() + "]")
                     .reduce("", (acc, curr) -> acc.isEmpty() ? curr : acc + "." + curr);
