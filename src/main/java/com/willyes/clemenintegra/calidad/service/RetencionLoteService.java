@@ -49,4 +49,6 @@ public interface RetencionLoteService {
     Optional<RetencionLote> obtenerActivaPorLote(Long loteId);
 
     List<RetencionLote> obtenerRetencionesActivas(Long loteId);
+
+    List<RetencionLote> obtenerRetencionesPorLote(Long loteId);
 }

@@ -139,7 +139,7 @@ class AuditoriaLoteServiceImplTest {
         when(loteProductoService.obtenerEstadoCalidad(1L)).thenReturn(estado);
         when(noConformidadRepository.findByLote_Id(1L)).thenReturn(List.of(nc));
         when(capaRepository.existsByNoConformidad_Id(5L)).thenReturn(true);
-        when(retencionLoteService.obtenerRetencionesActivas(1L)).thenReturn(List.of(retencion));
+        when(retencionLoteService.obtenerRetencionesPorLote(1L)).thenReturn(List.of(retencion));
         when(condicionUsoService.getActivasByLote(1L)).thenReturn(List.of(CondicionUsoResponseDTO.builder().id(7L).descripcion("Condición").build()));
         when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(1L)).thenReturn(List.of(mov));
         when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(1L)).thenReturn(List.of(evaluacion));
@@ -192,7 +192,7 @@ class AuditoriaLoteServiceImplTest {
         when(loteProductoService.obtenerEstadoCalidad(2L))
                 .thenReturn(EstadoCalidadLoteResponseDTO.builder().estadoLote("EN_CUARENTENA").build());
         when(noConformidadRepository.findByLote_Id(2L)).thenReturn(List.of());
-        when(retencionLoteService.obtenerRetencionesActivas(2L)).thenReturn(List.of());
+        when(retencionLoteService.obtenerRetencionesPorLote(2L)).thenReturn(List.of());
         when(condicionUsoService.getActivasByLote(2L)).thenReturn(List.of());
         when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(2L)).thenReturn(List.of());
         when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(2L)).thenReturn(List.of(evaluacionFisico));
@@ -238,7 +238,7 @@ class AuditoriaLoteServiceImplTest {
         when(loteProductoService.obtenerEstadoCalidad(3L))
                 .thenReturn(EstadoCalidadLoteResponseDTO.builder().estadoLote("EN_CUARENTENA").build());
         when(noConformidadRepository.findByLote_Id(3L)).thenReturn(List.of());
-        when(retencionLoteService.obtenerRetencionesActivas(3L)).thenReturn(List.of());
+        when(retencionLoteService.obtenerRetencionesPorLote(3L)).thenReturn(List.of());
         when(condicionUsoService.getActivasByLote(3L)).thenReturn(List.of());
         when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(3L)).thenReturn(List.of());
         when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(3L)).thenReturn(List.of(evalQM));
@@ -275,7 +275,7 @@ class AuditoriaLoteServiceImplTest {
                 .fechaRegistro(LocalDateTime.now())
                 .build();
         when(noConformidadRepository.findByLote_Id(4L)).thenReturn(List.of(nc));
-        when(retencionLoteService.obtenerRetencionesActivas(4L)).thenReturn(List.of());
+        when(retencionLoteService.obtenerRetencionesPorLote(4L)).thenReturn(List.of());
         when(condicionUsoService.getActivasByLote(4L)).thenReturn(List.of());
         when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(4L)).thenReturn(List.of());
         when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(4L)).thenReturn(List.of());

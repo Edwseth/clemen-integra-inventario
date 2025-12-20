@@ -4,15 +4,16 @@ import com.willyes.clemenintegra.calidad.dto.RetencionLoteDTO;
 import com.willyes.clemenintegra.calidad.mapper.RetencionLoteMapper;
 import com.willyes.clemenintegra.calidad.model.RetencionLote;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
+import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
+import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
 import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
-import com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -42,6 +43,7 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
     private final InventoryCatalogResolver catalogResolver;
     private final UsuarioRepository usuarioRepository;
     private final RetencionLoteMapper mapper;
+    private final NoConformidadRepository noConformidadRepository;
 
     public Page<RetencionLoteDTO> listar(EstadoRetencion estado, Pageable pageable) {
         Page<RetencionLote> page = (estado != null)
@@ -235,9 +237,36 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
             throw new IllegalArgumentException("Retención requerida");
         }
         RetencionLote retencion = repository.findById(retencionId)
-                .orElseThrow(() -> new NoSuchElementException("Retención no encontrada con ID: " + retencionId));
-        if (retencion.getEstado() == EstadoRetencion.LIBERADO) {
-            return retencion;
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RETENCION_NO_ENCONTRADA,
+                        "Retención no encontrada con ID: " + retencionId));
+        if (retencion.getEstado() != EstadoRetencion.RETENIDO) {
+            throw new CustomBusinessException(ApiErrorCode.RETENCION_NO_ACTIVA,
+                    "La retención no está activa o ya fue levantada.",
+                    java.util.Map.of("retencionId", retencionId,
+                            "estado", retencion.getEstado() != null ? retencion.getEstado().name() : null));
+        }
+
+        if (retencion.getMotivo() == MotivoRetencion.NO_CONFORMIDAD) {
+            List<NoConformidad> noConformidades = new java.util.ArrayList<>();
+            if (retencion.getNoConformidad() != null && retencion.getNoConformidad().getId() != null) {
+                noConformidadRepository.findById(retencion.getNoConformidad().getId())
+                        .ifPresent(noConformidades::add);
+            }
+            if (retencion.getLote() != null && retencion.getLote().getId() != null) {
+                for (NoConformidad nc : noConformidadRepository.findByLote_Id(retencion.getLote().getId())) {
+                    if (noConformidades.stream().noneMatch(existing -> existing.getId().equals(nc.getId()))) {
+                        noConformidades.add(nc);
+                    }
+                }
+            }
+            boolean ncAbierta = noConformidades.stream()
+                    .anyMatch(nc -> nc.getEstado() == EstadoNoConformidad.ABIERTA);
+            if (ncAbierta) {
+                throw new CustomBusinessException(ApiErrorCode.RETENCION_NC_NO_CERRADA,
+                        "No puede levantarse la retención porque la No Conformidad asociada está abierta.",
+                        java.util.Map.of("retencionId", retencionId,
+                                "loteId", retencion.getLote() != null ? retencion.getLote().getId() : null));
+            }
         }
 
         Usuario aprobador = retencion.getAprobadoPor();
@@ -279,6 +308,15 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         return repository.findByLote_IdAndEstado(loteId, EstadoRetencion.RETENIDO);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<RetencionLote> obtenerRetencionesPorLote(Long loteId) {
+        if (loteId == null) {
+            return List.of();
+        }
+        return repository.findByLote_Id(loteId);
+    }
+
     private void sincronizarEstadoRetenido(LoteProducto lote, RetencionLote retencion) {
         if (lote == null || lote.getEstado() == null) {
             return;
@@ -300,13 +338,11 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         if (lote.getEstado() == EstadoLote.RECHAZADO || lote.getEstado() == EstadoLote.VENCIDO) {
             return;
         }
-        boolean requiereAnalisis = AnalisisCalidadHelper.requiereFisico(lote.getProducto())
-                || AnalisisCalidadHelper.requiereQuimico(lote.getProducto())
-                || AnalisisCalidadHelper.requiereMicro(lote.getProducto());
-        lote.setEstado(requiereAnalisis ? EstadoLote.EN_CUARENTENA : EstadoLote.DISPONIBLE);
-        if (requiereAnalisis) {
-            asegurarAlmacenCuarentena(lote);
+        if (lote.getEstado() != EstadoLote.RETENIDO) {
+            return;
         }
+        lote.setEstado(EstadoLote.EN_CUARENTENA);
+        asegurarAlmacenCuarentena(lote);
         loteRepository.save(lote);
     }
 

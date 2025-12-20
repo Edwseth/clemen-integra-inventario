@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.RetencionLoteDTO;
+import com.willyes.clemenintegra.calidad.mapper.RetencionLoteMapper;
+import com.willyes.clemenintegra.calidad.model.RetencionLote;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class RetencionLoteController {
 
     private final RetencionLoteService service;
+    private final RetencionLoteMapper mapper;
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
@@ -63,5 +66,14 @@ public class RetencionLoteController {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
     }
-}
 
+    @PatchMapping("/{id}/levantar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<RetencionLoteDTO> levantarRetencion(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        RetencionLote retencion = service.levantar(id,
+                userDetails != null ? new com.willyes.clemenintegra.shared.model.Usuario(userDetails.getId()) : null);
+        return ResponseEntity.ok(mapper.toDTO(retencion));
+    }
+}

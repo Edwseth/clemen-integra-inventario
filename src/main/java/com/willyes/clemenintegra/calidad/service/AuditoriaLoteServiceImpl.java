@@ -74,11 +74,14 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                         .build())
                 .toList();
 
-        List<AuditoriaLoteResponseDTO.RetencionDTO> retenciones = retencionLoteService.obtenerRetencionesActivas(loteId).stream()
+        List<RetencionLote> retencionesLote = retencionLoteService.obtenerRetencionesPorLote(loteId);
+        List<AuditoriaLoteResponseDTO.RetencionDTO> retenciones = retencionesLote.stream()
                 .map(this::mapRetencion)
                 .toList();
 
-        boolean inconsistenciaRetencion = retenciones.isEmpty()
+        boolean tieneRetencionActiva = retencionesLote.stream()
+                .anyMatch(retencion -> retencion.getEstado() == com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion.RETENIDO);
+        boolean inconsistenciaRetencion = !tieneRetencionActiva
                 && lote.getEstado() == com.willyes.clemenintegra.inventario.model.enums.EstadoLote.RETENIDO;
 
         CondicionUsoResponseDTO condicionUso = condicionUsoService.getActivasByLote(loteId).stream()
@@ -118,7 +121,7 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
         }
 
         String motivoRetencion = null;
-        if (retenciones.isEmpty()
+        if (!tieneRetencionActiva
                 && lote.getEstado() == com.willyes.clemenintegra.inventario.model.enums.EstadoLote.RETENIDO
                 && tieneNoConformidadAsociada) {
             motivoRetencion = "NC";
@@ -187,6 +190,8 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .motivo(retencion.getMotivo())
                 .descripcion(retencion.getCausa())
                 .estado(retencion.getEstado() != null ? retencion.getEstado().name() : null)
+                .inconsistenciaNoConformidad(retencion.getMotivo() == com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion.NO_CONFORMIDAD
+                        && retencion.getNoConformidad() == null)
                 .build();
     }
 
