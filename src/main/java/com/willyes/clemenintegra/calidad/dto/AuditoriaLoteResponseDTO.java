@@ -139,6 +139,7 @@ public class AuditoriaLoteResponseDTO {
         private MotivoRetencion motivo;
         private String descripcion;
         private String estado;
+        private boolean inconsistenciaNoConformidad;
     }
 
     @Data

@@ -15,6 +15,8 @@ public interface RetencionLoteRepository extends JpaRepository<RetencionLote, Lo
 
     List<RetencionLote> findByLote_IdAndEstado(Long loteId, EstadoRetencion estado);
 
+    List<RetencionLote> findByLote_Id(Long loteId);
+
     Optional<RetencionLote> findFirstByLote_IdAndEstadoAndMotivo(Long loteId,
                                                                  EstadoRetencion estado,
                                                                  MotivoRetencion motivo);
