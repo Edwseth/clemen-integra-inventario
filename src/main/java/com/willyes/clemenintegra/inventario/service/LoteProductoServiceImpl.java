@@ -517,19 +517,27 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         validarEvaluacionesExistentes(id);
 
         Long almacenObsoletosId = catalogResolver.getAlmacenObsoletosId();
-        Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
-        if (lote.getAlmacen().getId().equals(almacenObsoletosId) && lote.getEstado() == EstadoLote.RECHAZADO) {
-            boolean movExistente = movimientoInventarioRepository
-                    .existsByTipoMovimientoAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoIdAndClasificacion(
-                            TipoMovimiento.TRANSFERENCIA, lote.getId(), almacenCuarentenaId, almacenObsoletosId, clasificacion);
-            if (movExistente) {
-                return loteProductoMapper.toResponseDTO(lote);
-            }
+        Almacen almacenActual = lote.getAlmacen();
+        if (almacenActual == null || almacenObsoletosId == null) {
+            // LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO aplica solo a inconsistencias de almacén.
+            throw new CustomBusinessException(ApiErrorCode.LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO,
+                    "LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO");
         }
 
-        if (!lote.getAlmacen().getId().equals(almacenCuarentenaId)
-                || (lote.getEstado() != EstadoLote.EN_CUARENTENA && lote.getEstado() != EstadoLote.RETENIDO)) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO");
+        Almacen almacenRechazo = almacenRepo.findById(almacenObsoletosId).orElse(null);
+        if (almacenRechazo == null) {
+            // LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO aplica solo a inconsistencias de almacén.
+            throw new CustomBusinessException(ApiErrorCode.LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO,
+                    "LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO");
+        }
+        if (almacenActual.getId().equals(almacenRechazo.getId())) {
+            // LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO aplica solo a lotes ya en rechazo/obsoletos.
+            throw new CustomBusinessException(ApiErrorCode.LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO,
+                    "LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO");
+        }
+
+        if (lote.getEstado() != EstadoLote.EN_CUARENTENA && lote.getEstado() != EstadoLote.RETENIDO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_EN_CUARENTENA");
         }
         if (lote.getStockReservado() != null && lote.getStockReservado().compareTo(BigDecimal.ZERO) > 0) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_CON_RESERVAS");
@@ -538,9 +546,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_SIN_STOCK");
         }
 
-        Almacen origen = lote.getAlmacen();
-        Almacen destino = almacenRepo.findById(almacenObsoletosId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_OBSOLETOS_INEXISTENTE"));
+        Almacen origen = almacenActual;
+        Almacen destino = almacenRechazo;
         BigDecimal cantidad = lote.getStockLote();
         Producto producto = lote.getProducto();
 
