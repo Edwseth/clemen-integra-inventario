@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 public enum ApiErrorCode {
 
     BLOQUEO_RETENCION_NC(HttpStatus.CONFLICT),
+    BLOQUEO_NC_ACTIVA(HttpStatus.CONFLICT),
+    BLOQUEO_CONDICION_USO(HttpStatus.CONFLICT),
     BLOQUEO_ESTADO_CUARENTENA(HttpStatus.CONFLICT),
     CALIDAD_LOTE_NO_LIBERADO(HttpStatus.UNPROCESSABLE_ENTITY),
     NC_ABIERTA(HttpStatus.CONFLICT),

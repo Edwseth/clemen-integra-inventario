@@ -153,6 +153,7 @@ class AuditoriaLoteServiceImplTest {
         assertThat(dto.getIncidentes()).hasSize(1);
         assertThat(dto.getIncidentes().get(0).isTieneCapa()).isTrue();
         assertThat(dto.getRetenciones()).hasSize(1);
+        assertThat(dto.isInconsistenciaRetencion()).isFalse();
         assertThat(dto.getMovimientos()).hasSize(1);
         assertThat(dto.getMovimientos().get(0).getFecha()).isEqualTo(mov.getFechaIngreso());
         assertThat(dto.getEvaluaciones()).hasSize(1);
@@ -284,6 +285,7 @@ class AuditoriaLoteServiceImplTest {
         assertThat(dto.getEstadoLote()).isEqualTo("RETENIDO");
         assertThat(dto.getEstadoCalidad().getEstadoLote()).isEqualTo("RETENIDO");
         assertThat(dto.getEstadoCalidad().isTieneRetencionActiva()).isFalse();
+        assertThat(dto.isInconsistenciaRetencion()).isTrue();
         assertThat(dto.getMotivoRetencion()).isEqualTo("NC");
         assertThat(dto.isTieneNoConformidadAsociada()).isTrue();
         assertThat(dto.isTieneNoConformidadActiva()).isTrue();

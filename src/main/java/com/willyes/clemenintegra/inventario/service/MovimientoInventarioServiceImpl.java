@@ -1584,14 +1584,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                             Almacen destino, Usuario usuario, BigDecimal cantidad,
                                             MotivoMovimiento motivoMovimiento) {
         if (dto.loteProductoId() != null) {
-            LoteProducto existente = loteProductoRepository.findById(dto.loteProductoId())
-                    .orElseThrow(() -> {
-                        log.warn(
-                                "crearLoteRecepcion: lote no encontrado loteId={} productoId={} destinoId={} cantidad={}",
-                                dto.loteProductoId(), producto.getId(),
-                                destino != null ? destino.getId() : null, cantidad);
-                        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
-                    });
+            Optional<LoteProducto> existenteOpt = loteProductoRepository.findById(dto.loteProductoId());
+            if (existenteOpt.isEmpty()) {
+                log.warn(
+                        "crearLoteRecepcion: lote no encontrado loteId={} productoId={} destinoId={} cantidad={}",
+                        dto.loteProductoId(), producto.getId(),
+                        destino != null ? destino.getId() : null, cantidad);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
+            }
+            LoteProducto existente = existenteOpt.get();
             BigDecimal nuevo = Optional.ofNullable(existente.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
             existente.setStockLote(nuevo);
             existente.setAlmacen(destino);
@@ -1610,6 +1611,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         validarFechaVencimientoRecepcion(dto.fechaVencimiento());
 
         boolean requiereAnalisis = requiereFisico(producto) || requiereQuimico(producto) || requiereMicro(producto);
+        if (requiereAnalisis) {
+            // Regla de negocio: un lote con análisis requerido no puede ingresar a almacenes operativos.
+            Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+            if (cuarentenaId == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_CUARENTENA_NO_CONFIGURADO");
+            }
+            destino = almacenRepository.findById(cuarentenaId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_CUARENTENA_INEXISTENTE"));
+        }
 
         LoteProducto lote = LoteProducto.builder()
                 .codigoLote(dto.codigoLote())

@@ -32,7 +32,7 @@ public class RetencionLote {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "motivo", nullable = false,
-            columnDefinition = "ENUM('NO_CONFORMIDAD','OTRO')")
+            columnDefinition = "ENUM('NO_CONFORMIDAD','REEVALUACION','OTRO')")
     private MotivoRetencion motivo;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -55,4 +55,3 @@ public class RetencionLote {
             foreignKey = @ForeignKey(name = "fk_retencion_usuario"))
     private Usuario aprobadoPor;
 }
-

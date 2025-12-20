@@ -30,12 +30,21 @@ public interface RetencionLoteService {
                           NoConformidad noConformidad,
                           Usuario usuario);
 
+    RetencionLote retenerLote(Long loteId,
+                              MotivoRetencion motivo,
+                              String descripcion,
+                              NoConformidad noConformidad,
+                              Usuario usuario,
+                              boolean moverACuarentena);
+
     RetencionLote asegurarRetencionNoConformidad(LoteProducto lote,
                                                   String descripcion,
                                                   NoConformidad noConformidad,
                                                   Usuario usuario);
 
     RetencionLote levantar(Long retencionId, Usuario usuario);
+
+    RetencionLote levantarRetencion(Long retencionId, Usuario usuario);
 
     Optional<RetencionLote> obtenerActivaPorLote(Long loteId);
 

@@ -78,6 +78,9 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .map(this::mapRetencion)
                 .toList();
 
+        boolean inconsistenciaRetencion = retenciones.isEmpty()
+                && lote.getEstado() == com.willyes.clemenintegra.inventario.model.enums.EstadoLote.RETENIDO;
+
         CondicionUsoResponseDTO condicionUso = condicionUsoService.getActivasByLote(loteId).stream()
                 .findFirst()
                 .orElse(null);
@@ -164,6 +167,7 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
                 .evaluaciones(evaluaciones)
                 .incidentes(incidentes)
                 .retenciones(retenciones)
+                .inconsistenciaRetencion(inconsistenciaRetencion)
                 .tieneNoConformidadAsociada(tieneNoConformidadAsociada)
                 .tieneNoConformidadActiva(tieneNoConformidadActiva)
                 .codigoNoConformidadPrincipal(noConformidadPrincipal.map(NoConformidad::getCodigo).orElse(null))
