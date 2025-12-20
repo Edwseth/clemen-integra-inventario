@@ -29,6 +29,8 @@ import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepos
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -63,6 +65,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -299,6 +302,92 @@ class LoteProductoServiceImplTest {
     }
 
     @Test
+    @DisplayName("Rechazar lote desde almacén normal mueve a rechazo y registra movimiento")
+    void rechazarLote_debeRechazarDesdeAlmacenNormal() {
+        Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        LoteProducto lote = loteEnCuarentena(90L, producto, 5, new BigDecimal("10"));
+        lote.setStockReservado(BigDecimal.ZERO);
+
+        MotivoMovimiento motivo = mockMotivoRechazo(21L);
+        TipoMovimientoDetalle tipoDetalle = mockTipoDetalleTransferencia(22L);
+
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(jefeCalidad);
+        when(loteProductoRepository.findByIdForUpdate(90L)).thenReturn(Optional.of(lote));
+        when(evaluacionRepository.findByLoteProductoId(90L)).thenReturn(evaluacionesConforme());
+        when(catalogResolver.getAlmacenObsoletosId()).thenReturn(99L);
+        when(almacenRepo.findById(99L)).thenReturn(Optional.of(almacenConId(99)));
+        when(loteProductoMapper.toResponseDTO(any())).thenReturn(LoteProductoResponseDTO.builder()
+                .estado(EstadoLote.RECHAZADO)
+                .build());
+
+        service.rechazarLote(90L);
+
+        assertThat(lote.getEstado()).isEqualTo(EstadoLote.RECHAZADO);
+        assertThat(lote.getAlmacen().getId()).isEqualTo(99);
+
+        ArgumentCaptor<com.willyes.clemenintegra.inventario.model.MovimientoInventario> movCaptor =
+                ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.model.MovimientoInventario.class);
+        verify(movimientoInventarioRepository).save(movCaptor.capture());
+        assertThat(movCaptor.getValue().getAlmacenOrigen().getId()).isEqualTo(5);
+        assertThat(movCaptor.getValue().getAlmacenDestino().getId()).isEqualTo(99);
+        assertThat(movCaptor.getValue().getMotivoMovimiento()).isSameAs(motivo);
+        assertThat(movCaptor.getValue().getTipoMovimientoDetalle()).isSameAs(tipoDetalle);
+        assertThat(movCaptor.getValue().getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.RECHAZO_CALIDAD);
+    }
+
+    @Test
+    @DisplayName("Rechazar lote falla si ya está en almacén de rechazo")
+    void rechazarLote_debeFallarSiYaEstaEnAlmacenRechazo() {
+        Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        LoteProducto lote = loteEnCuarentena(91L, producto, 99, new BigDecimal("5"));
+        lote.setStockReservado(BigDecimal.ZERO);
+
+        mockMotivoRechazo(21L);
+        mockTipoDetalleTransferencia(22L);
+
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(jefeCalidad);
+        when(loteProductoRepository.findByIdForUpdate(91L)).thenReturn(Optional.of(lote));
+        when(evaluacionRepository.findByLoteProductoId(91L)).thenReturn(evaluacionesConforme());
+        when(catalogResolver.getAlmacenObsoletosId()).thenReturn(99L);
+        when(almacenRepo.findById(99L)).thenReturn(Optional.of(almacenConId(99)));
+
+        CustomBusinessException ex = assertThrows(CustomBusinessException.class,
+                () -> service.rechazarLote(91L));
+
+        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO);
+    }
+
+    @Test
+    @DisplayName("Rechazar lote falla si no tiene almacén asociado")
+    void rechazarLote_debeFallarSiAlmacenNull() {
+        Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
+        Producto producto = productoConCategoria(TipoCategoria.PRODUCTO_TERMINADO);
+        LoteProducto lote = LoteProducto.builder()
+                .id(92L)
+                .producto(producto)
+                .almacen(null)
+                .estado(EstadoLote.EN_CUARENTENA)
+                .stockLote(new BigDecimal("5"))
+                .stockReservado(BigDecimal.ZERO)
+                .build();
+
+        mockMotivoRechazo(21L);
+        mockTipoDetalleTransferencia(22L);
+
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(jefeCalidad);
+        when(loteProductoRepository.findByIdForUpdate(92L)).thenReturn(Optional.of(lote));
+        when(evaluacionRepository.findByLoteProductoId(92L)).thenReturn(evaluacionesConforme());
+        when(catalogResolver.getAlmacenObsoletosId()).thenReturn(99L);
+
+        CustomBusinessException ex = assertThrows(CustomBusinessException.class,
+                () -> service.rechazarLote(92L));
+
+        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO);
+    }
+
+    @Test
     @DisplayName("Reabrir lote crea retención de reevaluación y mantiene trazabilidad")
     void reabrirLoteCreaRetencionReevaluacion() {
         Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
@@ -473,6 +562,23 @@ class LoteProductoServiceImplTest {
         tipoDetalle.setId(tipoDetalleId);
         when(catalogResolver.getTipoDetalleTransferenciaId()).thenReturn(tipoDetalleId);
         when(tipoMovimientoDetalleRepository.findById(tipoDetalleId)).thenReturn(Optional.of(tipoDetalle));
+    }
+
+    private MotivoMovimiento mockMotivoRechazo(Long motivoId) {
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(motivoId);
+        motivo.setMotivo(ClasificacionMovimientoInventario.RECHAZO_CALIDAD);
+        when(catalogResolver.getMotivoIdAjusteRechazo()).thenReturn(motivoId);
+        when(motivoMovimientoRepository.findById(motivoId)).thenReturn(Optional.of(motivo));
+        return motivo;
+    }
+
+    private TipoMovimientoDetalle mockTipoDetalleTransferencia(Long tipoDetalleId) {
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(tipoDetalleId);
+        when(catalogResolver.getTipoDetalleTransferenciaId()).thenReturn(tipoDetalleId);
+        when(tipoMovimientoDetalleRepository.findById(tipoDetalleId)).thenReturn(Optional.of(tipoDetalle));
+        return tipoDetalle;
     }
 
     private List<EvaluacionCalidad> evaluacionesConforme() {
