@@ -14,6 +14,8 @@ public interface DocumentoVersionRepository extends JpaRepository<DocumentoVersi
 
     Optional<DocumentoVersion> findFirstByDocumentoIdAndVigenteTrue(Long documentoId);
 
+    Optional<DocumentoVersion> findTopByDocumentoIdOrderByNumeroVersionDesc(Long documentoId);
+
     @Query("select max(v.numeroVersion) from DocumentoVersion v where v.documento.id = :documentoId")
     Optional<Integer> findMaxNumeroVersionByDocumentoId(@Param("documentoId") Long documentoId);
 }

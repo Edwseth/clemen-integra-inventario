@@ -27,6 +27,7 @@ public final class DocumentoMapper {
                 .creadoPorNombre(nombreUsuario(documento.getCreadoPor()))
                 .numeroVersionVigente(versionVigente != null ? versionVigente.getNumeroVersion() : null)
                 .fechaEmisionVersionVigente(versionVigente != null ? versionVigente.getFechaEmision() : null)
+                .versionVigenteId(versionVigente != null ? versionVigente.getId() : null)
                 .build();
     }
 

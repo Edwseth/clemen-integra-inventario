@@ -120,4 +120,41 @@ class ControlDocumentalServiceTest {
         assertThat(existente.isVigente()).isFalse();
         assertThat(versionDos.isVigente()).isTrue();
     }
+
+    @Test
+    void detalleDocumentoIncluyeVersionVigente() {
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .nombreUsuario("jperez")
+                .nombreCompleto("Juan Perez")
+                .build();
+
+        Documento documento = Documento.builder()
+                .id(1L)
+                .codigo("DOC-001")
+                .nombre("Procedimiento limpieza")
+                .tipo(TipoDocumento.PROCEDIMIENTO)
+                .area(AreaDocumento.CALIDAD)
+                .estado(EstadoDocumento.VIGENTE)
+                .creadoPor(usuario)
+                .build();
+
+        DocumentoVersion version = DocumentoVersion.builder()
+                .id(5L)
+                .documento(documento)
+                .numeroVersion(2)
+                .fechaEmision(LocalDateTime.now())
+                .vigente(true)
+                .build();
+
+        when(documentoRepository.findById(1L)).thenReturn(Optional.of(documento));
+        when(versionRepository.findTopByDocumentoIdOrderByNumeroVersionDesc(1L))
+                .thenReturn(Optional.of(version));
+        when(versionRepository.findByDocumentoIdOrderByNumeroVersionDesc(1L)).thenReturn(List.of(version));
+
+        var detalle = service.obtenerDetalleDocumento(1L);
+
+        assertThat(detalle.getDocumento().getNumeroVersionVigente()).isEqualTo(2);
+        assertThat(detalle.getDocumento().getVersionVigenteId()).isEqualTo(5L);
+    }
 }
