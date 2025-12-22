@@ -83,7 +83,7 @@ public class ControlDocumentalServiceImpl implements ControlDocumentalService {
 
         return documentos.map(documento -> {
             DocumentoVersion vigente = versionRepository
-                    .findFirstByDocumentoIdAndVigenteTrue(documento.getId())
+                    .findTopByDocumentoIdOrderByNumeroVersionDesc(documento.getId())
                     .orElse(null);
             return DocumentoMapper.toDTO(documento, vigente);
         });
@@ -133,7 +133,8 @@ public class ControlDocumentalServiceImpl implements ControlDocumentalService {
                         "Documento no encontrado.",
                         Map.of("documentoId", documentoId)));
 
-        DocumentoVersion vigente = versionRepository.findFirstByDocumentoIdAndVigenteTrue(documentoId).orElse(null);
+        DocumentoVersion vigente = versionRepository.findTopByDocumentoIdOrderByNumeroVersionDesc(documentoId)
+                .orElse(null);
 
         List<DocumentoVersionDTO> versiones = versionRepository.findByDocumentoIdOrderByNumeroVersionDesc(documentoId)
                 .stream()

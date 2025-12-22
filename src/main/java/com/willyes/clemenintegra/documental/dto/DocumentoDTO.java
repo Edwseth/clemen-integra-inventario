@@ -23,4 +23,5 @@ public class DocumentoDTO {
     private String creadoPorNombre;
     private Integer numeroVersionVigente;
     private LocalDateTime fechaEmisionVersionVigente;
+    private Long versionVigenteId;
 }
