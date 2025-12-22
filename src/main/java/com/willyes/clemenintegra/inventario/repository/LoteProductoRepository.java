@@ -45,6 +45,17 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
          FROM LoteProducto lp
          JOIN FETCH lp.producto p
          JOIN FETCH lp.almacen a
+        WHERE lp.fechaVencimiento BETWEEN :inicio AND :fin
+          AND lp.estado IN :estados
+    """)
+    List<LoteProducto> findAlertasProximasVencer(@Param("inicio") LocalDateTime inicio,
+                                                 @Param("fin") LocalDateTime fin,
+                                                 @Param("estados") Collection<EstadoLote> estados);
+    @Query("""
+       SELECT lp
+         FROM LoteProducto lp
+         JOIN FETCH lp.producto p
+         JOIN FETCH lp.almacen a
         WHERE lp.fechaVencimiento < :corte
           AND (:productoId IS NULL OR p.id = :productoId)
           AND (:almacenId  IS NULL OR a.id = :almacenId)
@@ -52,8 +63,26 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     List<LoteProducto> findVencidosFetch(@Param("corte") LocalDateTime corte,
                                          @Param("productoId") Long productoId,
                                          @Param("almacenId") Long almacenId);
+    @Query("""
+       SELECT lp
+         FROM LoteProducto lp
+         JOIN FETCH lp.producto p
+         JOIN FETCH lp.almacen a
+        WHERE lp.fechaVencimiento < :corte
+          AND lp.estado IN :estados
+    """)
+    List<LoteProducto> findAlertasVencidos(@Param("corte") LocalDateTime corte,
+                                           @Param("estados") Collection<EstadoLote> estados);
     Optional<LoteProducto> findByCodigoLoteAndProductoIdAndAlmacenId(String codigoLote, Integer productoId, Integer almacenId);
     List<LoteProducto> findByEstadoIn(List<EstadoLote> estados);
+    @Query("""
+       SELECT lp
+         FROM LoteProducto lp
+         JOIN FETCH lp.producto p
+         JOIN FETCH lp.almacen a
+        WHERE lp.estado IN :estados
+    """)
+    List<LoteProducto> findAlertasPendientesLiberar(@Param("estados") Collection<EstadoLote> estados);
     List<LoteProducto> findByEstadoInAndProducto_TipoAnalisisIn(List<EstadoLote> estados, List<TipoAnalisisCalidad> tipos);
     List<LoteProducto> findByFechaVencimientoBeforeAndEstadoNotIn(LocalDateTime fecha,
                                                                   List<EstadoLote> estados);
