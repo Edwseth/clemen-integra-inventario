@@ -81,7 +81,7 @@ public interface ProductoMapper {
         }
         return switch (valor) {
             case FISICO -> "FISICO_QUIMICO";
-            case QUIMICO_MICROBIOLOGICO -> "MICROBIOLOGICO";
+            case QUIMICO_MICROBIOLOGICO -> "AMBOS";
             default -> valor.name();
         };
     }
@@ -135,5 +135,4 @@ public interface ProductoMapper {
     }
 
 }
-
 

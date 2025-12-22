@@ -192,4 +192,31 @@ class EspecificacionesCalidadServiceImplTest {
         assertThat(captor.getValue()).hasSize(1);
         verify(productoRepository).save(producto);
     }
+
+    @Test
+    void debeListarPlantillaLegacyCuandoNoHayPlantillasPorProducto() {
+        Producto producto = Producto.builder()
+                .id(5)
+                .codigoSku("MP0126")
+                .nombre("CHONTADURO")
+                .build();
+
+        PlantillaAnalisisMicrobiologico legacy = PlantillaAnalisisMicrobiologico.builder()
+                .id(500L)
+                .producto(producto)
+                .nombre("Plantilla legacy")
+                .version(1)
+                .vigente(true)
+                .build();
+        producto.setPlantillaAnalisisMicrobiologico(legacy);
+
+        when(plantillaRepository.findByProducto_IdOrderByVersionDesc(5L)).thenReturn(List.of());
+        when(productoRepository.findById(5L)).thenReturn(Optional.of(producto));
+
+        var resultado = service.listarPlantillasMicroPorProducto(5L);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getId()).isEqualTo(500L);
+        assertThat(resultado.get(0).getCodigoSku()).isEqualTo("MP0126");
+    }
 }
