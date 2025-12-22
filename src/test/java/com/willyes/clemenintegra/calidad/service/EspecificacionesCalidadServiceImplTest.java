@@ -28,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -218,5 +219,60 @@ class EspecificacionesCalidadServiceImplTest {
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).getId()).isEqualTo(500L);
         assertThat(resultado.get(0).getCodigoSku()).isEqualTo("MP0126");
+    }
+
+    @Test
+    void debeMapearNumeroVersionVigenteYParametrosEnResumenMicro() {
+        PlantillaAnalisisMicrobiologico plantilla = PlantillaAnalisisMicrobiologico.builder()
+                .id(600L)
+                .nombre("Micro MP")
+                .version(2)
+                .vigente(true)
+                .parametros(IntStream.rangeClosed(1, 10)
+                        .mapToObj(i -> ParametroAnalisisMicrobiologico.builder()
+                                .id((long) i)
+                                .nombreEnsayo("Parametro " + i)
+                                .tipoResultado(TipoResultadoAnalisis.NUMERICO)
+                                .orden(i)
+                                .build())
+                        .toList())
+                .build();
+
+        when(plantillaRepository.findByProducto_IdOrderByVersionDesc(6L)).thenReturn(List.of(plantilla));
+
+        var resultado = service.listarPlantillasMicroPorProducto(6L);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getNumeroVersion()).isEqualTo(2);
+        assertThat(resultado.get(0).isVigente()).isTrue();
+        assertThat(resultado.get(0).getNumeroParametros()).isEqualTo(10);
+    }
+
+    @Test
+    void debeIncluirMetodoEnDetalleDeParametrosMicro() {
+        ParametroAnalisisMicrobiologico parametro = ParametroAnalisisMicrobiologico.builder()
+                .id(701L)
+                .nombreEnsayo("Mesofilos")
+                .metodo("ISO 4833-1:2013 / USP <61>")
+                .unidad("UFC/g")
+                .especificacion("<100")
+                .tipoResultado(TipoResultadoAnalisis.NUMERICO)
+                .orden(1)
+                .build();
+        PlantillaAnalisisMicrobiologico plantilla = PlantillaAnalisisMicrobiologico.builder()
+                .id(700L)
+                .nombre("Plantilla micro detalle")
+                .parametros(List.of(parametro))
+                .build();
+
+        when(plantillaRepository.findById(700L)).thenReturn(Optional.of(plantilla));
+
+        var detalle = service.obtenerDetallePlantillaMicro(700L);
+
+        assertThat(detalle.getParametros()).hasSize(1);
+        assertThat(detalle.getParametros().get(0).getNombreParametro()).isEqualTo("Mesofilos");
+        assertThat(detalle.getParametros().get(0).getMetodo()).isEqualTo("ISO 4833-1:2013 / USP <61>");
+        assertThat(detalle.getParametros().get(0).getCriterioAceptacion()).isEqualTo("<100");
+        assertThat(detalle.getParametros().get(0).getTipoResultado()).isEqualTo(TipoResultadoAnalisis.NUMERICO);
     }
 }

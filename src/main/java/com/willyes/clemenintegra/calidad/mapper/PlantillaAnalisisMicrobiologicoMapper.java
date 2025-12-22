@@ -19,6 +19,7 @@ public interface PlantillaAnalisisMicrobiologicoMapper {
     @Mapping(target = "codigoSku", source = "producto", qualifiedByName = "mapProductoCodigo")
     @Mapping(target = "nombreProducto", source = "producto", qualifiedByName = "mapProductoNombre")
     @Mapping(target = "numeroVersion", source = "version")
+    @Mapping(target = "numeroParametros", expression = "java(entity.getParametros() != null ? entity.getParametros().size() : 0)")
     @Mapping(target = "creadoPorNombre", source = "creadoPor", qualifiedByName = "mapNombreUsuario")
     @Mapping(target = "fechaCreacion", source = "createdAt")
     PlantillaAnalisisMicrobiologicoResumenDTO toResumenDTO(PlantillaAnalisisMicrobiologico entity);
@@ -32,6 +33,7 @@ public interface PlantillaAnalisisMicrobiologicoMapper {
     PlantillaAnalisisMicrobiologicoDetalleDTO toDetalleDTO(PlantillaAnalisisMicrobiologico entity);
 
     @Mapping(target = "nombreParametro", source = "nombreEnsayo")
+    @Mapping(target = "metodo", source = "metodo")
     @Mapping(target = "criterioAceptacion", source = "especificacion")
     @Mapping(target = "orden", source = "orden")
     ParametroAnalisisMicrobiologicoDTO toParametroDTO(ParametroAnalisisMicrobiologico parametro);

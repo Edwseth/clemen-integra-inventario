@@ -10,6 +10,7 @@ import lombok.*;
 public class ParametroAnalisisMicrobiologicoDTO {
     private Long id;
     private String nombreParametro;
+    private String metodo;
     private String unidad;
     private String criterioAceptacion;
     private TipoResultadoAnalisis tipoResultado;
