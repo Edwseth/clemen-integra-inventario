@@ -21,4 +21,5 @@ public class PlantillaAnalisisMicrobiologicoResumenDTO {
     private LocalDate fechaVigenciaHasta;
     private String creadoPorNombre;
     private LocalDateTime fechaCreacion;
+    private Integer numeroParametros;
 }
