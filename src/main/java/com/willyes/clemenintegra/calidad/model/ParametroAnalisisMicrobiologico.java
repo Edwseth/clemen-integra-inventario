@@ -4,6 +4,10 @@ import com.willyes.clemenintegra.calidad.model.enums.TipoResultadoAnalisis;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Parámetro microbiológico perteneciente a una plantilla. Contiene criterios de aceptación
+ * (campo especificación) y el tipo de resultado esperado.
+ */
 @Entity
 @Table(name = "parametros_analisis_micro")
 @Data
@@ -42,4 +46,3 @@ public class ParametroAnalisisMicrobiologico {
     private Integer orden;
 
 }
-

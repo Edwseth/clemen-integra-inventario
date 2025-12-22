@@ -1,8 +1,17 @@
 package com.willyes.clemenintegra.calidad.repository;
 
 import com.willyes.clemenintegra.calidad.model.PlantillaAnalisisMicrobiologico;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface PlantillaAnalisisMicrobiologicoRepository extends JpaRepository<PlantillaAnalisisMicrobiologico, Long> {
-}
+import java.util.List;
+import java.util.Optional;
 
+public interface PlantillaAnalisisMicrobiologicoRepository extends JpaRepository<PlantillaAnalisisMicrobiologico, Long> {
+    List<PlantillaAnalisisMicrobiologico> findByProducto_IdOrderByVersionDesc(Long productoId);
+
+    Optional<PlantillaAnalisisMicrobiologico> findTopByProducto_IdOrderByVersionDesc(Long productoId);
+
+    @EntityGraph(attributePaths = "parametros")
+    Optional<PlantillaAnalisisMicrobiologico> findById(Long id);
+}

@@ -5,6 +5,10 @@ import lombok.*;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+/**
+ * Resultado de un parámetro microbiológico evaluado dentro de una {@link EvaluacionCalidad}.
+ * Se apoya en parámetros definidos en {@link ParametroAnalisisMicrobiologico}.
+ */
 @Entity
 @Table(name = "resultados_analisis_micro")
 @Data
@@ -37,4 +41,3 @@ public class ResultadoAnalisisMicrobiologico {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 }
-

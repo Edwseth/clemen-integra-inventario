@@ -9,6 +9,11 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * Evaluación de calidad asociada a un lote de producto (LoteProducto) y, por extensión,
+ * al Producto del inventario. Aquí se registran resultados globales y se vinculan
+ * análisis microbiológicos vía {@link ResultadoAnalisisMicrobiologico}.
+ */
 @Entity
 @Table(name = "evaluaciones_calidad")
 @Data
