@@ -6,6 +6,10 @@ import lombok.*;
 
 import java.math.BigDecimal;
 
+/**
+ * Especificación de calidad legacy asociada a un producto. Existe como antecedente de
+ * parametrizaciones y se mantiene para compatibilidad.
+ */
 @Entity
 @Table(name = "especificaciones_calidad")
 @Data
@@ -38,4 +42,3 @@ public class EspecificacionCalidad {
             foreignKey = @ForeignKey(name = "fk_espec_calidad_producto"))
     private Producto producto;
 }
-

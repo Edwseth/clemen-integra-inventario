@@ -13,6 +13,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Lote de producto almacenado. Las evaluaciones de calidad se vinculan a este lote
+ * y, a través de él, al {@link Producto} correspondiente.
+ */
 @Entity
 @Table(name = "lotes_productos", uniqueConstraints = {
         @UniqueConstraint(
@@ -155,4 +159,3 @@ public class LoteProducto {
         }
     }
 }
-
