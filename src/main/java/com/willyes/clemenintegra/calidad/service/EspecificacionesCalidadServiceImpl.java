@@ -116,11 +116,20 @@ public class EspecificacionesCalidadServiceImpl implements EspecificacionesCalid
     @Transactional(readOnly = true)
     @Override
     public List<PlantillaAnalisisMicrobiologicoResumenDTO> listarPlantillasMicroPorProducto(Long productoId) {
-        obtenerProducto(productoId);
-        return plantillaRepository.findByProducto_IdOrderByVersionDesc(productoId)
-                .stream()
-                .map(plantillaMapper::toResumenDTO)
-                .toList();
+        List<PlantillaAnalisisMicrobiologico> plantillas = plantillaRepository
+                .findByProducto_IdOrderByVersionDesc(productoId);
+        if (!plantillas.isEmpty()) {
+            return plantillas.stream()
+                    .map(plantillaMapper::toResumenDTO)
+                    .toList();
+        }
+        // Fallback legacy: si no hay plantillas por producto_id, usar la plantilla asociada al producto.
+        Producto producto = obtenerProducto(productoId);
+        PlantillaAnalisisMicrobiologico plantillaLegacy = producto.getPlantillaAnalisisMicrobiologico();
+        if (plantillaLegacy == null) {
+            return List.of();
+        }
+        return List.of(plantillaMapper.toResumenDTO(plantillaLegacy));
     }
 
     @Transactional(readOnly = true)
