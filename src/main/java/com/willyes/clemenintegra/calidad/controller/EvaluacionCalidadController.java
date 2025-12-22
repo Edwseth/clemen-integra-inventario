@@ -166,13 +166,14 @@ public class EvaluacionCalidadController {
 
     @GetMapping(path = "/{evaluacionId}/micro/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // Reporte: PDF de análisis microbiológico asociado a una evaluación de calidad.
     public ResponseEntity<byte[]> descargarPdfMicro(@PathVariable Long evaluacionId) {
         byte[] pdf = resultadoAnalisisMicroService.obtenerPdfMicro(evaluacionId);
-        String nombreArchivo = "MICRO_" + evaluacionId + ".pdf";
+        String nombreArchivo = "analisis-micro-" + evaluacionId + ".pdf";
         try {
             EvaluacionCalidadResponseDTO dto = service.obtenerPorId(evaluacionId);
             if (dto != null && dto.getNombreLote() != null) {
-                nombreArchivo = "MICRO_" + dto.getNombreLote() + ".pdf";
+                nombreArchivo = "analisis-micro-" + dto.getNombreLote() + ".pdf";
             }
         } catch (Exception ignored) {
             // Se mantiene el nombre por defecto si no se puede resolver el lote
@@ -180,7 +181,7 @@ public class EvaluacionCalidadController {
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + nombreArchivo)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
                 .body(pdf);
     }
 
