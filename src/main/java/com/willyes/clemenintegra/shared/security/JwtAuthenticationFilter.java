@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.shared.security;
 
+import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
+import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
 
 import jakarta.servlet.FilterChain;
@@ -7,6 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -22,7 +25,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtAuthenticationProvider jwtAuthenticationProvider; // ✅ usar provider
+    private final AuthenticationManager authenticationManager;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -46,10 +49,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             final String token = authHeader.substring(7);
             try {
                 Authentication authRequest = new JwtAuthenticationToken(token);
-                Authentication authResult  = jwtAuthenticationProvider.authenticate(authRequest);
+                Authentication authResult  = authenticationManager.authenticate(authRequest);
                 SecurityContextHolder.getContext().setAuthentication(authResult);
                 log.debug("Usuario {} autenticado en {}", authResult.getName(), uri);
                 log.debug("Authorities asignadas: {}", authResult.getAuthorities());
+            } catch (SesionInvalidadaException | SesionInactivaException ex) {
+                log.warn("Sesión rechazada [{}] en {} {}: {}",
+                        ex.getClass().getSimpleName(), request.getMethod(), uri,
+                        (ex.getMessage() != null ? ex.getMessage() : "sin mensaje"));
+                SecurityContextHolder.clearContext();
+                throw ex;
             } catch (org.springframework.security.core.AuthenticationException ex) {
                 log.warn("Auth failed [{}] en {} {}: {}",
                         ex.getClass().getSimpleName(), request.getMethod(), uri,
@@ -73,6 +82,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
-
-
 
