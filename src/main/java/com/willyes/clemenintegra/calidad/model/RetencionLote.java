@@ -32,7 +32,7 @@ public class RetencionLote {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "motivo", nullable = false,
-            columnDefinition = "ENUM('NO_CONFORMIDAD','REEVALUACION','OTRO')")
+            columnDefinition = "ENUM('RETENCION_CALIDAD','NO_CONFORMIDAD','NC_DOCUMENTAL','OTRO','REEVALUACION')")
     private MotivoRetencion motivo;
 
     @ManyToOne(fetch = FetchType.LAZY)
