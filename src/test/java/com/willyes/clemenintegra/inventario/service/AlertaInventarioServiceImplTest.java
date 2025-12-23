@@ -4,7 +4,11 @@ import com.willyes.clemenintegra.inventario.dto.AlertaInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.AlertaInventarioSeveridad;
 import com.willyes.clemenintegra.inventario.dto.AlertaInventarioTipo;
 import com.willyes.clemenintegra.inventario.dto.LoteAlertaActivaProjection;
+import com.willyes.clemenintegra.inventario.dto.LoteEstadoProlongadoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.StockAlertaProjection;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -159,6 +163,28 @@ class AlertaInventarioServiceImplTest {
                 .filteredOn(a -> a.getTipo() == AlertaInventarioTipo.LOTE_VENCIDO)
                 .singleElement()
                 .satisfies(alerta -> assertThat(alerta.getStockActual()).isEqualByComparingTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    @DisplayName("Incluye estadoCalidadResumen en lotes retenidos o en cuarentena prolongados")
+    void lotesRetenidosProlongadosIncluyenEstadoCalidadResumen() {
+        Producto producto = new Producto();
+        producto.setId(10);
+        producto.setNombre("Producto A");
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(501L);
+        lote.setCodigoLote("L-RET");
+        lote.setProducto(producto);
+        lote.setEstado(EstadoLote.RETENIDO);
+        lote.setFechaFabricacion(LocalDateTime.parse("2025-01-01T00:00:00"));
+
+        when(loteProductoRepository.findAll()).thenReturn(List.of(lote));
+
+        List<LoteEstadoProlongadoResponseDTO> resultado = service.obtenerLotesRetenidosOCuarentenaProlongados();
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getEstadoCalidadResumen()).isEqualTo(EstadoLote.RETENIDO.name());
     }
 
     private record StockRow(Long productoId, String nombreProducto, String codigoSku, Long almacenId, String nombreAlmacen,

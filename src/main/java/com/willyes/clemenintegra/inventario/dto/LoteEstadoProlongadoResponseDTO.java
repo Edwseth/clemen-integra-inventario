@@ -12,8 +12,8 @@ public class LoteEstadoProlongadoResponseDTO {
     private Long loteId;
     private String codigoLote;
     private String estado;
+    private String estadoCalidadResumen;
     private LocalDateTime fechaFabricacion;
     private int diasEnEstado;
     private String nombreProducto;
 }
-

@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.shared.security;
 
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
+import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.model.UsuarioPrincipal;
 import org.springframework.context.annotation.Bean;
@@ -34,6 +35,7 @@ public class SecurityConfig {
 
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RequestTimingFilter requestTimingFilter;
 
     // Orígenes permitidos por perfil (lista separada por comas)
     @Value("${app.cors.allowed-origins:}")
@@ -260,7 +262,8 @@ public class SecurityConfig {
                                 }
                 ))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(requestTimingFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

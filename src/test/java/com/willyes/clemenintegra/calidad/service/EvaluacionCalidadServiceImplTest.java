@@ -224,6 +224,7 @@ class EvaluacionCalidadServiceImplTest {
         assertThat(dto.isTienePdfMicro()).isTrue();
         assertThat(dto.getEstadoMicro()).isEqualTo(DisciplinaEstado.EVALUADO);
         assertThat(dto.getEstadoEvaluacion()).isEqualTo(EstadoEvaluacionCalidad.EVALUADO);
+        assertThat(dto.getEstadoCalidadResumen()).isEqualTo(EstadoLote.EN_CUARENTENA.name());
     }
 
     @Test
@@ -259,6 +260,7 @@ class EvaluacionCalidadServiceImplTest {
         assertThat(dto.getMicroConforme()).isNull();
         assertThat(dto.getEstadoMicro()).isEqualTo(DisciplinaEstado.PENDIENTE);
         assertThat(dto.getEstadoEvaluacion()).isEqualTo(EstadoEvaluacionCalidad.PENDIENTE);
+        assertThat(dto.getEstadoCalidadResumen()).isEqualTo(EstadoLote.EN_CUARENTENA.name());
     }
 
     @Test

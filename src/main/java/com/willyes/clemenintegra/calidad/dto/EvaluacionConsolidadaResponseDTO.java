@@ -21,6 +21,7 @@ public class EvaluacionConsolidadaResponseDTO {
     private String estadoLote;
     private String tipoAnalisisCalidad;
     private String tipoAnalisisRequerido;
+    private String estadoCalidadResumen;
     private boolean fisicoQuimicoCargado;
     private boolean microbiologicoCargado;
     private boolean evaluacionesRequeridasCompletas;

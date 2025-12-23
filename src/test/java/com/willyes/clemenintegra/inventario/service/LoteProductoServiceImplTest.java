@@ -436,7 +436,7 @@ class LoteProductoServiceImplTest {
 
         when(loteProductoRepository.findAll(any(Specification.class), any(Sort.class)))
                 .thenReturn(List.of(lote), List.of(lote), List.of(lote));
-        when(evaluacionRepository.findByLoteProductoId(40L))
+        when(evaluacionRepository.findByLoteProductoIdIn(anyList()))
                 .thenReturn(List.of(), List.of(evalFisico), List.of(evalFisico, evalQM));
         when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(anyList()))
                 .thenReturn(List.of(com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico.builder()
@@ -451,6 +451,7 @@ class LoteProductoServiceImplTest {
         Page<LoteProductoResponseDTO> sinEvaluaciones = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
         assertThat(sinEvaluaciones.getContent()).hasSize(1);
         assertThat(sinEvaluaciones.getContent().get(0).isPendienteMicro()).isTrue();
+        assertThat(sinEvaluaciones.getContent().get(0).getEstadoCalidadResumen()).isEqualTo("EN_CUARENTENA");
 
         Page<LoteProductoResponseDTO> conFisico = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
         assertThat(conFisico.getContent()).hasSize(1);
@@ -476,7 +477,7 @@ class LoteProductoServiceImplTest {
 
         when(loteProductoRepository.findAll(any(Specification.class), any(Sort.class)))
                 .thenReturn(List.of(lote), List.of(lote));
-        when(evaluacionRepository.findByLoteProductoId(41L))
+        when(evaluacionRepository.findByLoteProductoIdIn(anyList()))
                 .thenReturn(List.of(evalQM), List.of(evalQM));
         when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(anyList()))
                 .thenReturn(Collections.emptyList(), List.of(com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico.builder()
@@ -491,6 +492,7 @@ class LoteProductoServiceImplTest {
         Page<LoteProductoResponseDTO> sinResultados = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
         assertThat(sinResultados.getContent()).hasSize(1);
         assertThat(sinResultados.getContent().get(0).isPendienteMicro()).isTrue();
+        assertThat(sinResultados.getContent().get(0).getEstadoCalidadResumen()).isEqualTo("EN_CUARENTENA");
 
         Page<LoteProductoResponseDTO> conResultados = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
         assertThat(conResultados.getContent()).isEmpty();
@@ -512,7 +514,7 @@ class LoteProductoServiceImplTest {
 
         when(loteProductoRepository.findAll(any(Specification.class), any(Sort.class)))
                 .thenReturn(List.of(lote));
-        when(evaluacionRepository.findByLoteProductoId(42L))
+        when(evaluacionRepository.findByLoteProductoIdIn(anyList()))
                 .thenReturn(List.of(evalFisico));
         when(loteProductoMapper.toDto(any())).thenAnswer(inv -> LoteProductoResponseDTO.builder()
                 .id(((LoteProducto) inv.getArgument(0)).getId())
