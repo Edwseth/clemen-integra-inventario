@@ -84,6 +84,7 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
                         .loteId(lote.getId())
                         .codigoLote(lote.getCodigoLote())
                         .estado(lote.getEstado().name())
+                        .estadoCalidadResumen(lote.getEstadoCalidadResumen())
                         .fechaFabricacion(lote.getFechaFabricacion())
                         .diasEnEstado((int) ChronoUnit.DAYS.between(lote.getFechaFabricacion(), LocalDate.now(clock)))
                         .nombreProducto(lote.getProducto().getNombre())

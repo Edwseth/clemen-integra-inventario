@@ -145,6 +145,10 @@ public class LoteProducto {
         return "OK";
     }
 
+    public String getEstadoCalidadResumen() {
+        return estado != null ? estado.name() : null;
+    }
+
     @PrePersist
     @PreUpdate
     private void normalizeDefaults() {

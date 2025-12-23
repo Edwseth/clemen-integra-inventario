@@ -185,16 +185,42 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         };
 
         List<LoteProducto> lotesOrdenados = loteRepo.findAll(specification, sort);
+        List<Long> loteIds = lotesOrdenados.stream()
+                .map(LoteProducto::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        java.util.Map<Long, List<EvaluacionCalidad>> evaluacionesPorLote = loteIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : evaluacionRepository.findByLoteProductoIdIn(loteIds).stream()
+                .filter(e -> e.getLoteProducto() != null && e.getLoteProducto().getId() != null)
+                .collect(java.util.stream.Collectors.groupingBy(e -> e.getLoteProducto().getId()));
+
+        java.util.Set<Long> evaluacionesQuimicoMicro = evaluacionesPorLote.values().stream()
+                .flatMap(List::stream)
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .map(EvaluacionCalidad::getId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
+        java.util.Set<Long> evaluacionesConResultadosMicro = evaluacionesQuimicoMicro.isEmpty()
+                ? java.util.Collections.emptySet()
+                : resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(new java.util.ArrayList<>(evaluacionesQuimicoMicro))
+                .stream()
+                .map(r -> r.getEvaluacion() != null ? r.getEvaluacion().getId() : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
 
         List<LoteProductoResponseDTO> filtrados = lotesOrdenados.stream()
                 .map(lote -> {
-                    List<EvaluacionCalidad> evaluaciones = evaluacionRepository.findByLoteProductoId(lote.getId());
-                    EstadoEvaluacionPendiente estado = calcularEstadoEvaluacionPendiente(lote.getProducto(), evaluaciones);
+                    List<EvaluacionCalidad> evaluaciones = evaluacionesPorLote.getOrDefault(lote.getId(), List.of());
+                    EstadoEvaluacionPendiente estado = calcularEstadoEvaluacionPendiente(lote.getProducto(),
+                            evaluaciones, evaluacionesConResultadosMicro);
                     // Criterio "por evaluar": incluir el lote si falta al menos una disciplina requerida.
                     if (!estado.estaPendiente()) {
                         return null;
                     }
                     LoteProductoResponseDTO dto = loteProductoMapper.toDto(lote);
+                    dto.setEstadoCalidadResumen(lote.getEstadoCalidadResumen());
                     dto.setEvaluaciones(evaluaciones.stream()
                             .map(EvaluacionCalidad::getTipoEvaluacion)
                             .toList());
@@ -304,7 +330,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     }
 
     private EstadoEvaluacionPendiente calcularEstadoEvaluacionPendiente(Producto producto,
-                                                                        List<EvaluacionCalidad> evaluaciones) {
+                                                                        List<EvaluacionCalidad> evaluaciones,
+                                                                        java.util.Set<Long> evaluacionesConResultadosMicro) {
         EstadoEvaluacionPendiente estado = new EstadoEvaluacionPendiente();
         if (producto == null) {
             return estado;
@@ -331,7 +358,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .filter(java.util.Objects::nonNull)
                 .toList();
         estado.tieneResultadosMicro = !evaluacionIds.isEmpty()
-                && !resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(evaluacionIds).isEmpty();
+                && evaluacionesConResultadosMicro != null
+                && evaluacionIds.stream().anyMatch(evaluacionesConResultadosMicro::contains);
 
         estado.pendienteFisico = estado.requiereAnalisisFisico && !estado.tieneEvaluacionFisica;
         estado.pendienteQuimico = estado.requiereAnalisisQuimico && !estado.tieneEvaluacionQuimicoMicro;

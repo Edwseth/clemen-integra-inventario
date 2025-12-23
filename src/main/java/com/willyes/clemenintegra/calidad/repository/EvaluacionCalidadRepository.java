@@ -40,6 +40,8 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
 
     java.util.List<EvaluacionCalidad> findByLoteProductoId(Long loteId);
 
+    java.util.List<EvaluacionCalidad> findByLoteProductoIdIn(java.util.List<Long> loteIds);
+
     @Query("SELECT DISTINCT e FROM EvaluacionCalidad e " +
             "LEFT JOIN FETCH e.archivosAdjuntos " +
             "JOIN FETCH e.usuarioEvaluador " +

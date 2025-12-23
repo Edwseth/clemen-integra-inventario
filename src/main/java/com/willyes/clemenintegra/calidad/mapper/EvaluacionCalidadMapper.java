@@ -188,6 +188,7 @@ public class EvaluacionCalidadMapper {
                 .estadoLote(lote.getEstado().name())
                 .tipoAnalisisCalidad(tipoAnalisis != null ? tipoAnalisis.name() : null)
                 .tipoAnalisisRequerido(mapearAnalisisRequerido(tipoAnalisis))
+                .estadoCalidadResumen(lote.getEstadoCalidadResumen())
                 .fisicoQuimicoCargado(fisicoCargado)
                 .microbiologicoCargado(microCargado)
                 .evaluacionesRequeridasCompletas(disciplinasCompletas)
