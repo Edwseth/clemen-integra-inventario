@@ -138,12 +138,15 @@ class JwtAuthenticationProviderTest {
         when(userDetailsService.loadUserByUsername("user")).thenReturn(new CustomUserDetails(usuario));
         when(usuarioRepository.save(eq(usuario))).thenReturn(usuario);
 
-        provider.authenticate(new JwtAuthenticationToken("token"));
+        var authentication = provider.authenticate(new JwtAuthenticationToken("token"));
 
         verify(usuarioRepository, times(1)).save(eq(usuario));
         verify(jwtTokenService, times(1)).extraerClaims("token");
         verify(jwtTokenService, times(1)).getSessionVersion("token");
         assertNotNull(usuario.getUltimaActividad());
         assertTrue(usuario.getUltimaActividad().isAfter(hace2Min));
+        assertTrue(authentication.isAuthenticated());
+        assertEquals("user", authentication.getName());
+        assertEquals(1, authentication.getAuthorities().size());
     }
 }

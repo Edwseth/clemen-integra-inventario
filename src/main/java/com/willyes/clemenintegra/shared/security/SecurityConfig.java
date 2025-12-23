@@ -36,6 +36,7 @@ public class SecurityConfig {
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RequestTimingFilter requestTimingFilter;
+    private final JwtAuthenticationProvider jwtAuthenticationProvider;
 
     // Orígenes permitidos por perfil (lista separada por comas)
     @Value("${app.cors.allowed-origins:}")
@@ -52,6 +53,7 @@ public class SecurityConfig {
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(jwtAuthenticationProvider)
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
