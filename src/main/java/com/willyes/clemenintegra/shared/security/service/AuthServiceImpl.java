@@ -92,7 +92,7 @@ public class AuthServiceImpl implements AuthService {
         Long versionActual = usuario.getSessionVersion() != null ? usuario.getSessionVersion() : 0L;
         usuario.setSessionVersion(versionActual + 1);
         usuario.setUltimaActividad(LocalDateTime.now());
-        usuarioRepository.save(usuario);
+        usuarioRepository.saveAndFlush(usuario);
 
         String token = jwtTokenService.generarToken(usuario);
         return new AuthResponseDTO(token, usuario.getNombreUsuario(), usuario.getRol().name());
