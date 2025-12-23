@@ -81,23 +81,19 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
         LocalDateTime ahora = LocalDateTime.now();
         LocalDateTime ultimaActividad = usuario.getUltimaActividad();
 
-        if (ultimaActividad != null) {
-            long minutosInactivo = java.time.Duration.between(ultimaActividad, ahora).toMinutes();
-            if (minutosInactivo > maxIdleMinutes) {
-                Long nuevaVersion = usuarioSessionVersion + 1;
-                usuario.setSessionVersion(nuevaVersion);
-                usuario.setUltimaActividad(ahora);
-                usuarioRepository.save(usuario);
-                throw new SesionInactivaException("La sesión ha expirado por inactividad.");
-            }
+        // Si nunca se ha registrado actividad (valor null), consideramos la sesión inactiva para forzar un nuevo login.
+        if (ultimaActividad == null) {
+            throw new SesionInactivaException("La sesión ha expirado por inactividad.");
         }
 
-        boolean actualizarActividad = ultimaActividad == null
-                || java.time.Duration.between(ultimaActividad, ahora).toMinutes() >= 1;
-        if (actualizarActividad) {
-            usuario.setUltimaActividad(ahora);
-            usuarioRepository.save(usuario);
+        long minutosInactivo = java.time.Duration.between(ultimaActividad, ahora).toMinutes();
+        if (minutosInactivo > maxIdleMinutes) {
+            throw new SesionInactivaException("La sesión ha expirado por inactividad.");
         }
+
+        // Sesión válida: refrescamos última actividad para mantenerla viva.
+        usuario.setUltimaActividad(ahora);
+        usuarioRepository.save(usuario);
     }
 
     private String requestUsername(String token) {

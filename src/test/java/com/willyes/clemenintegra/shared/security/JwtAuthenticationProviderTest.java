@@ -18,7 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -85,10 +85,65 @@ class JwtAuthenticationProviderTest {
                 .thenReturn(new DefaultClaims().setSubject("user"));
         when(jwtTokenService.getSessionVersion("token")).thenReturn(1L);
         when(userDetailsService.loadUserByUsername("user")).thenReturn(new CustomUserDetails(usuario));
-        when(usuarioRepository.save(eq(usuario))).thenReturn(usuario);
 
         assertThrows(SesionInactivaException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void lanzaSesionInactivaCuandoUltimaActividadEsNull() {
+        Usuario usuario = Usuario.builder()
+                .id(1L)
+                .nombreUsuario("user")
+                .clave("pass")
+                .nombreCompleto("Nombre")
+                .correo("correo@test.com")
+                .rol(RolUsuario.ROL_SUPER_ADMIN)
+                .activo(true)
+                .bloqueado(false)
+                .sessionVersion(1L)
+                .ultimaActividad(null)
+                .build();
+
+        when(jwtTokenService.extraerClaims("token"))
+                .thenReturn(new DefaultClaims().setSubject("user"));
+        when(jwtTokenService.getSessionVersion("token")).thenReturn(1L);
+        when(userDetailsService.loadUserByUsername("user")).thenReturn(new CustomUserDetails(usuario));
+
+        assertThrows(SesionInactivaException.class,
+                () -> provider.authenticate(new JwtAuthenticationToken("token")));
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizaUltimaActividadCuandoSesionEsValida() {
+        LocalDateTime hace2Min = LocalDateTime.now().minusMinutes(2);
+        Usuario usuario = Usuario.builder()
+                .id(1L)
+                .nombreUsuario("user")
+                .clave("pass")
+                .nombreCompleto("Nombre")
+                .correo("correo@test.com")
+                .rol(RolUsuario.ROL_SUPER_ADMIN)
+                .activo(true)
+                .bloqueado(false)
+                .sessionVersion(1L)
+                .ultimaActividad(hace2Min)
+                .build();
+
+        when(jwtTokenService.extraerClaims("token"))
+                .thenReturn(new DefaultClaims().setSubject("user"));
+        when(jwtTokenService.getSessionVersion("token")).thenReturn(1L);
+        when(userDetailsService.loadUserByUsername("user")).thenReturn(new CustomUserDetails(usuario));
+        when(usuarioRepository.save(eq(usuario))).thenReturn(usuario);
+
+        provider.authenticate(new JwtAuthenticationToken("token"));
+
         verify(usuarioRepository, times(1)).save(eq(usuario));
+        verify(jwtTokenService, times(1)).extraerClaims("token");
+        verify(jwtTokenService, times(1)).getSessionVersion("token");
+        assertNotNull(usuario.getUltimaActividad());
+        assertTrue(usuario.getUltimaActividad().isAfter(hace2Min));
     }
 }
