@@ -34,9 +34,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final UsuarioInactivoFilter usuarioInactivoFilter;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RequestTimingFilter requestTimingFilter;
-    private final JwtAuthenticationProvider jwtAuthenticationProvider;
+    private final org.springframework.beans.factory.ObjectProvider<JwtAuthenticationProvider> jwtAuthenticationProvider;
 
     // Orígenes permitidos por perfil (lista separada por comas)
     @Value("${app.cors.allowed-origins:}")
@@ -48,12 +47,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+        JwtAuthenticationProvider provider = jwtAuthenticationProvider.getIfAvailable();
+
         http
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(jwtAuthenticationProvider)
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
@@ -266,6 +267,10 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class)
                 .addFilterAfter(requestTimingFilter, JwtAuthenticationFilter.class);
+
+        if (provider != null) {
+            http.authenticationProvider(provider);
+        }
 
         return http.build();
     }
