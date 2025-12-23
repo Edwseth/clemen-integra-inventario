@@ -16,6 +16,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.willyes.clemenintegra.calidad.controller.ReportesCalidadController;
+import com.willyes.clemenintegra.calidad.service.ResultadoAnalisisMicroService;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -25,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(CalidadAuditoriaController.class)
+@WebMvcTest({CalidadAuditoriaController.class, ReportesCalidadController.class})
 @AutoConfigureMockMvc(addFilters = false)
 class CalidadAuditoriaControllerTest {
 
@@ -42,6 +45,8 @@ class CalidadAuditoriaControllerTest {
     private EvaluacionCalidadService evaluacionCalidadService;
     @MockBean
     private ReporteInvimaBpmPdfService reporteInvimaBpmPdfService;
+    @MockBean
+    private ResultadoAnalisisMicroService resultadoAnalisisMicroService;
     @MockBean
     private JwtAuthenticationProvider jwtAuthenticationProvider;
     @MockBean

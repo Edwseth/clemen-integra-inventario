@@ -7,4 +7,5 @@ public interface JwtTokenService {
     String generarToken(Usuario usuario);
     Claims extraerClaims(String token);
     String extraerNombreUsuario(String token);
+    Long getSessionVersion(String token);
 }

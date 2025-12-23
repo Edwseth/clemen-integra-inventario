@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
+import java.util.Map;
 
 @Service
 public class JwtTokenServiceImpl implements JwtTokenService {
@@ -23,10 +24,14 @@ public class JwtTokenServiceImpl implements JwtTokenService {
     }
 
     public String generarToken(Usuario usuario) {
+        Map<String, Object> claims = Map.of(
+                "rol", usuario.getRol().name(),
+                "usuarioId", usuario.getId(),
+                "sessionVersion", usuario.getSessionVersion()
+        );
         return Jwts.builder()
                 .setSubject(usuario.getNombreUsuario())
-                .claim("rol", usuario.getRol().name())
-                .claim("usuarioId", usuario.getId())
+                .addClaims(claims)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -45,6 +50,27 @@ public class JwtTokenServiceImpl implements JwtTokenService {
         return extraerClaims(token).getSubject();
     }
 
+    public Long getSessionVersion(String token) {
+        Claims claims = extraerClaims(token);
+        Object value = claims.get("sessionVersion");
+        if (value == null) {
+            throw new IllegalArgumentException("El token no contiene sessionVersion");
+        }
+        if (value instanceof Integer i) {
+            return i.longValue();
+        }
+        if (value instanceof Long l) {
+            return l;
+        }
+        if (value instanceof String s) {
+            try {
+                return Long.parseLong(s);
+            } catch (NumberFormatException ex) {
+                throw new IllegalArgumentException("sessionVersion inválida en token");
+            }
+        }
+        throw new IllegalArgumentException("sessionVersion inválida en token");
+    }
+
 
 }
-
