@@ -15,7 +15,9 @@ CREATE TABLE usuarios (
     activo BOOLEAN NOT NULL,
     bloqueado BOOLEAN NOT NULL,
     codigo_2fa VARCHAR(6),
-    codigo_2fa_expira_en TIMESTAMP
+    codigo_2fa_expira_en TIMESTAMP,
+    session_version BIGINT NOT NULL DEFAULT 0,
+    ultima_actividad TIMESTAMP
 );
 
 CREATE TABLE categorias_producto (

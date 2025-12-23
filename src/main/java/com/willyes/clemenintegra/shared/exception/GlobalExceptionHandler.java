@@ -2,6 +2,8 @@ package com.willyes.clemenintegra.shared.exception;
 
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
+import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
+import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
@@ -149,6 +151,18 @@ public class GlobalExceptionHandler {
         return buildResponse(ApiErrorCode.ROL_INSUFICIENTE,
                 "Acceso denegado. Contacte a un administrador para solicitar el rol adecuado.",
                 null);
+    }
+
+    @ExceptionHandler(SesionInactivaException.class)
+    public ResponseEntity<ErrorResponseDTO> handleSesionInactiva(SesionInactivaException ex,
+                                                                 HttpServletRequest request) {
+        return buildResponse(ApiErrorCode.SESION_INACTIVA, ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(SesionInvalidadaException.class)
+    public ResponseEntity<ErrorResponseDTO> handleSesionInvalidada(SesionInvalidadaException ex,
+                                                                   HttpServletRequest request) {
+        return buildResponse(ApiErrorCode.SESION_INVALIDA, ex.getMessage(), null);
     }
 
     @ExceptionHandler(ResponseStatusException.class)

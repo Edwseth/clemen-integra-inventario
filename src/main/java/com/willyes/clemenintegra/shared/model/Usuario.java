@@ -50,8 +50,14 @@ public class Usuario {
     @Column(name = "codigo_2fa_expira_en")
     private LocalDateTime codigo2FAExpiraEn;
 
+    @Column(name = "session_version", nullable = false)
+    @Builder.Default
+    private Long sessionVersion = 0L;
+
+    @Column(name = "ultima_actividad")
+    private LocalDateTime ultimaActividad;
+
     public Usuario(Long id) {
         this.id = id;
     }
 }
-
