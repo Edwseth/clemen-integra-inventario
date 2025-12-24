@@ -20,6 +20,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,9 +30,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "spring.jpa.defer-datasource-initialization=true")
+@SpringBootTest(properties = {
+        "spring.jpa.defer-datasource-initialization=true",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+})
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@ActiveProfiles("test")
 class RecepcionOCControllerIntegrationTest {
 
     private static final String CODIGO_RECEPCION = "RC-20240101-01";
@@ -225,4 +230,3 @@ class RecepcionOCControllerIntegrationTest {
                 .andExpect(jsonPath("$.movimientos[0].id").value(movimientoInventario.getId()));
     }
 }
-

@@ -16,6 +16,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.io.IOException;
 
@@ -26,12 +27,15 @@ import static org.mockito.Mockito.*;
 class JwtAuthenticationFilterTest {
 
     private AuthenticationManager authenticationManager;
+    private ObjectProvider<AuthenticationManager> authenticationManagerProvider;
     private JwtAuthenticationFilter filter;
 
     @BeforeEach
     void setUp() {
         authenticationManager = mock(AuthenticationManager.class);
-        filter = new JwtAuthenticationFilter(authenticationManager);
+        authenticationManagerProvider = mock(ObjectProvider.class);
+        when(authenticationManagerProvider.getIfAvailable()).thenReturn(authenticationManager);
+        filter = new JwtAuthenticationFilter(authenticationManagerProvider);
         SecurityContextHolder.clearContext();
     }
 
@@ -106,5 +110,20 @@ class JwtAuthenticationFilterTest {
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(authenticationManager, times(1)).authenticate(any(JwtAuthenticationToken.class));
+    }
+
+    @Test
+    void omiteValidacionCuandoNoHayAuthenticationManager() throws ServletException, IOException {
+        when(authenticationManagerProvider.getIfAvailable()).thenReturn(null);
+        JwtAuthenticationFilter filterSinManager = new JwtAuthenticationFilter(authenticationManagerProvider);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filterSinManager.doFilterInternal(request, response, new MockFilterChain());
+
+        verify(authenticationManager, never()).authenticate(any());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 }

@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -17,17 +16,17 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.io.IOException;
 import java.util.List;
 
 @Slf4j
 @Component
-@ConditionalOnBean(AuthenticationManager.class)
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final AuthenticationManager authenticationManager;
+    private final ObjectProvider<AuthenticationManager> authenticationManagerProvider;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
     private final List<String> publicMatchers = List.of(
             "/api/auth/**",
@@ -54,6 +53,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String uri = request.getRequestURI();
 
         if (shouldSkipFilter(request, uri)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        AuthenticationManager authenticationManager = authenticationManagerProvider.getIfAvailable();
+        if (authenticationManager == null) {
+            log.warn("JwtAuthenticationFilter: no hay AuthenticationManager disponible, se omite validación JWT para {}", uri);
             filterChain.doFilter(request, response);
             return;
         }

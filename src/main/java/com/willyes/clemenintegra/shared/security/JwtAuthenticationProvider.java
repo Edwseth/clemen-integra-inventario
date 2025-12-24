@@ -77,32 +77,43 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
             throw new BadCredentialsException("Usuario inactivo o bloqueado");
         }
 
+        boolean tokenHasSessionVersion = claims.containsKey("sessionVersion");
         Long tokenSessionVersion = jwtTokenService.getSessionVersion(claims);
         Long usuarioSessionVersion = Optional.ofNullable(usuario.getSessionVersion()).orElse(0L);
 
-        if (!usuarioSessionVersion.equals(tokenSessionVersion)) {
-            log.debug("JwtAuthenticationProvider: sesión invalidada para usuario {} (tokenVersion={}, dbVersion={})",
-                    usuario.getNombreUsuario(), tokenSessionVersion, usuarioSessionVersion);
-            throw new SesionInvalidadaException(
-                    String.format("La sesión fue invalidada (token=%d, bd=%d) para usuario %d",
-                            tokenSessionVersion, usuarioSessionVersion, usuario.getId())
-            );
+        if (!tokenHasSessionVersion && usuarioSessionVersion == 0L) {
+            log.debug("JwtAuthenticationProvider: token legado aceptado para usuario {} (dbVersion=0)", usuario.getNombreUsuario());
+        } else {
+            if (!usuarioSessionVersion.equals(tokenSessionVersion)) {
+                log.debug("JwtAuthenticationProvider: sesión invalidada para usuario {} (tokenVersion={}, dbVersion={})",
+                        usuario.getNombreUsuario(), tokenSessionVersion, usuarioSessionVersion);
+                throw new SesionInvalidadaException(
+                        String.format("La sesión fue invalidada (token=%d, bd=%d) para usuario %d",
+                                tokenSessionVersion, usuarioSessionVersion, usuario.getId())
+                );
+            }
+            log.debug("JwtAuthenticationProvider: versión de sesión válida para usuario {} (version={})",
+                    usuario.getNombreUsuario(), usuarioSessionVersion);
         }
 
         LocalDateTime ultimaActividad = usuario.getUltimaActividad();
         LocalDateTime ahora = LocalDateTime.now();
 
-        if (ultimaActividad != null) {
+        if (ultimaActividad == null) {
+            log.debug("JwtAuthenticationProvider: primera actividad registrada para usuario {}", usuario.getNombreUsuario());
+        } else {
             long minutosInactivo = Duration.between(ultimaActividad, ahora).toMinutes();
             if (minutosInactivo > maxIdleMinutes) {
                 log.debug("JwtAuthenticationProvider: sesión inactiva para usuario {} (idleMinutes={}, maxIdle={})",
                         usuario.getNombreUsuario(), minutosInactivo, maxIdleMinutes);
                 throw new SesionInactivaException("La sesión ha expirado por inactividad.");
             }
+            log.debug("JwtAuthenticationProvider: sesión activa para usuario {} (idleMinutes={}, maxIdle={})",
+                    usuario.getNombreUsuario(), minutosInactivo, maxIdleMinutes);
         }
 
         usuario.setUltimaActividad(ahora);
-        usuarioRepository.save(usuario);
+        usuarioRepository.saveAndFlush(usuario);
     }
 
     private String requestUsername(String token) {
