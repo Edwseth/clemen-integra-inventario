@@ -5,7 +5,6 @@ import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
 import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
-import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
 import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import io.jsonwebtoken.impl.DefaultClaims;
@@ -29,15 +28,13 @@ class JwtAuthenticationProviderTest {
     @Mock
     private JwtTokenService jwtTokenService;
     @Mock
-    private CustomUserDetailsService userDetailsService;
-    @Mock
     private UsuarioRepository usuarioRepository;
 
     private JwtAuthenticationProvider provider;
 
     @BeforeEach
     void setUp() {
-        provider = new JwtAuthenticationProvider(jwtTokenService, userDetailsService, usuarioRepository);
+        provider = new JwtAuthenticationProvider(jwtTokenService, usuarioRepository);
         ReflectionTestUtils.setField(provider, "maxIdleMinutes", 20L);
     }
 
@@ -58,7 +55,7 @@ class JwtAuthenticationProviderTest {
         when(jwtTokenService.extraerClaims("token"))
                 .thenReturn(new DefaultClaims().setSubject("user"));
         when(jwtTokenService.getSessionVersion("token")).thenReturn(1L);
-        when(userDetailsService.loadUserByUsername("user")).thenReturn(new CustomUserDetails(usuario));
+        when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
 
         assertThrows(SesionInvalidadaException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
@@ -84,7 +81,7 @@ class JwtAuthenticationProviderTest {
         when(jwtTokenService.extraerClaims("token"))
                 .thenReturn(new DefaultClaims().setSubject("user"));
         when(jwtTokenService.getSessionVersion("token")).thenReturn(1L);
-        when(userDetailsService.loadUserByUsername("user")).thenReturn(new CustomUserDetails(usuario));
+        when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
 
         assertThrows(SesionInactivaException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
@@ -109,7 +106,7 @@ class JwtAuthenticationProviderTest {
         when(jwtTokenService.extraerClaims("token"))
                 .thenReturn(new DefaultClaims().setSubject("user"));
         when(jwtTokenService.getSessionVersion("token")).thenReturn(1L);
-        when(userDetailsService.loadUserByUsername("user")).thenReturn(new CustomUserDetails(usuario));
+        when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
 
         assertThrows(SesionInactivaException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
@@ -135,7 +132,7 @@ class JwtAuthenticationProviderTest {
         when(jwtTokenService.extraerClaims("token"))
                 .thenReturn(new DefaultClaims().setSubject("user"));
         when(jwtTokenService.getSessionVersion("token")).thenReturn(1L);
-        when(userDetailsService.loadUserByUsername("user")).thenReturn(new CustomUserDetails(usuario));
+        when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
         when(usuarioRepository.save(eq(usuario))).thenReturn(usuario);
 
         var authentication = provider.authenticate(new JwtAuthenticationToken("token"));
