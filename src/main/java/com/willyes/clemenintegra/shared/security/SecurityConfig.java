@@ -48,8 +48,9 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+                                                   org.springframework.beans.factory.ObjectProvider<JwtAuthenticationFilter> jwtAuthenticationFilterProvider) throws Exception {
         JwtAuthenticationProvider provider = jwtAuthenticationProvider.getIfAvailable();
+        JwtAuthenticationFilter jwtAuthenticationFilter = jwtAuthenticationFilterProvider.getIfAvailable();
 
         http
                 .cors(org.springframework.security.config.Customizer.withDefaults())
@@ -263,10 +264,13 @@ public class SecurityConfig {
                                     response.setContentType("application/json");
                                     response.getWriter().write("{\"error\":\"No autorizado\"}");
                                 }
-                ))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class)
-                .addFilterAfter(requestTimingFilter, JwtAuthenticationFilter.class);
+                ));
+
+        if (jwtAuthenticationFilter != null) {
+            http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                    .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class)
+                    .addFilterAfter(requestTimingFilter, JwtAuthenticationFilter.class);
+        }
 
         if (provider != null) {
             http.authenticationProvider(provider);
