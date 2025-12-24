@@ -40,18 +40,21 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         String token = (String) authentication.getCredentials();
+        Claims claims;
         try {
-            Claims claims = jwtTokenService.extraerClaims(token);
+            claims = jwtTokenService.extraerClaims(token);
             String username = claims.getSubject();
             Usuario usuario = usuarioRepository.findByNombreUsuario(username)
                     .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-            validarSesion(token, usuario);
+            validarSesion(claims, usuario);
 
             CustomUserDetails principal = new CustomUserDetails(usuario);
-            return new UsernamePasswordAuthenticationToken(
+            UsernamePasswordAuthenticationToken authenticated = new UsernamePasswordAuthenticationToken(
                     principal, token, principal.getAuthorities()
             );
+            log.debug("JwtAuthenticationProvider: sesión válida para usuario {}, version {}", username, usuario.getSessionVersion());
+            return authenticated;
         } catch (ExpiredJwtException e) {
             log.warn("Token expirado para solicitud de {}", requestUsername(token));
             throw new BadCredentialsException("Token expirado", e);
@@ -69,15 +72,17 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
         }
     }
 
-    private void validarSesion(String token, Usuario usuario) {
+    private void validarSesion(Claims claims, Usuario usuario) {
         if (!usuario.isActivo() || usuario.isBloqueado()) {
             throw new BadCredentialsException("Usuario inactivo o bloqueado");
         }
 
-        Long tokenSessionVersion = jwtTokenService.getSessionVersion(token);
+        Long tokenSessionVersion = jwtTokenService.getSessionVersion(claims);
         Long usuarioSessionVersion = Optional.ofNullable(usuario.getSessionVersion()).orElse(0L);
 
         if (!usuarioSessionVersion.equals(tokenSessionVersion)) {
+            log.debug("JwtAuthenticationProvider: sesión invalidada para usuario {} (tokenVersion={}, dbVersion={})",
+                    usuario.getNombreUsuario(), tokenSessionVersion, usuarioSessionVersion);
             throw new SesionInvalidadaException(
                     String.format("La sesión fue invalidada (token=%d, bd=%d) para usuario %d",
                             tokenSessionVersion, usuarioSessionVersion, usuario.getId())
@@ -85,16 +90,18 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
         }
 
         LocalDateTime ultimaActividad = usuario.getUltimaActividad();
-        if (ultimaActividad == null) {
-            throw new SesionInactivaException("La sesión ha expirado por inactividad.");
+        LocalDateTime ahora = LocalDateTime.now();
+
+        if (ultimaActividad != null) {
+            long minutosInactivo = Duration.between(ultimaActividad, ahora).toMinutes();
+            if (minutosInactivo > maxIdleMinutes) {
+                log.debug("JwtAuthenticationProvider: sesión inactiva para usuario {} (idleMinutes={}, maxIdle={})",
+                        usuario.getNombreUsuario(), minutosInactivo, maxIdleMinutes);
+                throw new SesionInactivaException("La sesión ha expirado por inactividad.");
+            }
         }
 
-        long minutosInactivo = Duration.between(ultimaActividad, LocalDateTime.now()).toMinutes();
-        if (minutosInactivo > maxIdleMinutes) {
-            throw new SesionInactivaException("La sesión ha expirado por inactividad.");
-        }
-
-        usuario.setUltimaActividad(LocalDateTime.now());
+        usuario.setUltimaActividad(ahora);
         usuarioRepository.save(usuario);
     }
 

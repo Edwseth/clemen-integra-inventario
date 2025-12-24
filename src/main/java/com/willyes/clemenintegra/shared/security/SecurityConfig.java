@@ -8,13 +8,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,8 +25,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -42,8 +41,21 @@ public class SecurityConfig {
     private String allowedOriginsProp;
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(HttpSecurity http,
+                                                       org.springframework.beans.factory.ObjectProvider<JwtAuthenticationProvider> jwtAuthenticationProvider,
+                                                       org.springframework.beans.factory.ObjectProvider<UserDetailsService> userDetailsService,
+                                                       org.springframework.beans.factory.ObjectProvider<PasswordEncoder> passwordEncoder) throws Exception {
+        AuthenticationManagerBuilder builder = http.getSharedObject(AuthenticationManagerBuilder.class);
+        JwtAuthenticationProvider provider = jwtAuthenticationProvider.getIfAvailable();
+        if (provider != null) {
+            builder.authenticationProvider(provider);
+        }
+        UserDetailsService uds = userDetailsService.getIfAvailable();
+        PasswordEncoder encoder = passwordEncoder.getIfAvailable();
+        if (uds != null && encoder != null) {
+            builder.userDetailsService(uds).passwordEncoder(encoder);
+        }
+        return builder.build();
     }
 
     @Bean

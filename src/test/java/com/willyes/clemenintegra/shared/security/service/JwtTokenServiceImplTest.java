@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.shared.security.service;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
+import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,5 +36,19 @@ class JwtTokenServiceImplTest {
         var claims = service.extraerClaims(token);
         assertEquals("tester", claims.getSubject());
         assertEquals(99L, ((Number) claims.get("usuarioId")).longValue());
+    }
+
+    @Test
+    void devuelveCeroCuandoTokenNoTieneSessionVersion() {
+        JwtTokenServiceImpl service = new JwtTokenServiceImpl(SECRET);
+        String token = Jwts.builder()
+                .setSubject("legacy")
+                .setIssuedAt(new java.util.Date())
+                .signWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(SECRET.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                        io.jsonwebtoken.SignatureAlgorithm.HS256)
+                .compact();
+
+        Long version = service.getSessionVersion(token);
+        assertEquals(0L, version);
     }
 }

@@ -51,11 +51,16 @@ public class JwtTokenServiceImpl implements JwtTokenService {
     }
 
     public Long getSessionVersion(String token) {
-        Claims claims = extraerClaims(token);
+        return getSessionVersion(extraerClaims(token));
+    }
+
+    @Override
+    public Long getSessionVersion(Claims claims) {
         Object value = claims.get("sessionVersion");
         if (value == null) {
-            throw new IllegalArgumentException("El token no contiene sessionVersion");
+            return 0L;
         }
+
         if (value instanceof Integer i) {
             return i.longValue();
         }

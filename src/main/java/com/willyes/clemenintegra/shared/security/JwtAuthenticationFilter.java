@@ -34,11 +34,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String uri = request.getRequestURI();
 
-        // 1) Deja pasar preflight CORS y endpoints públicos
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())
-                || uri.startsWith("/api/auth")
-                || uri.startsWith("/api/public/")
-                || "/auth/login".equals(uri)) {
+        if (shouldSkipFilter(request, uri)) {
+            log.debug("JwtAuthenticationFilter: URI {} excluida, continúa la cadena", uri);
             filterChain.doFilter(request, response);
             return;
         }
@@ -48,25 +45,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             final String token = authHeader.substring(7);
             try {
+                log.debug("JwtAuthenticationFilter: token encontrado, delegando en AuthenticationManager para URI {}", uri);
                 JwtAuthenticationToken authenticationRequest = new JwtAuthenticationToken(token);
                 Authentication authentication = authenticationManager.authenticate(authenticationRequest);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("Usuario {} autenticado en {}", authentication.getName(), uri);
-            } catch (SesionInvalidadaException | SesionInactivaException ex) {
-                log.warn("Sesión rechazada [{}] en {} {}: {}",
-                        ex.getClass().getSimpleName(), request.getMethod(), uri,
-                        (ex.getMessage() != null ? ex.getMessage() : "sin mensaje"));
-                SecurityContextHolder.clearContext();
-                throw ex;
-            } catch (AuthenticationException ex) {
-                log.warn("Autenticación rechazada en {} {}: {}", request.getMethod(), uri, ex.getMessage());
+            } catch (SesionInvalidadaException | SesionInactivaException | AuthenticationException ex) {
                 SecurityContextHolder.clearContext();
                 throw ex;
             }
         } else {
-            log.debug("Solicitud sin encabezado Authorization en {}", uri);
+            log.debug("JwtAuthenticationFilter: sin token, continúa como anónimo para URI {}", uri);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean shouldSkipFilter(HttpServletRequest request, String uri) {
+        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+                || uri.startsWith("/api/auth")
+                || uri.startsWith("/api/public/")
+                || "/auth/login".equals(uri);
     }
 }
