@@ -3,21 +3,23 @@ package com.willyes.clemenintegra.shared.security;
 import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
 import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -26,6 +28,23 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final AuthenticationManager authenticationManager;
+    private final AntPathMatcher antPathMatcher = new AntPathMatcher();
+    private final List<String> publicMatchers = List.of(
+            "/api/auth/**",
+            "/api/public/**",
+            "/actuator/health",
+            "/actuator/health/**",
+            "/actuator/info",
+            "/v3/api-docs/**",
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/swagger-resources/**",
+            "/swagger-resources",
+            "/configuration/ui",
+            "/configuration/security",
+            "/webjars/**",
+            "/auth/login"
+    );
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -35,7 +54,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String uri = request.getRequestURI();
 
         if (shouldSkipFilter(request, uri)) {
-            log.debug("JwtAuthenticationFilter: URI {} excluida, continúa la cadena", uri);
             filterChain.doFilter(request, response);
             return;
         }
@@ -61,9 +79,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean shouldSkipFilter(HttpServletRequest request, String uri) {
-        return "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || uri.startsWith("/api/auth")
-                || uri.startsWith("/api/public/")
-                || "/auth/login".equals(uri);
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            log.debug("JwtAuthenticationFilter: URI {} excluida por método OPTIONS", uri);
+            return true;
+        }
+
+        return publicMatchers.stream()
+                .filter(pattern -> antPathMatcher.match(pattern, uri))
+                .peek(pattern -> log.debug("JwtAuthenticationFilter: URI {} excluida por patrón público {}", uri, pattern))
+                .findFirst()
+                .isPresent();
     }
 }
