@@ -56,13 +56,14 @@ class JwtAuthenticationProviderTest {
 
         Claims claims = new DefaultClaims();
         claims.setSubject("user");
+        claims.put("sessionVersion", 1L);
         when(jwtTokenService.extraerClaims("token")).thenReturn(claims);
         when(jwtTokenService.getSessionVersion(claims)).thenReturn(1L);
         when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
 
         assertThrows(SesionInvalidadaException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
-        verify(usuarioRepository, never()).save(any());
+        verify(usuarioRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -83,13 +84,14 @@ class JwtAuthenticationProviderTest {
 
         Claims claims = new DefaultClaims();
         claims.setSubject("user");
+        claims.put("sessionVersion", 1L);
         when(jwtTokenService.extraerClaims("token")).thenReturn(claims);
         when(jwtTokenService.getSessionVersion(claims)).thenReturn(1L);
         when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
 
         assertThrows(SesionInactivaException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
-        verify(usuarioRepository, never()).save(any());
+        verify(usuarioRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -109,14 +111,15 @@ class JwtAuthenticationProviderTest {
 
         Claims claims = new DefaultClaims();
         claims.setSubject("user");
+        claims.put("sessionVersion", 1L);
         when(jwtTokenService.extraerClaims("token")).thenReturn(claims);
         when(jwtTokenService.getSessionVersion(claims)).thenReturn(1L);
         when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
-        when(usuarioRepository.save(usuario)).thenReturn(usuario);
+        when(usuarioRepository.saveAndFlush(usuario)).thenReturn(usuario);
 
         var authentication = provider.authenticate(new JwtAuthenticationToken("token"));
 
-        verify(usuarioRepository, times(1)).save(usuario);
+        verify(usuarioRepository, times(1)).saveAndFlush(usuario);
         assertNotNull(usuario.getUltimaActividad());
         assertTrue(authentication.isAuthenticated());
     }
@@ -139,14 +142,15 @@ class JwtAuthenticationProviderTest {
 
         Claims claims = new DefaultClaims();
         claims.setSubject("user");
+        claims.put("sessionVersion", 1L);
         when(jwtTokenService.extraerClaims("token")).thenReturn(claims);
         when(jwtTokenService.getSessionVersion(claims)).thenReturn(1L);
         when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
-        when(usuarioRepository.save(eq(usuario))).thenReturn(usuario);
+        when(usuarioRepository.saveAndFlush(eq(usuario))).thenReturn(usuario);
 
         var authentication = provider.authenticate(new JwtAuthenticationToken("token"));
 
-        verify(usuarioRepository, times(1)).save(eq(usuario));
+        verify(usuarioRepository, times(1)).saveAndFlush(eq(usuario));
         verify(jwtTokenService, times(1)).extraerClaims("token");
         verify(jwtTokenService, times(1)).getSessionVersion(claims);
         assertNotNull(usuario.getUltimaActividad());
@@ -168,7 +172,7 @@ class JwtAuthenticationProviderTest {
                 .activo(true)
                 .bloqueado(false)
                 .sessionVersion(0L)
-                .ultimaActividad(LocalDateTime.now())
+                .ultimaActividad(LocalDateTime.now().minusMinutes(1))
                 .build();
 
         Claims claims = new DefaultClaims();
@@ -176,10 +180,38 @@ class JwtAuthenticationProviderTest {
         when(jwtTokenService.extraerClaims("token")).thenReturn(claims);
         when(jwtTokenService.getSessionVersion(claims)).thenReturn(0L);
         when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
-        when(usuarioRepository.save(usuario)).thenReturn(usuario);
+        when(usuarioRepository.saveAndFlush(usuario)).thenReturn(usuario);
 
         Authentication authentication = provider.authenticate(new JwtAuthenticationToken("token"));
 
         assertTrue(authentication.isAuthenticated());
+        verify(usuarioRepository).saveAndFlush(usuario);
+    }
+
+    @Test
+    void tokenLegadoSeInvalidaCuandoDbTieneVersionMayorACero() {
+        Usuario usuario = Usuario.builder()
+                .id(1L)
+                .nombreUsuario("user")
+                .clave("pass")
+                .nombreCompleto("Nombre")
+                .correo("correo@test.com")
+                .rol(RolUsuario.ROL_SUPER_ADMIN)
+                .activo(true)
+                .bloqueado(false)
+                .sessionVersion(3L)
+                .ultimaActividad(LocalDateTime.now())
+                .build();
+
+        Claims claims = new DefaultClaims();
+        claims.setSubject("user");
+
+        when(jwtTokenService.extraerClaims("token")).thenReturn(claims);
+        when(jwtTokenService.getSessionVersion(claims)).thenReturn(0L);
+        when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
+
+        assertThrows(SesionInvalidadaException.class,
+                () -> provider.authenticate(new JwtAuthenticationToken("token")));
+        verify(usuarioRepository, never()).saveAndFlush(any());
     }
 }
