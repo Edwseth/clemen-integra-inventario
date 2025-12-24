@@ -4,6 +4,8 @@ import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.model.UsuarioPrincipal;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,6 +17,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -25,16 +28,18 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final RequestTimingFilter requestTimingFilter;
-    private final org.springframework.beans.factory.ObjectProvider<JwtAuthenticationProvider> jwtAuthenticationProvider;
+    private final ObjectProvider<JwtAuthenticationProvider> jwtAuthenticationProviderProvider;
 
     // Orígenes permitidos por perfil (lista separada por comas)
     @Value("${app.cors.allowed-origins:}")
@@ -42,32 +47,39 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http,
-                                                       org.springframework.beans.factory.ObjectProvider<JwtAuthenticationProvider> jwtAuthenticationProvider,
-                                                       org.springframework.beans.factory.ObjectProvider<UserDetailsService> userDetailsService,
-                                                       org.springframework.beans.factory.ObjectProvider<PasswordEncoder> passwordEncoder) throws Exception {
+                                                       UserDetailsService userDetailsService,
+                                                       ObjectProvider<PasswordEncoder> passwordEncoderProvider) throws Exception {
         AuthenticationManagerBuilder builder = http.getSharedObject(AuthenticationManagerBuilder.class);
-        JwtAuthenticationProvider provider = jwtAuthenticationProvider.getIfAvailable();
-        if (provider != null) {
-            builder.authenticationProvider(provider);
+        JwtAuthenticationProvider jwtAuthenticationProvider = jwtAuthenticationProviderProvider.getIfAvailable();
+        if (jwtAuthenticationProvider != null) {
+            builder.authenticationProvider(jwtAuthenticationProvider);
+        } else {
+            log.warn("SecurityConfig: JwtAuthenticationProvider no está disponible, se usará AuthenticationManager sin el provider personalizado");
         }
-        UserDetailsService uds = userDetailsService.getIfAvailable();
-        PasswordEncoder encoder = passwordEncoder.getIfAvailable();
-        if (uds != null && encoder != null) {
-            builder.userDetailsService(uds).passwordEncoder(encoder);
+
+        PasswordEncoder passwordEncoder = passwordEncoderProvider.orderedStream().findFirst().orElse(null);
+        if (passwordEncoder != null) {
+            builder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
+        } else {
+            log.warn("SecurityConfig: PasswordEncoder no está disponible, se registrará UserDetailsService sin codificador");
+            builder.userDetailsService(userDetailsService);
         }
-        return builder.build();
+        AuthenticationManager authenticationManager = builder.build();
+        log.debug("SecurityConfig: AuthenticationManager configurado con UserDetailsService{}{}",
+                jwtAuthenticationProvider != null ? " y JwtAuthenticationProvider" : "",
+                passwordEncoder != null ? " y PasswordEncoder" : "");
+        return authenticationManager;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   org.springframework.beans.factory.ObjectProvider<JwtAuthenticationFilter> jwtAuthenticationFilterProvider) throws Exception {
-        JwtAuthenticationProvider provider = jwtAuthenticationProvider.getIfAvailable();
-        JwtAuthenticationFilter jwtAuthenticationFilter = jwtAuthenticationFilterProvider.getIfAvailable();
-
+                                                   ObjectProvider<JwtAuthenticationFilter> jwtAuthenticationFilterProvider,
+                                                   AuthenticationManager authenticationManager) throws Exception {
         http
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationManager(authenticationManager)
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
@@ -278,17 +290,28 @@ public class SecurityConfig {
                                 }
                 ));
 
-        if (jwtAuthenticationFilter != null) {
-            http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                    .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class)
-                    .addFilterAfter(requestTimingFilter, JwtAuthenticationFilter.class);
-        }
-
-        if (provider != null) {
-            http.authenticationProvider(provider);
+        JwtAuthenticationProvider jwtAuthenticationProvider = jwtAuthenticationProviderProvider.getIfAvailable();
+        if (jwtAuthenticationProvider != null) {
+            JwtAuthenticationFilter jwtAuthenticationFilter = jwtAuthenticationFilterProvider.getIfAvailable();
+            if (jwtAuthenticationFilter != null) {
+                log.debug("SecurityConfig: Registrando JwtAuthenticationFilter y JwtAuthenticationProvider en la cadena de filtros");
+                http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                        .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class)
+                        .addFilterAfter(requestTimingFilter, JwtAuthenticationFilter.class);
+            } else {
+                log.warn("SecurityConfig: JwtAuthenticationFilter no disponible, la cadena se construirá sin el filtro JWT");
+            }
+            http.authenticationProvider(jwtAuthenticationProvider);
         }
 
         return http.build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(PasswordEncoder.class)
+    public PasswordEncoder passwordEncoderFallback() {
+        log.warn("SecurityConfig: registrando PasswordEncoder delegating por no existir uno definido en el contexto");
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
     @Bean
