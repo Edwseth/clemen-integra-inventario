@@ -167,4 +167,90 @@ class MrpControllerTest {
         assertNotNull(sugerenciaDto.getNivelCriticidad());
         assertNotNull(sugerenciaDto.getEsCritico());
     }
+
+    @Test
+    void obtenerDebeRetornarRazonesCriticidadParaAltoYCritico() {
+        FormulaProductoRepository formulaProductoRepository = mock(FormulaProductoRepository.class);
+        LoteProductoRepository loteProductoRepository = mock(LoteProductoRepository.class);
+        OrdenCompraDetalleRepository ordenCompraDetalleRepository = mock(OrdenCompraDetalleRepository.class);
+        CorridaMrpRepository corridaMrpRepository = mock(CorridaMrpRepository.class);
+        MrpServiceImpl service = new MrpServiceImpl(
+                formulaProductoRepository,
+                loteProductoRepository,
+                ordenCompraDetalleRepository,
+                corridaMrpRepository
+        );
+        MrpController controller = new MrpController(
+                service,
+                mock(PlanProduccionService.class),
+                mock(MrpReporteService.class)
+        );
+
+        CorridaMrp corrida = CorridaMrp.builder()
+                .id(100L)
+                .horizonteInicio(java.time.LocalDate.of(2024, 1, 1))
+                .horizonteFin(java.time.LocalDate.of(2024, 1, 14))
+                .detalles(new java.util.ArrayList<>())
+                .build();
+
+        CategoriaProducto categoria = CategoriaProducto.builder()
+                .id(3L)
+                .nombre("Categoria 3")
+                .build();
+        Producto productoAlto = Producto.builder()
+                .id(50)
+                .codigoSku("SKU-ALTO")
+                .nombre("Producto Alto")
+                .categoriaProducto(categoria)
+                .leadTimeCompraDias(7)
+                .build();
+        DetalleCorridaMrp detalleAlto = DetalleCorridaMrp.builder()
+                .id(101L)
+                .corrida(corrida)
+                .producto(productoAlto)
+                .requerimientoBruto(BigDecimal.valueOf(50))
+                .inventarioDisponible(BigDecimal.valueOf(40))
+                .recepcionesProgramadas(BigDecimal.valueOf(10))
+                .requerimientoNeto(BigDecimal.valueOf(5))
+                .nivelBom(1)
+                .build();
+
+        Producto productoCritico = Producto.builder()
+                .id(60)
+                .codigoSku("SKU-CRITICO")
+                .nombre("Producto Critico")
+                .categoriaProducto(categoria)
+                .leadTimeCompraDias(21)
+                .build();
+        DetalleCorridaMrp detalleCritico = DetalleCorridaMrp.builder()
+                .id(102L)
+                .corrida(corrida)
+                .producto(productoCritico)
+                .requerimientoBruto(BigDecimal.valueOf(50))
+                .inventarioDisponible(BigDecimal.valueOf(5))
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.valueOf(45))
+                .nivelBom(1)
+                .build();
+
+        corrida.getDetalles().add(detalleAlto);
+        corrida.getDetalles().add(detalleCritico);
+        when(corridaMrpRepository.findWithDetallesById(100L)).thenReturn(Optional.of(corrida));
+
+        ResponseEntity<?> response = controller.obtener(100L);
+        CorridaMrpResponseDTO dto = (CorridaMrpResponseDTO) response.getBody();
+
+        assertNotNull(dto);
+        assertEquals(2, dto.getDetalles().size());
+        CorridaMrpResponseDTO.DetalleCorridaMrpDTO detalleDtoAlto = dto.getDetalles().get(0);
+        assertNotNull(detalleDtoAlto.getRazonesCriticidad());
+        assertEquals("ALTO", detalleDtoAlto.getCriticidad());
+        assertTrue(detalleDtoAlto.getRazonesCriticidad().contains("COBERTURA_MENOR_A_3_SEMANAS"));
+
+        CorridaMrpResponseDTO.DetalleCorridaMrpDTO detalleDtoCritico = dto.getDetalles().get(1);
+        assertNotNull(detalleDtoCritico.getRazonesCriticidad());
+        assertEquals("CRITICO", detalleDtoCritico.getCriticidad());
+        assertTrue(detalleDtoCritico.getRazonesCriticidad().contains("COBERTURA_MENOR_A_1_SEMANA"));
+        assertTrue(detalleDtoCritico.getRazonesCriticidad().contains("COBERTURA_MENOR_A_LEAD_TIME"));
+    }
 }

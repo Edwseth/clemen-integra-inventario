@@ -411,14 +411,17 @@ public class MrpServiceImpl implements MrpService {
                 ? BigDecimal.valueOf(leadTimeDias).divide(BigDecimal.valueOf(7), 2, RoundingMode.HALF_UP)
                 : null;
 
+        boolean esCritico = false;
         if (semanasCobertura.compareTo(BigDecimal.ONE) < 0) {
             razones.add("COBERTURA_MENOR_A_1_SEMANA");
+            esCritico = true;
         }
         if (leadTimeSemanas != null && semanasCobertura.compareTo(leadTimeSemanas) < 0) {
             razones.add("COBERTURA_MENOR_A_LEAD_TIME");
+            esCritico = true;
         }
 
-        if (!razones.isEmpty()) {
+        if (esCritico) {
             sugerencia.setNivelCriticidad("CRITICO");
             sugerencia.setEsCritico(true);
             sugerencia.setRazonesCriticidad(razones);

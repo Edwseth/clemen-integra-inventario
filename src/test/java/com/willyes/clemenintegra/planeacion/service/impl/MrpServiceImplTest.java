@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -202,6 +203,70 @@ class MrpServiceImplTest {
                 .orElse(null);
 
         assertEquals(TipoSugerenciaAbastecimiento.FABRICAR, tipoSugerenciaSemi);
+    }
+
+    @Test
+    void asignaRazonesParaCriticidadAlta() {
+        Producto producto = Producto.builder()
+                .id(30)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
+                .leadTimeCompraDias(7)
+                .build();
+        CorridaMrp corrida = CorridaMrp.builder()
+                .horizonteInicio(LocalDate.of(2024, 1, 1))
+                .horizonteFin(LocalDate.of(2024, 1, 14))
+                .build();
+        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
+                .corrida(corrida)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.valueOf(50))
+                .inventarioDisponible(BigDecimal.valueOf(40))
+                .recepcionesProgramadas(BigDecimal.valueOf(10))
+                .requerimientoNeto(BigDecimal.ZERO)
+                .nivelBom(1)
+                .build();
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias =
+                service.generarSugerencias(List.of(detalle));
+
+        assertEquals(1, sugerencias.size());
+        com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
+        assertEquals("ALTO", sugerencia.getNivelCriticidad());
+        assertNotNull(sugerencia.getRazonesCriticidad());
+        assertEquals(1, sugerencia.getRazonesCriticidad().size());
+        assertEquals("COBERTURA_MENOR_A_3_SEMANAS", sugerencia.getRazonesCriticidad().get(0));
+    }
+
+    @Test
+    void asignaRazonesParaCriticidadCritica() {
+        Producto producto = Producto.builder()
+                .id(40)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
+                .leadTimeCompraDias(21)
+                .build();
+        CorridaMrp corrida = CorridaMrp.builder()
+                .horizonteInicio(LocalDate.of(2024, 1, 1))
+                .horizonteFin(LocalDate.of(2024, 1, 14))
+                .build();
+        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
+                .corrida(corrida)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.valueOf(50))
+                .inventarioDisponible(BigDecimal.valueOf(5))
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.valueOf(45))
+                .nivelBom(1)
+                .build();
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias =
+                service.generarSugerencias(List.of(detalle));
+
+        assertEquals(1, sugerencias.size());
+        com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
+        assertEquals("CRITICO", sugerencia.getNivelCriticidad());
+        assertNotNull(sugerencia.getRazonesCriticidad());
+        assertTrue(sugerencia.getRazonesCriticidad().contains("COBERTURA_MENOR_A_1_SEMANA"));
+        assertTrue(sugerencia.getRazonesCriticidad().contains("COBERTURA_MENOR_A_LEAD_TIME"));
     }
 
     @Test
