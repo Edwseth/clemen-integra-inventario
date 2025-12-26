@@ -110,6 +110,7 @@ public class MrpController {
 
     private CorridaMrpResponseDTO.DetalleCorridaMrpDTO toDetalleDto(DetalleCorridaMrp detalle) {
         Producto insumo = detalle.getProducto();
+        SugerenciaAbastecimiento sugerencia = detalle.getSugerencia();
         return CorridaMrpResponseDTO.DetalleCorridaMrpDTO.builder()
                 .id(detalle.getId())
                 .productoId(insumo != null && insumo.getId() != null ? insumo.getId().longValue() : null)
@@ -122,12 +123,19 @@ public class MrpController {
                 .inventarioDisponible(detalle.getInventarioDisponible())
                 .recepcionesProgramadas(detalle.getRecepcionesProgramadas())
                 .requerimientoNeto(detalle.getRequerimientoNeto())
+                .consumoSemanalPromedio(sugerencia != null ? sugerencia.getConsumoSemanalPromedio() : null)
+                .semanasCobertura(sugerencia != null ? sugerencia.getSemanasCobertura() : null)
+                .razonesCriticidad(sugerencia != null && sugerencia.getRazonesCriticidad() != null
+                        ? sugerencia.getRazonesCriticidad()
+                        : List.of())
                 .nivelBom(detalle.getNivelBom())
                 .mensajeValidacion(detalle.getMensajeValidacion())
-                .tipoSugerencia(detalle.getSugerencia() != null && detalle.getSugerencia().getTipo() != null
-                        ? detalle.getSugerencia().getTipo().name()
+                .tipoSugerencia(sugerencia != null && sugerencia.getTipo() != null
+                        ? sugerencia.getTipo().name()
                         : null)
-                .criticidad(calcularCriticidad(detalle))
+                .criticidad(sugerencia != null && sugerencia.getNivelCriticidad() != null
+                        ? sugerencia.getNivelCriticidad()
+                        : calcularCriticidad(detalle))
                 .tipoCambio(detalle.getTipoCambioMrp() != null ? detalle.getTipoCambioMrp().name() : null)
                 .build();
     }
@@ -165,6 +173,7 @@ public class MrpController {
                 .semanasCobertura(sugerencia.getSemanasCobertura())
                 .nivelCriticidad(sugerencia.getNivelCriticidad())
                 .esCritico(sugerencia.getEsCritico())
+                .razonesCriticidad(sugerencia.getRazonesCriticidad() != null ? sugerencia.getRazonesCriticidad() : List.of())
                 .estado(sugerencia.getEstado() != null ? sugerencia.getEstado().name() : null)
                 .build();
     }

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,4 +45,17 @@ public interface OrdenCompraDetalleRepository extends JpaRepository<OrdenCompraD
             """)
     BigDecimal sumarCantidadPendientePorProductoYEstados(@Param("productoId") Long productoId,
                                                           @Param("estados") List<EstadoOrdenCompra> estados);
+
+    @Query("""
+            SELECT COALESCE(SUM(d.cantidad - d.cantidadRecibida), 0)
+            FROM OrdenCompraDetalle d
+            JOIN d.ordenCompra oc
+            WHERE d.producto.id = :productoId
+              AND oc.estado IN :estados
+              AND COALESCE(d.fechaNecesidad, oc.fechaCompromisoEntrega) BETWEEN :inicio AND :fin
+            """)
+    BigDecimal sumarCantidadPendientePorProductoYEstadoYFechas(@Param("productoId") Long productoId,
+                                                                @Param("estados") List<EstadoOrdenCompra> estados,
+                                                                @Param("inicio") LocalDate inicio,
+                                                                @Param("fin") LocalDate fin);
 }

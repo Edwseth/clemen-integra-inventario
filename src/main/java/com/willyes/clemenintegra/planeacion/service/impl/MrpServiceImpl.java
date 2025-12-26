@@ -5,8 +5,10 @@ import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
+import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
@@ -40,6 +42,7 @@ public class MrpServiceImpl implements MrpService {
 
     private final FormulaProductoRepository formulaProductoRepository;
     private final LoteProductoRepository loteProductoRepository;
+    private final OrdenCompraDetalleRepository ordenCompraDetalleRepository;
     private final CorridaMrpRepository corridaMrpRepository;
 
     @Override
@@ -75,7 +78,8 @@ public class MrpServiceImpl implements MrpService {
                 .build();
 
         Map<Producto, BigDecimal> requerimientosBrutos = calcularRequerimientosBrutos(plan);
-        List<DetalleCorridaMrp> requerimientosNetos = calcularRequerimientosNetos(requerimientosBrutos);
+        List<DetalleCorridaMrp> requerimientosNetos = calcularRequerimientosNetos(
+                requerimientosBrutos, corrida.getHorizonteInicio(), corrida.getHorizonteFin());
         requerimientosNetos.forEach(detalle -> {
             detalle.setCorrida(corrida);
             asignarTipoCambio(detalle, netosAnteriores);
@@ -126,7 +130,9 @@ public class MrpServiceImpl implements MrpService {
     }
 
     @Override
-    public List<DetalleCorridaMrp> calcularRequerimientosNetos(Map<Producto, BigDecimal> requerimientosBrutos) {
+    public List<DetalleCorridaMrp> calcularRequerimientosNetos(Map<Producto, BigDecimal> requerimientosBrutos,
+                                                               LocalDate horizonteInicio,
+                                                               LocalDate horizonteFin) {
         List<DetalleCorridaMrp> netos = new ArrayList<>();
         if (requerimientosBrutos == null || requerimientosBrutos.isEmpty()) {
             return netos;
@@ -136,8 +142,8 @@ public class MrpServiceImpl implements MrpService {
             Producto producto = entry.getKey();
             BigDecimal bruto = entry.getValue() != null ? entry.getValue() : BigDecimal.ZERO;
             BigDecimal inventario = obtenerInventarioDisponible(producto);
-            BigDecimal recepciones = BigDecimal.ZERO;
-            BigDecimal neto = bruto.subtract(inventario).max(BigDecimal.ZERO);
+            BigDecimal recepciones = obtenerRecepcionesProgramadas(producto, horizonteInicio, horizonteFin);
+            BigDecimal neto = bruto.subtract(inventario).subtract(recepciones).max(BigDecimal.ZERO);
 
             DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
                     .producto(producto)
@@ -183,7 +189,7 @@ public class MrpServiceImpl implements MrpService {
                     .estado(EstadoSugerenciaAbastecimiento.PENDIENTE)
                     .build();
             // Métricas de consumo y cobertura para exponer al frontend.
-            BigDecimal consumoTotal = Optional.ofNullable(detalle.getRequerimientoNeto()).orElse(BigDecimal.ZERO);
+            BigDecimal consumoTotal = Optional.ofNullable(detalle.getRequerimientoBruto()).orElse(BigDecimal.ZERO);
             sugerencia.setConsumoTotalPeriodo(consumoTotal);
 
             BigDecimal horizonteSemanas = calcularHorizonteSemanas(detalle.getCorrida());
@@ -262,6 +268,22 @@ public class MrpServiceImpl implements MrpService {
         return disponible.add(liberado);
     }
 
+    private BigDecimal obtenerRecepcionesProgramadas(Producto producto, LocalDate horizonteInicio, LocalDate horizonteFin) {
+        if (producto == null || producto.getId() == null || horizonteInicio == null || horizonteFin == null) {
+            return BigDecimal.ZERO;
+        }
+        LocalDate inicio = horizonteInicio.isAfter(horizonteFin) ? horizonteFin : horizonteInicio;
+        LocalDate fin = horizonteFin.isAfter(horizonteInicio) ? horizonteFin : horizonteInicio;
+        List<EstadoOrdenCompra> estadosAbiertos = List.of(
+                EstadoOrdenCompra.CREADA,
+                EstadoOrdenCompra.ENVIADA,
+                EstadoOrdenCompra.PARCIALMENTE_RECIBIDA
+        );
+        BigDecimal pendiente = ordenCompraDetalleRepository
+                .sumarCantidadPendientePorProductoYEstadoYFechas(producto.getId().longValue(), estadosAbiertos, inicio, fin);
+        return pendiente != null ? pendiente : BigDecimal.ZERO;
+    }
+
     private TipoSugerenciaAbastecimiento determinarTipo(Producto producto) {
         if (producto != null && producto.getCategoriaProducto() != null
                 && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO) {
@@ -311,9 +333,11 @@ public class MrpServiceImpl implements MrpService {
 
     private void asignarCriticidad(SugerenciaAbastecimiento sugerencia, Integer leadTimeDias) {
         BigDecimal semanasCobertura = sugerencia.getSemanasCobertura();
+        List<String> razones = new ArrayList<>();
         if (semanasCobertura == null) {
             sugerencia.setNivelCriticidad("ALTO");
             sugerencia.setEsCritico(false);
+            sugerencia.setRazonesCriticidad(razones);
             return;
         }
 
@@ -321,26 +345,37 @@ public class MrpServiceImpl implements MrpService {
                 ? BigDecimal.valueOf(leadTimeDias).divide(BigDecimal.valueOf(7), 2, RoundingMode.HALF_UP)
                 : null;
 
-        if (semanasCobertura.compareTo(BigDecimal.ONE) < 0
-                || (leadTimeSemanas != null && semanasCobertura.compareTo(leadTimeSemanas) < 0)) {
+        if (semanasCobertura.compareTo(BigDecimal.ONE) < 0) {
+            razones.add("COBERTURA_MENOR_A_1_SEMANA");
+        }
+        if (leadTimeSemanas != null && semanasCobertura.compareTo(leadTimeSemanas) < 0) {
+            razones.add("COBERTURA_MENOR_A_LEAD_TIME");
+        }
+
+        if (!razones.isEmpty()) {
             sugerencia.setNivelCriticidad("CRITICO");
             sugerencia.setEsCritico(true);
+            sugerencia.setRazonesCriticidad(razones);
             return;
         }
 
         if (semanasCobertura.compareTo(BigDecimal.ONE) >= 0 && semanasCobertura.compareTo(BigDecimal.valueOf(3)) < 0) {
             sugerencia.setNivelCriticidad("ALTO");
             sugerencia.setEsCritico(true);
+            razones.add("COBERTURA_MENOR_A_3_SEMANAS");
+            sugerencia.setRazonesCriticidad(razones);
             return;
         }
 
         if (semanasCobertura.compareTo(BigDecimal.valueOf(3)) >= 0 && semanasCobertura.compareTo(BigDecimal.valueOf(6)) < 0) {
             sugerencia.setNivelCriticidad("MEDIO");
             sugerencia.setEsCritico(false);
+            sugerencia.setRazonesCriticidad(razones);
             return;
         }
 
         sugerencia.setNivelCriticidad("BAJO");
         sugerencia.setEsCritico(false);
+        sugerencia.setRazonesCriticidad(razones);
     }
 }

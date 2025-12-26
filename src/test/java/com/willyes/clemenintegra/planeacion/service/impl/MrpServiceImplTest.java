@@ -2,7 +2,9 @@ package com.willyes.clemenintegra.planeacion.service.impl;
 
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
@@ -30,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
@@ -42,6 +46,9 @@ class MrpServiceImplTest {
 
     @Mock
     private LoteProductoRepository loteProductoRepository;
+
+    @Mock
+    private OrdenCompraDetalleRepository ordenCompraDetalleRepository;
 
     @Mock
     private CorridaMrpRepository corridaMrpRepository;
@@ -69,10 +76,56 @@ class MrpServiceImplTest {
     }
 
     @Test
+    void calculaRequerimientoNetoEnCeroCuandoInventarioCubreBruto() {
+        Producto producto = Producto.builder().id(1).build();
+        Map<Producto, BigDecimal> requerimientos = Map.of(producto, BigDecimal.TEN);
+
+        mockInventarioDisponible(BigDecimal.valueOf(15));
+        mockRecepcionesProgramadas(BigDecimal.ZERO);
+
+        List<DetalleCorridaMrp> netos = service.calcularRequerimientosNetos(
+                requerimientos, LocalDate.now(), LocalDate.now().plusDays(7));
+
+        assertEquals(1, netos.size());
+        assertEquals(0, netos.get(0).getRequerimientoNeto().compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    void calculaRequerimientoNetoPositivoCuandoInventarioInsuficiente() {
+        Producto producto = Producto.builder().id(2).build();
+        Map<Producto, BigDecimal> requerimientos = Map.of(producto, BigDecimal.TEN);
+
+        mockInventarioDisponible(BigDecimal.valueOf(2));
+        mockRecepcionesProgramadas(BigDecimal.ZERO);
+
+        List<DetalleCorridaMrp> netos = service.calcularRequerimientosNetos(
+                requerimientos, LocalDate.now(), LocalDate.now().plusDays(7));
+
+        assertEquals(BigDecimal.valueOf(8), netos.get(0).getRequerimientoNeto());
+    }
+
+    @Test
+    void descuentaRecepcionesProgramadasDelNeto() {
+        Producto producto = Producto.builder().id(3).build();
+        Map<Producto, BigDecimal> requerimientos = Map.of(producto, BigDecimal.TEN);
+
+        mockInventarioDisponible(BigDecimal.ONE);
+        mockRecepcionesProgramadas(BigDecimal.valueOf(4));
+
+        List<DetalleCorridaMrp> netos = service.calcularRequerimientosNetos(
+                requerimientos, LocalDate.now(), LocalDate.now().plusDays(7));
+
+        assertEquals(BigDecimal.valueOf(5), netos.get(0).getRequerimientoNeto());
+        assertEquals(BigDecimal.valueOf(4), netos.get(0).getRecepcionesProgramadas());
+    }
+
+    @Test
     void asignaTipoCambioComparandoConCorridaAnterior() {
         PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
                 .id(1L)
                 .estado(EstadoPlanProduccion.CONFIRMADO)
+                .semanaInicio(LocalDate.of(2024, 1, 1))
+                .semanaFin(LocalDate.of(2024, 1, 7))
                 .build();
 
         Producto insumoNuevo = Producto.builder().id(1).build();
@@ -114,7 +167,7 @@ class MrpServiceImplTest {
         );
 
         doReturn(Collections.emptyMap()).when(service).calcularRequerimientosBrutos(plan);
-        doReturn(nuevosDetalles).when(service).calcularRequerimientosNetos(anyMap());
+        doReturn(nuevosDetalles).when(service).calcularRequerimientosNetos(anyMap(), any(LocalDate.class), any(LocalDate.class));
         doReturn(Collections.emptyList()).when(service).generarSugerencias(any());
         when(corridaMrpRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -153,11 +206,12 @@ class MrpServiceImplTest {
 
         assertEquals(1, sugerencias.size());
         com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
-        assertEquals(BigDecimal.valueOf(100), sugerencia.getConsumoTotalPeriodo());
-        assertEquals(BigDecimal.valueOf(100.00).setScale(2), sugerencia.getConsumoSemanalPromedio());
-        assertEquals(BigDecimal.valueOf(0.40).setScale(2), sugerencia.getSemanasCobertura());
+        assertEquals(BigDecimal.valueOf(120), sugerencia.getConsumoTotalPeriodo());
+        assertEquals(BigDecimal.valueOf(120.00).setScale(2), sugerencia.getConsumoSemanalPromedio());
+        assertEquals(BigDecimal.valueOf(0.33).setScale(2), sugerencia.getSemanasCobertura());
         assertEquals("CRITICO", sugerencia.getNivelCriticidad());
         assertEquals(Boolean.TRUE, sugerencia.getEsCritico());
+        assertEquals(2, sugerencia.getRazonesCriticidad().size());
     }
 
     @Test
@@ -186,6 +240,10 @@ class MrpServiceImplTest {
         com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
         assertEquals("BAJO", sugerencia.getNivelCriticidad());
         assertEquals(Boolean.FALSE, sugerencia.getEsCritico());
+        assertEquals(BigDecimal.valueOf(2.50).setScale(2), sugerencia.getConsumoSemanalPromedio());
+        assertEquals(BigDecimal.valueOf(400.00).setScale(2), sugerencia.getSemanasCobertura());
+        assertNotNull(sugerencia.getRazonesCriticidad());
+        assertEquals(0, sugerencia.getRazonesCriticidad().size());
     }
 
     @Test
@@ -217,5 +275,18 @@ class MrpServiceImplTest {
         assertNull(sugerencia.getSemanasCobertura());
         assertEquals("ALTO", sugerencia.getNivelCriticidad());
         assertEquals(Boolean.FALSE, sugerencia.getEsCritico());
+        assertNotNull(sugerencia.getRazonesCriticidad());
+        assertEquals(0, sugerencia.getRazonesCriticidad().size());
+    }
+
+    private void mockInventarioDisponible(BigDecimal cantidad) {
+        List<Object[]> resultados = List.<Object[]>of(new Object[]{EstadoLote.DISPONIBLE, cantidad});
+        when(loteProductoRepository.sumarPorEstado(anyLong())).thenReturn(resultados);
+    }
+
+    private void mockRecepcionesProgramadas(BigDecimal cantidad) {
+        when(ordenCompraDetalleRepository.sumarCantidadPendientePorProductoYEstadoYFechas(
+                anyLong(), anyList(), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(cantidad);
     }
 }

@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +17,9 @@ public interface MrpService {
 
     Map<Producto, BigDecimal> calcularRequerimientosBrutos(PlanProduccionSemanal plan);
 
-    List<DetalleCorridaMrp> calcularRequerimientosNetos(Map<Producto, BigDecimal> requerimientosBrutos);
+    List<DetalleCorridaMrp> calcularRequerimientosNetos(Map<Producto, BigDecimal> requerimientosBrutos,
+                                                        LocalDate horizonteInicio,
+                                                        LocalDate horizonteFin);
 
     List<SugerenciaAbastecimiento> generarSugerencias(List<DetalleCorridaMrp> requerimientosNetos);
 

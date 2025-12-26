@@ -7,6 +7,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "sugerencias_abastecimiento")
@@ -64,4 +66,8 @@ public class SugerenciaAbastecimiento {
 
     @Transient
     private Boolean esCritico;
+
+    @Builder.Default
+    @Transient
+    private List<String> razonesCriticidad = new ArrayList<>();
 }

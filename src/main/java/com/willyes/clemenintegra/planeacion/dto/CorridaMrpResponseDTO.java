@@ -45,6 +45,9 @@ public class CorridaMrpResponseDTO {
         private BigDecimal inventarioDisponible;
         private BigDecimal recepcionesProgramadas;
         private BigDecimal requerimientoNeto;
+        private BigDecimal consumoSemanalPromedio;
+        private BigDecimal semanasCobertura;
+        private List<String> razonesCriticidad;
         private Integer nivelBom;
         private String mensajeValidacion;
         private String tipoSugerencia;
@@ -72,6 +75,7 @@ public class CorridaMrpResponseDTO {
         private BigDecimal semanasCobertura;
         private String nivelCriticidad;
         private Boolean esCritico;
+        private List<String> razonesCriticidad;
         private String estado;
     }
 }
