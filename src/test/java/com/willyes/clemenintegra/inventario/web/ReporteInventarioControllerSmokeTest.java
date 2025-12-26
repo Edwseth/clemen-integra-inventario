@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,6 +32,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = {"DB_SECURPASS=dummy", "DB_SECURNAME=dummy"})
 class ReporteInventarioControllerSmokeTest {
+
+    @TestConfiguration
+    @EnableMethodSecurity(prePostEnabled = true)
+    static class MethodSecurityConfig {
+        // Habilita @PreAuthorize en slice tests.
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -74,6 +82,19 @@ class ReporteInventarioControllerSmokeTest {
                         .param("fechaInicio", "2024-01-01")
                         .param("fechaFin", "2024-01-31"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_ANALISTA_CALIDAD")
+    @DisplayName("GET /api/reportes/alta-rotacion responde 403 para roles no permitidos")
+    void altaRotacion_restringidoParaRolesNoAutorizados() throws Exception {
+        when(reporteInventarioService.generarReporteAltaRotacion(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(new XSSFWorkbook());
+
+        mockMvc.perform(get("/api/reportes/alta-rotacion")
+                        .param("fechaInicio", "2024-01-01")
+                        .param("fechaFin", "2024-01-31"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
