@@ -207,10 +207,14 @@ public class MrpServiceImpl implements MrpService {
     }
 
     private SugerenciaAbastecimiento prepararSugerencia(DetalleCorridaMrp detalle) {
-        if (detalle == null || detalle.getRequerimientoNeto() == null ||
-                detalle.getRequerimientoNeto().compareTo(BigDecimal.ZERO) <= 0) {
+        if (detalle == null) {
             return null;
         }
+        BigDecimal requerimientoBruto = Optional.ofNullable(detalle.getRequerimientoBruto()).orElse(BigDecimal.ZERO);
+        if (requerimientoBruto.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        BigDecimal requerimientoNeto = Optional.ofNullable(detalle.getRequerimientoNeto()).orElse(BigDecimal.ZERO);
         Producto producto = detalle.getProducto();
         TipoSugerenciaAbastecimiento tipo = determinarTipo(producto);
         Integer leadTime = obtenerLeadTime(tipo, producto);
@@ -224,7 +228,7 @@ public class MrpServiceImpl implements MrpService {
             sugerencia = SugerenciaAbastecimiento.builder()
                     .detalleCorrida(detalle)
                     .tipo(tipo)
-                    .cantidadSugerida(detalle.getRequerimientoNeto())
+                    .cantidadSugerida(requerimientoNeto)
                     .fechaNecesidad(fechaNecesidad)
                     .fechaSugeridaLanzamiento(fechaLanzamiento)
                     .leadTimeDias(leadTime)
@@ -237,7 +241,7 @@ public class MrpServiceImpl implements MrpService {
                 sugerencia.setTipo(tipo);
             }
             if (sugerencia.getCantidadSugerida() == null) {
-                sugerencia.setCantidadSugerida(detalle.getRequerimientoNeto());
+                sugerencia.setCantidadSugerida(requerimientoNeto);
             }
             if (sugerencia.getFechaNecesidad() == null) {
                 sugerencia.setFechaNecesidad(fechaNecesidad);

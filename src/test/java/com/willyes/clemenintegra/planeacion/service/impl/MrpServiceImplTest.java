@@ -332,6 +332,38 @@ class MrpServiceImplTest {
     }
 
     @Test
+    void calculaConsumoYCoberturaAunqueElNetoSeaCero() {
+        CorridaMrp corrida = CorridaMrp.builder()
+                .horizonteInicio(LocalDate.of(2024, 2, 5))
+                .horizonteFin(LocalDate.of(2024, 2, 11))
+                .build();
+        Producto producto = Producto.builder()
+                .id(105)
+                .leadTimeCompraDias(7)
+                .build();
+        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
+                .corrida(corrida)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.valueOf(50))
+                .inventarioDisponible(BigDecimal.valueOf(200))
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.ZERO)
+                .nivelBom(1)
+                .build();
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias = service.generarSugerencias(List.of(detalle));
+
+        assertEquals(1, sugerencias.size());
+        com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
+
+        assertEquals(BigDecimal.valueOf(50.00).setScale(2), sugerencia.getConsumoSemanalPromedio());
+        assertEquals(BigDecimal.valueOf(4.00).setScale(2), sugerencia.getSemanasCobertura());
+        assertEquals(Boolean.FALSE, sugerencia.getEsCritico());
+        assertNotNull(sugerencia.getConsumoSemanalPromedio());
+        assertNotNull(sugerencia.getSemanasCobertura());
+    }
+
+    @Test
     void calculaConsumoYcoberturaCuandoHorizonteEsMenorAUnaSemana() {
         CorridaMrp corrida = CorridaMrp.builder()
                 .horizonteInicio(LocalDate.of(2025, 12, 28))
