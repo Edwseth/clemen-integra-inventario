@@ -1,16 +1,23 @@
 package com.willyes.clemenintegra.planeacion.service.impl;
 
+import com.willyes.clemenintegra.bom.model.DetalleFormula;
+import com.willyes.clemenintegra.bom.model.FormulaProducto;
+import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
-import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoCorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.model.enums.TipoCambioMrp;
+import com.willyes.clemenintegra.planeacion.model.enums.TipoSugerenciaAbastecimiento;
 import com.willyes.clemenintegra.planeacion.repository.CorridaMrpRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -117,6 +124,84 @@ class MrpServiceImplTest {
 
         assertEquals(BigDecimal.valueOf(5), netos.get(0).getRequerimientoNeto());
         assertEquals(BigDecimal.valueOf(4), netos.get(0).getRecepcionesProgramadas());
+    }
+
+    @Test
+    void explotaSemiElaboradoYPropagaRequerimientos() {
+        Producto productoTerminado = Producto.builder()
+                .id(10)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.PRODUCTO_TERMINADO).build())
+                .build();
+        Producto semiElaborado = Producto.builder()
+                .id(20)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO).build())
+                .build();
+        Producto insumoFinal = Producto.builder()
+                .id(30)
+                .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
+                .build();
+
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .estado(EstadoPlanProduccion.CONFIRMADO)
+                .semanaInicio(LocalDate.of(2024, 2, 5))
+                .semanaFin(LocalDate.of(2024, 2, 11))
+                .detalles(new ArrayList<>())
+                .build();
+        plan.getDetalles().add(PlanProduccionDetalle.builder()
+                .plan(plan)
+                .producto(productoTerminado)
+                .cantidadPlanificada(BigDecimal.ONE)
+                .build());
+
+        FormulaProducto formulaPt = FormulaProducto.builder()
+                .producto(productoTerminado)
+                .estado(EstadoFormula.APROBADA)
+                .detalles(List.of(DetalleFormula.builder()
+                        .insumo(semiElaborado)
+                        .cantidadNecesaria(BigDecimal.TEN)
+                        .build()))
+                .build();
+        FormulaProducto formulaPs = FormulaProducto.builder()
+                .producto(semiElaborado)
+                .estado(EstadoFormula.APROBADA)
+                .detalles(List.of(DetalleFormula.builder()
+                        .insumo(insumoFinal)
+                        .cantidadNecesaria(BigDecimal.valueOf(2))
+                        .build()))
+                .build();
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(productoTerminado.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPt));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(semiElaborado.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPs));
+
+        mockInventarioDisponible(Map.of(
+                semiElaborado.getId().longValue(), BigDecimal.valueOf(3),
+                insumoFinal.getId().longValue(), BigDecimal.ZERO
+        ));
+        mockRecepcionesProgramadas(Map.of(semiElaborado.getId().longValue(), BigDecimal.ONE));
+
+        Map<Producto, BigDecimal> brutos = service.calcularRequerimientosBrutos(plan);
+
+        assertEquals(BigDecimal.TEN, brutos.get(semiElaborado));
+        assertEquals(BigDecimal.valueOf(12), brutos.get(insumoFinal));
+
+        List<DetalleCorridaMrp> netos = service.calcularRequerimientosNetos(
+                brutos, plan.getSemanaInicio(), plan.getSemanaFin());
+        Map<Integer, DetalleCorridaMrp> netosPorProducto = netos.stream()
+                .collect(java.util.stream.Collectors.toMap(d -> d.getProducto().getId(), d -> d));
+
+        assertEquals(BigDecimal.valueOf(6), netosPorProducto.get(semiElaborado.getId()).getRequerimientoNeto());
+        assertEquals(BigDecimal.valueOf(12), netosPorProducto.get(insumoFinal.getId()).getRequerimientoNeto());
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias = service.generarSugerencias(netos);
+        TipoSugerenciaAbastecimiento tipoSugerenciaSemi = sugerencias.stream()
+                .filter(s -> s.getDetalleCorrida().getProducto().getId().equals(semiElaborado.getId()))
+                .findFirst()
+                .map(com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento::getTipo)
+                .orElse(null);
+
+        assertEquals(TipoSugerenciaAbastecimiento.FABRICAR, tipoSugerenciaSemi);
     }
 
     @Test
@@ -284,9 +369,26 @@ class MrpServiceImplTest {
         when(loteProductoRepository.sumarPorEstado(anyLong())).thenReturn(resultados);
     }
 
+    private void mockInventarioDisponible(Map<Long, BigDecimal> cantidadesPorProducto) {
+        when(loteProductoRepository.sumarPorEstado(anyLong())).thenAnswer(invocation -> {
+            Long productoId = invocation.getArgument(0);
+            BigDecimal cantidad = cantidadesPorProducto.getOrDefault(productoId, BigDecimal.ZERO);
+            return List.<Object[]>of(new Object[]{EstadoLote.DISPONIBLE, cantidad});
+        });
+    }
+
     private void mockRecepcionesProgramadas(BigDecimal cantidad) {
         when(ordenCompraDetalleRepository.sumarCantidadPendientePorProductoYEstadoYFechas(
                 anyLong(), anyList(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(cantidad);
+    }
+
+    private void mockRecepcionesProgramadas(Map<Long, BigDecimal> cantidadesPorProducto) {
+        when(ordenCompraDetalleRepository.sumarCantidadPendientePorProductoYEstadoYFechas(
+                anyLong(), anyList(), any(LocalDate.class), any(LocalDate.class)))
+                .thenAnswer(invocation -> {
+                    Long productoId = invocation.getArgument(0);
+                    return cantidadesPorProducto.getOrDefault(productoId, BigDecimal.ZERO);
+                });
     }
 }

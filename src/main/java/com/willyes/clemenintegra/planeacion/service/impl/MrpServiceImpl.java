@@ -40,6 +40,8 @@ import java.util.*;
 @Transactional
 public class MrpServiceImpl implements MrpService {
 
+    private static final int MAX_NIVEL_EXPLOSION = 5;
+
     private final FormulaProductoRepository formulaProductoRepository;
     private final LoteProductoRepository loteProductoRepository;
     private final OrdenCompraDetalleRepository ordenCompraDetalleRepository;
@@ -101,6 +103,10 @@ public class MrpServiceImpl implements MrpService {
             return requerimientos;
         }
 
+        Map<Producto, BigDecimal> requerimientosSemiElaborados = new HashMap<>();
+        LocalDate horizonteInicio = plan.getSemanaInicio();
+        LocalDate horizonteFin = plan.getSemanaFin();
+
         for (PlanProduccionDetalle detallePlan : plan.getDetalles()) {
             if (detallePlan.getProducto() == null || detallePlan.getCantidadPlanificada() == null) {
                 continue;
@@ -120,11 +126,18 @@ public class MrpServiceImpl implements MrpService {
                 if (detalleFormula.getInsumo() == null || detalleFormula.getCantidadNecesaria() == null) {
                     continue;
                 }
+                Producto insumo = detalleFormula.getInsumo();
                 BigDecimal requerido = detalleFormula.getCantidadNecesaria()
                         .multiply(detallePlan.getCantidadPlanificada());
-                requerimientos.merge(detalleFormula.getInsumo(), requerido, BigDecimal::add);
+                requerimientos.merge(insumo, requerido, BigDecimal::add);
+
+                if (esProductoSemiElaborado(insumo)) {
+                    requerimientosSemiElaborados.merge(insumo, requerido, BigDecimal::add);
+                }
             }
         }
+
+        explotarProductosSemiElaborados(requerimientosSemiElaborados, requerimientos, horizonteInicio, horizonteFin);
 
         return requerimientos;
     }
@@ -285,9 +298,11 @@ public class MrpServiceImpl implements MrpService {
     }
 
     private TipoSugerenciaAbastecimiento determinarTipo(Producto producto) {
-        if (producto != null && producto.getCategoriaProducto() != null
-                && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO) {
-            return TipoSugerenciaAbastecimiento.FABRICAR;
+        if (producto != null && producto.getCategoriaProducto() != null) {
+            TipoCategoria tipo = producto.getCategoriaProducto().getTipo();
+            if (tipo == TipoCategoria.PRODUCTO_TERMINADO || tipo == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+                return TipoSugerenciaAbastecimiento.FABRICAR;
+            }
         }
         return TipoSugerenciaAbastecimiento.COMPRA;
     }
@@ -377,5 +392,86 @@ public class MrpServiceImpl implements MrpService {
         sugerencia.setNivelCriticidad("BAJO");
         sugerencia.setEsCritico(false);
         sugerencia.setRazonesCriticidad(razones);
+    }
+
+    private void explotarProductosSemiElaborados(Map<Producto, BigDecimal> requerimientosSemiElaborados,
+                                                 Map<Producto, BigDecimal> requerimientos,
+                                                 LocalDate horizonteInicio,
+                                                 LocalDate horizonteFin) {
+        if (requerimientosSemiElaborados.isEmpty()) {
+            return;
+        }
+        Set<Long> visitados = new HashSet<>();
+        for (Map.Entry<Producto, BigDecimal> entry : requerimientosSemiElaborados.entrySet()) {
+            Producto producto = entry.getKey();
+            BigDecimal bruto = entry.getValue() != null ? entry.getValue() : BigDecimal.ZERO;
+            BigDecimal neto = calcularRequerimientoNetoTemporal(producto, bruto, horizonteInicio, horizonteFin);
+            if (neto.compareTo(BigDecimal.ZERO) > 0) {
+                explotarSemiElaboradoRecursivo(producto, neto, requerimientos, horizonteInicio, horizonteFin, visitados, 1);
+            }
+        }
+    }
+
+    private void explotarSemiElaboradoRecursivo(Producto semiElaborado,
+                                                BigDecimal requeridoNeto,
+                                                Map<Producto, BigDecimal> requerimientos,
+                                                LocalDate horizonteInicio,
+                                                LocalDate horizonteFin,
+                                                Set<Long> visitados,
+                                                int nivel) {
+        if (semiElaborado == null || semiElaborado.getId() == null || requeridoNeto == null) {
+            return;
+        }
+        if (nivel > MAX_NIVEL_EXPLOSION) {
+            log.warn("Se alcanzó la profundidad máxima de explosión ({}) para el producto {}", MAX_NIVEL_EXPLOSION, semiElaborado.getId());
+            return;
+        }
+        if (!visitados.add(semiElaborado.getId().longValue())) {
+            log.warn("Detectado ciclo en explosión de BOM para el producto {}", semiElaborado.getId());
+            return;
+        }
+
+        Optional<FormulaProducto> formulaOpt = formulaProductoRepository
+                .findByProductoIdAndEstadoAndActivoTrue(semiElaborado.getId().longValue(), EstadoFormula.APROBADA);
+        if (formulaOpt.isEmpty() || formulaOpt.get().getDetalles() == null) {
+            log.warn("No se encontró fórmula aprobada para el producto {}", semiElaborado.getId());
+            visitados.remove(semiElaborado.getId().longValue());
+            return;
+        }
+
+        for (DetalleFormula detalleFormula : formulaOpt.get().getDetalles()) {
+            if (detalleFormula.getInsumo() == null || detalleFormula.getCantidadNecesaria() == null) {
+                continue;
+            }
+            Producto insumo = detalleFormula.getInsumo();
+            BigDecimal requerido = detalleFormula.getCantidadNecesaria().multiply(requeridoNeto);
+            requerimientos.merge(insumo, requerido, BigDecimal::add);
+
+            if (esProductoSemiElaborado(insumo)) {
+                BigDecimal netoHijo = calcularRequerimientoNetoTemporal(insumo, requerido, horizonteInicio, horizonteFin);
+                if (netoHijo.compareTo(BigDecimal.ZERO) > 0) {
+                    explotarSemiElaboradoRecursivo(insumo, netoHijo, requerimientos, horizonteInicio, horizonteFin, visitados, nivel + 1);
+                }
+            }
+        }
+        visitados.remove(semiElaborado.getId().longValue());
+    }
+
+    private BigDecimal calcularRequerimientoNetoTemporal(Producto producto,
+                                                         BigDecimal bruto,
+                                                         LocalDate horizonteInicio,
+                                                         LocalDate horizonteFin) {
+        if (bruto == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal inventario = obtenerInventarioDisponible(producto);
+        BigDecimal recepciones = obtenerRecepcionesProgramadas(producto, horizonteInicio, horizonteFin);
+        return bruto.subtract(inventario).subtract(recepciones).max(BigDecimal.ZERO);
+    }
+
+    private boolean esProductoSemiElaborado(Producto producto) {
+        return producto != null
+                && producto.getCategoriaProducto() != null
+                && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_SEMI_ELABORADO;
     }
 }
