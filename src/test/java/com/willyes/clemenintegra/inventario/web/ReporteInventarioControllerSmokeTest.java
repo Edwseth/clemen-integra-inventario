@@ -64,6 +64,19 @@ class ReporteInventarioControllerSmokeTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_COMPRADOR")
+    @DisplayName("GET /api/reportes/alta-rotacion responde 200 para comprador")
+    void altaRotacion_permitidoParaComprador() throws Exception {
+        when(reporteInventarioService.generarReporteAltaRotacion(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(new XSSFWorkbook());
+
+        mockMvc.perform(get("/api/reportes/alta-rotacion")
+                        .param("fechaInicio", "2024-01-01")
+                        .param("fechaFin", "2024-01-31"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
     @DisplayName("GET /api/reportes/productos-por-vencer responde 200 con adjunto")
     void productosPorVencer_devuelveExcel() throws Exception {
