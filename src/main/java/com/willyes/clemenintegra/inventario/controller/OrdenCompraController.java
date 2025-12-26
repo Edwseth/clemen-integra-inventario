@@ -60,7 +60,7 @@ public class OrdenCompraController {
     private final OrdenCompraMapper mapper;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROL_COMPRADOR')")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<OrdenCompra> crear(@RequestBody OrdenCompraRequestDTO dto) {
         // 1. Validar proveedor
