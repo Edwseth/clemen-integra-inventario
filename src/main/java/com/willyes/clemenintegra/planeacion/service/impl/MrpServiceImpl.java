@@ -180,19 +180,48 @@ public class MrpServiceImpl implements MrpService {
         }
 
         for (DetalleCorridaMrp detalle : requerimientosNetos) {
-            if (detalle.getRequerimientoNeto() == null ||
-                    detalle.getRequerimientoNeto().compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
+            SugerenciaAbastecimiento sugerencia = prepararSugerencia(detalle);
+            if (sugerencia != null) {
+                sugerencias.add(sugerencia);
             }
-            Producto producto = detalle.getProducto();
-            TipoSugerenciaAbastecimiento tipo = determinarTipo(producto);
-            Integer leadTime = obtenerLeadTime(tipo, producto);
-            LocalDate fechaNecesidad = detalle.getCorrida() != null && detalle.getCorrida().getHorizonteFin() != null
-                    ? detalle.getCorrida().getHorizonteFin()
-                    : LocalDate.now();
-            LocalDate fechaLanzamiento = leadTime != null ? fechaNecesidad.minusDays(leadTime) : fechaNecesidad;
+        }
+        return sugerencias;
+    }
 
-            SugerenciaAbastecimiento sugerencia = SugerenciaAbastecimiento.builder()
+    @Override
+    @Transactional(readOnly = true)
+    public CorridaMrp obtenerCorrida(Long id) {
+        CorridaMrp corrida = corridaMrpRepository.findWithDetallesById(id)
+                .orElseThrow(() -> new NoSuchElementException("Corrida MRP no encontrada"));
+        // Las métricas de cobertura y criticidad son transitorias; al cargar desde BD deben recalcularse
+        // para que el GET entregue el mismo DTO enriquecido que el POST.
+        enriquecerCorrida(corrida);
+        return corrida;
+    }
+
+    private void enriquecerCorrida(CorridaMrp corrida) {
+        if (corrida == null || corrida.getDetalles() == null) {
+            return;
+        }
+        corrida.getDetalles().forEach(this::prepararSugerencia);
+    }
+
+    private SugerenciaAbastecimiento prepararSugerencia(DetalleCorridaMrp detalle) {
+        if (detalle == null || detalle.getRequerimientoNeto() == null ||
+                detalle.getRequerimientoNeto().compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        Producto producto = detalle.getProducto();
+        TipoSugerenciaAbastecimiento tipo = determinarTipo(producto);
+        Integer leadTime = obtenerLeadTime(tipo, producto);
+        LocalDate fechaNecesidad = detalle.getCorrida() != null && detalle.getCorrida().getHorizonteFin() != null
+                ? detalle.getCorrida().getHorizonteFin()
+                : LocalDate.now();
+        LocalDate fechaLanzamiento = leadTime != null ? fechaNecesidad.minusDays(leadTime) : fechaNecesidad;
+
+        SugerenciaAbastecimiento sugerencia = detalle.getSugerencia();
+        if (sugerencia == null) {
+            sugerencia = SugerenciaAbastecimiento.builder()
                     .detalleCorrida(detalle)
                     .tipo(tipo)
                     .cantidadSugerida(detalle.getRequerimientoNeto())
@@ -201,30 +230,46 @@ public class MrpServiceImpl implements MrpService {
                     .leadTimeDias(leadTime)
                     .estado(EstadoSugerenciaAbastecimiento.PENDIENTE)
                     .build();
-            // Métricas de consumo y cobertura para exponer al frontend.
-            BigDecimal consumoTotal = Optional.ofNullable(detalle.getRequerimientoBruto()).orElse(BigDecimal.ZERO);
-            sugerencia.setConsumoTotalPeriodo(consumoTotal);
-
-            BigDecimal horizonteSemanas = calcularHorizonteSemanas(detalle.getCorrida());
-            BigDecimal consumoSemanalPromedio = calcularConsumoSemanalPromedio(consumoTotal, horizonteSemanas);
-            sugerencia.setConsumoSemanalPromedio(consumoSemanalPromedio);
-
-            BigDecimal semanasCobertura = calcularSemanasCobertura(detalle, consumoSemanalPromedio);
-            sugerencia.setSemanasCobertura(semanasCobertura);
-
-            // Determinar criticidad basada en la cobertura y lead time.
-            asignarCriticidad(sugerencia, leadTime);
             detalle.setSugerencia(sugerencia);
-            sugerencias.add(sugerencia);
+        } else {
+            sugerencia.setDetalleCorrida(detalle);
+            if (sugerencia.getTipo() == null) {
+                sugerencia.setTipo(tipo);
+            }
+            if (sugerencia.getCantidadSugerida() == null) {
+                sugerencia.setCantidadSugerida(detalle.getRequerimientoNeto());
+            }
+            if (sugerencia.getFechaNecesidad() == null) {
+                sugerencia.setFechaNecesidad(fechaNecesidad);
+            }
+            if (sugerencia.getFechaSugeridaLanzamiento() == null) {
+                sugerencia.setFechaSugeridaLanzamiento(fechaLanzamiento);
+            }
+            if (sugerencia.getLeadTimeDias() == null) {
+                sugerencia.setLeadTimeDias(leadTime);
+            }
+            if (sugerencia.getEstado() == null) {
+                sugerencia.setEstado(EstadoSugerenciaAbastecimiento.PENDIENTE);
+            }
         }
-        return sugerencias;
+
+        enriquecerMetricas(detalle, sugerencia, leadTime);
+        return sugerencia;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public CorridaMrp obtenerCorrida(Long id) {
-        return corridaMrpRepository.findWithDetallesById(id)
-                .orElseThrow(() -> new NoSuchElementException("Corrida MRP no encontrada"));
+    private void enriquecerMetricas(DetalleCorridaMrp detalle, SugerenciaAbastecimiento sugerencia, Integer leadTimeDias) {
+        BigDecimal consumoTotal = Optional.ofNullable(detalle.getRequerimientoBruto()).orElse(BigDecimal.ZERO);
+        sugerencia.setConsumoTotalPeriodo(consumoTotal);
+
+        BigDecimal horizonteSemanas = calcularHorizonteSemanas(detalle.getCorrida());
+        BigDecimal consumoSemanalPromedio = calcularConsumoSemanalPromedio(consumoTotal, horizonteSemanas);
+        sugerencia.setConsumoSemanalPromedio(consumoSemanalPromedio);
+
+        BigDecimal semanasCobertura = calcularSemanasCobertura(detalle, consumoSemanalPromedio);
+        sugerencia.setSemanasCobertura(semanasCobertura);
+
+        Integer leadTimeParaCriticidad = leadTimeDias != null ? leadTimeDias : sugerencia.getLeadTimeDias();
+        asignarCriticidad(sugerencia, leadTimeParaCriticidad);
     }
 
     private Map<String, BigDecimal> construirMapaNetos(Optional<CorridaMrp> corridaAnterior) {

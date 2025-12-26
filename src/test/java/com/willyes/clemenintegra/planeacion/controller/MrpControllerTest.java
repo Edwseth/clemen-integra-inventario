@@ -6,18 +6,28 @@ import com.willyes.clemenintegra.planeacion.dto.CorridaMrpResponseDTO;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.enums.TipoCambioMrp;
+import com.willyes.clemenintegra.planeacion.repository.CorridaMrpRepository;
 import com.willyes.clemenintegra.planeacion.service.MrpReporteService;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
+import com.willyes.clemenintegra.planeacion.service.impl.MrpServiceImpl;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
+import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class MrpControllerTest {
 
@@ -89,5 +99,72 @@ class MrpControllerTest {
         assertEquals(TipoCambioMrp.AUMENTO.name(), dto.getDetalles().get(1).getTipoCambio());
         assertEquals(TipoCambioMrp.SIN_CAMBIO.name(), dto.getDetalles().get(2).getTipoCambio());
     }
-}
 
+    @Test
+    void obtenerDebeEnriquecerMetricasParaGet() {
+        FormulaProductoRepository formulaProductoRepository = mock(FormulaProductoRepository.class);
+        LoteProductoRepository loteProductoRepository = mock(LoteProductoRepository.class);
+        OrdenCompraDetalleRepository ordenCompraDetalleRepository = mock(OrdenCompraDetalleRepository.class);
+        CorridaMrpRepository corridaMrpRepository = mock(CorridaMrpRepository.class);
+        MrpServiceImpl service = new MrpServiceImpl(
+                formulaProductoRepository,
+                loteProductoRepository,
+                ordenCompraDetalleRepository,
+                corridaMrpRepository
+        );
+        MrpController controller = new MrpController(
+                service,
+                mock(PlanProduccionService.class),
+                mock(MrpReporteService.class)
+        );
+
+        CategoriaProducto categoria = CategoriaProducto.builder()
+                .id(2L)
+                .nombre("Materia Prima")
+                .build();
+        Producto producto = Producto.builder()
+                .id(10)
+                .codigoSku("SKU-PS-1")
+                .nombre("Producto Semielaborado")
+                .categoriaProducto(categoria)
+                .leadTimeCompraDias(7)
+                .build();
+
+        CorridaMrp corrida = CorridaMrp.builder()
+                .id(99L)
+                .horizonteInicio(java.time.LocalDate.of(2024, 1, 1))
+                .horizonteFin(java.time.LocalDate.of(2024, 1, 14))
+                .detalles(new java.util.ArrayList<>())
+                .build();
+        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
+                .id(100L)
+                .corrida(corrida)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.valueOf(50))
+                .inventarioDisponible(BigDecimal.valueOf(10))
+                .recepcionesProgramadas(BigDecimal.valueOf(5))
+                .requerimientoNeto(BigDecimal.valueOf(20))
+                .nivelBom(1)
+                .build();
+        corrida.getDetalles().add(detalle);
+        when(corridaMrpRepository.findWithDetallesById(99L)).thenReturn(Optional.of(corrida));
+
+        ResponseEntity<?> response = controller.obtener(99L);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody() instanceof CorridaMrpResponseDTO);
+        CorridaMrpResponseDTO dto = (CorridaMrpResponseDTO) response.getBody();
+        assertNotNull(dto.getDetalles());
+        assertEquals(1, dto.getDetalles().size());
+        CorridaMrpResponseDTO.DetalleCorridaMrpDTO detalleDto = dto.getDetalles().get(0);
+        assertNotNull(detalleDto.getConsumoSemanalPromedio());
+        assertNotNull(detalleDto.getSemanasCobertura());
+
+        assertNotNull(dto.getSugerencias());
+        assertEquals(1, dto.getSugerencias().size());
+        CorridaMrpResponseDTO.SugerenciaAbastecimientoDTO sugerenciaDto = dto.getSugerencias().get(0);
+        assertNotNull(sugerenciaDto.getConsumoSemanalPromedio());
+        assertNotNull(sugerenciaDto.getSemanasCobertura());
+        assertNotNull(sugerenciaDto.getNivelCriticidad());
+        assertNotNull(sugerenciaDto.getEsCritico());
+    }
+}
