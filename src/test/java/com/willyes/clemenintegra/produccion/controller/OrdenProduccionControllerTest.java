@@ -121,6 +121,29 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("POST /api/produccion/ordenes permite SUPER_ADMIN")
+    void crearOrden_superAdminPermitido() throws Exception {
+        OrdenProduccionResponseDTO orden = new OrdenProduccionResponseDTO();
+        orden.id = 101L;
+        orden.codigoOrden = "OP-SA";
+
+        ResultadoValidacionOrdenDTO respuesta = ResultadoValidacionOrdenDTO.builder()
+                .esValida(true)
+                .mensaje("ok")
+                .orden(orden)
+                .build();
+
+        when(ordenProduccionService.crearOrden(any(OrdenProduccionRequestDTO.class))).thenReturn(respuesta);
+
+        mockMvc.perform(post("/api/produccion/ordenes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildRequest())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.esValida").value(true));
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     @DisplayName("POST /api/produccion/ordenes retorna 400 con code STOCK_INSUFICIENTE")
     void crearOrden_insuficiente() throws Exception {
