@@ -325,8 +325,10 @@ public class MrpServiceImpl implements MrpService {
         if (dias <= 0) {
             return null;
         }
-        return BigDecimal.valueOf(dias)
-                .divide(BigDecimal.valueOf(7), 2, RoundingMode.HALF_UP);
+        // Incluye ambos extremos y redondea hacia arriba para no perder semanas parciales.
+        BigDecimal semanas = BigDecimal.valueOf(dias)
+                .divide(BigDecimal.valueOf(7), 10, RoundingMode.CEILING);
+        return semanas.max(BigDecimal.ONE).setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal calcularConsumoSemanalPromedio(BigDecimal consumoTotal, BigDecimal horizonteSemanas) {

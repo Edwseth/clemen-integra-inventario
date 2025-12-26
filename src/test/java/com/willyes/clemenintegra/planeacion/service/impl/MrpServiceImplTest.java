@@ -332,6 +332,60 @@ class MrpServiceImplTest {
     }
 
     @Test
+    void calculaConsumoYcoberturaCuandoHorizonteEsMenorAUnaSemana() {
+        CorridaMrp corrida = CorridaMrp.builder()
+                .horizonteInicio(LocalDate.of(2025, 12, 28))
+                .horizonteFin(LocalDate.of(2026, 1, 3))
+                .build();
+        Producto producto = Producto.builder()
+                .id(83)
+                .leadTimeCompraDias(14)
+                .build();
+        Map<Producto, BigDecimal> requerimientos = Map.of(producto, BigDecimal.valueOf(1000));
+
+        mockInventarioDisponible(BigDecimal.valueOf(20));
+        mockRecepcionesProgramadas(BigDecimal.valueOf(30));
+
+        List<DetalleCorridaMrp> netos = service.calcularRequerimientosNetos(
+                requerimientos, corrida.getHorizonteInicio(), corrida.getHorizonteFin());
+        netos.forEach(detalle -> detalle.setCorrida(corrida));
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias = service.generarSugerencias(netos);
+        com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
+
+        assertEquals(BigDecimal.valueOf(950), netos.get(0).getRequerimientoNeto());
+        assertEquals(BigDecimal.valueOf(1000.00).setScale(2), sugerencia.getConsumoSemanalPromedio());
+        assertEquals(BigDecimal.valueOf(0.05).setScale(2), sugerencia.getSemanasCobertura());
+        assertNotNull(sugerencia.getNivelCriticidad());
+    }
+
+    @Test
+    void horizonteMinimoEsUnaSemanaCuandoDiasEntreFechasEsSeis() {
+        CorridaMrp corrida = CorridaMrp.builder()
+                .horizonteInicio(LocalDate.of(2024, 3, 1))
+                .horizonteFin(LocalDate.of(2024, 3, 6))
+                .build();
+        Producto producto = Producto.builder()
+                .id(99)
+                .leadTimeCompraDias(7)
+                .build();
+        DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
+                .corrida(corrida)
+                .producto(producto)
+                .requerimientoBruto(BigDecimal.valueOf(70))
+                .inventarioDisponible(BigDecimal.ZERO)
+                .recepcionesProgramadas(BigDecimal.ZERO)
+                .requerimientoNeto(BigDecimal.valueOf(70))
+                .nivelBom(1)
+                .build();
+
+        List<com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento> sugerencias = service.generarSugerencias(List.of(detalle));
+        com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento sugerencia = sugerencias.get(0);
+
+        assertEquals(BigDecimal.valueOf(70.00).setScale(2), sugerencia.getConsumoSemanalPromedio());
+    }
+
+    @Test
     void manejaHorizonteInvalidoSinDividirPorCero() {
         CorridaMrp corrida = CorridaMrp.builder()
                 .horizonteInicio(null)
