@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.dto.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -35,7 +36,7 @@ public class DetalleEtapaController {
     }
 
     @PostMapping
-    public ResponseEntity<DetalleEtapaResponse> crear(@RequestBody DetalleEtapaRequest request) {
+    public ResponseEntity<DetalleEtapaResponse> crear(@Valid @RequestBody DetalleEtapaRequest request) {
         EtapaProduccion etapa = new EtapaProduccion(); etapa.setId(request.etapaProduccionId);
         OrdenProduccion orden = new OrdenProduccion(); orden.setId(request.ordenProduccionId);
         Usuario operario = new Usuario(); operario.setId(request.operarioId);
@@ -44,7 +45,7 @@ public class DetalleEtapaController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DetalleEtapaResponse> actualizar(@PathVariable Long id, @RequestBody DetalleEtapaRequest request) {
+    public ResponseEntity<DetalleEtapaResponse> actualizar(@PathVariable Long id, @Valid @RequestBody DetalleEtapaRequest request) {
         return service.buscarPorId(id)
                 .map(existente -> {
                     EtapaProduccion etapa = new EtapaProduccion(); etapa.setId(request.etapaProduccionId);

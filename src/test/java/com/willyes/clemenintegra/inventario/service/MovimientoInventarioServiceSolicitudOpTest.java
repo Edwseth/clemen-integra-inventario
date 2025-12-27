@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.enums.*;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -79,6 +80,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
     private LoteCalidadValidator loteCalidadValidator;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private EtapaProduccionRepository etapaProduccionRepository;
     @Mock
     private UbicacionFisicaRepository ubicacionFisicaRepository;
 

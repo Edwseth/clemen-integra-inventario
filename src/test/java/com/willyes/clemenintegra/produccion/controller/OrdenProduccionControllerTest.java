@@ -11,6 +11,8 @@ import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -215,5 +217,27 @@ class OrdenProduccionControllerTest {
                 .andExpect(content().json("[]"));
 
         verify(ordenProduccionService).listarMovimientosPorEtapa(8L, 9L, null);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos responde con movimientos")
+    void listarMovimientosPorEtapa_retornaMovimientos() throws Exception {
+        MovimientoInventarioResponseDTO movimiento = MovimientoInventarioResponseDTO.builder()
+                .id(77L)
+                .ordenProduccionId(8L)
+                .ordenProduccionEtapaId(9L)
+                .clasificacion("SALIDA_PRODUCCION")
+                .build();
+        when(ordenProduccionService.listarMovimientosPorEtapa(8L, 9L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(List.of(movimiento));
+
+        mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos", 8L, 9L)
+                        .param("clasificacion", "SALIDA_PRODUCCION"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(77L))
+                .andExpect(jsonPath("$[0].ordenProduccionEtapaId").value(9L));
+
+        verify(ordenProduccionService).listarMovimientosPorEtapa(8L, 9L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
     }
 }

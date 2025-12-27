@@ -23,11 +23,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Manejador global de excepciones para toda la aplicación.
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -177,6 +179,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponseDTO> handleRuntime(RuntimeException ex,
                                                           HttpServletRequest request) {
+        log.error("Error inesperado procesando la solicitud {}", request != null ? request.getRequestURI() : "", ex);
         return buildResponse(ApiErrorCode.ERROR_INTERNO,
                 "Ocurrió un error inesperado. Intente nuevamente o contacte soporte.",
                 null);

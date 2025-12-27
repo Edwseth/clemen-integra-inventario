@@ -467,6 +467,7 @@ class OrdenProduccionServiceReservaTest {
         tipoDetalleEntrada.setId(90L);
         when(tipoMovimientoDetalleRepository.findById(90L)).thenReturn(Optional.of(tipoDetalleEntrada));
         EtapaProduccion etapa = new EtapaProduccion();
+        etapa.setId(3L);
         etapa.setEstado(EstadoEtapa.FINALIZADA);
         etapa.setFechaInicio(LocalDateTime.now().minusDays(2));
         when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(1L))
