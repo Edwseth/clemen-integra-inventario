@@ -116,6 +116,15 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             Long ordenProduccionEtapaId,
             ClasificacionMovimientoInventario clasificacion);
 
+    List<MovimientoInventario> findByOrdenProduccionIdAndOrdenProduccionEtapaIdOrderByFechaIngresoDesc(
+            Long ordenProduccionId,
+            Long ordenProduccionEtapaId);
+
+    List<MovimientoInventario> findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoDesc(
+            Long ordenProduccionId,
+            Long ordenProduccionEtapaId,
+            ClasificacionMovimientoInventario clasificacion);
+
     @EntityGraph(attributePaths = {
             "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor"
     })

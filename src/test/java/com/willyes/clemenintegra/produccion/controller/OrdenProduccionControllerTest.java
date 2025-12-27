@@ -203,4 +203,17 @@ class OrdenProduccionControllerTest {
 
         verify(ordenProduccionService).listarConsumosPorEtapa(5L, 7L, null);
     }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos responde 200 con lista vacía")
+    void listarMovimientosPorEtapa_retornaListaVacia() throws Exception {
+        when(ordenProduccionService.listarMovimientosPorEtapa(8L, 9L, null)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos", 8L, 9L))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+
+        verify(ordenProduccionService).listarMovimientosPorEtapa(8L, 9L, null);
+    }
 }
