@@ -3203,15 +3203,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (etapaId != null) {
             return etapaId;
         }
-        return etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenProduccionId)
-                .stream()
-                .findFirst()
-                .map(EtapaProduccion::getId)
+        EtapaProduccion etapaActiva = etapaProduccionRepository
+                .findTopByOrdenProduccionIdAndFechaFinIsNullOrderByFechaInicioDesc(ordenProduccionId)
                 .orElseThrow(() -> new CustomBusinessException(
-                        ApiErrorCode.RECURSO_NO_ENCONTRADO,
-                        "ETAPA_PRODUCCION_NO_ENCONTRADA",
+                        ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
+                        "OP_SIN_ETAPA_ACTIVA",
                         Map.of("ordenProduccionId", ordenProduccionId)
                 ));
+        return etapaActiva.getId();
     }
 
 

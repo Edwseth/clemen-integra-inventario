@@ -603,8 +603,9 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(solicitudMovimientoRepository.saveAndFlush(solicitud)).willReturn(solicitud);
         lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
                 .thenReturn(BigDecimal.ZERO);
-        given(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenProduccion.getId()))
-                .willReturn(List.of(etapaProduccion));
+        given(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaFinIsNullOrderByFechaInicioDesc(
+                ordenProduccion.getId()))
+                .willReturn(Optional.of(etapaProduccion));
         given(entityManager.getReference(eq(EtapaProduccion.class), eq(etapaProduccion.getId()))).willReturn(etapaProduccion);
         given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
             MovimientoInventario mov = invocation.getArgument(0);
