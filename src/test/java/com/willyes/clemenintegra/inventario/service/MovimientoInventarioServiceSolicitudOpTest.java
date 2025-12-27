@@ -27,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -496,6 +497,38 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         verify(reservaLoteService, times(1))
                 .consumirReserva(eq(solicitud), eq(detalle), eq(lote), eq(new BigDecimal("3600.000000")));
+    }
+
+    @Test
+    void duplicarMovimientoBase_copiaEtapaYOrdenProduccion() {
+        OrdenProduccion ordenProduccion = OrdenProduccion.builder().id(10L).build();
+        EtapaProduccion etapaProduccion = EtapaProduccion.builder().id(20L).ordenProduccion(ordenProduccion).build();
+
+        MovimientoInventario base = new MovimientoInventario();
+        base.setCantidad(new BigDecimal("5.00"));
+        base.setTipoMovimiento(TipoMovimiento.SALIDA);
+        base.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        base.setOrdenProduccion(ordenProduccion);
+        base.setOrdenProduccionEtapa(etapaProduccion);
+        base.setLote(new LoteProducto());
+
+        LoteProducto nuevoLote = new LoteProducto();
+        nuevoLote.setId(55L);
+
+        MovimientoInventario duplicado = ReflectionTestUtils.invokeMethod(
+                service,
+                "duplicarMovimientoBase",
+                base,
+                nuevoLote,
+                new BigDecimal("3.50")
+        );
+
+        assertThat(duplicado).isNotNull();
+        assertThat(duplicado.getOrdenProduccion()).isSameAs(ordenProduccion);
+        assertThat(duplicado.getOrdenProduccionEtapa()).isNotNull();
+        assertThat(duplicado.getOrdenProduccionEtapa().getId()).isEqualTo(etapaProduccion.getId());
+        assertThat(duplicado.getLote()).isSameAs(nuevoLote);
+        assertThat(duplicado.getCantidad()).isEqualByComparingTo(new BigDecimal("3.50"));
     }
 
     @Disabled("Requiere entorno de integración para validar consumo doble de lote")
