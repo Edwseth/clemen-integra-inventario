@@ -571,11 +571,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         }
         // === /OP OVERRIDES ===
+        Long ordenProduccionIdContexto = dto.ordenProduccionId();
+        if (ordenProduccionIdContexto == null && ordenProduccion != null) {
+            ordenProduccionIdContexto = ordenProduccion.getId();
+        }
+
         boolean esConsumoEtapa = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
         if (dto.ordenProduccionEtapaId() != null) {
             etapaProduccion = entityManager.getReference(EtapaProduccion.class, dto.ordenProduccionEtapaId());
-        } else if (esConsumoEtapa && dto.ordenProduccionId() != null) {
-            Long etapaId = resolverEtapaConsumo(dto.ordenProduccionId(), null);
+        } else if (esConsumoEtapa && ordenProduccionIdContexto != null) {
+            Long etapaId = resolverEtapaConsumo(ordenProduccionIdContexto, null);
+            etapaProduccion = entityManager.getReference(EtapaProduccion.class, etapaId);
+        } else if (esConsumoEtapa && ordenProduccion != null && ordenProduccion.getId() != null) {
+            Long etapaId = resolverEtapaConsumo(ordenProduccion.getId(), null);
             etapaProduccion = entityManager.getReference(EtapaProduccion.class, etapaId);
         } else {
             etapaProduccion = null;
@@ -762,6 +770,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setAlmacenDestino(almacenDestino);
         movimiento.setOrdenProduccion(ordenProduccion);
         movimiento.setOrdenProduccionEtapa(etapaProduccion);
+        if (esConsumoEtapa && movimiento.getOrdenProduccionEtapa() == null && ordenProduccionIdContexto != null) {
+            Long etapaId = resolverEtapaConsumo(ordenProduccionIdContexto, null);
+            movimiento.setOrdenProduccionEtapa(entityManager.getReference(EtapaProduccion.class, etapaId));
+        }
         movimiento.setProveedor(dto.proveedorId() != null
                 ? entityManager.getReference(Proveedor.class, dto.proveedorId()) : null);
         movimiento.setOrdenCompra(dto.ordenCompraId() != null
@@ -772,6 +784,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setRegistradoPor(usuario);
         if (solicitud != null) {
             movimiento.setSolicitudMovimiento(solicitud);
+        }
+        if (esConsumoEtapa
+                && movimiento.getOrdenProduccionEtapa() == null
+                && movimiento.getSolicitudMovimiento() != null
+                && movimiento.getSolicitudMovimiento().getOrdenProduccion() != null
+                && movimiento.getSolicitudMovimiento().getOrdenProduccion().getId() != null) {
+            Long etapaId = resolverEtapaConsumo(movimiento.getSolicitudMovimiento().getOrdenProduccion().getId(), null);
+            movimiento.setOrdenProduccionEtapa(entityManager.getReference(EtapaProduccion.class, etapaId));
         }
 
         if (clasificacion == ClasificacionMovimientoInventario.SALIDA_CLIENTE) {
