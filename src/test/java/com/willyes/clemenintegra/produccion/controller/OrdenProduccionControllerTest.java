@@ -126,6 +126,20 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos responde 200")
+    void listarMovimientosPorEtapa_respondeOk() throws Exception {
+        when(ordenProduccionService.listarMovimientosPorEtapa(10L, 20L, null))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos", 10L, 20L))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+        verify(ordenProduccionService).listarMovimientosPorEtapa(10L, 20L, null);
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_SUPER_ADMIN")
     @DisplayName("POST /api/produccion/ordenes permite SUPER_ADMIN")
     void crearOrden_superAdminPermitido() throws Exception {

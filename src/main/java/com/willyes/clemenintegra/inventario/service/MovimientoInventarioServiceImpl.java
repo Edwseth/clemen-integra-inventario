@@ -574,6 +574,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean esConsumoEtapa = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
         if (dto.ordenProduccionEtapaId() != null) {
             etapaProduccion = entityManager.getReference(EtapaProduccion.class, dto.ordenProduccionEtapaId());
+        } else if (esConsumoEtapa && dto.ordenProduccionId() != null) {
+            Long etapaId = resolverEtapaConsumo(dto.ordenProduccionId(), null);
+            etapaProduccion = entityManager.getReference(EtapaProduccion.class, etapaId);
         } else {
             etapaProduccion = null;
         }

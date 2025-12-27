@@ -133,6 +133,54 @@ class MovimientoInventarioServiceConsumoEtapaTest {
     }
 
     @Test
+    void consumirInsumosPorOrden_conMultiplesLotesPropagaEtapaEnCadaMovimiento() {
+        SolicitudMovimiento solicitud = solicitudConDosDetalles();
+        SolicitudMovimientoDetalle detalle1 = solicitud.getDetalles().get(0);
+        SolicitudMovimientoDetalle detalle2 = solicitud.getDetalles().get(1);
+        Producto producto = solicitud.getProducto();
+
+        TypedQuery<SolicitudMovimiento> query = mock(TypedQuery.class);
+        when(entityManager.createQuery(anyString(), eq(SolicitudMovimiento.class))).thenReturn(query);
+        when(query.setParameter(eq("opId"), any())).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(solicitud));
+
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
+
+        LoteProducto lotePrebodega1 = loteEnPrebodega(detalle1.getLote(), producto, 30);
+        LoteProducto lotePrebodega2 = loteEnPrebodega(detalle2.getLote(), producto, 30);
+
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                detalle1.getLote().getCodigoLote(), producto.getId(), 30))
+                .thenReturn(Optional.of(lotePrebodega1));
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                detalle2.getLote().getCodigoLote(), producto.getId(), 30))
+                .thenReturn(Optional.of(lotePrebodega2));
+
+        when(movimientoInventarioRepository.sumaPorSolicitudYTipo(
+                eq(solicitud.getId()),
+                eq(producto.getId().longValue()),
+                anyLong(),
+                eq(TipoMovimiento.SALIDA),
+                eq(70L),
+                isNull())).thenReturn(BigDecimal.ZERO);
+
+        doReturn(MovimientoInventarioResponseDTO.builder().id(999L).build())
+                .when(service).registrarMovimiento(any(MovimientoInventarioDTO.class));
+
+        service.consumirInsumosPorOrden(10L, 20L, 5L);
+
+        ArgumentCaptor<MovimientoInventarioDTO> dtoCaptor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(service, times(2)).registrarMovimiento(dtoCaptor.capture());
+
+        assertThat(dtoCaptor.getAllValues())
+                .extracting(MovimientoInventarioDTO::ordenProduccionEtapaId)
+                .containsOnly(20L);
+        assertThat(detalle1.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
+        assertThat(detalle2.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
+    }
+
+    @Test
     void consumirInsumosPorOrden_sinLotePrebodegaLanzaError() {
         SolicitudMovimiento solicitud = solicitudConDetalle();
 
@@ -230,5 +278,66 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         detalle.setSolicitudMovimiento(solicitud);
 
         return solicitud;
+    }
+
+    private SolicitudMovimiento solicitudConDosDetalles() {
+        Producto producto = new Producto();
+        producto.setId(1);
+
+        LoteProducto lote1 = new LoteProducto();
+        lote1.setId(100L);
+        lote1.setCodigoLote("LOT-001");
+        lote1.setProducto(producto);
+        lote1.setAlmacen(new Almacen(10));
+        lote1.setEstado(EstadoLote.DISPONIBLE);
+        lote1.setStockLote(new BigDecimal("10"));
+        lote1.setStockReservado(BigDecimal.ZERO);
+
+        LoteProducto lote2 = new LoteProducto();
+        lote2.setId(101L);
+        lote2.setCodigoLote("LOT-002");
+        lote2.setProducto(producto);
+        lote2.setAlmacen(new Almacen(10));
+        lote2.setEstado(EstadoLote.DISPONIBLE);
+        lote2.setStockLote(new BigDecimal("15"));
+        lote2.setStockReservado(BigDecimal.ZERO);
+
+        SolicitudMovimientoDetalle detalle1 = new SolicitudMovimientoDetalle();
+        detalle1.setId(200L);
+        detalle1.setCantidad(new BigDecimal("5"));
+        detalle1.setCantidadAtendida(BigDecimal.ZERO);
+        detalle1.setLote(lote1);
+
+        SolicitudMovimientoDetalle detalle2 = new SolicitudMovimientoDetalle();
+        detalle2.setId(201L);
+        detalle2.setCantidad(new BigDecimal("7"));
+        detalle2.setCantidadAtendida(BigDecimal.ZERO);
+        detalle2.setLote(lote2);
+
+        OrdenProduccion ordenProduccion = new OrdenProduccion();
+        ordenProduccion.setId(10L);
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(500L);
+        solicitud.setProducto(producto);
+        solicitud.setTipoMovimiento(TipoMovimiento.SALIDA);
+        solicitud.setOrdenProduccion(ordenProduccion);
+        solicitud.setDetalles(List.of(detalle1, detalle2));
+        detalle1.setSolicitudMovimiento(solicitud);
+        detalle2.setSolicitudMovimiento(solicitud);
+
+        return solicitud;
+    }
+
+    private LoteProducto loteEnPrebodega(LoteProducto base, Producto producto, int almacenId) {
+        LoteProducto lote = new LoteProducto();
+        lote.setId(base.getId() + 1000);
+        lote.setCodigoLote(base.getCodigoLote());
+        lote.setProducto(producto);
+        lote.setAlmacen(new Almacen(almacenId));
+        lote.setEstado(EstadoLote.DISPONIBLE);
+        lote.setStockLote(base.getStockLote());
+        lote.setStockReservado(BigDecimal.ZERO);
+        return lote;
     }
 }
