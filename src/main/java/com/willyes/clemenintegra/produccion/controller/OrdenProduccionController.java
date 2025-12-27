@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.service.*;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -205,6 +206,14 @@ public class OrdenProduccionController {
                                                                    @RequestParam(name = "etapaId", required = false) Long etapaId,
                                                                    Pageable pageable) {
         return service.listarMovimientos(id, etapaId, pageable);
+    }
+
+    @GetMapping("/{ordenId}/etapas/{etapaId}/consumos")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarConsumosPorEtapa(@PathVariable Long ordenId,
+                                                                                        @PathVariable Long etapaId,
+                                                                                        @RequestParam(name = "clasificacion", required = false) ClasificacionMovimientoInventario clasificacion) {
+        return ResponseEntity.ok(service.listarConsumosPorEtapa(ordenId, etapaId, clasificacion));
     }
 
     @GetMapping("/{id}/lote")

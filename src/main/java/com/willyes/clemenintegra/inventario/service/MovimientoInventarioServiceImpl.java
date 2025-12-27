@@ -283,9 +283,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         OrdenProduccion ordenProduccion = dto.ordenProduccionId() != null
                 ? entityManager.getReference(OrdenProduccion.class, dto.ordenProduccionId())
                 : null;
-        EtapaProduccion etapaProduccion = dto.ordenProduccionEtapaId() != null
-                ? entityManager.getReference(EtapaProduccion.class, dto.ordenProduccionEtapaId())
-                : null;
+        EtapaProduccion etapaProduccion = null;
         Integer almacenParaUbicacion = almacenDestino != null
                 ? almacenDestino.getId()
                 : (almacenOrigen != null ? almacenOrigen.getId() : null);
@@ -571,6 +569,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         }
         // === /OP OVERRIDES ===
+        boolean esConsumoEtapa = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
+        if (esConsumoEtapa && dto.ordenProduccionEtapaId() != null) {
+            etapaProduccion = entityManager.getReference(EtapaProduccion.class, dto.ordenProduccionEtapaId());
+        } else {
+            etapaProduccion = null;
+        }
 
         // Detección automática de devolución interna
         boolean devolucionInterna = false;

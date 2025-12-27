@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
+import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
@@ -1510,6 +1511,28 @@ class OrdenProduccionServiceImplTest {
                 .thenAnswer(invocation -> Optional.ofNullable(solicitudes.get(invocation.getArgument(0))));
         when(solicitudMovimientoRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         doNothing().when(reservaLoteService).sincronizarReservasSolicitud(any());
+    }
+
+    @Test
+    void listarConsumosPorEtapa_usaClasificacionPorDefecto() {
+        MovimientoInventario movimiento = new MovimientoInventario();
+        movimiento.setId(55L);
+
+        MovimientoInventarioResponseDTO respuesta = MovimientoInventarioResponseDTO.builder()
+                .id(55L)
+                .build();
+
+        when(movimientoInventarioRepository
+                .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(
+                        10L,
+                        20L,
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(List.of(movimiento));
+        when(movimientoInventarioMapper.safeToResponseDTO(movimiento)).thenReturn(respuesta);
+
+        List<MovimientoInventarioResponseDTO> consumos = service.listarConsumosPorEtapa(10L, 20L, null);
+
+        assertThat(consumos).containsExactly(respuesta);
     }
 
     private void stubDisponibilidadGenerica() {

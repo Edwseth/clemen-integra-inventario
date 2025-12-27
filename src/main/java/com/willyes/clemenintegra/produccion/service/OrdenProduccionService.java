@@ -10,6 +10,7 @@ import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +48,10 @@ public interface OrdenProduccionService {
     LoteProductoResponse obtenerLote(Long ordenId);
 
     Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Long etapaId, Pageable pageable);
+
+    List<MovimientoInventarioResponseDTO> listarConsumosPorEtapa(Long ordenId,
+                                                                 Long etapaId,
+                                                                 @Nullable ClasificacionMovimientoInventario clasificacion);
 
     Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
                                                     EstadoProduccion estado,
