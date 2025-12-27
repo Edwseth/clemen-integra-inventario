@@ -2573,6 +2573,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         copia.setOrdenCompra(base.getOrdenCompra());
         copia.setMotivoMovimiento(base.getMotivoMovimiento());
         copia.setOrdenProduccion(base.getOrdenProduccion());
+        copia.setOrdenProduccionEtapa(base.getOrdenProduccionEtapa());
         copia.setTipoMovimientoDetalle(base.getTipoMovimientoDetalle());
         copia.setOrdenCompraDetalle(base.getOrdenCompraDetalle());
         copia.setSolicitudMovimiento(base.getSolicitudMovimiento());
