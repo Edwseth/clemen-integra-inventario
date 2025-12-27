@@ -1582,6 +1582,23 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     @Override
+    public List<MovimientoInventarioResponseDTO> listarConsumosPorEtapa(Long ordenId,
+                                                                        Long etapaId,
+                                                                        @Nullable ClasificacionMovimientoInventario clasificacion) {
+        ClasificacionMovimientoInventario clasificacionFiltro =
+                clasificacion != null ? clasificacion : ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
+        List<MovimientoInventario> movimientos = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(
+                        ordenId,
+                        etapaId,
+                        clasificacionFiltro
+                );
+        return movimientos.stream()
+                .map(movimientoInventarioMapper::safeToResponseDTO)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public OrdenProduccion cancelarOrden(Long ordenProduccionId, @Nullable String motivo) {
         OrdenProduccion orden = repository.findByIdForUpdate(ordenProduccionId)

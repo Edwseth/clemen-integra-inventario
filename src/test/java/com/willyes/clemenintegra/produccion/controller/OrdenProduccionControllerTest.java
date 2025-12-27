@@ -37,9 +37,12 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 @WebMvcTest(controllers = OrdenProduccionController.class,
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthenticationFilter.class))
@@ -186,5 +189,18 @@ class OrdenProduccionControllerTest {
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/produccion/ordenes/{id}", 15L))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/consumos responde 200 con lista vacía")
+    void listarConsumosPorEtapa_retornaListaVacia() throws Exception {
+        when(ordenProduccionService.listarConsumosPorEtapa(5L, 7L, null)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/consumos", 5L, 7L))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+
+        verify(ordenProduccionService).listarConsumosPorEtapa(5L, 7L, null);
     }
 }
