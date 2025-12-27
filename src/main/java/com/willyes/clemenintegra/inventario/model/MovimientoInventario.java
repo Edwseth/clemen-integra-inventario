@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.model;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import jakarta.persistence.*;
 import lombok.*;
@@ -88,6 +89,10 @@ public class MovimientoInventario {
     @JoinColumn(name = "orden_produccion_id")
     private OrdenProduccion ordenProduccion;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "orden_produccion_etapa_id")
+    private EtapaProduccion ordenProduccionEtapa;
+
     @ManyToOne
     @JoinColumn(name = "tipos_movimiento_detalle_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_mov_inv_tipo_mov_detalle"))
@@ -152,11 +157,11 @@ public class MovimientoInventario {
 
     public OrdenProduccion getOrdenProduccion() {return ordenProduccion;}
     public void setOrdenProduccion(OrdenProduccion ordenProduccion) {this.ordenProduccion = ordenProduccion;}
+    public EtapaProduccion getOrdenProduccionEtapa() {return ordenProduccionEtapa;}
+    public void setOrdenProduccionEtapa(EtapaProduccion ordenProduccionEtapa) {this.ordenProduccionEtapa = ordenProduccionEtapa;}
     public RecepcionOC getRecepcionOc() {return recepcionOc;}
     public void setRecepcionOc(RecepcionOC recepcionOc) {this.recepcionOc = recepcionOc;}
     public String getCodigoRecepcion() {return codigoRecepcion;}
     public void setCodigoRecepcion(String codigoRecepcion) {this.codigoRecepcion = codigoRecepcion;}
 }
-
-
 

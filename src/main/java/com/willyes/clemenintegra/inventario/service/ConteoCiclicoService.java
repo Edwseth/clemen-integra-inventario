@@ -433,6 +433,7 @@ public class ConteoCiclicoService {
                 null,
                 null,
                 null,
+                null,
                 lote.getCodigoLote(),
                 null,
                 null,

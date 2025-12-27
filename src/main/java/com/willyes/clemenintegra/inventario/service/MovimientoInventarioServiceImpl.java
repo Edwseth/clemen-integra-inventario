@@ -17,6 +17,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import org.springframework.util.StringUtils;
 import org.springframework.http.HttpStatus;
@@ -281,6 +282,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         OrdenProduccion ordenProduccion = dto.ordenProduccionId() != null
                 ? entityManager.getReference(OrdenProduccion.class, dto.ordenProduccionId())
+                : null;
+        EtapaProduccion etapaProduccion = dto.ordenProduccionEtapaId() != null
+                ? entityManager.getReference(EtapaProduccion.class, dto.ordenProduccionEtapaId())
                 : null;
         Integer almacenParaUbicacion = almacenDestino != null
                 ? almacenDestino.getId()
@@ -717,6 +721,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .ordenProduccionId(solicitud.getOrdenProduccion() != null
                             ? solicitud.getOrdenProduccion().getId()
                             : null)
+                    .codigoOrdenProduccion(solicitud.getOrdenProduccion() != null
+                            ? solicitud.getOrdenProduccion().getCodigoOrden()
+                            : null)
+                    .ordenProduccionEtapaId(dto.ordenProduccionEtapaId())
                     .detallesSolicitud(detallesRespuesta == null ? List.of() : List.copyOf(detallesRespuesta))
                     .build();
         }
@@ -744,6 +752,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setAlmacenOrigen(almacenOrigen);
         movimiento.setAlmacenDestino(almacenDestino);
         movimiento.setOrdenProduccion(ordenProduccion);
+        movimiento.setOrdenProduccionEtapa(etapaProduccion);
         movimiento.setProveedor(dto.proveedorId() != null
                 ? entityManager.getReference(Proveedor.class, dto.proveedorId()) : null);
         movimiento.setOrdenCompra(dto.ordenCompraId() != null
@@ -3001,7 +3010,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     // =====================================
     @Override
     @Transactional
-    public void consumirInsumosPorOrden(Long ordenProduccionId, Long usuarioId) {
+    public void consumirInsumosPorOrden(Long ordenProduccionId, Long ordenProduccionEtapaId, Long usuarioId) {
 
         final Long preBodegaId = Objects.requireNonNull(
                 catalogResolver.getAlmacenPreBodegaProduccionId(),
@@ -3054,6 +3063,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 if (qtyObjetivo.signum() <= 0) {
                     continue;
                 }
+                if (det.getEstado() == EstadoSolicitudMovimientoDetalle.ATENDIDO
+                        && qtyAtendida.compareTo(qtyObjetivo) >= 0) {
+                    continue;
+                }
 
                 // Ubicar el lote equivalente en Pre-Bodega (mismo código de lote)
                 final String codigoLote =
@@ -3073,7 +3086,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 if (lotePreBodegaOpt.isEmpty()) {
                     log.warn("CONSUMO_OP: no existe lote en Pre-Bodega para consumir. op={}, prod={}, lote={}",
                             ordenProduccionId, productoIdInt, codigoLote);
-                    continue;
+                    throw new CustomBusinessException(
+                            ApiErrorCode.CONSUMO_PREBODEGA_INSUFICIENTE,
+                            "No hay lote disponible en Pre-Bodega para consumo automático",
+                            Map.of(
+                                    "ordenProduccionId", ordenProduccionId,
+                                    "productoId", productoIdLong,
+                                    "codigoLote", codigoLote
+                            ));
                 }
                 final LoteProducto lotePreBodega = lotePreBodegaOpt.get();
 
@@ -3097,6 +3117,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     continue;
                 }
 
+                BigDecimal disponible = calcularDisponibleLote(lotePreBodega);
+                if (disponible.compareTo(pendiente) < 0) {
+                    throw new CustomBusinessException(
+                            ApiErrorCode.CONSUMO_PREBODEGA_INSUFICIENTE,
+                            "No hay lote disponible en Pre-Bodega para consumo automático",
+                            Map.of(
+                                    "ordenProduccionId", ordenProduccionId,
+                                    "productoId", productoIdLong,
+                                    "codigoLote", codigoLote,
+                                    "faltante", pendiente.subtract(disponible)
+                            ));
+                }
+
                 // Registrar la SALIDA_PRODUCCION (desde Pre-Bodega). Dejamos ligada la solicitud para idempotencia.
                 final MovimientoInventarioDTO dtoSalida = new MovimientoInventarioDTO(
                         null,                               // id
@@ -3116,6 +3149,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         sol.getId(),                        // solicitudMovimientoId  <-- clave para idempotencia
                         usuarioId,                          // usuarioId
                         ordenProduccionId,                  // ordenProduccionId
+                        ordenProduccionEtapaId,             // ordenProduccionEtapaId
                         null,                               // ordenCompraDetalleId
                         null,                               // codigoLote
                         null,                               // fechaVencimiento

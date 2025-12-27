@@ -123,13 +123,14 @@ class MovimientoInventarioServiceSalidaPtTest {
                 null,
                 70L,
                 TIPO_DETALLE_SALIDA_PT_ID,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
+                null, // solicitudMovimientoId
+                null, // usuarioId
+                null, // ordenProduccionId
+                null, // ordenProduccionEtapaId
+                null, // ordenCompraDetalleId
+                null, // codigoLote
+                null, // fechaVencimiento
+                null, // estadoLote
                 true,
                 null,
                 null
@@ -177,13 +178,14 @@ class MovimientoInventarioServiceSalidaPtTest {
                 null,
                 70L,
                 TIPO_DETALLE_SALIDA_PT_ID,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
+                null, // solicitudMovimientoId
+                null, // usuarioId
+                null, // ordenProduccionId
+                null, // ordenProduccionEtapaId
+                null, // ordenCompraDetalleId
+                null, // codigoLote
+                null, // fechaVencimiento
+                null, // estadoLote
                 true,
                 null,
                 null

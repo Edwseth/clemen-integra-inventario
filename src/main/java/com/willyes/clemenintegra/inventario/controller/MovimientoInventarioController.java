@@ -411,6 +411,7 @@ public class MovimientoInventarioController {
                 dto.solicitudMovimientoId(),
                 dto.usuarioId(),
                 dto.ordenProduccionId(),
+                dto.ordenProduccionEtapaId(),
                 dto.ordenCompraDetalleId(),
                 dto.codigoLote(),
                 dto.fechaVencimiento(),

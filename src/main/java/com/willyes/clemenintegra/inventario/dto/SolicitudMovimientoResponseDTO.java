@@ -32,6 +32,7 @@ public class SolicitudMovimientoResponseDTO {
     private Integer almacenDestinoId;
     private String nombreAlmacenDestino;
     private Long ordenProduccionId;
+    private String codigoOrdenProduccion;
     private String codigoOrden;   // Código de la OP (si aplica) para banner/prefill
     private Long motivoMovimientoId;
     private Long tipoMovimientoDetalleId;

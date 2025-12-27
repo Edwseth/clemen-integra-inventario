@@ -202,8 +202,9 @@ public class OrdenProduccionController {
     @GetMapping("/{id}/movimientos")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public Page<MovimientoInventarioResponseDTO> listarMovimientos(@PathVariable Long id,
+                                                                   @RequestParam(name = "etapaId", required = false) Long etapaId,
                                                                    Pageable pageable) {
-        return service.listarMovimientos(id, pageable);
+        return service.listarMovimientos(id, etapaId, pageable);
     }
 
     @GetMapping("/{id}/lote")
@@ -221,7 +222,7 @@ public class OrdenProduccionController {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
         // Ejecutar consumo idempotente
-        movimientoInventarioService.consumirInsumosPorOrden(ordenId, usuario.getId());
+        movimientoInventarioService.consumirInsumosPorOrden(ordenId, null, usuario.getId());
 
         Map<String, Object> body = new HashMap<>();
         body.put("ordenId", ordenId);

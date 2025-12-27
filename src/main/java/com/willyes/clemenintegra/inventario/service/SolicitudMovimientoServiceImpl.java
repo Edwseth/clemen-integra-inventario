@@ -849,6 +849,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .almacenDestinoId(destinoCabecera != null ? destinoCabecera.getId() : null)
                 .nombreAlmacenDestino(destinoCabecera != null ? destinoCabecera.getNombre() : null)
                 .ordenProduccionId(s.getOrdenProduccion() != null ? s.getOrdenProduccion().getId() : null)
+                .codigoOrdenProduccion(s.getOrdenProduccion() != null ? s.getOrdenProduccion().getCodigoOrden() : null)
                 .codigoOrden(s.getOrdenProduccion() != null ? s.getOrdenProduccion().getCodigoOrden() : null)
                 .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
                 .tipoMovimientoDetalleId(s.getTipoMovimientoDetalle() != null ? s.getTipoMovimientoDetalle().getId() : null)

@@ -21,7 +21,7 @@ public interface MovimientoInventarioService {
 
     MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto);
     MovimientoInventarioResponseDTO registrarMovimiento(MovimientoInventarioDTO dto, String idempotencyKey);
-    void consumirInsumosPorOrden(Long ordenProduccionId, Long usuarioId);
+    void consumirInsumosPorOrden(Long ordenProduccionId, Long ordenProduccionEtapaId, Long usuarioId);
 
     List<LoteConsumoDTO> simulateFefo(Long productoId, BigDecimal cantidad, Long almacenId);
 

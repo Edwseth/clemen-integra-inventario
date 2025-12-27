@@ -673,7 +673,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
-            movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), usuario.getId());
+            movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), null, usuario.getId());
 
             List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
             parseEstados(estadosSolicitudConcluyentesConf);
@@ -913,6 +913,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     null,
                     null,
                     orden.getId(),
+                    null,
                     null,
                     null,
                     null,
@@ -1402,7 +1403,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         // Consumo etapa 1: generar SALIDA_PRODUCCION desde Pre-Bodega (idempotente)
         if (etapa.getSecuencia() != null && etapa.getSecuencia() == 1) {
-            movimientoInventarioService.consumirInsumosPorOrden(ordenId, usuario.getId());
+            movimientoInventarioService.consumirInsumosPorOrden(ordenId, etapaId, usuario.getId());
         }
 
         etapa.setEstado(EstadoEtapa.EN_PROCESO);
@@ -1492,7 +1493,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));
 
-        movimientoInventarioService.consumirInsumosPorOrden(ordenId, usuario.getId());
+        movimientoInventarioService.consumirInsumosPorOrden(ordenId, etapaId, usuario.getId());
 
         etapa.setEstado(EstadoEtapa.FINALIZADA);
         etapa.setFechaFin(LocalDateTime.now());
@@ -1565,9 +1566,19 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .orElse(null);
     }
 
-    public Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Pageable pageable) {
-        return movimientoInventarioRepository.findByOrdenProduccionId(id, pageable)
-                .map(movimientoInventarioMapper::safeToResponseDTO);
+    public Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Long etapaId, Pageable pageable) {
+        Page<MovimientoInventario> page;
+        if (etapaId != null) {
+            page = movimientoInventarioRepository
+                    .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacion(
+                            id,
+                            etapaId,
+                            ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                            pageable);
+        } else {
+            page = movimientoInventarioRepository.findByOrdenProduccionId(id, pageable);
+        }
+        return page.map(movimientoInventarioMapper::safeToResponseDTO);
     }
 
     @Override
@@ -1664,7 +1675,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
-        movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), usuario.getId());
+        movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), null, usuario.getId());
 
         orden.setCantidadProducida(cantidadProducida);
         orden.setEstado(EstadoProduccion.FINALIZADA);

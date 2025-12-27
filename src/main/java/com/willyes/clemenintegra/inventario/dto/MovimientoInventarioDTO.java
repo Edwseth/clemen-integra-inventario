@@ -37,6 +37,7 @@ public record MovimientoInventarioDTO(
         @JsonProperty(access = JsonProperty.Access.READ_ONLY)
         Long usuarioId,
         Long ordenProduccionId,
+        Long ordenProduccionEtapaId,
         Long ordenCompraDetalleId,
         String codigoLote,
         /**
@@ -62,4 +63,3 @@ public record MovimientoInventarioDTO(
 
 ) {
 }
-

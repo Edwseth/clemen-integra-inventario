@@ -22,6 +22,7 @@ public interface MovimientoInventarioMapper {
     //@Mapping(target = "fechaIngreso", ignore = true)
     @Mapping(target = "solicitudMovimiento", ignore = true)
     @Mapping(target = "ordenProduccion", ignore = true)
+    @Mapping(target = "ordenProduccionEtapa", ignore = true)
     @Mapping(target = "clasificacion", source = "clasificacionMovimientoInventario")
     MovimientoInventario toEntity(MovimientoInventarioDTO dto);
 
@@ -37,6 +38,7 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "ordenCompraDetalleId", expression = "java(movimiento.getOrdenCompraDetalle() != null ? movimiento.getOrdenCompraDetalle().getId() : null)")
     @Mapping(target = "solicitudMovimientoId", expression = "java(movimiento.getSolicitudMovimiento() != null ? movimiento.getSolicitudMovimiento().getId() : null)")
     @Mapping(target = "ordenProduccionId", expression = "java(movimiento.getOrdenProduccion() != null ? movimiento.getOrdenProduccion().getId() : null)")
+    @Mapping(target = "ordenProduccionEtapaId", expression = "java(movimiento.getOrdenProduccionEtapa() != null ? movimiento.getOrdenProduccionEtapa().getId() : null)")
     @Mapping(target = "clasificacionMovimientoInventario", source = "clasificacion")
     @Mapping(target = "atenciones", ignore = true)
     @Mapping(target = "ubicacionDestinoId", ignore = true)
@@ -78,6 +80,8 @@ public interface MovimientoInventarioMapper {
         var u = m.getRegistradoPor();
         dto.setNombreUsuarioRegistrador(u != null ? u.getNombreCompleto() : null);
         dto.setOrdenProduccionId(m.getOrdenProduccion() != null ? m.getOrdenProduccion().getId() : null);
+        dto.setCodigoOrdenProduccion(m.getOrdenProduccion() != null ? m.getOrdenProduccion().getCodigoOrden() : null);
+        dto.setOrdenProduccionEtapaId(m.getOrdenProduccionEtapa() != null ? m.getOrdenProduccionEtapa().getId() : null);
         dto.setUnidad(m.getProducto() != null && m.getProducto().getUnidadMedida() != null
                 ? m.getProducto().getUnidadMedida().getNombre()
                 : null);
