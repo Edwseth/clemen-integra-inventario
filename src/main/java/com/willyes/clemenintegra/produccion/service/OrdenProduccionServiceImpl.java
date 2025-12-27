@@ -1599,6 +1599,32 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     @Override
+    public List<MovimientoInventarioResponseDTO> listarMovimientosPorEtapa(Long ordenId,
+                                                                           Long etapaId,
+                                                                           @Nullable ClasificacionMovimientoInventario clasificacion) {
+        OrdenProduccion orden = repository.findById(ordenId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+        EtapaProduccion etapa = etapaProduccionRepository.findById(etapaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ETAPA_NO_ENCONTRADA"));
+        if (!Objects.equals(etapa.getOrdenProduccion().getId(), orden.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_PERTENECE_A_ORDEN");
+        }
+
+        ClasificacionMovimientoInventario clasificacionFiltro =
+                clasificacion != null ? clasificacion : ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
+
+        List<MovimientoInventario> movimientos = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoDesc(
+                        ordenId,
+                        etapaId,
+                        clasificacionFiltro
+                );
+        return movimientos.stream()
+                .map(movimientoInventarioMapper::safeToResponseDTO)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public OrdenProduccion cancelarOrden(Long ordenProduccionId, @Nullable String motivo) {
         OrdenProduccion orden = repository.findByIdForUpdate(ordenProduccionId)

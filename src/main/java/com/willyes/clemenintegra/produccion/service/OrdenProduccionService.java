@@ -53,6 +53,10 @@ public interface OrdenProduccionService {
                                                                  Long etapaId,
                                                                  @Nullable ClasificacionMovimientoInventario clasificacion);
 
+    List<MovimientoInventarioResponseDTO> listarMovimientosPorEtapa(Long ordenId,
+                                                                    Long etapaId,
+                                                                    @Nullable ClasificacionMovimientoInventario clasificacion);
+
     Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
                                                     EstadoProduccion estado,
                                                     String responsable,

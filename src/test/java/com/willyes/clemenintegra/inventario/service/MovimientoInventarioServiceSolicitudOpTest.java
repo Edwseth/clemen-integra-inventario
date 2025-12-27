@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.*;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -419,6 +420,9 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 .build();
         solicitud.setUsuarioResponsable(usuario);
 
+        EtapaProduccion etapaProduccion = new EtapaProduccion();
+        etapaProduccion.setId(77L);
+
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
 
@@ -440,7 +444,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 solicitud.getId(),
                 usuario.getId(),
                 ordenProduccion.getId(),
-                null,
+                etapaProduccion.getId(),
                 null,
                 lote.getCodigoLote(),
                 null,
@@ -456,6 +460,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(solicitudMovimientoRepository.findByIdWithLock(solicitud.getId())).willReturn(Optional.of(solicitud));
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
         given(entityManager.getReference(eq(OrdenProduccion.class), eq(ordenProduccion.getId()))).willReturn(ordenProduccion);
+        given(entityManager.getReference(eq(EtapaProduccion.class), eq(etapaProduccion.getId()))).willReturn(etapaProduccion);
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Object id = invocation.getArgument(1);
             return new Almacen(id instanceof Integer ? (Integer) id : ((Long) id).intValue());
@@ -483,6 +488,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitudMovimiento.CERRADA);
         assertThat(lote.getStockReservado()).isEqualByComparingTo(BigDecimal.ZERO.setScale(2));
         assertThat(lote.getStockLote()).isEqualByComparingTo(new BigDecimal("1400.00"));
+        verify(movimientoInventarioRepository).save(argThat(mov -> mov.getOrdenProduccionEtapa() != null
+                && mov.getOrdenProduccionEtapa().getId().equals(etapaProduccion.getId())));
 
         verify(reservaLoteService, times(1))
                 .consumirReserva(eq(solicitud), eq(detalle), eq(lote), eq(new BigDecimal("3600.000000")));
