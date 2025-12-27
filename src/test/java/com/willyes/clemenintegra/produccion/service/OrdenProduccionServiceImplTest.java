@@ -950,7 +950,7 @@ class OrdenProduccionServiceImplTest {
 
         service.registrarCierre(250L, dto);
 
-        verify(movimientoInventarioService).consumirInsumosPorOrden(250L, null, usuarioBasico().getId());
+        verify(movimientoInventarioService).consumirInsumosPorOrden(250L, 1L, usuarioBasico().getId());
         verify(movimientoInventarioService).registrarMovimiento(any());
     }
 

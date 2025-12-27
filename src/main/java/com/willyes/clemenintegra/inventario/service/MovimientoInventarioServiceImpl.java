@@ -19,6 +19,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import org.springframework.util.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -145,6 +146,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final RecepcionOCService recepcionOCService;
     private final LoteCalidadValidator loteCalidadValidator;
     private final UbicacionFisicaRepository ubicacionFisicaRepository;
+    private final EtapaProduccionRepository etapaProduccionRepository;
     //private final Long motivoSalidaProdId = catalogResolver.getMotivoSalidaProduccionId();
     //private final Long tipoDetSalidaProdId = catalogResolver.getTipoDetalleSalidaProduccionId();
 
@@ -3019,6 +3021,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         final Long preBodegaId = Objects.requireNonNull(
                 catalogResolver.getAlmacenPreBodegaProduccionId(),
                 "CONFIG_FALTANTE: inventory.almacenPreBodegaProduccionId");
+        Long etapaDestinoId = resolverEtapaConsumo(ordenProduccionId, ordenProduccionEtapaId);
 
         // 1) Traer TODAS las solicitudes de la OP (cualquier estado) con sus partidas + lote
         List<SolicitudMovimiento> solicitudes = entityManager.createQuery(
@@ -3153,7 +3156,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         sol.getId(),                        // solicitudMovimientoId  <-- clave para idempotencia
                         usuarioId,                          // usuarioId
                         ordenProduccionId,                  // ordenProduccionId
-                        ordenProduccionEtapaId,             // ordenProduccionEtapaId
+                        etapaDestinoId,                     // ordenProduccionEtapaId
                         null,                               // ordenCompraDetalleId
                         null,                               // codigoLote
                         null,                               // fechaVencimiento
@@ -3170,6 +3173,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 det.setEstado(com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle.ATENDIDO);
             }
         }
+    }
+
+    private Long resolverEtapaConsumo(Long ordenProduccionId, Long etapaId) {
+        if (etapaId != null) {
+            return etapaId;
+        }
+        return etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenProduccionId)
+                .stream()
+                .findFirst()
+                .map(EtapaProduccion::getId)
+                .orElseThrow(() -> new CustomBusinessException(
+                        ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "ETAPA_PRODUCCION_NO_ENCONTRADA",
+                        Map.of("ordenProduccionId", ordenProduccionId)
+                ));
     }
 
 

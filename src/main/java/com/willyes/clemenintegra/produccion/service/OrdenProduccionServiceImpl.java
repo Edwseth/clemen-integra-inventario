@@ -575,6 +575,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return orden;
     }
 
+    private Long resolverEtapaPrincipal(Long ordenProduccionId) {
+        return etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenProduccionId)
+                .stream()
+                .findFirst()
+                .map(EtapaProduccion::getId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "ETAPA_PRODUCCION_NO_CONFIGURADA"));
+    }
+
     public void eliminar(Long id) {
         repository.deleteById(id);
     }
@@ -673,7 +683,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
-            movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), null, usuario.getId());
+            Long etapaConsumoId = resolverEtapaPrincipal(orden.getId());
+            movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), etapaConsumoId, usuario.getId());
 
             List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
             parseEstados(estadosSolicitudConcluyentesConf);
@@ -1718,7 +1729,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
-        movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), null, usuario.getId());
+        Long etapaConsumoId = resolverEtapaPrincipal(orden.getId());
+        movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), etapaConsumoId, usuario.getId());
 
         orden.setCantidadProducida(cantidadProducida);
         orden.setEstado(EstadoProduccion.FINALIZADA);

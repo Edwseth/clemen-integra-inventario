@@ -12,6 +12,8 @@ import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import org.junit.jupiter.api.Test;
@@ -74,6 +76,8 @@ class MovimientoInventarioServiceConsumoEtapaTest {
     private EntityManager entityManager;
     @Mock
     private UbicacionFisicaRepository ubicacionFisicaRepository;
+    @Mock
+    private EtapaProduccionRepository etapaProduccionRepository;
 
     @Spy
     @InjectMocks
@@ -145,6 +149,54 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         assertThatThrownBy(() -> service.consumirInsumosPorOrden(10L, 20L, 5L))
                 .isInstanceOf(CustomBusinessException.class)
                 .hasFieldOrPropertyWithValue("code", ApiErrorCode.CONSUMO_PREBODEGA_INSUFICIENTE);
+    }
+
+    @Test
+    void consumirInsumosPorOrden_resuelveEtapaCuandoNoSeEnvio() {
+        SolicitudMovimiento solicitud = solicitudConDetalle();
+        SolicitudMovimientoDetalle detalle = solicitud.getDetalles().get(0);
+        Producto producto = solicitud.getProducto();
+
+        TypedQuery<SolicitudMovimiento> query = mock(TypedQuery.class);
+        when(entityManager.createQuery(anyString(), eq(SolicitudMovimiento.class))).thenReturn(query);
+        when(query.setParameter(eq("opId"), any())).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(solicitud));
+
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
+        when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(10L))
+                .thenReturn(List.of(EtapaProduccion.builder().id(22L).build()));
+
+        LoteProducto lotePrebodega = new LoteProducto();
+        lotePrebodega.setId(300L);
+        lotePrebodega.setCodigoLote(detalle.getLote().getCodigoLote());
+        lotePrebodega.setProducto(producto);
+        lotePrebodega.setAlmacen(new Almacen(30));
+        lotePrebodega.setEstado(EstadoLote.DISPONIBLE);
+        lotePrebodega.setStockLote(new BigDecimal("50"));
+        lotePrebodega.setStockReservado(BigDecimal.ZERO);
+
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                detalle.getLote().getCodigoLote(), producto.getId(), 30))
+                .thenReturn(Optional.of(lotePrebodega));
+        when(movimientoInventarioRepository.sumaPorSolicitudYTipo(
+                eq(solicitud.getId()),
+                eq(producto.getId().longValue()),
+                eq(lotePrebodega.getId()),
+                eq(TipoMovimiento.SALIDA),
+                eq(70L),
+                isNull())).thenReturn(BigDecimal.ZERO);
+
+        doReturn(MovimientoInventarioResponseDTO.builder().id(999L).build())
+                .when(service).registrarMovimiento(any(MovimientoInventarioDTO.class));
+
+        service.consumirInsumosPorOrden(10L, null, 5L);
+
+        ArgumentCaptor<MovimientoInventarioDTO> dtoCaptor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(service).registrarMovimiento(dtoCaptor.capture());
+
+        MovimientoInventarioDTO dtoSalida = dtoCaptor.getValue();
+        assertThat(dtoSalida.ordenProduccionEtapaId()).isEqualTo(22L);
     }
 
     private SolicitudMovimiento solicitudConDetalle() {

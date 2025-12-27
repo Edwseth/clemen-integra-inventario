@@ -19,6 +19,7 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,6 +91,8 @@ class MovimientoInventarioServiceSalidaPtTest {
     private EntityManager entityManager;
     @Mock
     private UbicacionFisicaRepository ubicacionFisicaRepository;
+    @Mock
+    private EtapaProduccionRepository etapaProduccionRepository;
 
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
