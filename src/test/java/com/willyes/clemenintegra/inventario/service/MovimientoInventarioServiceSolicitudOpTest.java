@@ -183,6 +183,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 usuario.getId(),
                 ordenProduccion.getId(),
                 null,
+                null,
                 lote.getCodigoLote(),
                 null,
                 null,
@@ -343,6 +344,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 usuario.getId(),
                 ordenProduccion.getId(),
                 null,
+                null,
                 lote.getCodigoLote(),
                 null,
                 null,
@@ -438,6 +440,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 solicitud.getId(),
                 usuario.getId(),
                 ordenProduccion.getId(),
+                null,
                 null,
                 lote.getCodigoLote(),
                 null,
@@ -563,6 +566,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 usuario.getId(),
                 999L,
                 null,
+                null,
                 loteOrigen.getCodigoLote(),
                 null,
                 null,
@@ -665,6 +669,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 usuario.getId(),
                 999L,
                 null,
+                null,
                 loteOrigen.getCodigoLote(),
                 null,
                 null,
@@ -727,6 +732,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 66L,
                 null,
                 99L,
+                null,
                 null,
                 null,
                 loteOrigen.getCodigoLote(),
@@ -800,8 +806,9 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
+                null,
                 Boolean.FALSE,
-                List.of(),
+                List.<AtencionDTO>of(),
                 null
         );
 
@@ -869,8 +876,9 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
+                null,
                 Boolean.FALSE,
-                List.of(),
+                List.<AtencionDTO>of(),
                 null
         );
 

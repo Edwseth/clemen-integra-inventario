@@ -46,7 +46,7 @@ public interface OrdenProduccionService {
 
     LoteProductoResponse obtenerLote(Long ordenId);
 
-    Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Pageable pageable);
+    Page<MovimientoInventarioResponseDTO> listarMovimientos(Long id, Long etapaId, Pageable pageable);
 
     Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
                                                     EstadoProduccion estado,

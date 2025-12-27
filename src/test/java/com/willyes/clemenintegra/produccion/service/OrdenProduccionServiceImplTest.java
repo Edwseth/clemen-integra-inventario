@@ -511,7 +511,7 @@ class OrdenProduccionServiceImplTest {
         assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.EN_PROCESO);
         assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
         verify(ordenProduccionRepository).save(orden);
-        verify(movimientoInventarioService).consumirInsumosPorOrden(1L, usuario.getId());
+        verify(movimientoInventarioService).consumirInsumosPorOrden(1L, 10L, usuario.getId());
     }
 
     @Test
@@ -719,7 +719,7 @@ class OrdenProduccionServiceImplTest {
         EtapaProduccion resultado = service.finalizarEtapa(50L, 500L, 7L);
 
         assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.FINALIZADA);
-        verify(movimientoInventarioService).consumirInsumosPorOrden(50L, 7L);
+        verify(movimientoInventarioService).consumirInsumosPorOrden(50L, 500L, 7L);
         verify(etapaProduccionRepository).save(any(EtapaProduccion.class));
     }
 
@@ -743,7 +743,7 @@ class OrdenProduccionServiceImplTest {
         when(etapaProduccionRepository.findById(600L)).thenReturn(Optional.of(etapa));
         when(usuarioRepository.findById(8L)).thenReturn(Optional.of(usuario));
         doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "SIN_STOCK"))
-                .when(movimientoInventarioService).consumirInsumosPorOrden(60L, 8L);
+                .when(movimientoInventarioService).consumirInsumosPorOrden(60L, 600L, 8L);
 
         assertThatThrownBy(() -> service.finalizarEtapa(60L, 600L, 8L))
                 .isInstanceOf(ResponseStatusException.class)
@@ -949,7 +949,7 @@ class OrdenProduccionServiceImplTest {
 
         service.registrarCierre(250L, dto);
 
-        verify(movimientoInventarioService).consumirInsumosPorOrden(250L, usuarioBasico().getId());
+        verify(movimientoInventarioService).consumirInsumosPorOrden(250L, null, usuarioBasico().getId());
         verify(movimientoInventarioService).registrarMovimiento(any());
     }
 
@@ -969,7 +969,7 @@ class OrdenProduccionServiceImplTest {
                 .extracting("reason")
                 .isEqualTo("ORDEN_NO_CERRABLE");
 
-        verify(movimientoInventarioService, never()).consumirInsumosPorOrden(anyLong(), anyLong());
+        verify(movimientoInventarioService, never()).consumirInsumosPorOrden(anyLong(), any(), anyLong());
     }
 
     @Test

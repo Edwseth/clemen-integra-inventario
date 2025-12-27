@@ -43,6 +43,8 @@ public interface LoteProductoMapper {
     @Mapping(target = "ubicacionFisicaId", expression = "java(lote.getUbicacionFisica()!=null ? lote.getUbicacionFisica().getId() : null)")
     @Mapping(target = "ubicacionFisicaCodigo", expression = "java(lote.getUbicacionFisica()!=null ? lote.getUbicacionFisica().getCodigo() : null)")
     @Mapping(target = "ubicacionFisicaDescripcion", expression = "java(lote.getUbicacionFisica()!=null ? lote.getUbicacionFisica().getDescripcion() : null)")
+    @Mapping(target = "ordenProduccionId", expression = "java(lote.getOrdenProduccion()!=null ? lote.getOrdenProduccion().getId() : null)")
+    @Mapping(target = "codigoOrdenProduccion", expression = "java(lote.getOrdenProduccion()!=null ? lote.getOrdenProduccion().getCodigoOrden() : null)")
     LoteProductoResponseDTO toResponseDTO(LoteProducto lote);
 
     @Mapping(source = "producto.nombre", target = "nombreProducto")
@@ -71,6 +73,8 @@ public interface LoteProductoMapper {
     @Mapping(target = "ubicacionFisicaId", expression = "java(entity.getUbicacionFisica()!=null ? entity.getUbicacionFisica().getId() : null)")
     @Mapping(target = "ubicacionFisicaCodigo", expression = "java(entity.getUbicacionFisica()!=null ? entity.getUbicacionFisica().getCodigo() : null)")
     @Mapping(target = "ubicacionFisicaDescripcion", expression = "java(entity.getUbicacionFisica()!=null ? entity.getUbicacionFisica().getDescripcion() : null)")
+    @Mapping(target = "ordenProduccionId", expression = "java(entity.getOrdenProduccion()!=null ? entity.getOrdenProduccion().getId() : null)")
+    @Mapping(target = "codigoOrdenProduccion", expression = "java(entity.getOrdenProduccion()!=null ? entity.getOrdenProduccion().getCodigoOrden() : null)")
     LoteProductoResponseDTO toDto(LoteProducto entity);
 
     default String mapTipoAnalisisCalidadString(com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad valor) {

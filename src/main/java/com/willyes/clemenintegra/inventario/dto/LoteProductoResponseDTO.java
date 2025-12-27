@@ -15,6 +15,8 @@ import java.util.List;
 public class LoteProductoResponseDTO {
     private Long id;
     private String codigoLote;
+    private Long ordenProduccionId;
+    private String codigoOrdenProduccion;
     private LocalDateTime fechaFabricacion;
     private LocalDateTime fechaVencimiento;
     private BigDecimal stockLote;
