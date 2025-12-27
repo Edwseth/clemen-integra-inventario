@@ -1535,6 +1535,33 @@ class OrdenProduccionServiceImplTest {
         assertThat(consumos).containsExactly(respuesta);
     }
 
+    @Test
+    void listarMovimientosPorEtapa_filtraPorOrdenEtapaYClasificacion() {
+        OrdenProduccion orden = OrdenProduccion.builder().id(10L).build();
+        EtapaProduccion etapa = EtapaProduccion.builder().id(20L).ordenProduccion(orden).build();
+        when(ordenProduccionRepository.findById(orden.getId())).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(etapa.getId())).thenReturn(Optional.of(etapa));
+
+        MovimientoInventario movimiento = new MovimientoInventario();
+        MovimientoInventarioResponseDTO dto = MovimientoInventarioResponseDTO.builder().id(77L).build();
+
+        when(movimientoInventarioRepository
+                .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoDesc(
+                        orden.getId(),
+                        etapa.getId(),
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
+                .thenReturn(List.of(movimiento));
+        when(movimientoInventarioMapper.safeToResponseDTO(movimiento)).thenReturn(dto);
+
+        List<MovimientoInventarioResponseDTO> respuesta = service.listarMovimientosPorEtapa(
+                orden.getId(),
+                etapa.getId(),
+                null
+        );
+
+        assertThat(respuesta).containsExactly(dto);
+    }
+
     private void stubDisponibilidadGenerica() {
         when(disponibilidadInsumoService.resolverAlmacenesPreferidos(any()))
                 .thenReturn(List.of(90L));

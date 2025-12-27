@@ -40,7 +40,7 @@ public class DetalleEtapaController {
 
     @PostMapping
     public ResponseEntity<DetalleEtapaResponse> crear(@Valid @RequestBody DetalleEtapaRequest request) {
-        normalizarRequest(request);
+        normalizarRequest(request, null);
         EtapaProduccion etapa = new EtapaProduccion(); etapa.setId(request.etapaProduccionId);
         OrdenProduccion orden = new OrdenProduccion(); orden.setId(request.ordenProduccionId);
         Usuario operario = new Usuario(); operario.setId(request.operarioId);
@@ -52,7 +52,7 @@ public class DetalleEtapaController {
     public ResponseEntity<DetalleEtapaResponse> actualizar(@PathVariable Long id, @Valid @RequestBody DetalleEtapaRequest request) {
         return service.buscarPorId(id)
                 .map(existente -> {
-                    normalizarRequest(request);
+                    normalizarRequest(request, existente);
                     EtapaProduccion etapa = new EtapaProduccion(); etapa.setId(request.etapaProduccionId);
                     OrdenProduccion orden = new OrdenProduccion(); orden.setId(request.ordenProduccionId);
                     Usuario operario = new Usuario(); operario.setId(request.operarioId);
@@ -69,17 +69,15 @@ public class DetalleEtapaController {
         return ResponseEntity.noContent().build();
     }
 
-    private void normalizarRequest(DetalleEtapaRequest request) {
+    private void normalizarRequest(DetalleEtapaRequest request, DetalleEtapa existente) {
         if (request == null) {
             return;
         }
-        if (request.fechaInicio == null) {
-            request.fechaInicio = LocalDateTime.now();
-        }
-        if (request.operarioId == null) {
-            Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
-            request.operarioId = usuario != null ? usuario.getId() : null;
-        }
+        // La fecha de inicio y el operario se fijan en backend para evitar discrepancias
+        // de zona horaria y asegurar trazabilidad de quién inició la etapa.
+        request.fechaInicio = existente != null ? existente.getFechaInicio() : LocalDateTime.now();
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        request.operarioId = usuario != null ? usuario.getId() : null;
         if (StringUtils.hasText(request.operarioNombre)) {
             String prefijo = "Operario: " + request.operarioNombre;
             request.observaciones = StringUtils.hasText(request.observaciones)
