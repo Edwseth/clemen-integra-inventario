@@ -575,18 +575,17 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (ordenProduccionIdContexto == null && ordenProduccion != null) {
             ordenProduccionIdContexto = ordenProduccion.getId();
         }
+        if (ordenProduccionIdContexto == null
+                && solicitud != null
+                && solicitud.getOrdenProduccion() != null
+                && solicitud.getOrdenProduccion().getId() != null) {
+            ordenProduccionIdContexto = solicitud.getOrdenProduccion().getId();
+        }
 
         boolean esConsumoEtapa = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
-        if (dto.ordenProduccionEtapaId() != null) {
-            etapaProduccion = entityManager.getReference(EtapaProduccion.class, dto.ordenProduccionEtapaId());
-        } else if (esConsumoEtapa && ordenProduccionIdContexto != null) {
-            Long etapaId = resolverEtapaConsumo(ordenProduccionIdContexto, null);
-            etapaProduccion = entityManager.getReference(EtapaProduccion.class, etapaId);
-        } else if (esConsumoEtapa && ordenProduccion != null && ordenProduccion.getId() != null) {
-            Long etapaId = resolverEtapaConsumo(ordenProduccion.getId(), null);
-            etapaProduccion = entityManager.getReference(EtapaProduccion.class, etapaId);
-        } else {
-            etapaProduccion = null;
+        if (esConsumoEtapa) {
+            EtapaProduccion etapaActiva = resolverEtapaActiva(ordenProduccionIdContexto, dto.ordenProduccionEtapaId());
+            etapaProduccion = etapaActiva;
         }
 
         // Detección automática de devolución interna
@@ -3200,17 +3199,58 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private Long resolverEtapaConsumo(Long ordenProduccionId, Long etapaId) {
+        EtapaProduccion etapaActiva = resolverEtapaActiva(ordenProduccionId, etapaId);
+        return etapaActiva.getId();
+    }
+
+    private EtapaProduccion resolverEtapaActiva(Long ordenProduccionId, Long etapaId) {
+        if (ordenProduccionId == null) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
+                    "OP_SIN_ETAPA_ACTIVA",
+                    Map.of("ordenProduccionId", (Object) null)
+            );
+        }
         if (etapaId != null) {
-            return etapaId;
+            EtapaProduccion etapa = etapaProduccionRepository.findById(etapaId)
+                    .orElseThrow(() -> new CustomBusinessException(
+                            ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
+                            "OP_SIN_ETAPA_ACTIVA",
+                            Map.of("ordenProduccionId", ordenProduccionId, "etapaId", etapaId)
+                    ));
+            return validarEtapaActiva(etapa, ordenProduccionId);
         }
         EtapaProduccion etapaActiva = etapaProduccionRepository
-                .findTopByOrdenProduccionIdAndFechaFinIsNullOrderByFechaInicioDesc(ordenProduccionId)
+                .findEtapaActivaByOrdenProduccionId(ordenProduccionId)
+                .map(e -> validarEtapaActiva(e, ordenProduccionId))
                 .orElseThrow(() -> new CustomBusinessException(
                         ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
                         "OP_SIN_ETAPA_ACTIVA",
                         Map.of("ordenProduccionId", ordenProduccionId)
                 ));
-        return etapaActiva.getId();
+        return etapaActiva;
+    }
+
+    private EtapaProduccion validarEtapaActiva(EtapaProduccion etapa, Long ordenProduccionId) {
+        if (etapa == null || etapa.getFechaInicio() == null || etapa.getFechaFin() != null) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
+                    "OP_SIN_ETAPA_ACTIVA",
+                    Map.of("ordenProduccionId", ordenProduccionId,
+                            "etapaId", etapa != null ? etapa.getId() : null)
+            );
+        }
+        if (etapa.getOrdenProduccion() != null
+                && etapa.getOrdenProduccion().getId() != null
+                && !Objects.equals(etapa.getOrdenProduccion().getId(), ordenProduccionId)) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
+                    "OP_SIN_ETAPA_ACTIVA",
+                    Map.of("ordenProduccionId", ordenProduccionId,
+                            "etapaId", etapa.getId())
+            );
+        }
+        return etapa;
     }
 
 
