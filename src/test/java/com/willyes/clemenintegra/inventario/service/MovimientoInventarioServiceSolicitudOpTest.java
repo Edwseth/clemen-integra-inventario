@@ -427,6 +427,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         EtapaProduccion etapaProduccion = new EtapaProduccion();
         etapaProduccion.setId(77L);
+        etapaProduccion.setFechaInicio(LocalDateTime.now());
+        etapaProduccion.setFechaFin(null);
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
@@ -465,7 +467,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(solicitudMovimientoRepository.findByIdWithLock(solicitud.getId())).willReturn(Optional.of(solicitud));
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
         given(entityManager.getReference(eq(OrdenProduccion.class), eq(ordenProduccion.getId()))).willReturn(ordenProduccion);
-        given(entityManager.getReference(eq(EtapaProduccion.class), eq(etapaProduccion.getId()))).willReturn(etapaProduccion);
+        given(etapaProduccionRepository.findById(etapaProduccion.getId())).willReturn(Optional.of(etapaProduccion));
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Object id = invocation.getArgument(1);
             return new Almacen(id instanceof Integer ? (Integer) id : ((Long) id).intValue());
@@ -555,6 +557,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         EtapaProduccion etapaProduccion = new EtapaProduccion();
         etapaProduccion.setId(77L);
         etapaProduccion.setOrdenProduccion(ordenProduccion);
+        etapaProduccion.setFechaInicio(LocalDateTime.now());
+        etapaProduccion.setFechaFin(null);
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
@@ -603,10 +607,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(solicitudMovimientoRepository.saveAndFlush(solicitud)).willReturn(solicitud);
         lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
                 .thenReturn(BigDecimal.ZERO);
-        given(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaFinIsNullOrderByFechaInicioDesc(
-                ordenProduccion.getId()))
+        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(ordenProduccion.getId()))
                 .willReturn(Optional.of(etapaProduccion));
-        given(entityManager.getReference(eq(EtapaProduccion.class), eq(etapaProduccion.getId()))).willReturn(etapaProduccion);
         given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
             MovimientoInventario mov = invocation.getArgument(0);
             mov.setId(902L);
@@ -1024,6 +1026,12 @@ class MovimientoInventarioServiceSolicitudOpTest {
         Producto producto = productoSemiElaborado();
         LoteProducto lote = loteEnEstado(producto, EstadoLote.EN_CUARENTENA, new BigDecimal("10"), 60);
 
+        EtapaProduccion etapaActiva = EtapaProduccion.builder()
+                .id(300L)
+                .fechaInicio(LocalDateTime.now())
+                .ordenProduccion(OrdenProduccion.builder().id(30L).build())
+                .build();
+
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null,
                 new BigDecimal("2"),
@@ -1041,7 +1049,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 2L,
                 null,
                 null,
-                null,
+                30L,
                 null,
                 null,
                 null,
@@ -1068,6 +1076,11 @@ class MovimientoInventarioServiceSolicitudOpTest {
             Number id = invocation.getArgument(1);
             return new Almacen(id.intValue());
         });
+        given(entityManager.getReference(eq(OrdenProduccion.class), eq(30L))).willAnswer(invocation -> {
+            OrdenProduccion op = new OrdenProduccion();
+            op.setId(30L);
+            return op;
+        });
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuarioBasico());
         given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
         doThrow(new CustomBusinessException(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO, "BLOQUEO"))
@@ -1075,11 +1088,260 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
         lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
                 .thenReturn(BigDecimal.ZERO);
+        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(30L)).willReturn(Optional.of(etapaActiva));
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO);
+    }
+
+    @Test
+    void registrarMovimiento_salidaProduccionAsociaEtapaActiva() {
+        Producto producto = new Producto();
+        producto.setId(1);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(5L);
+        producto.setUnidadMedida(unidad);
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(200L);
+        lote.setProducto(producto);
+        lote.setAlmacen(new Almacen(10));
+        lote.setStockLote(new BigDecimal("50"));
+        lote.setStockReservado(BigDecimal.ZERO);
+        lote.setEstado(EstadoLote.DISPONIBLE);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("5"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                "DOC-SAL",
+                null,
+                producto.getId(),
+                lote.getId(),
+                lote.getAlmacen().getId(),
+                null,
+                null,
+                null,
+                null,
+                2L,
+                null,
+                null,
+                20L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Boolean.FALSE,
+                List.<AtencionDTO>of(),
+                null
+        );
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.SALIDA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+
+        EtapaProduccion etapaActiva = EtapaProduccion.builder()
+                .id(55L)
+                .fechaInicio(LocalDateTime.now())
+                .ordenProduccion(OrdenProduccion.builder().id(20L).build())
+                .build();
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        TipoMovimientoDetalle detalle = new TipoMovimientoDetalle();
+        detalle.setId(2L);
+        detalle.setDescripcion("SALIDA OP");
+        given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(detalle));
+        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(20L)).willReturn(Optional.of(etapaActiva));
+        given(entityManager.getReference(eq(OrdenProduccion.class), eq(20L))).willAnswer(invocation -> {
+            OrdenProduccion op = new OrdenProduccion();
+            op.setId(20L);
+            return op;
+        });
+        given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
+            Number id = invocation.getArgument(1);
+            return new Almacen(id.intValue());
+        });
+        given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
+        lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(901L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            return MovimientoInventarioResponseDTO.builder()
+                    .id(mov.getId())
+                    .ordenProduccionEtapaId(
+                            mov.getOrdenProduccionEtapa() != null ? mov.getOrdenProduccionEtapa().getId() : null)
+                    .build();
+        });
+        doNothing().when(loteCalidadValidator).validarLoteUtilizable(any());
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        assertThat(respuesta.getOrdenProduccionEtapaId()).isEqualTo(55L);
+        verify(movimientoInventarioRepository).save(argThat(mov ->
+                mov.getOrdenProduccionEtapa() != null && mov.getOrdenProduccionEtapa().getId().equals(55L)));
+    }
+
+    @Test
+    void registrarMovimiento_salidaProduccionSinEtapaActivaLanzaError() {
+        Producto producto = new Producto();
+        producto.setId(1);
+        producto.setUnidadMedida(new UnidadMedida());
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(201L);
+        lote.setProducto(producto);
+        lote.setAlmacen(new Almacen(10));
+        lote.setStockLote(new BigDecimal("10"));
+        lote.setStockReservado(BigDecimal.ZERO);
+        lote.setEstado(EstadoLote.DISPONIBLE);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("1"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                "DOC-SAL",
+                null,
+                producto.getId(),
+                lote.getId(),
+                lote.getAlmacen().getId(),
+                null,
+                null,
+                null,
+                null,
+                2L,
+                null,
+                null,
+                21L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Boolean.FALSE,
+                List.<AtencionDTO>of(),
+                null
+        );
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.SALIDA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
+        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(21L)).willReturn(Optional.empty());
+        given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
+            Number id = invocation.getArgument(1);
+            return new Almacen(id.intValue());
+        });
+        given(entityManager.getReference(eq(OrdenProduccion.class), eq(21L))).willAnswer(invocation -> {
+            OrdenProduccion op = new OrdenProduccion();
+            op.setId(21L);
+            return op;
+        });
+        lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.OP_SIN_ETAPA_ACTIVA);
+
+        verify(movimientoInventarioRepository, never()).save(any(MovimientoInventario.class));
+    }
+
+    @Test
+    void registrarMovimiento_descartaEtapaCorruptaSinFechaInicio() {
+        Producto producto = new Producto();
+        producto.setId(1);
+        producto.setUnidadMedida(new UnidadMedida());
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(202L);
+        lote.setProducto(producto);
+        lote.setAlmacen(new Almacen(10));
+        lote.setStockLote(new BigDecimal("10"));
+        lote.setStockReservado(BigDecimal.ZERO);
+        lote.setEstado(EstadoLote.DISPONIBLE);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("1"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                "DOC-SAL",
+                null,
+                producto.getId(),
+                lote.getId(),
+                lote.getAlmacen().getId(),
+                null,
+                null,
+                null,
+                null,
+                2L,
+                null,
+                null,
+                22L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Boolean.FALSE,
+                List.<AtencionDTO>of(),
+                null
+        );
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.SALIDA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+
+        EtapaProduccion corrupta = EtapaProduccion.builder()
+                .id(88L)
+                .fechaInicio(null)
+                .fechaFin(null)
+                .ordenProduccion(OrdenProduccion.builder().id(22L).build())
+                .build();
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
+        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(22L)).willReturn(Optional.of(corrupta));
+        given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
+            Number id = invocation.getArgument(1);
+            return new Almacen(id.intValue());
+        });
+        given(entityManager.getReference(eq(OrdenProduccion.class), eq(22L))).willAnswer(invocation -> {
+            OrdenProduccion op = new OrdenProduccion();
+            op.setId(22L);
+            return op;
+        });
+        lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.OP_SIN_ETAPA_ACTIVA);
+
+        verify(movimientoInventarioRepository, never()).save(any(MovimientoInventario.class));
     }
 
     private void prepararEscenarioComun(MovimientoInventarioDTO dto,

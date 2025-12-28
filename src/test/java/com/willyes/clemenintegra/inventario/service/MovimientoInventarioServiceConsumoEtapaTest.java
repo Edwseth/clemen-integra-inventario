@@ -25,6 +25,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -96,6 +97,12 @@ class MovimientoInventarioServiceConsumoEtapaTest {
 
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
+        EtapaProduccion etapaActiva = EtapaProduccion.builder()
+                .id(20L)
+                .fechaInicio(LocalDateTime.now())
+                .ordenProduccion(OrdenProduccion.builder().id(10L).build())
+                .build();
+        when(etapaProduccionRepository.findById(anyLong())).thenReturn(Optional.of(etapaActiva));
 
         LoteProducto lotePrebodega = new LoteProducto();
         lotePrebodega.setId(300L);
@@ -146,6 +153,12 @@ class MovimientoInventarioServiceConsumoEtapaTest {
 
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
+        EtapaProduccion etapaActiva = EtapaProduccion.builder()
+                .id(20L)
+                .fechaInicio(LocalDateTime.now())
+                .ordenProduccion(OrdenProduccion.builder().id(10L).build())
+                .build();
+        when(etapaProduccionRepository.findById(anyLong())).thenReturn(Optional.of(etapaActiva));
 
         LoteProducto lotePrebodega1 = loteEnPrebodega(detalle1.getLote(), producto, 30);
         LoteProducto lotePrebodega2 = loteEnPrebodega(detalle2.getLote(), producto, 30);
@@ -191,6 +204,12 @@ class MovimientoInventarioServiceConsumoEtapaTest {
 
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
+        EtapaProduccion etapaActivaError = EtapaProduccion.builder()
+                .id(20L)
+                .fechaInicio(LocalDateTime.now())
+                .ordenProduccion(OrdenProduccion.builder().id(10L).build())
+                .build();
+        when(etapaProduccionRepository.findById(anyLong())).thenReturn(Optional.of(etapaActivaError));
         when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(any(), anyInt(), anyInt()))
                 .thenReturn(Optional.empty());
 
@@ -212,8 +231,8 @@ class MovimientoInventarioServiceConsumoEtapaTest {
 
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
-        when(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaFinIsNullOrderByFechaInicioDesc(10L))
-                .thenReturn(Optional.of(EtapaProduccion.builder().id(22L).build()));
+        when(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(10L))
+                .thenReturn(Optional.of(EtapaProduccion.builder().id(22L).fechaInicio(LocalDateTime.now()).build()));
 
         LoteProducto lotePrebodega = new LoteProducto();
         lotePrebodega.setId(300L);
@@ -260,8 +279,8 @@ class MovimientoInventarioServiceConsumoEtapaTest {
 
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
-        when(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaFinIsNullOrderByFechaInicioDesc(10L))
-                .thenReturn(Optional.of(EtapaProduccion.builder().id(30L).build()));
+        when(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(10L))
+                .thenReturn(Optional.of(EtapaProduccion.builder().id(30L).fechaInicio(LocalDateTime.now()).build()));
 
         LoteProducto lotePrebodega = new LoteProducto();
         lotePrebodega.setId(300L);
@@ -298,7 +317,7 @@ class MovimientoInventarioServiceConsumoEtapaTest {
     @Test
     void consumirInsumosPorOrden_sinEtapaActivaLanzaError() {
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
-        when(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaFinIsNullOrderByFechaInicioDesc(10L))
+        when(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(10L))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.consumirInsumosPorOrden(10L, null, 5L))
