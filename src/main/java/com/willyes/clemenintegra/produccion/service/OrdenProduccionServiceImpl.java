@@ -1330,6 +1330,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         if (etapa.getEstado() != EstadoEtapa.PENDIENTE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_INICIABLE");
         }
+        List<EtapaProduccion> activas = etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(ordenId);
+        boolean hayOtraActiva = activas.stream().anyMatch(e -> !Objects.equals(e.getId(), etapaId)
+                && e.getEstado() == EstadoEtapa.EN_PROCESO);
+        if (hayOtraActiva) {
+            throw new CustomBusinessException(ApiErrorCode.ETAPA_YA_ACTIVA,
+                    "Ya existe una etapa en proceso para la orden",
+                    Map.of("ordenProduccionId", ordenId,
+                            "etapaActivaIds", activas.stream().map(EtapaProduccion::getId).toList()));
+        }
 
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 

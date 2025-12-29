@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -23,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -99,6 +101,7 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
         EtapaProduccion etapaActiva = EtapaProduccion.builder()
                 .id(20L)
+                .estado(EstadoEtapa.EN_PROCESO)
                 .fechaInicio(LocalDateTime.now())
                 .ordenProduccion(OrdenProduccion.builder().id(10L).build())
                 .build();
@@ -155,6 +158,7 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
         EtapaProduccion etapaActiva = EtapaProduccion.builder()
                 .id(20L)
+                .estado(EstadoEtapa.EN_PROCESO)
                 .fechaInicio(LocalDateTime.now())
                 .ordenProduccion(OrdenProduccion.builder().id(10L).build())
                 .build();
@@ -206,6 +210,7 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
         EtapaProduccion etapaActivaError = EtapaProduccion.builder()
                 .id(20L)
+                .estado(EstadoEtapa.EN_PROCESO)
                 .fechaInicio(LocalDateTime.now())
                 .ordenProduccion(OrdenProduccion.builder().id(10L).build())
                 .build();
@@ -231,8 +236,12 @@ class MovimientoInventarioServiceConsumoEtapaTest {
 
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
-        when(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(10L))
-                .thenReturn(Optional.of(EtapaProduccion.builder().id(22L).fechaInicio(LocalDateTime.now()).build()));
+        when(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(10L))
+                .thenReturn(List.of(EtapaProduccion.builder()
+                        .id(22L)
+                        .estado(EstadoEtapa.EN_PROCESO)
+                        .fechaInicio(LocalDateTime.now())
+                        .build()));
 
         LoteProducto lotePrebodega = new LoteProducto();
         lotePrebodega.setId(300L);
@@ -279,8 +288,12 @@ class MovimientoInventarioServiceConsumoEtapaTest {
 
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(70L);
-        when(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(10L))
-                .thenReturn(Optional.of(EtapaProduccion.builder().id(30L).fechaInicio(LocalDateTime.now()).build()));
+        when(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(10L))
+                .thenReturn(List.of(EtapaProduccion.builder()
+                        .id(30L)
+                        .estado(EstadoEtapa.EN_PROCESO)
+                        .fechaInicio(LocalDateTime.now())
+                        .build()));
 
         LoteProducto lotePrebodega = new LoteProducto();
         lotePrebodega.setId(300L);
@@ -317,13 +330,64 @@ class MovimientoInventarioServiceConsumoEtapaTest {
     @Test
     void consumirInsumosPorOrden_sinEtapaActivaLanzaError() {
         when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
-        when(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(10L))
-                .thenReturn(Optional.empty());
+        when(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(10L))
+                .thenReturn(List.of());
 
         assertThatThrownBy(() -> service.consumirInsumosPorOrden(10L, null, 5L))
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.OP_SIN_ETAPA_ACTIVA);
+    }
+
+    @Test
+    void resolverEtapaActiva_respetaEtapaEnProcesoUnica() {
+        EtapaProduccion activa = EtapaProduccion.builder()
+                .id(1L)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .ordenProduccion(OrdenProduccion.builder().id(5L).build())
+                .build();
+        when(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(5L)).thenReturn(List.of(activa));
+
+        EtapaProduccion resultado = ReflectionTestUtils.invokeMethod(service, "resolverEtapaActiva", 5L, null);
+
+        assertThat(resultado).isSameAs(activa);
+    }
+
+    @Test
+    void resolverEtapaActiva_sinActivasLanzaError() {
+        when(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(9L)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "resolverEtapaActiva", 9L, null))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.OP_SIN_ETAPA_ACTIVA);
+    }
+
+    @Test
+    void resolverEtapaActiva_conMultiplesActivasLanzaAmbiguedad() {
+        EtapaProduccion e1 = EtapaProduccion.builder().id(1L).estado(EstadoEtapa.EN_PROCESO).build();
+        EtapaProduccion e2 = EtapaProduccion.builder().id(2L).estado(EstadoEtapa.EN_PROCESO).build();
+        when(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(15L)).thenReturn(List.of(e1, e2));
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "resolverEtapaActiva", 15L, null))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.ETAPA_ACTIVA_AMBIGUA);
+    }
+
+    @Test
+    void resolverEtapaActiva_conIdNoConsultaActivas() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(11L)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .ordenProduccion(OrdenProduccion.builder().id(7L).build())
+                .build();
+        when(etapaProduccionRepository.findById(11L)).thenReturn(Optional.of(etapa));
+
+        EtapaProduccion resultado = ReflectionTestUtils.invokeMethod(service, "resolverEtapaActiva", 7L, 11L);
+
+        assertThat(resultado).isSameAs(etapa);
+        verify(etapaProduccionRepository, never()).findEtapasActivasByOrdenProduccionId(anyLong());
     }
 
     private SolicitudMovimiento solicitudConDetalle() {

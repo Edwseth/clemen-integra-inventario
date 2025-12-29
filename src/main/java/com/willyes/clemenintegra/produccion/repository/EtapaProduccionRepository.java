@@ -13,9 +13,13 @@ public interface EtapaProduccionRepository extends JpaRepository<EtapaProduccion
     @Query("""
             select e from EtapaProduccion e
             where e.ordenProduccion.id = :ordenId
-              and e.fechaInicio is not null
-              and e.fechaFin is null
-            order by e.fechaInicio desc
+              and (
+                    e.estado = 'EN_PROCESO'
+                    or (e.fechaInicio is not null and e.fechaFin is null)
+              )
+            order by
+                case when e.estado = 'EN_PROCESO' then 0 else 1 end,
+                e.fechaInicio desc
             """)
-    Optional<EtapaProduccion> findEtapaActivaByOrdenProduccionId(@Param("ordenId") Long ordenProduccionId);
+    List<EtapaProduccion> findEtapasActivasByOrdenProduccionId(@Param("ordenId") Long ordenProduccionId);
 }

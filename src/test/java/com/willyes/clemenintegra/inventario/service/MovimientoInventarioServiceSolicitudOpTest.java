@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.enums.*;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -429,6 +430,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         etapaProduccion.setId(77L);
         etapaProduccion.setFechaInicio(LocalDateTime.now());
         etapaProduccion.setFechaFin(null);
+        etapaProduccion.setEstado(EstadoEtapa.EN_PROCESO);
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
@@ -559,6 +561,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         etapaProduccion.setOrdenProduccion(ordenProduccion);
         etapaProduccion.setFechaInicio(LocalDateTime.now());
         etapaProduccion.setFechaFin(null);
+        etapaProduccion.setEstado(EstadoEtapa.EN_PROCESO);
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
@@ -607,8 +610,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(solicitudMovimientoRepository.saveAndFlush(solicitud)).willReturn(solicitud);
         lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
                 .thenReturn(BigDecimal.ZERO);
-        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(ordenProduccion.getId()))
-                .willReturn(Optional.of(etapaProduccion));
+        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(ordenProduccion.getId()))
+                .willReturn(List.of(etapaProduccion));
         given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
             MovimientoInventario mov = invocation.getArgument(0);
             mov.setId(902L);
@@ -1029,6 +1032,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         EtapaProduccion etapaActiva = EtapaProduccion.builder()
                 .id(300L)
                 .fechaInicio(LocalDateTime.now())
+                .estado(EstadoEtapa.EN_PROCESO)
                 .ordenProduccion(OrdenProduccion.builder().id(30L).build())
                 .build();
 
@@ -1088,7 +1092,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
         lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
                 .thenReturn(BigDecimal.ZERO);
-        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(30L)).willReturn(Optional.of(etapaActiva));
+        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(30L))
+                .willReturn(List.of(etapaActiva));
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(CustomBusinessException.class)
@@ -1148,6 +1153,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         EtapaProduccion etapaActiva = EtapaProduccion.builder()
                 .id(55L)
                 .fechaInicio(LocalDateTime.now())
+                .estado(EstadoEtapa.EN_PROCESO)
                 .ordenProduccion(OrdenProduccion.builder().id(20L).build())
                 .build();
 
@@ -1157,7 +1163,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         detalle.setId(2L);
         detalle.setDescripcion("SALIDA OP");
         given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(detalle));
-        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(20L)).willReturn(Optional.of(etapaActiva));
+        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(20L))
+                .willReturn(List.of(etapaActiva));
         given(entityManager.getReference(eq(OrdenProduccion.class), eq(20L))).willAnswer(invocation -> {
             OrdenProduccion op = new OrdenProduccion();
             op.setId(20L);
@@ -1243,7 +1250,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
-        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(21L)).willReturn(Optional.empty());
+        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(21L)).willReturn(List.of());
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Number id = invocation.getArgument(1);
             return new Almacen(id.intValue());
@@ -1322,7 +1329,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
-        given(etapaProduccionRepository.findEtapaActivaByOrdenProduccionId(22L)).willReturn(Optional.of(corrupta));
+        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(22L))
+                .willReturn(List.of(corrupta));
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Number id = invocation.getArgument(1);
             return new Almacen(id.intValue());

@@ -3218,31 +3218,55 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             "OP_SIN_ETAPA_ACTIVA",
                             Map.of("ordenProduccionId", ordenProduccionId, "etapaId", etapaId)
                     ));
-            return validarEtapaActiva(etapa, ordenProduccionId);
+            return validarEtapaActiva(etapa, ordenProduccionId, false);
         }
-        EtapaProduccion etapaActiva = etapaProduccionRepository
-                .findEtapaActivaByOrdenProduccionId(ordenProduccionId)
-                .map(e -> validarEtapaActiva(e, ordenProduccionId))
-                .orElseThrow(() -> new CustomBusinessException(
-                        ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
-                        "OP_SIN_ETAPA_ACTIVA",
-                        Map.of("ordenProduccionId", ordenProduccionId)
-                ));
-        return etapaActiva;
+        List<EtapaProduccion> candidatas = etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(ordenProduccionId);
+        List<EtapaProduccion> enProceso = candidatas.stream()
+                .filter(e -> e.getEstado() == com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa.EN_PROCESO)
+                .toList();
+        if (enProceso.size() == 1) {
+            return validarEtapaActiva(enProceso.get(0), ordenProduccionId, true);
+        }
+        if (enProceso.size() > 1 || candidatas.size() > 1) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.ETAPA_ACTIVA_AMBIGUA,
+                    "ETAPA_ACTIVA_AMBIGUA",
+                    Map.of("ordenProduccionId", ordenProduccionId,
+                            "etapas", candidatas.stream().map(EtapaProduccion::getId).toList())
+            );
+        }
+        if (candidatas.size() == 1) {
+            return validarEtapaActiva(candidatas.get(0), ordenProduccionId, true);
+        }
+        throw new CustomBusinessException(
+                ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
+                "OP_SIN_ETAPA_ACTIVA",
+                Map.of("ordenProduccionId", ordenProduccionId)
+        );
     }
 
-    private EtapaProduccion validarEtapaActiva(EtapaProduccion etapa, Long ordenProduccionId) {
-        if (etapa == null || etapa.getFechaInicio() == null || etapa.getFechaFin() != null) {
+    private EtapaProduccion validarEtapaActiva(EtapaProduccion etapa, Long ordenProduccionId, boolean permitirHeuristicaFecha) {
+        if (etapa == null) {
             throw new CustomBusinessException(
                     ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
                     "OP_SIN_ETAPA_ACTIVA",
                     Map.of("ordenProduccionId", ordenProduccionId,
-                            "etapaId", etapa != null ? etapa.getId() : null)
+                            "etapaId", (Object) null)
             );
         }
         if (etapa.getOrdenProduccion() != null
                 && etapa.getOrdenProduccion().getId() != null
                 && !Objects.equals(etapa.getOrdenProduccion().getId(), ordenProduccionId)) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
+                    "OP_SIN_ETAPA_ACTIVA",
+                    Map.of("ordenProduccionId", ordenProduccionId,
+                            "etapaId", etapa.getId())
+            );
+        }
+        boolean activaPorEstado = etapa.getEstado() == com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa.EN_PROCESO;
+        boolean activaPorFecha = etapa.getFechaInicio() != null && etapa.getFechaFin() == null;
+        if (!activaPorEstado && !(permitirHeuristicaFecha && activaPorFecha)) {
             throw new CustomBusinessException(
                     ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
                     "OP_SIN_ETAPA_ACTIVA",

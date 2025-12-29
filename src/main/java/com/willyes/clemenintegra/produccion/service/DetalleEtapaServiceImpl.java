@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.DetalleEtapaRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -62,16 +64,31 @@ public class DetalleEtapaServiceImpl implements DetalleEtapaService {
                     .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                             "OPERARIO_NO_ENCONTRADO"));
 
+            if (etapa.getEstado() != EstadoEtapa.EN_PROCESO) {
+                throw new CustomBusinessException(ApiErrorCode.ETAPA_NO_INICIADA, "ETAPA_NO_INICIADA",
+                        Map.of("etapaId", etapa.getId(), "estado", etapa.getEstado()));
+            }
             if (etapa.getOrdenProduccion() == null
                     || !etapa.getOrdenProduccion().getId().equals(orden.getId())) {
                 throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "ETAPA_NO_PERTENECE_A_ORDEN");
             }
 
-            detalle.setEtapaProduccion(etapa);
-            detalle.setOrdenProduccion(orden);
-            detalle.setOperario(operario);
+            DetalleEtapa abierto = detalle.getId() == null
+                    ? repository.findFirstByEtapaProduccionIdAndFechaFinIsNullOrderByFechaInicioDesc(etapaId).orElse(null)
+                    : null;
 
-            return repository.save(detalle);
+            DetalleEtapa base = abierto != null ? abierto : detalle;
+
+            base.setEtapaProduccion(etapa);
+            base.setOrdenProduccion(orden);
+            base.setOperario(operario);
+            if (abierto != null) {
+                base.setObservaciones(detalle.getObservaciones());
+                base.setFechaFin(detalle.getFechaFin());
+                base.setFechaInicio(abierto.getFechaInicio());
+            }
+
+            return repository.save(base);
         } catch (DataIntegrityViolationException ex) {
             log.error("Error de integridad al guardar detalle de etapa opId={} etapaId={} operarioId={}",
                     detalle != null && detalle.getOrdenProduccion() != null ? detalle.getOrdenProduccion().getId() : null,
