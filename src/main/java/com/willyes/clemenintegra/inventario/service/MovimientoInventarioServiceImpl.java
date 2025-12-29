@@ -625,6 +625,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         boolean esConsumoEtapa = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
+        boolean bloquearEtapaPorTraslado = esTrasladoAPreBodega;
         boolean requiereEtapaActiva = !esTrasladoAPreBodega && requiereEtapaActiva(
                 clasificacion,
                 resolvedTipoDetalleId,
@@ -815,7 +816,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setAlmacenOrigen(almacenOrigen);
         movimiento.setAlmacenDestino(almacenDestino);
         movimiento.setOrdenProduccion(ordenProduccion);
-        movimiento.setOrdenProduccionEtapa(etapaProduccion);
+        if (!bloquearEtapaPorTraslado) {
+            movimiento.setOrdenProduccionEtapa(etapaProduccion);
+        }
         if (esConsumoEtapa && movimiento.getOrdenProduccionEtapa() == null && ordenProduccionIdContexto != null) {
             Long etapaId = resolverEtapaConsumo(ordenProduccionIdContexto, null);
             movimiento.setOrdenProduccionEtapa(entityManager.getReference(EtapaProduccion.class, etapaId));

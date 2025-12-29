@@ -50,7 +50,6 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
-import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -1329,6 +1328,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         if (!etapa.getOrdenProduccion().getId().equals(ordenId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_PERTENECE_A_ORDEN");
         }
+        boolean etapaYaActiva = etapa.getEstado() == EstadoEtapa.EN_PROCESO
+                && etapa.getFechaInicio() != null
+                && etapa.getFechaFin() == null;
+        if (etapaYaActiva) {
+            return etapa;
+        }
         if (etapa.getEstado() != EstadoEtapa.PENDIENTE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_INICIABLE");
         }
@@ -1432,16 +1437,18 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             repository.save(orden);
         }
 
+        etapa.setEstado(EstadoEtapa.EN_PROCESO);
+        etapa.setFechaInicio(LocalDateTime.now());
+        etapa.setUsuarioId(usuario.getId());
+        etapa.setUsuarioNombre(usuario.getNombreCompleto());
+        EtapaProduccion guardada = etapaProduccionRepository.save(etapa);
+
         // Consumo etapa 1: generar SALIDA_PRODUCCION desde Pre-Bodega (idempotente)
         if (etapa.getSecuencia() != null && etapa.getSecuencia() == 1) {
             movimientoInventarioService.consumirInsumosPorOrden(ordenId, etapaId, usuario.getId());
         }
 
-        etapa.setEstado(EstadoEtapa.EN_PROCESO);
-        etapa.setFechaInicio(LocalDateTime.now());
-        etapa.setUsuarioId(usuario.getId());
-        etapa.setUsuarioNombre(usuario.getNombreCompleto());
-        return etapaProduccionRepository.save(etapa);
+        return guardada;
     }
 
     private void recalcularEstadoOrden(OrdenProduccion orden) {
@@ -1555,19 +1562,33 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             }
             BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             Long insumoId = det.getInsumo().getId().longValue();
-            // Solo se consideran consumos reales de producción (SALIDA_PRODUCCION). Traslados o preparaciones no suman aquí.
-            BigDecimal consumidaMov = Optional.ofNullable(
-                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacion(
+            // Consumido real: solo salidas de producción ligadas a una etapa (activa o finalizada).
+            BigDecimal consumida = Optional.ofNullable(
+                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionConEtapa(
                             id,
                             insumoId,
                             ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                             TipoMovimiento.SALIDA
                     )
             ).orElse(BigDecimal.ZERO);
-            BigDecimal consumidaReservas = Optional.ofNullable(
-                    reservaLoteRepository.sumConsumidaByOrdenAndProducto(id, insumoId, EstadoReservaLote.CONSUMIDA)
+            // Alistado/reservado: traslados internos a Pre-Bodega sin etapa (pre-arranque).
+            BigDecimal alistadoTransferencias = Optional.ofNullable(
+                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
+                            id,
+                            insumoId,
+                            ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                            TipoMovimiento.TRANSFERENCIA
+                    )
             ).orElse(BigDecimal.ZERO);
-            BigDecimal consumida = consumidaMov.max(consumidaReservas);
+            BigDecimal alistadoSalidasSinEtapa = Optional.ofNullable(
+                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
+                            id,
+                            insumoId,
+                            ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                            TipoMovimiento.SALIDA
+                    )
+            ).orElse(BigDecimal.ZERO);
+            BigDecimal alistado = alistadoTransferencias.add(alistadoSalidasSinEtapa);
             BigDecimal faltante = requerida.subtract(consumida);
             if (faltante.compareTo(BigDecimal.ZERO) < 0) {
                 faltante = BigDecimal.ZERO;
@@ -1578,7 +1599,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     det.getInsumo().getUnidadMedida() != null ? det.getInsumo().getUnidadMedida().getNombre() : null,
                     requerida,
                     consumida,
-                    faltante
+                    faltante,
+                    alistado
             ));
         }
         return lista;
