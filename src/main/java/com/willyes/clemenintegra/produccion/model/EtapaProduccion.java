@@ -6,7 +6,6 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
-import jakarta.persistence.PrePersist;
 
 @Entity
 @Table(name = "etapa_produccion",
@@ -49,13 +48,4 @@ public class EtapaProduccion {
 
     @Column(name = "usuario_nombre", length = 100)
     private String usuarioNombre;
-
-    @PrePersist
-    public void prePersist() {
-        if (fechaInicio == null) {
-            fechaInicio = LocalDateTime.now();
-        }
-        // Las etapas nuevas nunca deberían nacer cerradas
-        fechaFin = null;
-    }
 }

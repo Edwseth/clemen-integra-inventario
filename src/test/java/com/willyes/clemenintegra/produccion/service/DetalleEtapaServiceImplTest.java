@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.DetalleEtapaRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -42,7 +43,11 @@ class DetalleEtapaServiceImplTest {
     @Test
     void guardar_asociaReferenciasValidadas() {
         OrdenProduccion orden = OrdenProduccion.builder().id(5L).build();
-        EtapaProduccion etapa = EtapaProduccion.builder().id(7L).ordenProduccion(orden).build();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(7L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .build();
         Usuario operario = new Usuario(); operario.setId(11L);
 
         DetalleEtapa detalle = DetalleEtapa.builder()
@@ -67,7 +72,11 @@ class DetalleEtapaServiceImplTest {
     void guardar_conEtapaDeOtraOrdenLanzaErrorDeNegocio() {
         OrdenProduccion orden = OrdenProduccion.builder().id(5L).build();
         OrdenProduccion otraOrden = OrdenProduccion.builder().id(8L).build();
-        EtapaProduccion etapa = EtapaProduccion.builder().id(7L).ordenProduccion(otraOrden).build();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(7L)
+                .ordenProduccion(otraOrden)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .build();
         Usuario operario = new Usuario(); operario.setId(11L);
 
         DetalleEtapa detalle = DetalleEtapa.builder()
@@ -88,7 +97,11 @@ class DetalleEtapaServiceImplTest {
     @Test
     void guardar_errorDeIntegridadSeMapeaComoSolicitudInvalida() {
         OrdenProduccion orden = OrdenProduccion.builder().id(5L).build();
-        EtapaProduccion etapa = EtapaProduccion.builder().id(7L).ordenProduccion(orden).build();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(7L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .build();
         Usuario operario = new Usuario(); operario.setId(11L);
 
         DetalleEtapa detalle = DetalleEtapa.builder()
