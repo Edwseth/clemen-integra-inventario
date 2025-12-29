@@ -31,6 +31,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -40,11 +41,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -389,9 +392,69 @@ class MovimientoInventarioServiceTransferenciaTest {
                 });
     }
 
+    @Test
+    void salidaProduccionAHaciaPrebodegaNoResuelveEtapa() {
+        ReflectionTestUtils.setField(service, "preBodegaId", 6);
+        ReflectionTestUtils.setField(service, "tipoDetalleTransferenciaId", 12);
+
+        Producto producto = crearProducto(11, 2);
+        LoteProducto lote = crearLote(410L, producto, 5, EstadoLote.DISPONIBLE,
+                new BigDecimal("1000"), BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("100"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                5,
+                6,
+                null,
+                null,
+                null,
+                11L,
+                null,
+                24L,
+                1L,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                null
+        );
+
+        configurarMocksBasicos(producto, lote);
+        given(mapper.toEntity(dto)).willReturn(new MovimientoInventario());
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class)))
+                .willAnswer(invocation -> {
+                    MovimientoInventario mov = invocation.getArgument(0);
+                    mov.setId(901L);
+                    return mov;
+                });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willAnswer(invocation -> {
+                    MovimientoInventario mov = invocation.getArgument(0);
+                    return MovimientoInventarioResponseDTO.builder().id(mov.getId()).build();
+                });
+        lenient().doNothing().when(loteCalidadValidator).validarLoteUtilizable(any());
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        assertThat(respuesta).isNotNull();
+        assertThat(respuesta.getId()).isEqualTo(901L);
+        verifyNoInteractions(etapaProduccionRepository);
+    }
+
     private void configurarMocksBasicos(Producto producto, LoteProducto lote) {
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
-        given(tipoMovimientoDetalleRepository.findById(5L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
+        lenient().when(tipoMovimientoDetalleRepository.findById(anyLong()))
+                .thenReturn(Optional.of(new TipoMovimientoDetalle()));
         given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
         lenient().when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
                 lote.getCodigoLote(), producto.getId(), 6)).thenReturn(Optional.empty());

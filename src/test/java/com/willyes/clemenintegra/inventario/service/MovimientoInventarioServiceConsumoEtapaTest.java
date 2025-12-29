@@ -395,10 +395,9 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         boolean requiere = ReflectionTestUtils.invokeMethod(
                 service,
                 "requiereEtapaActiva",
-                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
-                100L,
+                false,
                 null,
-                null
+                10L
         );
 
         assertThat(requiere).isFalse();
@@ -409,8 +408,7 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         boolean requiere = ReflectionTestUtils.invokeMethod(
                 service,
                 "requiereEtapaActiva",
-                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                200L,
+                true,
                 null,
                 10L
         );
@@ -423,8 +421,7 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         boolean requiere = ReflectionTestUtils.invokeMethod(
                 service,
                 "requiereEtapaActiva",
-                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
-                200L,
+                true,
                 55L,
                 10L
         );

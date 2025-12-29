@@ -582,14 +582,25 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             ordenProduccionIdContexto = solicitud.getOrdenProduccion().getId();
         }
 
-        boolean esConsumoEtapa = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
-        boolean requiereEtapaActiva = requiereEtapaActiva(
+        boolean esConsumoEtapa = esMovimientoConsumoEnEtapa(
                 clasificacion,
+                tipoMovimiento,
                 resolvedTipoDetalleId,
-                dto.ordenProduccionEtapaId(),
+                almacenDestinoIdNormalizado);
+        Long etapaIdContextual = esConsumoEtapa ? dto.ordenProduccionEtapaId() : null;
+
+        boolean requiereEtapaActiva = requiereEtapaActiva(
+                esConsumoEtapa,
+                etapaIdContextual,
                 ordenProduccionIdContexto);
+        log.debug("OP_ETAPA requiere? tipoMovimiento={} clasificacion={} motivoId={} tipoDetalleId={} opId={} etapaId={} requiere={}",
+                tipoMovimiento, clasificacion, dto.motivoMovimientoId(), resolvedTipoDetalleId, ordenProduccionIdContexto,
+                etapaIdContextual, requiereEtapaActiva);
         if (requiereEtapaActiva) {
-            EtapaProduccion etapaActiva = resolverEtapaActiva(ordenProduccionIdContexto, dto.ordenProduccionEtapaId());
+            log.debug("OP_ETAPA resolverEtapaActiva opId={} etapaId={}", ordenProduccionIdContexto, etapaIdContextual);
+            EtapaProduccion etapaActiva = resolverEtapaActiva(ordenProduccionIdContexto, etapaIdContextual);
+            log.debug("OP_ETAPA etapaActiva id={} estado={}", etapaActiva != null ? etapaActiva.getId() : null,
+                    etapaActiva != null ? etapaActiva.getEstado() : null);
             etapaProduccion = etapaActiva;
         }
 
@@ -745,7 +756,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .codigoOrdenProduccion(solicitud.getOrdenProduccion() != null
                             ? solicitud.getOrdenProduccion().getCodigoOrden()
                             : null)
-                    .ordenProduccionEtapaId(dto.ordenProduccionEtapaId())
+                    .ordenProduccionEtapaId(etapaIdContextual)
                     .detallesSolicitud(detallesRespuesta == null ? List.of() : List.copyOf(detallesRespuesta))
                     .build();
         }
@@ -3208,23 +3219,33 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return etapaActiva.getId();
     }
 
-    private boolean requiereEtapaActiva(ClasificacionMovimientoInventario clasificacion,
-                                        Long tipoMovimientoDetalleId,
+    private boolean requiereEtapaActiva(boolean esConsumoEtapa,
                                         Long etapaId,
                                         Long ordenProduccionId) {
-        if (ordenProduccionId == null) {
+        if (!esConsumoEtapa || ordenProduccionId == null) {
             return false;
         }
-        if (etapaId != null) {
-            return true;
+        return true;
+    }
+
+    private boolean esMovimientoConsumoEnEtapa(ClasificacionMovimientoInventario clasificacion,
+                                               TipoMovimiento tipoMovimiento,
+                                               Long tipoMovimientoDetalleId,
+                                               Integer almacenDestinoId) {
+        if (clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                || tipoMovimiento != TipoMovimiento.SALIDA) {
+            return false;
         }
-        if (clasificacion != null) {
-            return clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
-        }
-        Long tipoDetalleSalidaProduccionId = catalogResolver.getTipoDetalleSalidaProduccionId();
-        return tipoDetalleSalidaProduccionId != null
+        boolean detalleEsTransferencia = tipoDetalleTransferenciaId != null
                 && tipoMovimientoDetalleId != null
-                && Objects.equals(tipoMovimientoDetalleId, tipoDetalleSalidaProduccionId);
+                && Objects.equals(tipoMovimientoDetalleId, tipoDetalleTransferenciaId.longValue());
+        if (detalleEsTransferencia) {
+            return false;
+        }
+        boolean destinoEsPrebodega = preBodegaId != null
+                && almacenDestinoId != null
+                && Objects.equals(preBodegaId.longValue(), almacenDestinoId.longValue());
+        return !destinoEsPrebodega;
     }
 
     private EtapaProduccion resolverEtapaActiva(Long ordenProduccionId, Long etapaId) {
