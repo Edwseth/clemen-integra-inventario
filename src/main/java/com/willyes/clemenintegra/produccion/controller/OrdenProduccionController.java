@@ -187,7 +187,8 @@ public class OrdenProduccionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PatchMapping("/{ordenId}/etapas/{etapaId}/finalizar")
+    // Compatibilidad POST agregada porque el frontend usa POST
+    @RequestMapping(value = "/{ordenId}/etapas/{etapaId}/finalizar", method = {RequestMethod.PATCH, RequestMethod.POST})
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<EtapaProduccionResponse> finalizarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
