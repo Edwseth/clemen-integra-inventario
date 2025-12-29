@@ -977,6 +977,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .secuencia(p.getSecuencia())
                         .ordenProduccion(op)
                         .estado(EstadoEtapa.PENDIENTE)
+                        .fechaInicio(null)
+                        .fechaFin(null)
                         .build())
                 .toList();
         etapaProduccionRepository.saveAll(etapas);
@@ -1330,14 +1332,23 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         if (etapa.getEstado() != EstadoEtapa.PENDIENTE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_INICIABLE");
         }
-        List<EtapaProduccion> activas = etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(ordenId);
-        boolean hayOtraActiva = activas.stream().anyMatch(e -> !Objects.equals(e.getId(), etapaId)
-                && e.getEstado() == EstadoEtapa.EN_PROCESO);
-        if (hayOtraActiva) {
-            throw new CustomBusinessException(ApiErrorCode.ETAPA_YA_ACTIVA,
-                    "Ya existe una etapa en proceso para la orden",
+        long activas = etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(ordenId);
+        List<EtapaProduccion> activasList = activas > 0
+                ? etapaProduccionRepository.findByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(ordenId)
+                : List.of();
+        List<Long> activasIds = activasList.stream().map(EtapaProduccion::getId).toList();
+        if (activas > 1) {
+            throw new CustomBusinessException(ApiErrorCode.PRODUCCION_MULTIPLES_ETAPAS_ACTIVAS,
+                    "Existen múltiples etapas activas para la orden",
                     Map.of("ordenProduccionId", ordenId,
-                            "etapaActivaIds", activas.stream().map(EtapaProduccion::getId).toList()));
+                            "etapaActivaIds", activasIds));
+        }
+        boolean hayOtraActiva = activas == 1 && activasIds.stream().noneMatch(id -> Objects.equals(id, etapaId));
+        if (hayOtraActiva) {
+            throw new CustomBusinessException(ApiErrorCode.PRODUCCION_OTRA_ETAPA_ACTIVA,
+                    "Ya existe otra etapa en proceso para la orden",
+                    Map.of("ordenProduccionId", ordenId,
+                            "etapaActivaIds", activasIds));
         }
 
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
@@ -1509,6 +1520,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
         if (etapa.getEstado() != EstadoEtapa.EN_PROCESO) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ETAPA_NO_FINALIZABLE");
+        }
+        if (etapa.getFechaInicio() == null) {
+            throw new CustomBusinessException(ApiErrorCode.ETAPA_NO_INICIADA, "ETAPA_NO_INICIADA",
+                    Map.of("ordenProduccionId", ordenId, "etapaId", etapaId));
         }
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));

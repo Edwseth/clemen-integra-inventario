@@ -610,8 +610,10 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(solicitudMovimientoRepository.saveAndFlush(solicitud)).willReturn(solicitud);
         lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
                 .thenReturn(BigDecimal.ZERO);
-        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(ordenProduccion.getId()))
-                .willReturn(List.of(etapaProduccion));
+        given(etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(ordenProduccion.getId()))
+                .willReturn(1L);
+        given(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNullOrderByFechaInicioDescIdDesc(ordenProduccion.getId()))
+                .willReturn(Optional.of(etapaProduccion));
         given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
             MovimientoInventario mov = invocation.getArgument(0);
             mov.setId(902L);
@@ -1092,8 +1094,10 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
         lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), eq(EstadoReservaLote.ACTIVA)))
                 .thenReturn(BigDecimal.ZERO);
-        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(30L))
-                .willReturn(List.of(etapaActiva));
+        given(etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(30L))
+                .willReturn(1L);
+        given(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNullOrderByFechaInicioDescIdDesc(30L))
+                .willReturn(Optional.of(etapaActiva));
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(CustomBusinessException.class)
@@ -1163,8 +1167,10 @@ class MovimientoInventarioServiceSolicitudOpTest {
         detalle.setId(2L);
         detalle.setDescripcion("SALIDA OP");
         given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(detalle));
-        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(20L))
-                .willReturn(List.of(etapaActiva));
+        given(etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(20L))
+                .willReturn(1L);
+        given(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNullOrderByFechaInicioDescIdDesc(20L))
+                .willReturn(Optional.of(etapaActiva));
         given(entityManager.getReference(eq(OrdenProduccion.class), eq(20L))).willAnswer(invocation -> {
             OrdenProduccion op = new OrdenProduccion();
             op.setId(20L);
@@ -1250,7 +1256,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
-        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(21L)).willReturn(List.of());
+        given(etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(21L))
+                .willReturn(0L);
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Number id = invocation.getArgument(1);
             return new Almacen(id.intValue());
@@ -1329,8 +1336,10 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
-        given(etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(22L))
-                .willReturn(List.of(corrupta));
+        given(etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(22L))
+                .willReturn(0L);
+        given(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNullOrderByFechaInicioDescIdDesc(22L))
+                .willReturn(Optional.empty());
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Number id = invocation.getArgument(1);
             return new Almacen(id.intValue());

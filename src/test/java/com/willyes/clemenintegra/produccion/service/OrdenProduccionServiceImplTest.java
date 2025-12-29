@@ -475,6 +475,30 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("clonarEtapasParaOrden crea etapas pendientes sin fechas iniciales")
+    void clonarEtapasParaOrden_inicializaFechasNulas() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(1000L);
+
+        EtapaPlantilla e1 = EtapaPlantilla.builder().nombre("Corte").secuencia(1).build();
+        EtapaPlantilla e2 = EtapaPlantilla.builder().nombre("Mezcla").secuencia(2).build();
+
+        ArgumentCaptor<List<EtapaProduccion>> captor = ArgumentCaptor.forClass(List.class);
+        when(etapaProduccionRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.clonarEtapasParaOrden(orden, List.of(e1, e2));
+
+        verify(etapaProduccionRepository).saveAll(captor.capture());
+        List<EtapaProduccion> guardadas = captor.getValue();
+        assertThat(guardadas).hasSize(2);
+        guardadas.forEach(etapa -> {
+            assertThat(etapa.getEstado()).isEqualTo(EstadoEtapa.PENDIENTE);
+            assertThat(etapa.getFechaInicio()).isNull();
+            assertThat(etapa.getFechaFin()).isNull();
+        });
+    }
+
+    @Test
     @DisplayName("iniciarEtapa inicia la primera etapa cuando las solicitudes de movimiento están concluidas")
     void iniciarEtapa_conSolicitudesConcluidas() {
         OrdenProduccion orden = new OrdenProduccion();
@@ -510,9 +534,75 @@ class OrdenProduccionServiceImplTest {
         EtapaProduccion resultado = service.iniciarEtapa(1L, 10L);
 
         assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.EN_PROCESO);
+        assertThat(resultado.getFechaInicio()).isNotNull();
+        assertThat(resultado.getUsuarioId()).isEqualTo(usuario.getId());
+        assertThat(resultado.getUsuarioNombre()).isEqualTo(usuario.getNombreCompleto());
         assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
         verify(ordenProduccionRepository).save(orden);
         verify(movimientoInventarioService).consumirInsumosPorOrden(1L, 10L, usuario.getId());
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa rechaza cuando ya hay otra etapa activa en la OP")
+    void iniciarEtapa_otroActivo() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(2L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+
+        EtapaProduccion etapaObjetivo = EtapaProduccion.builder()
+                .id(20L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(2)
+                .build();
+
+        EtapaProduccion activa = EtapaProduccion.builder()
+                .id(21L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .fechaInicio(LocalDateTime.now().minusHours(2))
+                .build();
+
+        when(ordenProduccionRepository.findById(2L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(20L)).thenReturn(Optional.of(etapaObjetivo));
+        when(etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(2L))
+                .thenReturn(1L);
+        when(etapaProduccionRepository.findByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(2L))
+                .thenReturn(List.of(activa));
+
+        assertThatThrownBy(() -> service.iniciarEtapa(2L, 20L))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.PRODUCCION_OTRA_ETAPA_ACTIVA);
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa devuelve conflicto cuando existen múltiples etapas activas")
+    void iniciarEtapa_multiplesActivas() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(3L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+
+        EtapaProduccion etapaObjetivo = EtapaProduccion.builder()
+                .id(30L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .build();
+
+        EtapaProduccion activa1 = EtapaProduccion.builder().id(31L).ordenProduccion(orden).fechaInicio(LocalDateTime.now().minusHours(2)).build();
+        EtapaProduccion activa2 = EtapaProduccion.builder().id(32L).ordenProduccion(orden).fechaInicio(LocalDateTime.now().minusHours(1)).build();
+
+        when(ordenProduccionRepository.findById(3L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(30L)).thenReturn(Optional.of(etapaObjetivo));
+        when(etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(3L))
+                .thenReturn(2L);
+        when(etapaProduccionRepository.findByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(3L))
+                .thenReturn(List.of(activa1, activa2));
+
+        assertThatThrownBy(() -> service.iniciarEtapa(3L, 30L))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.PRODUCCION_MULTIPLES_ETAPAS_ACTIVAS);
     }
 
     @Test
@@ -703,6 +793,7 @@ class OrdenProduccionServiceImplTest {
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(500L)
                 .estado(EstadoEtapa.EN_PROCESO)
+                .fechaInicio(LocalDateTime.now().minusHours(1))
                 .ordenProduccion(orden)
                 .build();
 
@@ -734,6 +825,7 @@ class OrdenProduccionServiceImplTest {
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(600L)
                 .estado(EstadoEtapa.EN_PROCESO)
+                .fechaInicio(LocalDateTime.now().minusHours(1))
                 .ordenProduccion(orden)
                 .build();
 

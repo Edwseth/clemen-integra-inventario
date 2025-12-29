@@ -3220,23 +3220,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     ));
             return validarEtapaActiva(etapa, ordenProduccionId, false);
         }
-        List<EtapaProduccion> candidatas = etapaProduccionRepository.findEtapasActivasByOrdenProduccionId(ordenProduccionId);
-        List<EtapaProduccion> enProceso = candidatas.stream()
-                .filter(e -> e.getEstado() == com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa.EN_PROCESO)
-                .toList();
-        if (enProceso.size() == 1) {
-            return validarEtapaActiva(enProceso.get(0), ordenProduccionId, true);
-        }
-        if (enProceso.size() > 1 || candidatas.size() > 1) {
+        long activas = etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(ordenProduccionId);
+        List<EtapaProduccion> candidatas = activas > 0
+                ? etapaProduccionRepository.findByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(ordenProduccionId)
+                : List.of();
+        if (activas > 1) {
             throw new CustomBusinessException(
-                    ApiErrorCode.ETAPA_ACTIVA_AMBIGUA,
-                    "ETAPA_ACTIVA_AMBIGUA",
+                    ApiErrorCode.PRODUCCION_MULTIPLES_ETAPAS_ACTIVAS,
+                    "PRODUCCION_MULTIPLES_ETAPAS_ACTIVAS",
                     Map.of("ordenProduccionId", ordenProduccionId,
                             "etapas", candidatas.stream().map(EtapaProduccion::getId).toList())
             );
         }
-        if (candidatas.size() == 1) {
-            return validarEtapaActiva(candidatas.get(0), ordenProduccionId, true);
+        Optional<EtapaProduccion> etapaActiva = etapaProduccionRepository
+                .findTopByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNullOrderByFechaInicioDescIdDesc(ordenProduccionId);
+        if (etapaActiva.isPresent()) {
+            return validarEtapaActiva(etapaActiva.get(), ordenProduccionId, true);
         }
         throw new CustomBusinessException(
                 ApiErrorCode.OP_SIN_ETAPA_ACTIVA,
