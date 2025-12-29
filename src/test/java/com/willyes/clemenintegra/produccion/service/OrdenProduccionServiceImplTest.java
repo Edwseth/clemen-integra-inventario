@@ -577,6 +577,33 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("iniciarEtapa es idempotente cuando la etapa ya está activa")
+    void iniciarEtapa_idempotenteMismaEtapaActiva() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(2L);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+
+        EtapaProduccion etapaActiva = EtapaProduccion.builder()
+                .id(20L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .fechaInicio(LocalDateTime.now().minusMinutes(30))
+                .build();
+
+        when(ordenProduccionRepository.findById(2L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(20L)).thenReturn(Optional.of(etapaActiva));
+        when(etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(2L))
+                .thenReturn(1L);
+        when(etapaProduccionRepository.findByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(2L))
+                .thenReturn(List.of(etapaActiva));
+
+        EtapaProduccion resultado = service.iniciarEtapa(2L, 20L);
+
+        assertThat(resultado).isSameAs(etapaActiva);
+        verify(movimientoInventarioService, never()).consumirInsumosPorOrden(any(), any(), any());
+    }
+
+    @Test
     @DisplayName("iniciarEtapa devuelve conflicto cuando existen múltiples etapas activas")
     void iniciarEtapa_multiplesActivas() {
         OrdenProduccion orden = new OrdenProduccion();
@@ -1190,13 +1217,23 @@ class OrdenProduccionServiceImplTest {
         when(ordenProduccionRepository.findById(200L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formula));
-        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacion(
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionConEtapa(
                 200L,
                 300L,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 TipoMovimiento.SALIDA))
                 .thenReturn(BigDecimal.ZERO);
-        when(reservaLoteRepository.sumConsumidaByOrdenAndProducto(200L, 300L, EstadoReservaLote.CONSUMIDA))
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
+                200L,
+                300L,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                TipoMovimiento.TRANSFERENCIA))
+                .thenReturn(new BigDecimal("1.25"));
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
+                200L,
+                300L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                TipoMovimiento.SALIDA))
                 .thenReturn(BigDecimal.ZERO);
 
         List<com.willyes.clemenintegra.produccion.dto.InsumoOPDTO> lista = service.listarInsumos(200L);
@@ -1206,6 +1243,7 @@ class OrdenProduccionServiceImplTest {
         assertThat(dto.getCantidadRequerida()).isEqualByComparingTo(new BigDecimal("10"));
         assertThat(dto.getCantidadConsumida()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(dto.getFaltante()).isEqualByComparingTo(new BigDecimal("10"));
+        assertThat(dto.getCantidadAlistada()).isEqualByComparingTo(new BigDecimal("1.25"));
     }
 
     @Test
@@ -1235,14 +1273,24 @@ class OrdenProduccionServiceImplTest {
         when(ordenProduccionRepository.findById(201L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formula));
-        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacion(
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionConEtapa(
                 201L,
                 301L,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 TipoMovimiento.SALIDA))
-                .thenReturn(BigDecimal.ONE);
-        when(reservaLoteRepository.sumConsumidaByOrdenAndProducto(201L, 301L, EstadoReservaLote.CONSUMIDA))
                 .thenReturn(new BigDecimal("3"));
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
+                201L,
+                301L,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                TipoMovimiento.TRANSFERENCIA))
+                .thenReturn(new BigDecimal("2.5"));
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
+                201L,
+                301L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                TipoMovimiento.SALIDA))
+                .thenReturn(BigDecimal.ZERO);
 
         List<com.willyes.clemenintegra.produccion.dto.InsumoOPDTO> lista = service.listarInsumos(201L);
 
@@ -1251,6 +1299,7 @@ class OrdenProduccionServiceImplTest {
         assertThat(dto.getCantidadRequerida()).isEqualByComparingTo(new BigDecimal("10"));
         assertThat(dto.getCantidadConsumida()).isEqualByComparingTo(new BigDecimal("3"));
         assertThat(dto.getFaltante()).isEqualByComparingTo(new BigDecimal("7"));
+        assertThat(dto.getCantidadAlistada()).isEqualByComparingTo(new BigDecimal("2.5"));
     }
 
     private OrdenProduccion crearOrdenBase(Long id, BigDecimal programada, BigDecimal producida, EstadoProduccion estado) {

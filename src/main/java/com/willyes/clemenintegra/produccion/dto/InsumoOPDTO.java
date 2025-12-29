@@ -16,4 +16,5 @@ public class InsumoOPDTO {
     private BigDecimal cantidadRequerida;
     private BigDecimal cantidadConsumida;
     private BigDecimal faltante;
+    private BigDecimal cantidadAlistada;
 }

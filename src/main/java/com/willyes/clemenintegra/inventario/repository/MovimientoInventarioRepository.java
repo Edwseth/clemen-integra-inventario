@@ -157,6 +157,28 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                                          @Param("clasificacion") ClasificacionMovimientoInventario clasificacion,
                                                          @Param("tipoMovimiento") TipoMovimiento tipoMovimiento);
 
+    @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m " +
+            "where m.ordenProduccion.id = :ordenId " +
+            "and m.producto.id = :productoId " +
+            "and m.clasificacion = :clasificacion " +
+            "and m.tipoMovimiento = :tipoMovimiento " +
+            "and m.ordenProduccionEtapa is not null")
+    BigDecimal sumaCantidadPorOrdenProductoClasificacionConEtapa(@Param("ordenId") Long ordenId,
+                                                                 @Param("productoId") Long productoId,
+                                                                 @Param("clasificacion") ClasificacionMovimientoInventario clasificacion,
+                                                                 @Param("tipoMovimiento") TipoMovimiento tipoMovimiento);
+
+    @Query("select coalesce(sum(m.cantidad),0) from MovimientoInventario m " +
+            "where m.ordenProduccion.id = :ordenId " +
+            "and m.producto.id = :productoId " +
+            "and m.clasificacion = :clasificacion " +
+            "and m.tipoMovimiento = :tipoMovimiento " +
+            "and m.ordenProduccionEtapa is null")
+    BigDecimal sumaCantidadPorOrdenProductoClasificacionSinEtapa(@Param("ordenId") Long ordenId,
+                                                                 @Param("productoId") Long productoId,
+                                                                 @Param("clasificacion") ClasificacionMovimientoInventario clasificacion,
+                                                                 @Param("tipoMovimiento") TipoMovimiento tipoMovimiento);
+
     @EntityGraph(attributePaths = {
             "producto", "producto.unidadMedida", "lote", "almacenOrigen", "almacenDestino",
             "proveedor", "ordenCompra", "motivoMovimiento", "tipoMovimientoDetalle", "registradoPor"
