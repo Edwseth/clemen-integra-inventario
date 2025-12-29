@@ -177,7 +177,7 @@ public class OrdenProduccionController {
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{ordenId}/etapas/{etapaId}/iniciar")
+    @RequestMapping(value = "/{ordenId}/etapas/{etapaId}/iniciar", method = {RequestMethod.PATCH, RequestMethod.POST})
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> iniciarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         service.iniciarEtapa(ordenId, etapaId);
