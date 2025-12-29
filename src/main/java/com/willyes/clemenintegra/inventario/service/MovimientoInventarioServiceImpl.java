@@ -583,7 +583,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         boolean esConsumoEtapa = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
-        if (esConsumoEtapa) {
+        boolean requiereEtapaActiva = requiereEtapaActiva(
+                clasificacion,
+                resolvedTipoDetalleId,
+                dto.ordenProduccionEtapaId(),
+                ordenProduccionIdContexto);
+        if (requiereEtapaActiva) {
             EtapaProduccion etapaActiva = resolverEtapaActiva(ordenProduccionIdContexto, dto.ordenProduccionEtapaId());
             etapaProduccion = etapaActiva;
         }
@@ -3203,6 +3208,25 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return etapaActiva.getId();
     }
 
+    private boolean requiereEtapaActiva(ClasificacionMovimientoInventario clasificacion,
+                                        Long tipoMovimientoDetalleId,
+                                        Long etapaId,
+                                        Long ordenProduccionId) {
+        if (ordenProduccionId == null) {
+            return false;
+        }
+        if (etapaId != null) {
+            return true;
+        }
+        if (clasificacion != null) {
+            return clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
+        }
+        Long tipoDetalleSalidaProduccionId = catalogResolver.getTipoDetalleSalidaProduccionId();
+        return tipoDetalleSalidaProduccionId != null
+                && tipoMovimientoDetalleId != null
+                && Objects.equals(tipoMovimientoDetalleId, tipoDetalleSalidaProduccionId);
+    }
+
     private EtapaProduccion resolverEtapaActiva(Long ordenProduccionId, Long etapaId) {
         if (ordenProduccionId == null) {
             throw new CustomBusinessException(
@@ -3226,8 +3250,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 : List.of();
         if (activas > 1) {
             throw new CustomBusinessException(
-                    ApiErrorCode.PRODUCCION_MULTIPLES_ETAPAS_ACTIVAS,
-                    "PRODUCCION_MULTIPLES_ETAPAS_ACTIVAS",
+                    ApiErrorCode.OP_MULTIPLES_ETAPAS_ACTIVAS,
+                    "OP_MULTIPLES_ETAPAS_ACTIVAS",
                     Map.of("ordenProduccionId", ordenProduccionId,
                             "etapas", candidatas.stream().map(EtapaProduccion::getId).toList())
             );

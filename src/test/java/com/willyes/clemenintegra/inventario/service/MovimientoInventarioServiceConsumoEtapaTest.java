@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
@@ -386,7 +387,49 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "resolverEtapaActiva", 15L, null))
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
-                .isEqualTo(ApiErrorCode.PRODUCCION_MULTIPLES_ETAPAS_ACTIVAS);
+                .isEqualTo(ApiErrorCode.OP_MULTIPLES_ETAPAS_ACTIVAS);
+    }
+
+    @Test
+    void requiereEtapaActiva_paraPrearranqueNoExigeEtapa() {
+        boolean requiere = ReflectionTestUtils.invokeMethod(
+                service,
+                "requiereEtapaActiva",
+                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                100L,
+                null,
+                null
+        );
+
+        assertThat(requiere).isFalse();
+    }
+
+    @Test
+    void requiereEtapaActiva_paraSalidaProduccionExigeEtapa() {
+        boolean requiere = ReflectionTestUtils.invokeMethod(
+                service,
+                "requiereEtapaActiva",
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                200L,
+                null,
+                10L
+        );
+
+        assertThat(requiere).isTrue();
+    }
+
+    @Test
+    void requiereEtapaActiva_cuandoDtoIncluyeEtapaExigeValidacion() {
+        boolean requiere = ReflectionTestUtils.invokeMethod(
+                service,
+                "requiereEtapaActiva",
+                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                200L,
+                55L,
+                10L
+        );
+
+        assertThat(requiere).isTrue();
     }
 
     @Test
