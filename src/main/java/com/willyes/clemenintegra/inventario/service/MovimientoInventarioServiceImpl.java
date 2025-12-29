@@ -89,6 +89,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     private static final Logger log = LoggerFactory.getLogger(MovimientoInventarioServiceImpl.class);
     private static final ZoneId ZONA_BOGOTA = ZoneId.of("America/Bogota");
+    private static final long PREBODEGA_PRODUCCION_ID_FALLBACK = 6L;
     /** Nombre normalizado del almacén Pre-Bodega Producción */
     private static final String PRE_BODEGA_PRODUCCION_NORMALIZADO =
             java.text.Normalizer.normalize("Pre-Bodega Producción", java.text.Normalizer.Form.NFD)
@@ -157,6 +158,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private Integer preBodegaId;
     @Value("${inventory.tipoDetalle.transferenciaId}")
     private Integer tipoDetalleTransferenciaId;
+    private Long preBodegaProduccionIdCache;
+    private boolean preBodegaProduccionIdCacheLoaded;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -582,8 +585,46 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             ordenProduccionIdContexto = solicitud.getOrdenProduccion().getId();
         }
 
+        Long preBodegaProduccionId = resolverAlmacenPreBodegaId();
+        boolean esTrasladoAPreBodega = esTrasladoManualAPreBodega(
+                tipoMovimiento,
+                clasificacion,
+                almacenDestinoIdNormalizado,
+                almacenDestino,
+                ordenProduccionIdContexto,
+                preBodegaProduccionId,
+                dto.ordenProduccionEtapaId(),
+                solicitud != null
+        );
+        if (esTrasladoAPreBodega) {
+            if (preBodegaProduccionId != null
+                    && (almacenDestino == null
+                    || !Objects.equals(almacenDestino.getId().longValue(), preBodegaProduccionId))) {
+                almacenDestino = entityManager.getReference(Almacen.class, Math.toIntExact(preBodegaProduccionId));
+                almacenDestinoIdNormalizado = almacenDestino.getId();
+            }
+            if (tipoMovimiento != TipoMovimiento.TRANSFERENCIA) {
+                tipoMovimiento = TipoMovimiento.TRANSFERENCIA;
+                movimiento.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+            }
+            if (clasificacion != ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION) {
+                clasificacion = ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
+                movimiento.setClasificacion(clasificacion);
+            }
+            if (tipoDetalleTransferenciaId != null
+                    && (tipoMovimientoDetalle == null
+                    || !Objects.equals(tipoMovimientoDetalle.getId(), tipoDetalleTransferenciaId.longValue()))) {
+                tipoMovimientoDetalle = tipoMovimientoDetalleRepository
+                        .findById(tipoDetalleTransferenciaId.longValue())
+                        .orElse(tipoMovimientoDetalle);
+                movimiento.setTipoMovimientoDetalle(tipoMovimientoDetalle);
+            }
+            log.info("TRASLADO_PREBODEGA_DETECTADO: opId={} destinoId={} tipoNormalizado={} clasificacion={}",
+                    ordenProduccionIdContexto, almacenDestinoIdNormalizado, tipoMovimiento, clasificacion);
+        }
+
         boolean esConsumoEtapa = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
-        boolean requiereEtapaActiva = requiereEtapaActiva(
+        boolean requiereEtapaActiva = !esTrasladoAPreBodega && requiereEtapaActiva(
                 clasificacion,
                 resolvedTipoDetalleId,
                 dto.ordenProduccionEtapaId(),
@@ -2032,7 +2073,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean hayContextoSolicitud = solicitudContexto != null || detalleContexto != null;
 
         boolean esTransferenciaInternaProduccion = tipo == TipoMovimiento.TRANSFERENCIA
-                && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
+                && clasificacion == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
         boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
         boolean requiereAutoSplit = tipo == TipoMovimiento.TRANSFERENCIA
                 && esTransferenciaInternaProduccion
@@ -2669,6 +2710,51 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
         String nfd = java.text.Normalizer.normalize(nombre, java.text.Normalizer.Form.NFD);
         return nfd.replaceAll("\\p{M}", "").toLowerCase();
+    }
+
+    private Long resolverAlmacenPreBodegaId() {
+        if (preBodegaProduccionIdCacheLoaded) {
+            return preBodegaProduccionIdCache;
+        }
+        preBodegaProduccionIdCacheLoaded = true;
+        if (preBodegaId != null) {
+            preBodegaProduccionIdCache = preBodegaId.longValue();
+            return preBodegaProduccionIdCache;
+        }
+        Optional<Almacen> preBodega = almacenRepository.findByNombre("Pre-Bodega Producción");
+        if (preBodega.isPresent() && preBodega.get().getId() != null) {
+            preBodegaProduccionIdCache = preBodega.get().getId().longValue();
+            return preBodegaProduccionIdCache;
+        }
+        preBodegaProduccionIdCache = PREBODEGA_PRODUCCION_ID_FALLBACK;
+        log.warn("PREBODEGA_ID_NO_CONFIGURADA_USANDO_FALLBACK: {}", PREBODEGA_PRODUCCION_ID_FALLBACK);
+        return preBodegaProduccionIdCache;
+    }
+
+    private boolean esTrasladoManualAPreBodega(TipoMovimiento tipoMovimiento,
+                                               ClasificacionMovimientoInventario clasificacion,
+                                               Integer almacenDestinoId,
+                                               Almacen almacenDestino,
+                                               Long ordenProduccionId,
+                                               Long preBodegaProduccionId,
+                                               Long etapaProduccionId,
+                                               boolean tieneSolicitud) {
+        if (ordenProduccionId == null || etapaProduccionId != null || tieneSolicitud) {
+            return false;
+        }
+        boolean destinoCoincide = (almacenDestinoId != null && preBodegaProduccionId != null
+                && Objects.equals(almacenDestinoId.longValue(), preBodegaProduccionId));
+        if (!destinoCoincide && almacenDestino != null) {
+            destinoCoincide = PRE_BODEGA_PRODUCCION_NORMALIZADO.equals(normalizar(almacenDestino.getNombre()));
+        }
+        if (!destinoCoincide) {
+            return false;
+        }
+        boolean esEnvioProduccion = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                || clasificacion == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
+                || tipoMovimiento == TipoMovimiento.TRANSFERENCIA
+                || tipoMovimiento == TipoMovimiento.SALIDA;
+        return esEnvioProduccion;
     }
 
     private boolean requiereSolicitudMovimientoId(TipoMovimientoDetalle tipoMovimientoDetalle) {
