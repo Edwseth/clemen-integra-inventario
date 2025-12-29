@@ -15,9 +15,11 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,7 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -294,5 +297,43 @@ class OrdenProduccionControllerTest {
         mockMvc.perform(post("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar", 77L, 88L))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.PRODUCCION_OTRA_ETAPA_ACTIVA.name()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar responde 200")
+    void finalizarEtapa_postRespondeOk() throws Exception {
+        Usuario usuario = Usuario.builder().id(10L).nombreCompleto("Operador").build();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(22L)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .ordenProduccion(OrdenProduccion.builder().id(11L).build())
+                .build();
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(ordenProduccionService.finalizarEtapa(11L, 22L, 10L)).thenReturn(etapa);
+
+        mockMvc.perform(post("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar", 11L, 22L))
+                .andExpect(status().isOk());
+
+        verify(ordenProduccionService).finalizarEtapa(11L, 22L, 10L);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("PATCH /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar responde 200")
+    void finalizarEtapa_patchRespondeOk() throws Exception {
+        Usuario usuario = Usuario.builder().id(20L).nombreCompleto("Operador Patch").build();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(33L)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .ordenProduccion(OrdenProduccion.builder().id(44L).build())
+                .build();
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(ordenProduccionService.finalizarEtapa(44L, 33L, 20L)).thenReturn(etapa);
+
+        mockMvc.perform(patch("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar", 44L, 33L))
+                .andExpect(status().isOk());
+
+        verify(ordenProduccionService).finalizarEtapa(44L, 33L, 20L);
     }
 }
