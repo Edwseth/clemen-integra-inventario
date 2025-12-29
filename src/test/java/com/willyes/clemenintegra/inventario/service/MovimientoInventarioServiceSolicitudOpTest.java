@@ -33,6 +33,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Objects;
@@ -1373,6 +1374,130 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         MovimientoInventario guardado = movimientoCaptor.getValue();
         assertThat(respuesta.getId()).isEqualTo(902L);
+        assertThat(guardado.getTipoMovimiento()).isEqualTo(TipoMovimiento.TRANSFERENCIA);
+        assertThat(guardado.getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
+        assertThat(guardado.getOrdenProduccionEtapa()).isNull();
+        verifyNoInteractions(etapaProduccionRepository);
+    }
+
+    @Test
+    void registrarMovimiento_trasladoPrebodegaConSolicitudNoExigeEtapaActiva() {
+        ReflectionTestUtils.setField(service, "preBodegaId", 6);
+        ReflectionTestUtils.setField(service, "tipoDetalleTransferenciaId", 2);
+
+        Producto producto = new Producto();
+        producto.setId(1);
+        producto.setUnidadMedida(new UnidadMedida());
+
+        Almacen origen = new Almacen(5);
+        origen.setNombre("Principal Empaque");
+
+        Almacen destino = new Almacen(6);
+        destino.setNombre("Pre-Bodega Producción");
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(301L);
+        lote.setProducto(producto);
+        lote.setAlmacen(origen);
+        lote.setStockLote(new BigDecimal("10"));
+        lote.setStockReservado(BigDecimal.ZERO);
+        lote.setEstado(EstadoLote.DISPONIBLE);
+
+        Usuario usuario = usuarioOperativo();
+
+        OrdenProduccion opReferencia = new OrdenProduccion();
+        opReferencia.setId(24L);
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(500L);
+        solicitud.setProducto(producto);
+        solicitud.setLote(lote);
+        solicitud.setTipoMovimiento(TipoMovimiento.SALIDA);
+        solicitud.setEstado(EstadoSolicitudMovimiento.AUTORIZADA);
+        solicitud.setCantidad(new BigDecimal("3"));
+        solicitud.setUsuarioResponsable(usuario);
+        solicitud.setOrdenProduccion(opReferencia);
+        solicitud.setDetalles(Collections.emptyList());
+        solicitud.setAlmacenOrigen(origen);
+        solicitud.setAlmacenDestino(destino);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("3"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                "DOC-SAL",
+                null,
+                producto.getId(),
+                lote.getId(),
+                origen.getId(),
+                destino.getId(),
+                null,
+                null,
+                null,
+                2L,
+                solicitud.getId(),
+                usuario.getId(),
+                24L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Boolean.FALSE,
+                List.<AtencionDTO>of(),
+                null
+        );
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.SALIDA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(2L);
+        tipoDetalle.setDescripcion("Traslado Prebodega");
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        given(tipoMovimientoDetalleRepository.findById(2L)).willReturn(Optional.of(tipoDetalle));
+        given(solicitudMovimientoRepository.findByIdWithLock(solicitud.getId())).willReturn(Optional.of(solicitud));
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
+        given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
+            Number id = invocation.getArgument(1);
+            if (Objects.equals(id.longValue(), destino.getId().longValue())) {
+                return destino;
+            }
+            Almacen almacen = new Almacen(id.intValue());
+            almacen.setNombre("Principal Empaque");
+            return almacen;
+        });
+        given(entityManager.getReference(eq(OrdenProduccion.class), eq(24L))).willReturn(opReferencia);
+        given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
+        given(loteProductoRepository.save(any(LoteProducto.class))).willAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(solicitudMovimientoRepository.save(any(SolicitudMovimiento.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(solicitudMovimientoRepository.saveAndFlush(any(SolicitudMovimiento.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(reservaLoteRepository.sumPendienteActivaByLoteId(anyLong(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+        lenient().doNothing().when(loteCalidadValidator).validarLoteUtilizable(any());
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(903L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(903L).build());
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        ArgumentCaptor<MovimientoInventario> movimientoCaptor = ArgumentCaptor.forClass(MovimientoInventario.class);
+        verify(movimientoInventarioRepository).save(movimientoCaptor.capture());
+
+        MovimientoInventario guardado = movimientoCaptor.getValue();
+        assertThat(respuesta.getId()).isEqualTo(903L);
         assertThat(guardado.getTipoMovimiento()).isEqualTo(TipoMovimiento.TRANSFERENCIA);
         assertThat(guardado.getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
         assertThat(guardado.getOrdenProduccionEtapa()).isNull();

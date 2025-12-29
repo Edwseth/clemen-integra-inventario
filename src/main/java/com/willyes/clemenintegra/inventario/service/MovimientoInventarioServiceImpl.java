@@ -586,15 +586,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         Long preBodegaProduccionId = resolverAlmacenPreBodegaId();
-        boolean esTrasladoAPreBodega = esTrasladoManualAPreBodega(
+        boolean esTrasladoAPreBodega = isTrasladoAPrebodega(
                 tipoMovimiento,
                 clasificacion,
+                tipoMovimientoDetalle,
                 almacenDestinoIdNormalizado,
                 almacenDestino,
-                ordenProduccionIdContexto,
-                preBodegaProduccionId,
-                dto.ordenProduccionEtapaId(),
-                solicitud != null
+                preBodegaProduccionId
         );
         if (esTrasladoAPreBodega) {
             if (preBodegaProduccionId != null
@@ -619,6 +617,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         .orElse(tipoMovimientoDetalle);
                 movimiento.setTipoMovimientoDetalle(tipoMovimientoDetalle);
             }
+            resolvedTipoDetalleId = tipoMovimientoDetalle != null
+                    ? tipoMovimientoDetalle.getId()
+                    : resolvedTipoDetalleId;
             log.info("TRASLADO_PREBODEGA_DETECTADO: opId={} destinoId={} tipoNormalizado={} clasificacion={}",
                     ordenProduccionIdContexto, almacenDestinoIdNormalizado, tipoMovimiento, clasificacion);
         }
@@ -2731,17 +2732,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return preBodegaProduccionIdCache;
     }
 
-    private boolean esTrasladoManualAPreBodega(TipoMovimiento tipoMovimiento,
-                                               ClasificacionMovimientoInventario clasificacion,
-                                               Integer almacenDestinoId,
-                                               Almacen almacenDestino,
-                                               Long ordenProduccionId,
-                                               Long preBodegaProduccionId,
-                                               Long etapaProduccionId,
-                                               boolean tieneSolicitud) {
-        if (ordenProduccionId == null || etapaProduccionId != null || tieneSolicitud) {
-            return false;
-        }
+    private boolean isTrasladoAPrebodega(TipoMovimiento tipoMovimiento,
+                                         ClasificacionMovimientoInventario clasificacion,
+                                         TipoMovimientoDetalle tipoMovimientoDetalle,
+                                         Integer almacenDestinoId,
+                                         Almacen almacenDestino,
+                                         Long preBodegaProduccionId) {
         boolean destinoCoincide = (almacenDestinoId != null && preBodegaProduccionId != null
                 && Objects.equals(almacenDestinoId.longValue(), preBodegaProduccionId));
         if (!destinoCoincide && almacenDestino != null) {
@@ -2750,11 +2746,29 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (!destinoCoincide) {
             return false;
         }
-        boolean esEnvioProduccion = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+        boolean esTipoDetalleTraslado = esTipoDetalleTrasladoPrebodega(tipoMovimientoDetalle);
+        boolean esTipoDetalleTransferencia = esTipoDetalleTransferencia(tipoMovimientoDetalle);
+        return tipoMovimiento == TipoMovimiento.TRANSFERENCIA
                 || clasificacion == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
-                || tipoMovimiento == TipoMovimiento.TRANSFERENCIA
-                || tipoMovimiento == TipoMovimiento.SALIDA;
-        return esEnvioProduccion;
+                || esTipoDetalleTraslado
+                || esTipoDetalleTransferencia;
+    }
+
+    private boolean esTipoDetalleTrasladoPrebodega(TipoMovimientoDetalle tipoMovimientoDetalle) {
+        if (tipoMovimientoDetalle == null || tipoMovimientoDetalle.getDescripcion() == null) {
+            return false;
+        }
+        String descripcionNormalizada = normalizar(tipoMovimientoDetalle.getDescripcion());
+        return descripcionNormalizada.contains("prebodega")
+                || descripcionNormalizada.contains("pre-bodega")
+                || descripcionNormalizada.contains("pre bodega");
+    }
+
+    private boolean esTipoDetalleTransferencia(TipoMovimientoDetalle tipoMovimientoDetalle) {
+        return tipoDetalleTransferenciaId != null
+                && tipoMovimientoDetalle != null
+                && tipoMovimientoDetalle.getId() != null
+                && Objects.equals(tipoMovimientoDetalle.getId(), tipoDetalleTransferenciaId.longValue());
     }
 
     private boolean requiereSolicitudMovimientoId(TipoMovimientoDetalle tipoMovimientoDetalle) {
