@@ -13,6 +13,11 @@ import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -253,5 +258,41 @@ class OrdenProduccionControllerTest {
                 .andExpect(jsonPath("$[0].ordenProduccionEtapaId").value(9L));
 
         verify(ordenProduccionService).listarMovimientosPorEtapa(8L, 9L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar responde 200 y retorna la orden")
+    void iniciarEtapa_postDevuelveOrden() throws Exception {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(55L)
+                .codigoOrden("OP-55")
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(BigDecimal.TEN)
+                .cantidadProducida(BigDecimal.ZERO)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .fechaInicio(LocalDateTime.now())
+                .build();
+        when(ordenProduccionService.iniciarEtapa(55L, 7L)).thenReturn(new EtapaProduccion());
+        when(ordenProduccionService.buscarPorId(55L)).thenReturn(Optional.of(orden));
+
+        mockMvc.perform(post("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar", 55L, 7L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(55L))
+                .andExpect(jsonPath("$.estado").value("EN_PROCESO"));
+
+        verify(ordenProduccionService).iniciarEtapa(55L, 7L);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar devuelve 409 si existe otra etapa activa")
+    void iniciarEtapa_postConflictoOtraActiva() throws Exception {
+        when(ordenProduccionService.iniciarEtapa(77L, 88L))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.PRODUCCION_OTRA_ETAPA_ACTIVA, "Ya existe una etapa activa"));
+
+        mockMvc.perform(post("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar", 77L, 88L))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.PRODUCCION_OTRA_ETAPA_ACTIVA.name()));
     }
 }
