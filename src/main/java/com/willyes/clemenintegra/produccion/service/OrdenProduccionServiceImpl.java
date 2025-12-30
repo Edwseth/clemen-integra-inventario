@@ -42,6 +42,7 @@ import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult
 import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
+import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
@@ -135,6 +136,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final ReservaLoteService reservaLoteService;
     private final ReservaLoteRepository reservaLoteRepository;
     private final DisponibilidadInsumoService disponibilidadInsumoService;
+    private final ChecklistEtapaService checklistEtapaService;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -1879,6 +1881,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             throw new CustomBusinessException(ApiErrorCode.ETAPA_NO_INICIADA, "ETAPA_NO_INICIADA",
                     Map.of("ordenProduccionId", ordenId, "etapaId", etapaId));
         }
+        checklistEtapaService.validarChecklistCompleto(etapaId);
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));
 
