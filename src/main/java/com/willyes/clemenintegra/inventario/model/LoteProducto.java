@@ -108,6 +108,11 @@ public class LoteProducto {
     @JoinColumn(name = "lote_ps_origen_id")
     private LoteProducto lotePsOrigen;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lote_origen_id",
+            foreignKey = @ForeignKey(name = "fk_lotes_productos_lote_origen"))
+    private LoteProducto loteOrigen;
+
     public LoteProducto(Long id) {
         this.id = id;
     }

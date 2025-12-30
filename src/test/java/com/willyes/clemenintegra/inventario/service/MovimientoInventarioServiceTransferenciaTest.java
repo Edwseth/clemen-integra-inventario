@@ -152,6 +152,14 @@ class MovimientoInventarioServiceTransferenciaTest {
             mov.setId(200L);
             return mov;
         });
+        ArgumentCaptor<LoteProducto> lotesGuardados = ArgumentCaptor.forClass(LoteProducto.class);
+        given(loteProductoRepository.save(lotesGuardados.capture())).willAnswer(invocation -> {
+            LoteProducto loteArg = invocation.getArgument(0);
+            if (loteArg.getId() == null) {
+                loteArg.setId(900L);
+            }
+            return loteArg;
+        });
         given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
                 .willReturn(MovimientoInventarioResponseDTO.builder().id(200L).build());
 
@@ -163,6 +171,14 @@ class MovimientoInventarioServiceTransferenciaTest {
         ArgumentCaptor<MovimientoInventario> movimientoCaptor = ArgumentCaptor.forClass(MovimientoInventario.class);
         verify(movimientoInventarioRepository).save(movimientoCaptor.capture());
         assertThat(movimientoCaptor.getValue().getOrdenProduccionEtapa()).isNull();
+        LoteProducto loteDestinoPersistido = lotesGuardados.getAllValues().stream()
+                .filter(lp -> lp.getAlmacen() != null && lp.getAlmacen().getId().equals(dto.almacenDestinoId()))
+                .reduce((first, second) -> second)
+                .orElse(null);
+        assertThat(loteDestinoPersistido).isNotNull();
+        assertThat(loteDestinoPersistido.getStockLote()).isEqualByComparingTo(new BigDecimal("1000.00"));
+        assertThat(loteDestinoPersistido.getLoteOrigen()).isEqualTo(lote);
+        assertThat(movimientoCaptor.getValue().getLote()).isSameAs(loteDestinoPersistido);
     }
 
     @Test

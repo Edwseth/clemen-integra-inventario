@@ -2181,8 +2181,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (tipo == TipoMovimiento.TRANSFERENCIA) {
             if (detalleOpGestionado) {
-                LoteProducto loteRespuesta = loteProcesadoOp != null ? loteProcesadoOp : loteOrigen;
-                return List.of(new MovimientoLoteDetalle(loteRespuesta, cantidad));
+                if (destino == null) {
+                    log.warn("TRANSFERENCIA_DESTINO_REQUERIDO_OP loteId={} productoId={} cantidad={}",
+                            loteOrigen.getId(), producto.getId(), cantidad);
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_DESTINO_REQUERIDO");
+                }
+                LoteProducto loteDestino = acreditarTransferenciaEnDestino(loteOrigen, destino, producto, cantidad);
+                return List.of(new MovimientoLoteDetalle(loteDestino, cantidad));
             }
             // Se rechaza la transferencia solo si el lote está agotado/sin disponible, en otro almacén de origen
             // o su estado no es transferible (calidad ya se valida en LoteCalidadValidator).
@@ -2419,6 +2424,26 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return new MovimientoLoteDetalle(guardadoDestino, cantidadDetalle);
     }
 
+    private LoteProducto acreditarTransferenciaEnDestino(LoteProducto loteOrigen,
+                                                         Almacen destino,
+                                                         Producto producto,
+                                                         BigDecimal cantidadTransferida) {
+        LoteProducto loteDestino = ensureDestinoLote(producto, loteOrigen.getCodigoLote(), loteOrigen, destino);
+        int escala = resolverEscalaProducto(producto);
+        BigDecimal stockDestino = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO)
+                .setScale(escala, RoundingMode.HALF_UP);
+        BigDecimal nuevoStockDestino = stockDestino.add(cantidadTransferida.setScale(escala, RoundingMode.HALF_UP));
+        loteDestino.setStockLote(nuevoStockDestino);
+        if (loteDestino.getStockReservado() == null) {
+            loteDestino.setStockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
+        }
+        if (loteDestino.getLoteOrigen() == null) {
+            loteDestino.setLoteOrigen(loteOrigen);
+        }
+        recalcularAgotadoSegunDisponibilidad(loteDestino);
+        return loteProductoRepository.save(loteDestino);
+    }
+
     private LoteProducto ensureDestinoLote(
             Producto producto,
             String codigoLote,
@@ -2433,7 +2458,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .findByCodigoLoteAndProductoIdAndAlmacenId(codigoLote, prodId, destinoId);
 
         if (exacto.isPresent()) {
-            return exacto.get();
+            LoteProducto existente = exacto.get();
+            if (existente.getLoteOrigen() == null && loteOrigen != null) {
+                existente.setLoteOrigen(loteOrigen);
+                loteProductoRepository.save(existente);
+            }
+            return existente;
         }
 
         // 2) Si NO existe en el destino, lo creamos en destino (clonando metadatos relevantes)
@@ -2447,12 +2477,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             nuevo.setFechaFabricacion(loteOrigen.getFechaFabricacion());
             nuevo.setFechaVencimiento(loteOrigen.getFechaVencimiento());
             nuevo.setTemperaturaAlmacenamiento(loteOrigen.getTemperaturaAlmacenamiento());
+            nuevo.setLoteOrigen(loteOrigen);
             // NO copiar stock: se ajustará por el movimiento
             nuevo.setStockLote(BigDecimal.ZERO);
-            nuevo.setStockReservado(BigDecimal.ZERO);
+            nuevo.setStockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
         } else {
-            nuevo.setStockLote(BigDecimal.ZERO);
-            nuevo.setStockReservado(BigDecimal.ZERO);
+            nuevo.setStockLote(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
+            nuevo.setStockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
         }
 
         LoteProducto guardado = loteProductoRepository.save(nuevo);

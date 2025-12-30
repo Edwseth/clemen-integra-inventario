@@ -60,6 +60,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
@@ -165,11 +166,16 @@ class OrdenProduccionServiceReservaTest {
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
         MotivoMovimiento motivo = new MotivoMovimiento();
         motivo.setId(11L);
+        when(catalogResolver.getMotivoSalidaProduccionId()).thenReturn(11L);
         when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION))
                 .thenReturn(Optional.of(motivo));
+        when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(motivo));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
         tipoDetalle.setId(33L);
+        when(catalogResolver.getTipoDetalleSalidaProduccionId()).thenReturn(33L);
         when(tipoMovimientoDetalleRepository.findById(anyLong())).thenReturn(Optional.of(tipoDetalle));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(anyLong(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
         lenient().when(solicitudMovimientoRepository.findById(100L)).thenReturn(Optional.of(crearSolicitudBase()));
         lenient().when(solicitudMovimientoRepository.saveAndFlush(any(SolicitudMovimiento.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
