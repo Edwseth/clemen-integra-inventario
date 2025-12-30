@@ -447,6 +447,23 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         verify(etapaProduccionRepository, never()).countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(anyLong());
     }
 
+    @Test
+    void resolverEtapaActiva_conEtapaFinalizadaPermiteConsumo() {
+        LocalDateTime fin = LocalDateTime.now();
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(12L)
+                .estado(EstadoEtapa.FINALIZADA)
+                .fechaInicio(fin.minusHours(2))
+                .fechaFin(fin.minusHours(1))
+                .ordenProduccion(OrdenProduccion.builder().id(8L).build())
+                .build();
+        when(etapaProduccionRepository.findById(12L)).thenReturn(Optional.of(etapa));
+
+        EtapaProduccion resultado = ReflectionTestUtils.invokeMethod(service, "resolverEtapaActiva", 8L, 12L);
+
+        assertThat(resultado).isSameAs(etapa);
+    }
+
     private SolicitudMovimiento solicitudConDetalle() {
         Producto producto = new Producto();
         producto.setId(1);

@@ -92,6 +92,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Comparator;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -584,6 +585,38 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         "ETAPA_PRODUCCION_NO_CONFIGURADA"));
     }
 
+    private EtapaProduccion seleccionarEtapaParaConsumo(List<EtapaProduccion> etapas, Long ordenProduccionId) {
+        List<EtapaProduccion> existentes = Optional.ofNullable(etapas)
+                .orElseGet(() -> etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenProduccionId));
+        Optional<EtapaProduccion> activa = existentes.stream()
+                .filter(e -> e.getFechaInicio() != null && e.getFechaFin() == null)
+                .findFirst();
+        if (activa.isPresent()) {
+            return activa.get();
+        }
+        return existentes.stream()
+                .filter(e -> e.getFechaInicio() != null
+                        && (e.getFechaFin() != null || e.getEstado() == EstadoEtapa.FINALIZADA))
+                .max(Comparator
+                        .comparing(EtapaProduccion::getFechaFin, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(EtapaProduccion::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_ETAPA_ACTIVA"));
+    }
+
+    private void registrarConsumoDeInsumos(Long ordenProduccionId, Long etapaId, Long usuarioId) {
+        boolean consumoRegistrado = !movimientoInventarioRepository
+                .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(
+                        ordenProduccionId,
+                        etapaId,
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                ).isEmpty();
+        if (consumoRegistrado) {
+            log.debug("OP-consumo ya registrado, omitiendo duplicados op={}, etapa={}", ordenProduccionId, etapaId);
+            return;
+        }
+        movimientoInventarioService.consumirInsumosPorOrden(ordenProduccionId, etapaId, usuarioId);
+    }
+
     public void eliminar(Long id) {
         repository.deleteById(id);
     }
@@ -606,6 +639,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
             dto.setCantidad(cantidad);
+
+            List<EtapaProduccion> etapas = etapaProduccionRepository
+                    .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId());
+            boolean algunaEtapaIniciada = etapas.stream().anyMatch(e -> e.getFechaInicio() != null);
+            boolean todasFinalizadas = !etapas.isEmpty()
+                    && etapas.stream().allMatch(e -> e.getFechaFin() != null || e.getEstado() == EstadoEtapa.FINALIZADA);
+
+            if (!algunaEtapaIniciada) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_ETAPA_ACTIVA");
+            }
+            if (dto.getTipo() == TipoCierre.TOTAL
+                    && orden.getEstado() == EstadoProduccion.EN_PROCESO
+                    && todasFinalizadas) {
+                log.debug("OP-cierre total sin etapa activa permitida op={}", orden.getId());
+            }
 
             LoteProducto lote = loteProductoRepository
                     .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
@@ -682,8 +730,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
-            Long etapaConsumoId = resolverEtapaPrincipal(orden.getId());
-            movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), etapaConsumoId, usuario.getId());
+            EtapaProduccion etapaConsumo = seleccionarEtapaParaConsumo(etapas, orden.getId());
+            registrarConsumoDeInsumos(orden.getId(), etapaConsumo.getId(), usuario.getId());
 
             List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
             parseEstados(estadosSolicitudConcluyentesConf);
