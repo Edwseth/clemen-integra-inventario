@@ -72,9 +72,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -85,6 +88,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -1173,6 +1177,106 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("registrarCierre total usa la última etapa finalizada cuando no hay activa")
+    void registrarCierre_totalSinEtapaActiva() {
+        OrdenProduccion orden = crearOrdenBase(350L, new BigDecimal("80"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        LocalDateTime fin = LocalDateTime.now().minusHours(1);
+        EtapaProduccion etapaFinalizada = EtapaProduccion.builder()
+                .id(5L)
+                .estado(EstadoEtapa.FINALIZADA)
+                .fechaInicio(fin.minusHours(1))
+                .fechaFin(fin)
+                .build();
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId()))
+                .thenReturn(List.of(etapaFinalizada));
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("40"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        assertThatCode(() -> service.registrarCierre(350L, dto)).doesNotThrowAnyException();
+
+        verify(movimientoInventarioService).consumirInsumosPorOrden(350L, 5L, usuarioBasico().getId());
+    }
+
+    @Test
+    @DisplayName("registrarCierre registra consumo real antes de consultar insumos")
+    void registrarCierre_actualizaConsumido() {
+        OrdenProduccion orden = crearOrdenBase(360L, new BigDecimal("3"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        Producto insumo = new Producto();
+        insumo.setId(600);
+        insumo.setNombre("Insumo prueba");
+        UnidadMedida um = new UnidadMedida();
+        um.setNombre("kg");
+        insumo.setUnidadMedida(um);
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("2"));
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(detalle));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        AtomicBoolean consumoEjecutado = new AtomicBoolean(false);
+        doAnswer(inv -> {
+            consumoEjecutado.set(true);
+            return null;
+        }).when(movimientoInventarioService).consumirInsumosPorOrden(eq(360L), anyLong(), anyLong());
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionConEtapa(
+                eq(360L),
+                eq(600L),
+                eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION),
+                eq(TipoMovimiento.SALIDA)
+        )).thenAnswer(inv -> consumoEjecutado.get() ? new BigDecimal("6") : BigDecimal.ZERO);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("3"))
+                .tipo(TipoCierre.PARCIAL)
+                .build();
+
+        service.registrarCierre(360L, dto);
+        List<com.willyes.clemenintegra.produccion.dto.InsumoOPDTO> insumos = service.listarInsumos(360L);
+
+        assertThat(insumos).hasSize(1);
+        assertThat(insumos.get(0).getCantidadConsumida()).isEqualByComparingTo(new BigDecimal("6"));
+    }
+
+    @Test
+    @DisplayName("registrarCierre es idempotente al registrar consumos de insumos")
+    void registrarCierre_idempotenciaConsumos() {
+        OrdenProduccion orden = crearOrdenBase(370L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AtomicInteger consumos = new AtomicInteger(0);
+        doAnswer(inv -> {
+            consumos.incrementAndGet();
+            return null;
+        }).when(movimientoInventarioService).consumirInsumosPorOrden(eq(370L), anyLong(), anyLong());
+        AtomicInteger consultasConsumo = new AtomicInteger(0);
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(
+                eq(370L),
+                anyLong(),
+                eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
+        )).thenAnswer(inv -> consultasConsumo.getAndIncrement() == 0 ? List.of() : List.of(new MovimientoInventario()));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("5"))
+                .tipo(TipoCierre.PARCIAL)
+                .build();
+
+        service.registrarCierre(370L, dto);
+        service.registrarCierre(370L, dto);
+
+        assertThat(consumos.get()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("registrarCierre definitivo rechaza cierre sin producción acumulada")
     void registrarCierre_definitivoSinProduccion() {
         OrdenProduccion orden = crearOrdenBase(304L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
@@ -1379,6 +1483,9 @@ class OrdenProduccionServiceImplTest {
         TipoMovimientoDetalle tipoEntrada = new TipoMovimientoDetalle();
         tipoEntrada.setId(21L);
         when(tipoMovimientoDetalleRepository.findById(21L)).thenReturn(Optional.of(tipoEntrada));
+        when(movimientoInventarioRepository
+                .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(anyLong(), anyLong(), any()))
+                .thenReturn(List.of());
 
         when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);

@@ -18,6 +18,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import org.springframework.util.StringUtils;
@@ -3345,6 +3346,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             "OP_SIN_ETAPA_ACTIVA",
                             Map.of("ordenProduccionId", ordenProduccionId, "etapaId", etapaId)
                     ));
+            boolean finalizada = etapa.getFechaInicio() != null
+                    && (etapa.getFechaFin() != null || etapa.getEstado() == EstadoEtapa.FINALIZADA);
+            if (finalizada && etapa.getOrdenProduccion() != null
+                    && Objects.equals(etapa.getOrdenProduccion().getId(), ordenProduccionId)) {
+                return etapa;
+            }
             return validarEtapaActiva(etapa, ordenProduccionId, false);
         }
         long activas = etapaProduccionRepository.countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(ordenProduccionId);
