@@ -1832,8 +1832,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 || !Objects.equals(lote.getProducto().getId(), producto.getId())) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_PRODUCTO_INVALIDO");
         }
-        if (lote.getAlmacen() == null || lote.getAlmacen().getId() == null
-                || !Objects.equals(lote.getAlmacen().getId().longValue(), almacenPtId)) {
+        Long almacenActualLoteId = obtenerAlmacenActualLoteId(lote);
+        if (almacenActualLoteId == null || !Objects.equals(almacenActualLoteId, almacenPtId)) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
         loteCalidadValidator.validarLoteUtilizable(lote);
@@ -1904,11 +1904,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 dto.tipoMovimiento() == TipoMovimiento.DEVOLUCION
                         && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION;
 
+        Long almacenActualLoteId = obtenerAlmacenActualLoteId(loteOrigen);
         if (!esDevolucionInternaCalculada
                 && almacenOrigen != null
-                && !loteOrigen.getAlmacen().getId().equals(almacenOrigen.getId())) {
+                && (almacenActualLoteId == null
+                || !Objects.equals(almacenActualLoteId, almacenOrigen.getId().longValue()))) {
             log.debug("[INVENTARIO] almacén origen no coincide: loteId={} almacenLoteId={} almacenOrigenId={}",
-                    loteOrigen.getId(), loteOrigen.getAlmacen().getId(), almacenOrigen.getId());
+                    loteOrigen.getId(), almacenActualLoteId, almacenOrigen.getId());
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
 
@@ -2274,11 +2276,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                 loteAdicional.getProducto() != null ? loteAdicional.getProducto().getId() : null);
                         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_PRODUCTO_INVALIDO");
                     }
-                    if (loteAdicional.getAlmacen() == null
-                            || !Objects.equals(loteAdicional.getAlmacen().getId(), almacenOrigenId)) {
+                    Long almacenActualLoteAdicionalId = obtenerAlmacenActualLoteId(loteAdicional);
+                    if (almacenActualLoteAdicionalId == null
+                            || !Objects.equals(almacenActualLoteAdicionalId, almacenOrigenId.longValue())) {
                         log.warn("AUTO_SPLIT_ALMACEN_INCONSISTENTE loteId={} almacenEsperado={} almacenEncontrado={}",
-                                loteAdicional.getId(), almacenOrigenId,
-                                loteAdicional.getAlmacen() != null ? loteAdicional.getAlmacen().getId() : null);
+                                loteAdicional.getId(), almacenOrigenId, almacenActualLoteAdicionalId);
                         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
                     }
 
@@ -3124,6 +3126,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
         }
         return disponible.setScale(6, RoundingMode.HALF_UP);
+    }
+
+    private Long obtenerAlmacenActualLoteId(LoteProducto lote) {
+        if (lote == null || lote.getAlmacen() == null || lote.getAlmacen().getId() == null) {
+            return null;
+        }
+        return lote.getAlmacen().getId().longValue();
     }
 
     private BigDecimal nvl(BigDecimal valor) {
