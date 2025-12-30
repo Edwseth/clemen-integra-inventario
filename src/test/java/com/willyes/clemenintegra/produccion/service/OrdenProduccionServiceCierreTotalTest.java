@@ -27,7 +27,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,6 +37,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -212,6 +215,61 @@ class OrdenProduccionServiceCierreTotalTest {
         verify(movimientoInventarioService, never()).registrarMovimiento(any());
     }
 
+    @Test
+    void registrarConsumoRealPorCierreTotal_omiteProductoFabricadoAlValidarAlmacenOrigen() {
+        OrdenProduccion orden = ordenProduccion(new BigDecimal("5"));
+        Usuario usuario = usuario(52L);
+        EtapaProduccion etapa = new EtapaProduccion();
+        etapa.setId(88L);
+        List<EtapaProduccion> etapas = List.of(etapa);
+
+        Producto productoFabricado = orden.getProducto();
+        Producto insumo = producto(202);
+        FormulaProducto formula = formulaConProductoFabricado(productoFabricado, insumo,
+                new BigDecimal("1.0"), new BigDecimal("2.0"));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(
+                orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)).thenReturn(Optional.of(formula));
+
+        when(catalogResolver.getTipoDetalleSalidaProduccionId()).thenReturn(10L);
+        when(tipoMovimientoDetalleRepository.findById(10L)).thenReturn(Optional.of(tipoMovimientoDetalle(10L)));
+        when(catalogResolver.getMotivoSalidaProduccionId()).thenReturn(11L);
+        when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(motivoMovimiento(11L)));
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+
+        MovimientoInventario alistadoInsumo = transferenciaPrebodega(insumo, 6, new BigDecimal("12"));
+        MovimientoInventario alistadoProducto = transferenciaPrebodega(productoFabricado, 6, new BigDecimal("3"));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()), eq(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION), any()))
+                .thenReturn(new PageImpl<>(List.of(alistadoProducto, alistadoInsumo)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()), eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        lenient().when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
+                eq(orden.getId()), anyLong(), eq(TipoMovimiento.SALIDA), eq(10L)))
+                .thenReturn(BigDecimal.ZERO);
+
+        when(movimientoInventarioService.registrarMovimiento(argThat(dto ->
+                dto != null && dto.productoId().longValue() == productoFabricado.getId().longValue())))
+                .thenThrow(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN"));
+        when(movimientoInventarioService.registrarMovimiento(argThat(dto ->
+                dto != null && dto.productoId().longValue() == insumo.getId().longValue())))
+                .thenReturn(MovimientoInventarioResponseDTO.builder().id(1001L).build());
+
+        assertThatCode(() -> ReflectionTestUtils.invokeMethod(
+                service,
+                "registrarConsumoRealPorCierreTotal",
+                orden,
+                etapas,
+                etapa,
+                usuario
+        )).doesNotThrowAnyException();
+
+        verify(movimientoInventarioService, times(1)).registrarMovimiento(argThat(dto ->
+                dto != null && dto.productoId().longValue() == insumo.getId().longValue()));
+        verify(movimientoInventarioService, never()).registrarMovimiento(argThat(dto ->
+                dto != null && dto.productoId().longValue() == productoFabricado.getId().longValue()));
+    }
+
     private OrdenProduccion ordenProduccion(BigDecimal cantidadProgramada) {
         OrdenProduccion orden = new OrdenProduccion();
         orden.setId(1L);
@@ -242,6 +300,21 @@ class OrdenProduccionServiceCierreTotalTest {
         detalle.setInsumo(insumo);
         detalle.setCantidadNecesaria(cantidad);
         formula.setDetalles(List.of(detalle));
+        return formula;
+    }
+
+    private FormulaProducto formulaConProductoFabricado(Producto productoFabricado,
+                                                        Producto insumo,
+                                                        BigDecimal requeridoFabricado,
+                                                        BigDecimal requeridoInsumo) {
+        FormulaProducto formula = new FormulaProducto();
+        DetalleFormula detProducto = new DetalleFormula();
+        detProducto.setInsumo(productoFabricado);
+        detProducto.setCantidadNecesaria(requeridoFabricado);
+        DetalleFormula detInsumo = new DetalleFormula();
+        detInsumo.setInsumo(insumo);
+        detInsumo.setCantidadNecesaria(requeridoInsumo);
+        formula.setDetalles(List.of(detProducto, detInsumo));
         return formula;
     }
 

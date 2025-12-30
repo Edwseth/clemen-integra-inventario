@@ -652,6 +652,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         if (orden == null || orden.getId() == null || orden.getProducto() == null) {
             return;
         }
+        Long productoFabricadoId = Optional.ofNullable(orden.getProducto())
+                .map(Producto::getId)
+                .map(Integer::longValue)
+                .orElse(null);
         FormulaProducto formula = formulaProductoRepository
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
@@ -677,13 +681,19 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             if (det == null || det.getInsumo() == null || det.getInsumo().getId() == null) {
                 continue;
             }
+            Long productoId = det.getInsumo().getId().longValue();
+            if (productoFabricadoId != null && Objects.equals(productoId, productoFabricadoId)) {
+                log.debug("OP-cierre total omitiendo producto fabricado como insumo op={}, productoId={}",
+                        orden.getId(), productoFabricadoId);
+                continue;
+            }
             BigDecimal requerido = safeCantidad(det.getCantidadNecesaria())
                     .multiply(orden.getCantidadProgramada())
                     .setScale(6, RoundingMode.HALF_UP);
             if (requerido.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
-            requeridoPorProducto.merge(det.getInsumo().getId().longValue(), requerido, BigDecimal::add);
+            requeridoPorProducto.merge(productoId, requerido, BigDecimal::add);
         }
         if (requeridoPorProducto.isEmpty()) {
             log.debug("OP-cierre total sin insumos calculados op={}", orden.getId());
@@ -711,6 +721,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             if (mov == null || mov.getLote() == null || mov.getProducto() == null) {
                 continue;
             }
+            if (productoFabricadoId != null
+                    && Objects.equals(mov.getProducto().getId().longValue(), productoFabricadoId)) {
+                log.debug("OP-cierre total omitió movimiento del producto fabricado op={}, loteId={}",
+                        orden.getId(), mov.getLote().getId());
+                continue;
+            }
             if (mov.getTipoMovimiento() != TipoMovimiento.TRANSFERENCIA) {
                 continue;
             }
@@ -735,6 +751,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         for (MovimientoInventario mov : consumosPrevios) {
             if (mov == null || mov.getLote() == null) {
+                continue;
+            }
+            if (productoFabricadoId != null
+                    && mov.getProducto() != null
+                    && Objects.equals(mov.getProducto().getId().longValue(), productoFabricadoId)) {
                 continue;
             }
             if (mov.getTipoMovimiento() != TipoMovimiento.SALIDA) {
