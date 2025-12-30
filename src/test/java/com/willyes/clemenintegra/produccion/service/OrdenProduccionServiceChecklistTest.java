@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 class OrdenProduccionServiceChecklistTest {
 
@@ -103,9 +105,13 @@ class OrdenProduccionServiceChecklistTest {
     @Test
     @DisplayName("Finalizar etapa falla si checklist obligatorio incompleto")
     void finalizarEtapaChecklistIncompleto() {
-        when(checklistEtapaService.validarChecklistCompleto(anyLong()))
-                .thenThrow(new CustomBusinessException(com.willyes.clemenintegra.shared.exception.ApiErrorCode.CHECKLIST_ETAPA_INCOMPLETO, "CHECKLIST_ETAPA_INCOMPLETO"));
+
+        doThrow(new CustomBusinessException(
+                com.willyes.clemenintegra.shared.exception.ApiErrorCode.CHECKLIST_ETAPA_INCOMPLETO,
+                "CHECKLIST_ETAPA_INCOMPLETO"
+        )).when(checklistEtapaService).validarChecklistCompleto(anyLong());
 
         assertThrows(CustomBusinessException.class, () -> service.finalizarEtapa(1L, 2L, 3L));
     }
+
 }

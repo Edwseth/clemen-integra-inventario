@@ -909,38 +909,38 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             OrdenProduccion orden = repository.findById(id)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
 
-                if (orden.getEstado() == EstadoProduccion.FINALIZADA ||
-                        orden.getEstado() == EstadoProduccion.CANCELADA ||
-                        orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA) {
-                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_CERRABLE");
-                }
+            if (orden.getEstado() == EstadoProduccion.FINALIZADA ||
+                    orden.getEstado() == EstadoProduccion.CANCELADA ||
+                    orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_CERRABLE");
+            }
 
-                if (dto.getCantidad() == null) {
-                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
-                }
+            if (dto.getCantidad() == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+            }
 
-                Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
-                BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
-                dto.setCantidad(cantidad);
-                log.info("OP-cierre request traceId={} opId={} tipo={} cantidad={} usuarioId={}", traceId, orden.getId(),
-                        dto.getTipo(), cantidad, usuario.getId());
+            Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+            BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
+            dto.setCantidad(cantidad);
+            log.info("OP-cierre request traceId={} opId={} tipo={} cantidad={} usuarioId={}", traceId, orden.getId(),
+                    dto.getTipo(), cantidad, usuario.getId());
 
-                List<EtapaProduccion> etapas = etapaProduccionRepository
-                        .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId());
-                boolean algunaEtapaIniciada = etapas.stream().anyMatch(e -> e.getFechaInicio() != null);
-                boolean todasFinalizadas = !etapas.isEmpty()
-                        && etapas.stream().allMatch(e -> e.getFechaFin() != null || e.getEstado() == EstadoEtapa.FINALIZADA);
+            List<EtapaProduccion> etapas = etapaProduccionRepository
+                    .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId());
+            boolean algunaEtapaIniciada = etapas.stream().anyMatch(e -> e.getFechaInicio() != null);
+            boolean todasFinalizadas = !etapas.isEmpty()
+                    && etapas.stream().allMatch(e -> e.getFechaFin() != null || e.getEstado() == EstadoEtapa.FINALIZADA);
 
-                boolean permitirCierreSinActiva = dto.getTipo() == TipoCierre.TOTAL
-                        && orden.getEstado() == EstadoProduccion.EN_PROCESO
-                        && todasFinalizadas;
+            boolean permitirCierreSinActiva = dto.getTipo() == TipoCierre.TOTAL
+                    && orden.getEstado() == EstadoProduccion.EN_PROCESO
+                    && todasFinalizadas;
 
-                if (!algunaEtapaIniciada && !permitirCierreSinActiva) {
-                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_ETAPA_ACTIVA");
-                }
-                if (permitirCierreSinActiva) {
-                    log.debug("OP-cierre total sin etapa activa permitida op={}", orden.getId());
-                }
+            if (!algunaEtapaIniciada && !permitirCierreSinActiva) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_ETAPA_ACTIVA");
+            }
+            if (permitirCierreSinActiva) {
+                log.debug("OP-cierre total sin etapa activa permitida op={}", orden.getId());
+            }
 
             LoteProducto lote = loteProductoRepository
                     .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
@@ -2129,3 +2129,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return repository.save(orden);
     }
 }
+
+
+
+

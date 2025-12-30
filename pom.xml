@@ -238,7 +238,6 @@
           <execution>
             <goals>
               <goal>repackage</goal>
-              <goal>build-info</goal>
             </goals>
           </execution>
         </executions>
@@ -249,7 +248,6 @@
               <artifactId>lombok</artifactId>
             </exclude>
           </excludes>
-          <!-- Prevent spring-boot:run from compiling test sources -->
           <useTestClasspath>false</useTestClasspath>
         </configuration>
       </plugin>
@@ -277,6 +275,26 @@
         <flyway.user>ci_demo</flyway.user>
         <flyway.password>DespliegueClemenIntegraErpDemo</flyway.password>
       </properties>
+    </profile>
+
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>build-info</id>
+                <goals>
+                  <goal>build-info</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 

@@ -154,16 +154,19 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
 
     private String csv(String value) {
         if (!StringUtils.hasText(value)) {
-            return \"\";
+            return "";
         }
-        return \\\"\\\" + value.replace(\\\"\\\\\\\", \\\"\\\\\\\\\\\").replace(\\\"\\\"\\\", \\\"\\\"\\\"\\\") + \\\"\\\"\\\";
+        // CSV estándar: escapar comillas dobles duplicándolas
+        String escaped = value.replace("\"", "\"\"");
+        // Encapsular siempre con comillas para evitar problemas con comas/saltos de línea
+        return "\"" + escaped + "\"";
     }
 
     private String safe(Object value) {
-        return value != null ? value.toString() : \"\";
+        return value != null ? value.toString() : "";
     }
 
     private String safeBool(Boolean value) {
-        return Boolean.TRUE.equals(value) ? \"true\" : \"false\";
+        return Boolean.TRUE.equals(value) ? "true" : "false";
     }
 }
