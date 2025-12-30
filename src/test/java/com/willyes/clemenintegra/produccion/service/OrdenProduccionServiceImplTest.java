@@ -1195,6 +1195,7 @@ class OrdenProduccionServiceImplTest {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("40"))
                 .tipo(TipoCierre.TOTAL)
+                .confirmarCierreParcial(true)
                 .build();
 
         assertThatCode(() -> service.registrarCierre(350L, dto)).doesNotThrowAnyException();
