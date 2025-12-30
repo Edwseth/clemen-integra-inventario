@@ -165,7 +165,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 orden,
                 etapas,
                 etapa,
-                usuario
+                usuario,
+                "trace-test"
         );
 
         ArgumentCaptor<MovimientoInventarioDTO> dtoCaptor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
@@ -209,7 +210,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 orden,
                 List.of(),
                 null,
-                usuario
+                usuario,
+                "trace-test"
         );
 
         verify(movimientoInventarioService, never()).registrarMovimiento(any());
@@ -261,7 +263,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 orden,
                 etapas,
                 etapa,
-                usuario
+                usuario,
+                "trace-test"
         )).doesNotThrowAnyException();
 
         verify(movimientoInventarioService, times(1)).registrarMovimiento(argThat(dto ->

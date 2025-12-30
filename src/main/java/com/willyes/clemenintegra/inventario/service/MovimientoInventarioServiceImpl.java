@@ -56,6 +56,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -263,7 +264,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         Integer almacenOrigenIdNormalizadoInt = dto.almacenOrigenId();
-        boolean salidaPt = isSalidaPt(tipoMovimiento, resolvedTipoDetalleId);
+        boolean salidaPt = clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                && isSalidaPt(tipoMovimiento, resolvedTipoDetalleId);
 
         Long almacenPtId = null;
         if (salidaPt) {
@@ -1802,7 +1804,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         List<MovimientoLoteDetalle> detalles = new ArrayList<>();
         for (ParLoteCantidad par : plan) {
-            MovimientoLoteDetalle detalle = consumirLoteSalidaPt(par, producto, almacenPtId, estadosElegibles);
+            MovimientoLoteDetalle detalle = consumirLoteSalidaPt(par, producto, almacenPtId, estadosElegibles, dto);
             log.info("SALIDA_PT producto={} lote={} cantidad={} autosplit={} destino={} doc={}",
                     producto != null ? producto.getId() : null,
                     detalle.lote() != null ? detalle.lote().getId() : null,
@@ -1822,7 +1824,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private MovimientoLoteDetalle consumirLoteSalidaPt(ParLoteCantidad consumo,
                                                        Producto producto,
                                                        Long almacenPtId,
-                                                       EnumSet<EstadoLote> estadosElegibles) {
+                                                       EnumSet<EstadoLote> estadosElegibles,
+                                                       MovimientoInventarioDTO dto) {
         if (consumo == null || consumo.loteId() == null) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ID_REQUERIDO");
         }
@@ -1834,6 +1837,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
         Long almacenActualLoteId = obtenerAlmacenActualLoteId(lote);
         if (almacenActualLoteId == null || !Objects.equals(almacenActualLoteId, almacenPtId)) {
+            logLoteOrigenInvalido("salida_pt", dto, lote, almacenPtId, almacenActualLoteId,
+                    dto != null ? dto.clasificacionMovimientoInventario() : null,
+                    dto != null ? dto.tipoMovimiento() : null,
+                    dto != null ? dto.tipoMovimientoDetalleId() : null);
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
         loteCalidadValidator.validarLoteUtilizable(lote);
@@ -1911,6 +1918,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 || !Objects.equals(almacenActualLoteId, almacenOrigen.getId().longValue()))) {
             log.debug("[INVENTARIO] almacén origen no coincide: loteId={} almacenLoteId={} almacenOrigenId={}",
                     loteOrigen.getId(), almacenActualLoteId, almacenOrigen.getId());
+            logLoteOrigenInvalido("procesar_con_lote_existente", dto, loteOrigen,
+                    almacenOrigen.getId().longValue(), almacenActualLoteId, clasificacion, tipo, dto.tipoMovimientoDetalleId());
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
 
@@ -2281,6 +2290,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             || !Objects.equals(almacenActualLoteAdicionalId, almacenOrigenId.longValue())) {
                         log.warn("AUTO_SPLIT_ALMACEN_INCONSISTENTE loteId={} almacenEsperado={} almacenEncontrado={}",
                                 loteAdicional.getId(), almacenOrigenId, almacenActualLoteAdicionalId);
+                        logLoteOrigenInvalido("auto_split", dto, loteAdicional, almacenOrigenId.longValue(),
+                                almacenActualLoteAdicionalId, clasificacion, tipo, dto.tipoMovimientoDetalleId());
                         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
                     }
 
@@ -2637,6 +2648,34 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
         Long salidaId = catalogResolver.getTipoDetalleSalidaId();
         return salidaId != null && Objects.equals(tipoDetalleId, salidaId);
+    }
+
+    private void logLoteOrigenInvalido(String origenLog,
+                                       MovimientoInventarioDTO dto,
+                                       LoteProducto lote,
+                                       Long almacenEsperadoId,
+                                       Long almacenActualLoteId,
+                                       ClasificacionMovimientoInventario clasificacion,
+                                       TipoMovimiento tipoMovimiento,
+                                       Long tipoDetalleId) {
+        log.warn("LOTE_NO_PERTENECE_ALMACEN_ORIGEN traceId={} origen={} opId={} etapaId={} productoId={} loteId={} codigoLote={} dtoAlmacenOrigenId={} dtoAlmacenDestinoId={} almacenEsperadoId={} loteAlmacenActualId={} loteOrigenId={} loteOrigenAlmacenId={} clasificacion={} tipoMovimiento={} tipoDetalleId={}",
+                MDC.get("opTraceId"),
+                origenLog,
+                dto != null ? dto.ordenProduccionId() : null,
+                dto != null ? dto.ordenProduccionEtapaId() : null,
+                dto != null ? dto.productoId() : (lote != null && lote.getProducto() != null ? lote.getProducto().getId() : null),
+                lote != null ? lote.getId() : null,
+                lote != null ? lote.getCodigoLote() : null,
+                dto != null ? dto.almacenOrigenId() : null,
+                dto != null ? dto.almacenDestinoId() : null,
+                almacenEsperadoId,
+                almacenActualLoteId,
+                lote != null && lote.getLoteOrigen() != null ? lote.getLoteOrigen().getId() : null,
+                lote != null && lote.getLoteOrigen() != null && lote.getLoteOrigen().getAlmacen() != null ? lote.getLoteOrigen().getAlmacen().getId() : null,
+                clasificacion,
+                tipoMovimiento,
+                tipoDetalleId
+        );
     }
 
     private MotivoMovimiento resolverMotivoMovimientoPorClasificacion(

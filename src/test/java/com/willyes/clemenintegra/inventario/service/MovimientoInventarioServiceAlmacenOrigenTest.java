@@ -169,6 +169,65 @@ class MovimientoInventarioServiceAlmacenOrigenTest {
         verify(movimientoInventarioRepository).save(any(MovimientoInventario.class));
     }
 
+    @Test
+    void salidaProduccionNoSeNormalizaComoSalidaPt() {
+        Producto producto = crearProducto(818, 2);
+        LoteProducto lotePreBodega = crearLote(300L, producto, 6, EstadoLote.LIBERADO,
+                new BigDecimal("5"), BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("2"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                null,
+                producto.getId(),
+                lotePreBodega.getId(),
+                6,
+                null,
+                null,
+                null,
+                null,
+                TIPO_DETALLE_SALIDA_PRODUCCION_ID,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        configurarMocksBasicos(producto, lotePreBodega);
+        lenient().when(catalogResolver.isSalidaPtEnabled()).thenReturn(true);
+        lenient().when(catalogResolver.getTipoDetalleSalidaPtId()).thenReturn(TIPO_DETALLE_SALIDA_PRODUCCION_ID);
+        lenient().when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(501L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(501L).build());
+
+        assertThatNoException().isThrownBy(() -> service.registrarMovimiento(dto));
+
+        assertThat(lotePreBodega.getStockLote()).isEqualByComparingTo(new BigDecimal("3.00"));
+        verify(movimientoInventarioRepository).save(any(MovimientoInventario.class));
+    }
+
     private void configurarMocksBasicos(Producto producto, LoteProducto lotePreBodega) {
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
