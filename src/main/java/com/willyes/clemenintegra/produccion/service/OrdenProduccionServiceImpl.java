@@ -56,6 +56,7 @@ import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
@@ -92,6 +93,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.Objects;
 import java.util.Comparator;
 import java.math.RoundingMode;
@@ -648,7 +650,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private void registrarConsumoRealPorCierreTotal(OrdenProduccion orden,
                                                     List<EtapaProduccion> etapas,
                                                     EtapaProduccion etapaConsumo,
-                                                    Usuario usuario) {
+                                                    Usuario usuario,
+                                                    String traceId) {
         if (orden == null || orden.getId() == null || orden.getProducto() == null) {
             return;
         }
@@ -846,6 +849,19 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         null,
                         null
                 );
+                log.info("OP-cierre total movDTO traceId={} opId={} etapaId={} productoId={} loteId={} tipo={} clasificacion={} almacenOrigenId={} almacenDestinoId={} tipoDetalleId={} motivoId={} cantidad={}",
+                        traceId,
+                        orden.getId(),
+                        etapaDestinoId,
+                        productoId,
+                        loteId,
+                        salida.tipoMovimiento(),
+                        salida.clasificacionMovimientoInventario(),
+                        salida.almacenOrigenId(),
+                        salida.almacenDestinoId(),
+                        salida.tipoMovimientoDetalleId(),
+                        salida.motivoMovimientoId(),
+                        salida.cantidad());
                 movimientoInventarioService.registrarMovimiento(salida);
 
                 pendiente = pendiente.subtract(consumir);
@@ -866,41 +882,63 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         repository.deleteById(id);
     }
 
+    /*
+     * Auditoría rápida (opcional, para ejecución manual) para seguir movimientos de la OP:
+     * 1) Movimientos del producto fabricado (818) por orden:
+     *    SELECT mi.id, mi.tipo_mov, mi.cantidad, mi.almacen_origen_id, mi.almacen_destino_id, mi.productos_id,
+     *           lp.id lote_id, lp.codigo_lote, lp.almacenes_id lote_almacen_actual
+     *    FROM movimientos_inventario mi
+     *    JOIN lotes_productos lp ON lp.id = mi.lotes_productos_id
+     *    WHERE mi.orden_produccion_id = :opId AND mi.productos_id = 818
+     *    ORDER BY mi.id DESC;
+     * 2) Todas las SALIDAS por orden:
+     *    SELECT mi.id, mi.tipo_mov, mi.cantidad, mi.almacen_origen_id, mi.almacen_destino_id, mi.productos_id,
+     *           mi.tipos_movimiento_detalle_id, mi.clasificacion,
+     *           lp.id lote_id, lp.codigo_lote, lp.almacenes_id lote_almacen_actual
+     *    FROM movimientos_inventario mi
+     *    JOIN lotes_productos lp ON lp.id = mi.lotes_productos_id
+     *    WHERE mi.orden_produccion_id = :opId AND mi.tipo_mov='SALIDA'
+     *    ORDER BY mi.id DESC;
+     */
     @Transactional
     public OrdenProduccion registrarCierre(Long id, CierreProduccionRequestDTO dto) {
-        try {
+        String traceId = UUID.randomUUID().toString();
+        try (MDC.MDCCloseable ignored = MDC.putCloseable("opTraceId", traceId)) {
             OrdenProduccion orden = repository.findById(id)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
 
-            if (orden.getEstado() == EstadoProduccion.FINALIZADA ||
-                    orden.getEstado() == EstadoProduccion.CANCELADA ||
-                    orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_CERRABLE");
-            }
+                if (orden.getEstado() == EstadoProduccion.FINALIZADA ||
+                        orden.getEstado() == EstadoProduccion.CANCELADA ||
+                        orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_CERRABLE");
+                }
 
-            if (dto.getCantidad() == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
-            }
+                if (dto.getCantidad() == null) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
+                }
 
-            BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
-            dto.setCantidad(cantidad);
+                Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+                BigDecimal cantidad = validarCantidad(dto.getCantidad(), orden.getProducto());
+                dto.setCantidad(cantidad);
+                log.info("OP-cierre request traceId={} opId={} tipo={} cantidad={} usuarioId={}", traceId, orden.getId(),
+                        dto.getTipo(), cantidad, usuario.getId());
 
-            List<EtapaProduccion> etapas = etapaProduccionRepository
-                    .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId());
-            boolean algunaEtapaIniciada = etapas.stream().anyMatch(e -> e.getFechaInicio() != null);
-            boolean todasFinalizadas = !etapas.isEmpty()
-                    && etapas.stream().allMatch(e -> e.getFechaFin() != null || e.getEstado() == EstadoEtapa.FINALIZADA);
+                List<EtapaProduccion> etapas = etapaProduccionRepository
+                        .findByOrdenProduccionIdOrderBySecuenciaAsc(orden.getId());
+                boolean algunaEtapaIniciada = etapas.stream().anyMatch(e -> e.getFechaInicio() != null);
+                boolean todasFinalizadas = !etapas.isEmpty()
+                        && etapas.stream().allMatch(e -> e.getFechaFin() != null || e.getEstado() == EstadoEtapa.FINALIZADA);
 
-            boolean permitirCierreSinActiva = dto.getTipo() == TipoCierre.TOTAL
-                    && orden.getEstado() == EstadoProduccion.EN_PROCESO
-                    && todasFinalizadas;
+                boolean permitirCierreSinActiva = dto.getTipo() == TipoCierre.TOTAL
+                        && orden.getEstado() == EstadoProduccion.EN_PROCESO
+                        && todasFinalizadas;
 
-            if (!algunaEtapaIniciada && !permitirCierreSinActiva) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_ETAPA_ACTIVA");
-            }
-            if (permitirCierreSinActiva) {
-                log.debug("OP-cierre total sin etapa activa permitida op={}", orden.getId());
-            }
+                if (!algunaEtapaIniciada && !permitirCierreSinActiva) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_ETAPA_ACTIVA");
+                }
+                if (permitirCierreSinActiva) {
+                    log.debug("OP-cierre total sin etapa activa permitida op={}", orden.getId());
+                }
 
             LoteProducto lote = loteProductoRepository
                     .findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue())
@@ -975,12 +1013,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ErrorResponseException(HttpStatus.CONFLICT, problem, null);
             }
 
-            Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
-
             EtapaProduccion etapaConsumo = seleccionarEtapaParaConsumo(etapas, orden.getId());
             registrarConsumoDeInsumos(orden.getId(), etapaConsumo.getId(), usuario.getId());
             if (dto.getTipo() == TipoCierre.TOTAL) {
-                registrarConsumoRealPorCierreTotal(orden, etapas, etapaConsumo, usuario);
+                registrarConsumoRealPorCierreTotal(orden, etapas, etapaConsumo, usuario, traceId);
             }
 
             List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
@@ -1229,6 +1265,19 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     null,
                     null,
                     null);
+            log.info("OP-cierre entrada DTO traceId={} opId={} etapaId={} productoId={} loteId={} tipo={} clasificacion={} almacenOrigenId={} almacenDestinoId={} tipoDetalleId={} motivoId={} cantidad={}",
+                    traceId,
+                    orden.getId(),
+                    null,
+                    orden.getProducto().getId(),
+                    lote.getId(),
+                    movDto.tipoMovimiento(),
+                    movDto.clasificacionMovimientoInventario(),
+                    movDto.almacenOrigenId(),
+                    movDto.almacenDestinoId(),
+                    movDto.tipoMovimientoDetalleId(),
+                    movDto.motivoMovimientoId(),
+                    movDto.cantidad());
             movimientoInventarioService.registrarMovimiento(movDto);
             log.info("OP-cierre entrada PT op={}, producto={}, lote={}, cantidad={}, usuario={}, destino={}, motivoId={}, tipoDetalleId={}",
                     orden.getId(), orden.getProducto().getId(), lote.getId(), cantidad, usuario.getId(), destino.getId(), motivoEntrada.getId(), tipoDetalleEntrada.getId());
