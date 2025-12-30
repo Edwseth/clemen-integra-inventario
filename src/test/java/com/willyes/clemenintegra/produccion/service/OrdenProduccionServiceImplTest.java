@@ -45,6 +45,7 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
+import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -129,6 +130,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private ReservaLoteService reservaLoteService;
     @Mock private ReservaLoteRepository reservaLoteRepository;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
+    @Mock private ChecklistEtapaService checklistEtapaService;
 
     @Spy
     @InjectMocks
@@ -137,6 +139,7 @@ class OrdenProduccionServiceImplTest {
     @BeforeEach
     void setUp() {
         lenient().doNothing().when(service).reservarInsumosParaOP(anyLong(), any());
+        lenient().doNothing().when(checklistEtapaService).validarChecklistCompleto(anyLong());
         lenient().when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> {
             OrdenProduccion op = invocation.getArgument(0);
             if (op.getId() == null) {
