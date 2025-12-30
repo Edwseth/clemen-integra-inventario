@@ -86,6 +86,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -603,6 +604,33 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_ETAPA_ACTIVA"));
     }
 
+    private EtapaProduccion obtenerUltimaEtapaFinalizada(List<EtapaProduccion> etapas, Long ordenProduccionId) {
+        List<EtapaProduccion> existentes = Optional.ofNullable(etapas)
+                .orElseGet(() -> etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenProduccionId));
+        return existentes.stream()
+                .filter(e -> e.getFechaInicio() != null
+                        && (e.getFechaFin() != null || e.getEstado() == EstadoEtapa.FINALIZADA))
+                .max(Comparator
+                        .comparing(EtapaProduccion::getFechaFin, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(EtapaProduccion::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
+    }
+
+    private Long resolverTipoDetalleSalidaProduccionId() {
+        Long id = catalogResolver.getTipoDetalleSalidaProduccionId();
+        if (id == null) {
+            id = catalogResolver.getTipoDetalleSalidaId();
+        }
+        if (id == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_SALIDA_PRODUCCION_INEXISTENTE");
+        }
+        return id;
+    }
+
+    private BigDecimal safeCantidad(BigDecimal valor) {
+        return valor != null ? valor : BigDecimal.ZERO;
+    }
+
     private void registrarConsumoDeInsumos(Long ordenProduccionId, Long etapaId, Long usuarioId) {
         boolean consumoRegistrado = !movimientoInventarioRepository
                 .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(
@@ -615,6 +643,202 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             return;
         }
         movimientoInventarioService.consumirInsumosPorOrden(ordenProduccionId, etapaId, usuarioId);
+    }
+
+    private void registrarConsumoRealPorCierreTotal(OrdenProduccion orden,
+                                                    List<EtapaProduccion> etapas,
+                                                    EtapaProduccion etapaConsumo,
+                                                    Usuario usuario) {
+        if (orden == null || orden.getId() == null || orden.getProducto() == null) {
+            return;
+        }
+        FormulaProducto formula = formulaProductoRepository
+                .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
+
+        Long detalleSalidaId = resolverTipoDetalleSalidaProduccionId();
+        TipoMovimientoDetalle detalleSalida = tipoMovimientoDetalleRepository.findById(detalleSalidaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_SALIDA_PRODUCCION_INEXISTENTE"));
+
+        Long motivoSalidaId = catalogResolver.getMotivoSalidaProduccionId();
+        if (motivoSalidaId == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_SALIDA_PRODUCCION_INEXISTENTE");
+        }
+        MotivoMovimiento motivoSalida = motivoMovimientoRepository.findById(motivoSalidaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_SALIDA_PRODUCCION_INEXISTENTE"));
+
+        Long preBodegaId = catalogResolver.getAlmacenPreBodegaProduccionId();
+        if (preBodegaId == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_PRE_BODEGA_INEXISTENTE");
+        }
+
+        Map<Long, BigDecimal> requeridoPorProducto = new LinkedHashMap<>();
+        for (DetalleFormula det : obtenerDetallesFormulaSeguro(formula)) {
+            if (det == null || det.getInsumo() == null || det.getInsumo().getId() == null) {
+                continue;
+            }
+            BigDecimal requerido = safeCantidad(det.getCantidadNecesaria())
+                    .multiply(orden.getCantidadProgramada())
+                    .setScale(6, RoundingMode.HALF_UP);
+            if (requerido.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            requeridoPorProducto.merge(det.getInsumo().getId().longValue(), requerido, BigDecimal::add);
+        }
+        if (requeridoPorProducto.isEmpty()) {
+            log.debug("OP-cierre total sin insumos calculados op={}", orden.getId());
+            return;
+        }
+
+        List<MovimientoInventario> alistados = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacion(
+                        orden.getId(),
+                        ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                        Pageable.unpaged()
+                ).getContent();
+        List<MovimientoInventario> consumosPrevios = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacion(
+                        orden.getId(),
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                        Pageable.unpaged()
+                ).getContent();
+
+        Map<Long, BigDecimal> disponiblePorLote = new LinkedHashMap<>();
+        Map<Long, Long> productoPorLote = new HashMap<>();
+        Map<Long, LocalDateTime> fechaPorLote = new HashMap<>();
+
+        for (MovimientoInventario mov : alistados) {
+            if (mov == null || mov.getLote() == null || mov.getProducto() == null) {
+                continue;
+            }
+            if (mov.getTipoMovimiento() != TipoMovimiento.TRANSFERENCIA) {
+                continue;
+            }
+            if (mov.getAlmacenDestino() != null
+                    && !Objects.equals(Long.valueOf(mov.getAlmacenDestino().getId().longValue()), preBodegaId)) {
+                continue;
+            }
+            Long loteId = mov.getLote().getId();
+            if (loteId == null) {
+                continue;
+            }
+            BigDecimal cantidad = safeCantidad(mov.getCantidad());
+            disponiblePorLote.merge(loteId, cantidad, BigDecimal::add);
+            productoPorLote.put(loteId, mov.getProducto().getId().longValue());
+            if (mov.getFechaIngreso() != null) {
+                fechaPorLote.merge(loteId, mov.getFechaIngreso(), (previa, nueva) -> {
+                    if (previa == null) return nueva;
+                    return previa.isBefore(nueva) ? previa : nueva;
+                });
+            }
+        }
+
+        for (MovimientoInventario mov : consumosPrevios) {
+            if (mov == null || mov.getLote() == null) {
+                continue;
+            }
+            if (mov.getTipoMovimiento() != TipoMovimiento.SALIDA) {
+                continue;
+            }
+            if (mov.getTipoMovimientoDetalle() == null
+                    || !Objects.equals(mov.getTipoMovimientoDetalle().getId(), detalleSalidaId)) {
+                continue;
+            }
+            Long loteId = mov.getLote().getId();
+            BigDecimal saldoActual = disponiblePorLote.get(loteId);
+            if (saldoActual != null) {
+                BigDecimal nuevoSaldo = saldoActual.subtract(safeCantidad(mov.getCantidad()));
+                if (nuevoSaldo.compareTo(BigDecimal.ZERO) < 0) {
+                    nuevoSaldo = BigDecimal.ZERO;
+                }
+                disponiblePorLote.put(loteId, nuevoSaldo);
+            }
+        }
+
+        Long etapaDestinoId = Optional.ofNullable(etapaConsumo)
+                .map(EtapaProduccion::getId)
+                .orElseGet(() -> Optional.ofNullable(obtenerUltimaEtapaFinalizada(etapas, orden.getId()))
+                        .map(EtapaProduccion::getId)
+                        .orElse(null));
+
+        for (Map.Entry<Long, BigDecimal> entry : requeridoPorProducto.entrySet()) {
+            Long productoId = entry.getKey();
+            BigDecimal requerido = entry.getValue();
+            BigDecimal consumido = Optional.ofNullable(
+                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
+                            orden.getId(),
+                            productoId,
+                            TipoMovimiento.SALIDA,
+                            detalleSalidaId
+                    )
+            ).orElse(BigDecimal.ZERO);
+
+            BigDecimal faltante = requerido.subtract(consumido);
+            if (faltante.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            List<Long> lotesProducto = disponiblePorLote.entrySet().stream()
+                    .filter(e -> e.getValue().compareTo(BigDecimal.ZERO) > 0)
+                    .filter(e -> Objects.equals(productoPorLote.get(e.getKey()), productoId))
+                    .sorted(Comparator.comparing(
+                                    (Map.Entry<Long, BigDecimal> e) -> fechaPorLote.getOrDefault(e.getKey(), LocalDateTime.MIN))
+                            .thenComparing(Map.Entry::getKey))
+                    .map(Map.Entry::getKey)
+                    .toList();
+
+            BigDecimal pendiente = faltante;
+            for (Long loteId : lotesProducto) {
+                BigDecimal disponible = disponiblePorLote.getOrDefault(loteId, BigDecimal.ZERO);
+                if (disponible.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                BigDecimal consumir = pendiente.min(disponible).setScale(6, RoundingMode.HALF_UP);
+                if (consumir.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+
+                MovimientoInventarioDTO salida = new MovimientoInventarioDTO(
+                        null,
+                        consumir,
+                        TipoMovimiento.SALIDA,
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                        orden.getCodigoOrden(),
+                        null,
+                        productoId.intValue(),
+                        loteId,
+                        preBodegaId.intValue(),
+                        null,
+                        null,
+                        null,
+                        motivoSalida.getId(),
+                        detalleSalida.getId(),
+                        null,
+                        usuario.getId(),
+                        orden.getId(),
+                        etapaDestinoId,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+                movimientoInventarioService.registrarMovimiento(salida);
+
+                pendiente = pendiente.subtract(consumir);
+                disponiblePorLote.put(loteId, disponible.subtract(consumir));
+                if (pendiente.compareTo(BigDecimal.ZERO) <= 0) {
+                    break;
+                }
+            }
+
+            if (pendiente.compareTo(BigDecimal.ZERO) > 0) {
+                log.warn("OP-cierre total con alistado insuficiente para consumo real op={}, productoId={}, faltante={}",
+                        orden.getId(), productoId, pendiente);
+            }
+        }
     }
 
     public void eliminar(Long id) {
@@ -646,12 +870,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             boolean todasFinalizadas = !etapas.isEmpty()
                     && etapas.stream().allMatch(e -> e.getFechaFin() != null || e.getEstado() == EstadoEtapa.FINALIZADA);
 
-            if (!algunaEtapaIniciada) {
+            boolean permitirCierreSinActiva = dto.getTipo() == TipoCierre.TOTAL
+                    && orden.getEstado() == EstadoProduccion.EN_PROCESO
+                    && todasFinalizadas;
+
+            if (!algunaEtapaIniciada && !permitirCierreSinActiva) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "OP_SIN_ETAPA_ACTIVA");
             }
-            if (dto.getTipo() == TipoCierre.TOTAL
-                    && orden.getEstado() == EstadoProduccion.EN_PROCESO
-                    && todasFinalizadas) {
+            if (permitirCierreSinActiva) {
                 log.debug("OP-cierre total sin etapa activa permitida op={}", orden.getId());
             }
 
@@ -732,6 +958,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             EtapaProduccion etapaConsumo = seleccionarEtapaParaConsumo(etapas, orden.getId());
             registrarConsumoDeInsumos(orden.getId(), etapaConsumo.getId(), usuario.getId());
+            if (dto.getTipo() == TipoCierre.TOTAL) {
+                registrarConsumoRealPorCierreTotal(orden, etapas, etapaConsumo, usuario);
+            }
 
             List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
             parseEstados(estadosSolicitudConcluyentesConf);
@@ -1604,22 +1833,24 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
         List<InsumoOPDTO> lista = new ArrayList<>();
+        Long detalleSalidaId = resolverTipoDetalleSalidaProduccionId();
         for (DetalleFormula det : obtenerDetallesFormulaSeguro(formula)) {
             if (det == null || det.getInsumo() == null) {
                 continue;
             }
             BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             Long insumoId = det.getInsumo().getId().longValue();
-            // Consumido real: solo salidas de producción ligadas a una etapa (activa o finalizada).
+            // Consumido real: salidas de producción registradas para la OP (independiente de etapa).
             BigDecimal consumida = Optional.ofNullable(
-                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionConEtapa(
+                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
                             id,
                             insumoId,
-                            ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                            TipoMovimiento.SALIDA
+                            TipoMovimiento.SALIDA,
+                            detalleSalidaId
                     )
             ).orElse(BigDecimal.ZERO);
-            // Alistado/reservado: traslados internos a Pre-Bodega sin etapa (pre-arranque).
+            // Alistado/reservado: traslados internos a Pre-Bodega sin etapa (pre-arranque). El alistado no debe
+            // contabilizar las salidas de producción.
             BigDecimal alistadoTransferencias = Optional.ofNullable(
                     movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
                             id,
@@ -1628,15 +1859,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                             TipoMovimiento.TRANSFERENCIA
                     )
             ).orElse(BigDecimal.ZERO);
-            BigDecimal alistadoSalidasSinEtapa = Optional.ofNullable(
-                    movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
-                            id,
-                            insumoId,
-                            ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                            TipoMovimiento.SALIDA
-                    )
-            ).orElse(BigDecimal.ZERO);
-            BigDecimal alistado = alistadoTransferencias.add(alistadoSalidasSinEtapa);
+            BigDecimal alistado = alistadoTransferencias;
             BigDecimal faltante = requerida.subtract(consumida);
             if (faltante.compareTo(BigDecimal.ZERO) < 0) {
                 faltante = BigDecimal.ZERO;

@@ -17,6 +17,7 @@ import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
@@ -51,6 +52,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -93,6 +96,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -156,6 +160,18 @@ class OrdenProduccionServiceImplTest {
                 .thenAnswer(invocation -> ((BigDecimal) invocation.getArgument(0)).setScale(2, RoundingMode.HALF_UP));
         lenient().when(umValidator.getRoundingMode()).thenReturn(RoundingMode.HALF_UP);
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+        lenient().when(catalogResolver.getTipoDetalleSalidaProduccionId()).thenReturn(11L);
+        lenient().when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(11L);
+        lenient().when(catalogResolver.getMotivoSalidaProduccionId()).thenReturn(11L);
+        lenient().when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+        TipoMovimientoDetalle tipoSalida = new TipoMovimientoDetalle();
+        tipoSalida.setId(11L);
+        lenient().when(tipoMovimientoDetalleRepository.findById(11L)).thenReturn(Optional.of(tipoSalida));
+        MotivoMovimiento motivoSalida = new MotivoMovimiento();
+        motivoSalida.setId(11L);
+        lenient().when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(motivoSalida));
+        lenient().when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(anyLong(), anyLong(), any(), anyLong()))
+                .thenReturn(BigDecimal.ZERO);
     }
 
     @Test
@@ -1177,6 +1193,156 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("registrarCierre total crea salidas de consumo real desde el alistado")
+    void registrarCierre_totalGeneraSalidas() {
+        OrdenProduccion orden = crearOrdenBase(400L, new BigDecimal("2"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Producto insumo = new Producto();
+        insumo.setId(910);
+        UnidadMedida um = new UnidadMedida();
+        um.setNombre("kg");
+        insumo.setUnidadMedida(um);
+        DetalleFormula det = new DetalleFormula();
+        det.setInsumo(insumo);
+        det.setCantidadNecesaria(new BigDecimal("1.5"));
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(det));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(77L);
+        MovimientoInventario alistado = new MovimientoInventario();
+        alistado.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        alistado.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
+        alistado.setProducto(insumo);
+        alistado.setLote(lote);
+        alistado.setCantidad(new BigDecimal("3.0"));
+        Almacen preBodega = new Almacen();
+        preBodega.setId(6);
+        alistado.setAlmacenDestino(preBodega);
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()),
+                eq(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(alistado)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()),
+                eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of()));
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
+                eq(orden.getId()),
+                eq(insumo.getId().longValue()),
+                eq(TipoMovimiento.SALIDA),
+                eq(11L)
+        )).thenReturn(BigDecimal.ZERO);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("2"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+
+        service.registrarCierre(400L, dto);
+
+        verify(movimientoInventarioService, atLeast(2)).registrarMovimiento(captor.capture());
+        long salidas = captor.getAllValues().stream()
+                .filter(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA)
+                .count();
+        MovimientoInventarioDTO consumo = captor.getAllValues().stream()
+                .filter(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA)
+                .findFirst()
+                .orElseThrow();
+        assertThat(salidas).isEqualTo(1);
+        assertThat(consumo.cantidad()).isEqualByComparingTo(new BigDecimal("3.000000"));
+        assertThat(consumo.tipoMovimientoDetalleId()).isEqualTo(11L);
+        assertThat(consumo.almacenOrigenId()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("registrarCierre total no duplica salidas ya registradas")
+    void registrarCierre_totalIdempotenteEnSalidas() {
+        OrdenProduccion orden = crearOrdenBase(401L, new BigDecimal("2"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Producto insumo = new Producto();
+        insumo.setId(911);
+        UnidadMedida um = new UnidadMedida();
+        um.setNombre("kg");
+        insumo.setUnidadMedida(um);
+        DetalleFormula det = new DetalleFormula();
+        det.setInsumo(insumo);
+        det.setCantidadNecesaria(new BigDecimal("1.5"));
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(det));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(78L);
+        MovimientoInventario alistado = new MovimientoInventario();
+        alistado.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        alistado.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
+        alistado.setProducto(insumo);
+        alistado.setLote(lote);
+        alistado.setCantidad(new BigDecimal("3.0"));
+        Almacen preBodega = new Almacen();
+        preBodega.setId(6);
+        alistado.setAlmacenDestino(preBodega);
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()),
+                eq(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(alistado)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()),
+                eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of()));
+
+        AtomicInteger consultas = new AtomicInteger(0);
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
+                eq(orden.getId()),
+                eq(insumo.getId().longValue()),
+                eq(TipoMovimiento.SALIDA),
+                eq(11L)
+        )).thenAnswer(inv -> consultas.getAndIncrement() == 0 ? BigDecimal.ZERO : new BigDecimal("3.0"));
+
+        ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("2"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        service.registrarCierre(401L, dto);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+        orden.setCantidadProducida(BigDecimal.ZERO);
+        orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
+        orden.setTipoCierre(null);
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
+                eq(orden.getId()),
+                eq(insumo.getId().longValue()),
+                eq(TipoMovimiento.SALIDA),
+                eq(11L)
+        )).thenReturn(new BigDecimal("3.0"));
+        service.registrarCierre(401L, dto);
+
+        verify(movimientoInventarioService, atLeast(3)).registrarMovimiento(captor.capture());
+        long salidas = captor.getAllValues().stream()
+                .filter(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA)
+                .count();
+        assertThat(salidas).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("registrarCierre total usa la última etapa finalizada cuando no hay activa")
     void registrarCierre_totalSinEtapaActiva() {
         OrdenProduccion orden = crearOrdenBase(350L, new BigDecimal("80"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
@@ -1227,11 +1393,11 @@ class OrdenProduccionServiceImplTest {
             consumoEjecutado.set(true);
             return null;
         }).when(movimientoInventarioService).consumirInsumosPorOrden(eq(360L), anyLong(), anyLong());
-        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionConEtapa(
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
                 eq(360L),
                 eq(600L),
-                eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION),
-                eq(TipoMovimiento.SALIDA)
+                eq(TipoMovimiento.SALIDA),
+                eq(11L)
         )).thenAnswer(inv -> consumoEjecutado.get() ? new BigDecimal("6") : BigDecimal.ZERO);
         when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -1322,11 +1488,11 @@ class OrdenProduccionServiceImplTest {
         when(ordenProduccionRepository.findById(200L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formula));
-        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionConEtapa(
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
                 200L,
                 300L,
-                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                TipoMovimiento.SALIDA))
+                TipoMovimiento.SALIDA,
+                11L))
                 .thenReturn(BigDecimal.ZERO);
         when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
                 200L,
@@ -1378,11 +1544,11 @@ class OrdenProduccionServiceImplTest {
         when(ordenProduccionRepository.findById(201L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formula));
-        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionConEtapa(
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
                 201L,
                 301L,
-                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-                TipoMovimiento.SALIDA))
+                TipoMovimiento.SALIDA,
+                11L))
                 .thenReturn(new BigDecimal("3"));
         when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoClasificacionSinEtapa(
                 201L,
@@ -1448,6 +1614,10 @@ class OrdenProduccionServiceImplTest {
         when(ordenProduccionRepository.findById(orden.getId())).thenReturn(Optional.of(orden));
         when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(
                 orden.getId(), orden.getProducto().getId().longValue())).thenReturn(Optional.empty());
+        FormulaProducto formulaVacia = new FormulaProducto();
+        formulaVacia.setDetalles(List.of());
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaVacia));
 
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(1L)
@@ -1462,6 +1632,7 @@ class OrdenProduccionServiceImplTest {
         when(vidaUtilProductoService.buscarPorProductoId(orden.getProducto().getId()))
                 .thenReturn(Optional.of(vidaUtil));
 
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
         when(catalogResolver.getMotivoIdDevolucionDesdeProduccion()).thenReturn(10L);
         MotivoMovimiento motivoDev = new MotivoMovimiento();
         motivoDev.setId(10L);
@@ -1472,9 +1643,12 @@ class OrdenProduccionServiceImplTest {
         when(solicitudMovimientoRepository.findWithDetalles(eq(orden.getId()), isNull(), isNull(), isNull(), eq(false), any()))
                 .thenReturn(List.of());
         when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(11L);
+        when(catalogResolver.getTipoDetalleSalidaProduccionId()).thenReturn(11L);
         when(catalogResolver.getTipoDetalleTransferenciaId()).thenReturn(null);
         when(movimientoInventarioRepository.sumaPorSolicitudYTipo(any(), any(), any(), any(), any(), any()))
                 .thenReturn(BigDecimal.ZERO);
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(anyLong(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
 
         when(catalogResolver.getMotivoIdEntradaProductoTerminado()).thenReturn(20L);
         MotivoMovimiento motivoEntrada = new MotivoMovimiento();
@@ -1496,6 +1670,9 @@ class OrdenProduccionServiceImplTest {
         almacenCuarentena.setId(31);
         when(almacenRepository.findById(30L)).thenReturn(Optional.of(almacenPt));
         when(almacenRepository.findById(31L)).thenReturn(Optional.of(almacenCuarentena));
+        Almacen preBodega = new Almacen();
+        preBodega.setId(6);
+        when(almacenRepository.findById(6L)).thenReturn(Optional.of(preBodega));
 
         when(loteProductoRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioBasico());
