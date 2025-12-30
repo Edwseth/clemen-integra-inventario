@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
+@SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class JwtAuthenticationIntegrationTest {
