@@ -96,6 +96,7 @@ class OrdenProduccionServiceCierreTotalTest {
         reservaLoteService = mock(ReservaLoteService.class);
         reservaLoteRepository = mock(ReservaLoteRepository.class);
         disponibilidadInsumoService = mock(DisponibilidadInsumoService.class);
+        ChecklistEtapaService checklistEtapaService = mock(ChecklistEtapaService.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -121,7 +122,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 vidaUtilProductoService,
                 reservaLoteService,
                 reservaLoteRepository,
-                disponibilidadInsumoService
+                disponibilidadInsumoService,
+                checklistEtapaService
         );
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDO");

@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ public class DetalleEtapaController {
     private final com.willyes.clemenintegra.shared.service.UsuarioService usuarioService;
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public List<DetalleEtapaResponse> listarTodas() {
         return service.listarTodas().stream()
                 .map(ProduccionMapper::toResponse)
@@ -31,6 +33,7 @@ public class DetalleEtapaController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<DetalleEtapaResponse> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
                 .map(ProduccionMapper::toResponse)
@@ -39,6 +42,7 @@ public class DetalleEtapaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<DetalleEtapaResponse> crear(@Valid @RequestBody DetalleEtapaRequest request) {
         normalizarRequest(request, null);
         EtapaProduccion etapa = new EtapaProduccion(); etapa.setId(request.etapaProduccionId);
@@ -49,6 +53,7 @@ public class DetalleEtapaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<DetalleEtapaResponse> actualizar(@PathVariable Long id, @Valid @RequestBody DetalleEtapaRequest request) {
         return service.buscarPorId(id)
                 .map(existente -> {
@@ -64,6 +69,7 @@ public class DetalleEtapaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
