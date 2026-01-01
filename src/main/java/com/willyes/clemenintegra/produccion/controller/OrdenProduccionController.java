@@ -41,6 +41,7 @@ public class OrdenProduccionController {
     private final ReporteOrdenProduccionService reporteOrdenProduccionService;
     private final UsuarioService usuarioService;
     private final com.willyes.clemenintegra.inventario.service.MovimientoInventarioService movimientoInventarioService;
+    private final ChecklistEtapaService checklistEtapaService;
     //private final UsuarioService usuarioService;
 
 
@@ -223,6 +224,21 @@ public class OrdenProduccionController {
                                                                                            @PathVariable Long etapaId,
                                                                                            @RequestParam(name = "clasificacion", required = false) ClasificacionMovimientoInventario clasificacion) {
         return ResponseEntity.ok(service.listarMovimientosPorEtapa(ordenId, etapaId, clasificacion));
+    }
+
+    @GetMapping("/{ordenId}/etapas/{etapaId}/checklist")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<ChecklistEtapaDTO> obtenerChecklistPorEtapa(@PathVariable Long ordenId,
+                                                                      @PathVariable Long etapaId) {
+        return ResponseEntity.ok(checklistEtapaService.obtenerPorOrdenYEtapa(ordenId, etapaId));
+    }
+
+    @PostMapping("/{ordenId}/etapas/{etapaId}/checklist")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<ChecklistEtapaDTO> actualizarChecklistPorEtapa(@PathVariable Long ordenId,
+                                                                         @PathVariable Long etapaId,
+                                                                         @RequestBody List<ChecklistItemDTO> items) {
+        return ResponseEntity.ok(checklistEtapaService.actualizarEnOrden(ordenId, etapaId, items));
     }
 
     @GetMapping("/{id}/lote")

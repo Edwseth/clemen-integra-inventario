@@ -14,10 +14,11 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class VersionService {
 
-    private final BuildProperties buildProperties;
+    private final ObjectProvider<BuildProperties> buildPropertiesProvider;
     private final ObjectProvider<GitProperties> gitPropertiesProvider;
 
     public VersionResponse getVersionInfo() {
+        BuildProperties buildProperties = buildPropertiesProvider.getIfAvailable();
         GitProperties gitProperties = gitPropertiesProvider.getIfAvailable();
 
         String gitTag = Optional.ofNullable(gitProperties)
@@ -33,11 +34,11 @@ public class VersionService {
             gitTag = gitCommitId;
         }
 
-        Instant buildInstant = buildProperties.getTime();
+        Instant buildInstant = buildProperties != null ? buildProperties.getTime() : null;
 
         return VersionResponse.builder()
-                .appName(buildProperties.getName())
-                .version(buildProperties.getVersion())
+                .appName(buildProperties != null ? buildProperties.getName() : "unknown")
+                .version(buildProperties != null ? buildProperties.getVersion() : "unknown")
                 .buildTime(buildInstant != null ? buildInstant.toString() : null)
                 .gitTag(gitTag)
                 .gitCommitId(gitCommitId)

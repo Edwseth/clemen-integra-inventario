@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.produccion.service;
 import com.willyes.clemenintegra.produccion.dto.ChecklistItemDTO;
 import com.willyes.clemenintegra.produccion.model.ChecklistEtapaItem;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -93,5 +94,34 @@ class ChecklistEtapaServiceImplTest {
         ));
 
         assertThrows(CustomBusinessException.class, () -> service.validarChecklistCompleto(7L));
+    }
+
+    @Test
+    @DisplayName("Obtener checklist por orden valida pertenencia y retorna lista vacía sin plantilla")
+    void obtenerChecklistPorOrden_sinItems() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(3L)
+                .ordenProduccion(OrdenProduccion.builder().id(2L).build())
+                .build();
+        when(etapaProduccionRepository.findById(3L)).thenReturn(Optional.of(etapa));
+        when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(3L)).thenReturn(List.of());
+
+        var dto = service.obtenerPorOrdenYEtapa(2L, 3L);
+
+        assertThat(dto.getItems()).isEmpty();
+        assertThat(dto.getFaltantesObligatorios()).isZero();
+        assertThat(dto.getOrdenProduccionId()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("Obtener checklist por orden falla si etapa no pertenece a la orden")
+    void obtenerChecklistPorOrden_etapaNoPertenece() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(6L)
+                .ordenProduccion(OrdenProduccion.builder().id(99L).build())
+                .build();
+        when(etapaProduccionRepository.findById(6L)).thenReturn(Optional.of(etapa));
+
+        assertThrows(CustomBusinessException.class, () -> service.obtenerPorOrdenYEtapa(1L, 6L));
     }
 }

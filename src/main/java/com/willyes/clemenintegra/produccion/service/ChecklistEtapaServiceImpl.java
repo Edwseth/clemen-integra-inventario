@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,8 +37,15 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     @Override
     @Transactional(readOnly = true)
     public ChecklistEtapaDTO obtenerPorEtapa(Long etapaId) {
-        EtapaProduccion etapa = etapaProduccionRepository.findById(etapaId)
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ETAPA_NO_ENCONTRADA"));
+        EtapaProduccion etapa = obtenerEtapa(etapaId);
+        List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
+        return buildDto(etapa, items);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ChecklistEtapaDTO obtenerPorOrdenYEtapa(Long ordenId, Long etapaId) {
+        EtapaProduccion etapa = obtenerEtapaValidada(ordenId, etapaId);
         List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
         return buildDto(etapa, items);
     }
@@ -45,16 +53,19 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     @Override
     @Transactional
     public ChecklistEtapaDTO actualizar(Long etapaId, List<ChecklistItemDTO> itemsDto) {
-        EtapaProduccion etapa = etapaProduccionRepository.findById(etapaId)
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ETAPA_NO_ENCONTRADA"));
+        EtapaProduccion etapa = obtenerEtapa(etapaId);
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
 
-        repository.deleteByEtapaProduccionId(etapaId);
-        List<ChecklistEtapaItem> items = (itemsDto != null ? itemsDto : List.<ChecklistItemDTO>of()).stream()
-                .map(dto -> toEntity(dto, etapa, usuario))
-                .sorted(Comparator.comparing(ChecklistEtapaItem::getId, Comparator.nullsLast(Long::compareTo)))
-                .collect(Collectors.toList());
-        List<ChecklistEtapaItem> guardados = repository.saveAll(items);
+        List<ChecklistEtapaItem> guardados = guardarItems(etapa, usuario, itemsDto);
+        return buildDto(etapa, guardados);
+    }
+
+    @Override
+    @Transactional
+    public ChecklistEtapaDTO actualizarEnOrden(Long ordenId, Long etapaId, List<ChecklistItemDTO> itemsDto) {
+        EtapaProduccion etapa = obtenerEtapaValidada(ordenId, etapaId);
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        List<ChecklistEtapaItem> guardados = guardarItems(etapa, usuario, itemsDto);
         return buildDto(etapa, guardados);
     }
 
@@ -104,6 +115,30 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
                     "CHECKLIST_ETAPA_INCOMPLETO",
                     Map.of("etapaId", etapaId, "faltantes", faltantes));
         }
+    }
+
+    private List<ChecklistEtapaItem> guardarItems(EtapaProduccion etapa, Usuario usuario, List<ChecklistItemDTO> itemsDto) {
+        repository.deleteByEtapaProduccionId(etapa.getId());
+        List<ChecklistEtapaItem> items = (itemsDto != null ? itemsDto : List.<ChecklistItemDTO>of()).stream()
+                .map(dto -> toEntity(dto, etapa, usuario))
+                .sorted(Comparator.comparing(ChecklistEtapaItem::getId, Comparator.nullsLast(Long::compareTo)))
+                .collect(Collectors.toList());
+        return repository.saveAll(items);
+    }
+
+    private EtapaProduccion obtenerEtapa(Long etapaId) {
+        return etapaProduccionRepository.findById(etapaId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ETAPA_NO_ENCONTRADA"));
+    }
+
+    private EtapaProduccion obtenerEtapaValidada(Long ordenId, Long etapaId) {
+        EtapaProduccion etapa = obtenerEtapa(etapaId);
+        if (etapa.getOrdenProduccion() == null || !Objects.equals(etapa.getOrdenProduccion().getId(), ordenId)) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "ETAPA_NO_PERTENECE_A_ORDEN",
+                    Map.of("ordenId", ordenId, "etapaId", etapaId));
+        }
+        return etapa;
     }
 
     private ChecklistEtapaDTO buildDto(EtapaProduccion etapa, List<ChecklistEtapaItem> items) {
