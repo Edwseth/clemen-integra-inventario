@@ -5,8 +5,10 @@ import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.dto.ChecklistEtapaDTO;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.produccion.service.ReporteOrdenProduccionService;
+import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
@@ -45,6 +47,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -81,6 +84,9 @@ class OrdenProduccionControllerTest {
 
     @MockBean
     private UsuarioService usuarioService;
+
+    @MockBean
+    private ChecklistEtapaService checklistEtapaService;
 
     @MockBean
     private MovimientoInventarioService movimientoInventarioService;
@@ -261,6 +267,48 @@ class OrdenProduccionControllerTest {
                 .andExpect(jsonPath("$[0].ordenProduccionEtapaId").value(9L));
 
         verify(ordenProduccionService).listarMovimientosPorEtapa(8L, 9L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist responde 200 y retorna lista vacía")
+    void obtenerChecklistPorEtapa_respondeOk() throws Exception {
+        ChecklistEtapaDTO checklist = ChecklistEtapaDTO.builder()
+                .etapaId(12L)
+                .ordenProduccionId(11L)
+                .items(List.of())
+                .faltantesObligatorios(0)
+                .completo(false)
+                .build();
+        when(checklistEtapaService.obtenerPorOrdenYEtapa(11L, 12L)).thenReturn(checklist);
+
+        mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist", 11L, 12L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.items").isEmpty());
+
+        verify(checklistEtapaService).obtenerPorOrdenYEtapa(11L, 12L);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist responde 200")
+    void actualizarChecklistPorEtapa_respondeOk() throws Exception {
+        ChecklistEtapaDTO checklist = ChecklistEtapaDTO.builder()
+                .etapaId(14L)
+                .ordenProduccionId(13L)
+                .items(List.of())
+                .completo(true)
+                .faltantesObligatorios(0)
+                .build();
+        when(checklistEtapaService.actualizarEnOrden(eq(13L), eq(14L), any())).thenReturn(checklist);
+
+        mockMvc.perform(post("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist", 13L, 14L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isOk());
+
+        verify(checklistEtapaService).actualizarEnOrden(eq(13L), eq(14L), any());
     }
 
     @Test
