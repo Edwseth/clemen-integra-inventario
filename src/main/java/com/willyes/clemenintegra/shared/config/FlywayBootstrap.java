@@ -34,7 +34,7 @@ public class FlywayBootstrap implements CommandLineRunner {
     @Value("${app.flyway.secondary.password:${DB_PASS:}}")
     private String secondaryPass;
 
-    @Value("${app.flyway.migrations.locations:classpath:db/migration}")
+    @Value("${app.flyway.migrations.locations:classpath:db/migration/inventario}")
     private String locations;
 
     @Value("${app.flyway.baseline-on-migrate:true}")
