@@ -50,24 +50,28 @@ public class FlywayBootstrap implements CommandLineRunner {
 
     private void migrateIfFirstTime(String url, String user, String pass) {
         try {
-            if (!hasFlywayHistory(url, user, pass)) {
+            boolean hasHistory = hasFlywayHistory(url, user, pass);
+            Flyway flyway = Flyway.configure()
+                    .dataSource(url, user, pass)
+                    .locations(locations)
+                    .baselineOnMigrate(baselineOnMigrate)
+                    .baselineVersion(baselineVersion)
+                    .outOfOrder(false)
+                    .load();
+
+            if (!hasHistory) {
                 log.info("Flyway[once]: SIN historial en {} → baseline+migrate (baselineVersion={})",
                         url, baselineVersion);
-                Flyway flyway = Flyway.configure()
-                        .dataSource(url, user, pass)
-                        .locations(locations)
-                        .baselineOnMigrate(baselineOnMigrate)
-                        .baselineVersion(baselineVersion)
-                        .outOfOrder(false)
-                        .load();
-                flyway.migrate();
-                var info = flyway.info();
-                log.info("Flyway[once]: OK en {} → applied={}, current={}",
-                        url, info.applied().length,
-                        info.current() == null ? "n/a" : info.current().getVersion());
             } else {
-                log.info("Flyway[once]: historial YA presente en {} → no se ejecuta nada.", url);
+                log.info("Flyway[once]: historial YA presente en {} → se ejecuta migrate para aplicar pendientes.",
+                        url);
             }
+
+            flyway.migrate();
+            var info = flyway.info();
+            log.info("Flyway[once]: OK en {} → applied={}, current={}",
+                    url, info.applied().length,
+                    info.current() == null ? "n/a" : info.current().getVersion());
         } catch (Exception e) {
             log.error("Flyway[once]: ERROR migrando {}", url, e);
             throw e;
@@ -87,5 +91,4 @@ public class FlywayBootstrap implements CommandLineRunner {
         }
     }
 }
-
 

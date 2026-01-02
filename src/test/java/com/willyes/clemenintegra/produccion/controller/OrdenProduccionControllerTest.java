@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.ChecklistEtapaDTO;
+import com.willyes.clemenintegra.produccion.dto.ChecklistItemDTO;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.produccion.service.ReporteOrdenProduccionService;
 import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
@@ -288,6 +289,48 @@ class OrdenProduccionControllerTest {
                 .andExpect(jsonPath("$.items").isEmpty());
 
         verify(checklistEtapaService).obtenerPorOrdenYEtapa(11L, 12L);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist responde 200 con checklist lleno")
+    void obtenerChecklistPorEtapa_conDatos() throws Exception {
+        ChecklistItemDTO item = ChecklistItemDTO.builder()
+                .id(21L)
+                .nombrePaso("Validar equipo")
+                .obligatorio(true)
+                .completado(true)
+                .observacion("ok")
+                .build();
+        ChecklistEtapaDTO checklist = ChecklistEtapaDTO.builder()
+                .etapaId(14L)
+                .ordenProduccionId(13L)
+                .items(List.of(item))
+                .completo(true)
+                .faltantesObligatorios(0)
+                .build();
+        when(checklistEtapaService.obtenerPorOrdenYEtapa(13L, 14L)).thenReturn(checklist);
+
+        mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist", 13L, 14L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value(21L))
+                .andExpect(jsonPath("$.completo").value(true));
+
+        verify(checklistEtapaService).obtenerPorOrdenYEtapa(13L, 14L);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist devuelve 400 si la etapa no corresponde")
+    void obtenerChecklistPorEtapa_etapaNoPertenece() throws Exception {
+        when(checklistEtapaService.obtenerPorOrdenYEtapa(9L, 99L))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "ETAPA_NO_PERTENECE_A_ORDEN"));
+
+        mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist", 9L, 99L))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.SOLICITUD_INVALIDA.name()));
+
+        verify(checklistEtapaService).obtenerPorOrdenYEtapa(9L, 99L);
     }
 
     @Test

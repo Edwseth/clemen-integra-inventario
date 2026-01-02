@@ -230,6 +230,7 @@ public class OrdenProduccionController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<ChecklistEtapaDTO> obtenerChecklistPorEtapa(@PathVariable Long ordenId,
                                                                       @PathVariable Long etapaId) {
+        log.info("ChecklistEtapa - GET ordenId={}, etapaId={}", ordenId, etapaId);
         return ResponseEntity.ok(checklistEtapaService.obtenerPorOrdenYEtapa(ordenId, etapaId));
     }
 
