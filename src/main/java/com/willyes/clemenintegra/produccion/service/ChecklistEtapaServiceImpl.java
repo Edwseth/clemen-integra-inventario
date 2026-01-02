@@ -45,8 +45,10 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     @Override
     @Transactional(readOnly = true)
     public ChecklistEtapaDTO obtenerPorOrdenYEtapa(Long ordenId, Long etapaId) {
+        log.info("ChecklistEtapa - obtenerPorOrdenYEtapa ordenId={}, etapaId={}", ordenId, etapaId);
         EtapaProduccion etapa = obtenerEtapaValidada(ordenId, etapaId);
         List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
+        log.debug("ChecklistEtapa - items recuperados: {}", items.size());
         return buildDto(etapa, items);
     }
 
@@ -134,10 +136,12 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     private EtapaProduccion obtenerEtapaValidada(Long ordenId, Long etapaId) {
         EtapaProduccion etapa = obtenerEtapa(etapaId);
         if (etapa.getOrdenProduccion() == null || !Objects.equals(etapa.getOrdenProduccion().getId(), ordenId)) {
+            log.warn("ChecklistEtapa - etapa {} no pertenece a la orden {}", etapaId, ordenId);
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                     "ETAPA_NO_PERTENECE_A_ORDEN",
                     Map.of("ordenId", ordenId, "etapaId", etapaId));
         }
+        log.debug("ChecklistEtapa - etapa {} validada para orden {}", etapaId, ordenId);
         return etapa;
     }
 
