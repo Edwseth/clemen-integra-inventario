@@ -1,22 +1,91 @@
-create table orden_compra_documentos (
-    id bigint not null auto_increment,
-    orden_compra_id bigint not null,
-    tipo_documento varchar(20) not null,
-    nombre_visible varchar(255) not null,
-    nombre_archivo varchar(255) not null,
-    content_type varchar(100),
-    size bigint,
-    storage_path varchar(500) not null,
-    creado_por_id bigint not null,
-    fecha_creacion datetime not null default current_timestamp,
-    primary key (id)
-) ENGINE=InnoDB;
+-- V20251218 - orden_compra_documentos (idempotente)
 
-alter table orden_compra_documentos
-    add constraint fk_oc_documento_oc foreign key (orden_compra_id) references ordenes_compra (id);
+SET @schema := DATABASE();
 
-alter table orden_compra_documentos
-    add constraint fk_oc_documento_usuario foreign key (creado_por_id) references usuarios (id);
+-- A) Tabla
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = @schema AND table_name = 'orden_compra_documentos'
+    ),
+    'SELECT "OK: tabla orden_compra_documentos ya existe" AS info;',
+    'CREATE TABLE orden_compra_documentos (
+        id BIGINT NOT NULL AUTO_INCREMENT,
+        orden_compra_id BIGINT NOT NULL,
+        tipo_documento VARCHAR(20) NOT NULL,
+        nombre_visible VARCHAR(255) NOT NULL,
+        nombre_archivo VARCHAR(255) NOT NULL,
+        content_type VARCHAR(100),
+        size BIGINT,
+        storage_path VARCHAR(500) NOT NULL,
+        creado_por_id BIGINT NOT NULL,
+        fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+     ) ENGINE=InnoDB;'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-create index idx_oc_documentos_oc on orden_compra_documentos (orden_compra_id);
-create index idx_oc_documentos_tipo on orden_compra_documentos (tipo_documento);
+-- B) FK orden_compra_id -> ordenes_compra
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE table_schema = @schema
+        AND table_name = 'orden_compra_documentos'
+        AND constraint_name = 'fk_oc_documento_oc'
+        AND constraint_type = 'FOREIGN KEY'
+    ),
+    'SELECT "OK: FK fk_oc_documento_oc ya existe" AS info;',
+    'ALTER TABLE orden_compra_documentos
+       ADD CONSTRAINT fk_oc_documento_oc
+       FOREIGN KEY (orden_compra_id) REFERENCES ordenes_compra (id);'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- C) FK creado_por_id -> usuarios
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE table_schema = @schema
+        AND table_name = 'orden_compra_documentos'
+        AND constraint_name = 'fk_oc_documento_usuario'
+        AND constraint_type = 'FOREIGN KEY'
+    ),
+    'SELECT "OK: FK fk_oc_documento_usuario ya existe" AS info;',
+    'ALTER TABLE orden_compra_documentos
+       ADD CONSTRAINT fk_oc_documento_usuario
+       FOREIGN KEY (creado_por_id) REFERENCES usuarios (id);'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- D) Índices
+SET @idx := 'idx_oc_documentos_oc';
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.statistics
+      WHERE table_schema = @schema AND table_name = 'orden_compra_documentos' AND index_name = @idx
+    ),
+    'SELECT "OK: idx_oc_documentos_oc ya existe" AS info;',
+    'CREATE INDEX idx_oc_documentos_oc ON orden_compra_documentos (orden_compra_id);'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @idx := 'idx_oc_documentos_tipo';
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.statistics
+      WHERE table_schema = @schema AND table_name = 'orden_compra_documentos' AND index_name = @idx
+    ),
+    'SELECT "OK: idx_oc_documentos_tipo ya existe" AS info;',
+    'CREATE INDEX idx_oc_documentos_tipo ON orden_compra_documentos (tipo_documento);'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

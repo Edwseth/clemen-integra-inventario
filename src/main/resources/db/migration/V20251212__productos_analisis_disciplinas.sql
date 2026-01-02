@@ -1,11 +1,50 @@
--- Agregar banderas independientes para las disciplinas de análisis de calidad
-ALTER TABLE productos
-    ADD COLUMN requiere_analisis_fisico TINYINT(1) NOT NULL DEFAULT 0 AFTER tipo_analisis_calidad,
-    ADD COLUMN requiere_analisis_quimico TINYINT(1) NOT NULL DEFAULT 0 AFTER requiere_analisis_fisico,
-    ADD COLUMN requiere_analisis_microbiologico TINYINT(1) NOT NULL DEFAULT 0 AFTER requiere_analisis_quimico;
+-- V20251212 - banderas independientes por disciplina de análisis (idempotente)
 
--- Poblar las nuevas banderas con reglas iniciales. El campo tipo_analisis_calidad se mantiene como legado.
--- Material de Empaque (ME): por defecto FÍSICO + MICRO (1,0,1), excepto etiquetas (código SKU que inicia en 'ET').
+-- A) Agregar columnas si no existen
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND table_name = 'productos'
+        AND column_name = 'requiere_analisis_fisico'
+    ),
+    'SELECT "OK: requiere_analisis_fisico ya existe" AS info;',
+    'ALTER TABLE productos ADD COLUMN requiere_analisis_fisico TINYINT(1) NOT NULL DEFAULT 0;'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND table_name = 'productos'
+        AND column_name = 'requiere_analisis_quimico'
+    ),
+    'SELECT "OK: requiere_analisis_quimico ya existe" AS info;',
+    'ALTER TABLE productos ADD COLUMN requiere_analisis_quimico TINYINT(1) NOT NULL DEFAULT 0;'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND table_name = 'productos'
+        AND column_name = 'requiere_analisis_microbiologico'
+    ),
+    'SELECT "OK: requiere_analisis_microbiologico ya existe" AS info;',
+    'ALTER TABLE productos ADD COLUMN requiere_analisis_microbiologico TINYINT(1) NOT NULL DEFAULT 0;'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- B) Poblar banderas (idempotente por reglas: recalcula siempre)
+-- Material de Empaque (ME): FISICO + MICRO, excepto etiquetas ET%
 UPDATE productos p
 JOIN categorias_producto c ON p.categorias_producto_id = c.id
 SET p.requiere_analisis_fisico = 1,
@@ -14,7 +53,7 @@ SET p.requiere_analisis_fisico = 1,
 WHERE c.nombre = 'Material de Empaque'
   AND (p.codigo_sku IS NULL OR p.codigo_sku NOT LIKE 'ET%');
 
--- Etiquetas: sólo FÍSICO.
+-- Etiquetas ET%: solo FISICO
 UPDATE productos p
 JOIN categorias_producto c ON p.categorias_producto_id = c.id
 SET p.requiere_analisis_fisico = 1,
@@ -23,14 +62,10 @@ SET p.requiere_analisis_fisico = 1,
 WHERE c.nombre = 'Material de Empaque'
   AND p.codigo_sku LIKE 'ET%';
 
--- Materia Prima, Producto Terminado, Producto Semielaborado y SM => QUÍMICO + MICRO (0,1,1).
+-- Materia Prima / PT / PS / SM: QUIMICO + MICRO
 UPDATE productos p
 JOIN categorias_producto c ON p.categorias_producto_id = c.id
 SET p.requiere_analisis_fisico = 0,
     p.requiere_analisis_quimico = 1,
     p.requiere_analisis_microbiologico = 1
 WHERE c.nombre IN ('Materia Prima', 'Producto Terminado', 'Producto Semielaborado', 'SM');
-
--- Espacio para excepciones adicionales por SKU específico (rellenar según defina el cliente).
--- UPDATE productos SET requiere_analisis_fisico = ?, requiere_analisis_quimico = ?, requiere_analisis_microbiologico = ?
--- WHERE codigo_sku = 'SM001';

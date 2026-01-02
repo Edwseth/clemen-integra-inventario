@@ -3,7 +3,7 @@ package db.migration;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 
-public class V20251120__etapa_checklist extends BaseJavaMigration {
+public class V20251124__etapa_checklist extends BaseJavaMigration {
     @Override
     public void migrate(Context context) throws Exception {
         var conn = context.getConnection();
