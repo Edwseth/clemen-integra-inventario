@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.shared.config;
 
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.FlywayException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,7 +74,15 @@ public class FlywayBootstrap implements CommandLineRunner {
                     url, info.applied().length,
                     info.current() == null ? "n/a" : info.current().getVersion());
         } catch (Exception e) {
-            log.error("Flyway[once]: ERROR migrando {}", url, e);
+            var detail = e.getMessage();
+            if (e instanceof FlywayException && detail != null
+                    && detail.contains("Found more than one migration with version")) {
+                log.error("Flyway[once]: ERROR migrando {} → {}. "
+                                + "Verifica versiones duplicadas en db/migration y renombra una de las migraciones "
+                                + "a un nuevo número mayor (ej. 20251227).", url, detail, e);
+            } else {
+                log.error("Flyway[once]: ERROR migrando {} → {}", url, detail, e);
+            }
             throw e;
         }
     }
@@ -91,4 +100,3 @@ public class FlywayBootstrap implements CommandLineRunner {
         }
     }
 }
-
