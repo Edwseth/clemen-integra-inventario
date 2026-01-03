@@ -19,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -53,6 +54,13 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
             plan.setCreadoPor(new Usuario(dto.getCreadoPorId()));
         }
 
+        Usuario creador = plan.getCreadoPor();
+        if (creador == null && dto.getCreadoPorId() != null) {
+            creador = new Usuario(dto.getCreadoPorId());
+            plan.setCreadoPor(creador);
+        }
+        final Usuario creadorFinal = creador;
+
         plan.getDetalles().clear();
         if (dto.getDetalles() != null) {
             dto.getDetalles().forEach(detalleDTO -> {
@@ -64,6 +72,8 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
                         .prioridad(detalleDTO.getPrioridad())
                         .origenDemanda(detalleDTO.getOrigenDemanda())
                         .observacion(detalleDTO.getObservacion())
+                        .creadoPor(creadorFinal)
+                        .fechaCreacion(LocalDateTime.now())
                         .build();
                 plan.getDetalles().add(detalle);
             });
