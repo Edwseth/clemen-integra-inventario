@@ -17,6 +17,7 @@ public class BatchRecordDTO {
     public List<ControlProcesoDTO> controlesProceso;
     public List<ControlEmpaqueDTO> controlesEmpaque;
     public List<ObservacionProcesoDTO> observacionesProceso;
+    public List<ChecklistEtapaDTO> checklistEtapas;
     public EstadoBatchRecord estadoBatchRecord;
     public String revisadoPorNombre;
     public LocalDateTime fechaRevision;
@@ -157,5 +158,23 @@ public class BatchRecordDTO {
         public String descripcion;
         public String registradoPor;
         public LocalDateTime fechaRegistro;
+    }
+
+    public static class ChecklistEtapaDTO {
+        public Long etapaId;
+        public String etapaNombre;
+        public List<ChecklistItemDTO> items;
+    }
+
+    public static class ChecklistItemDTO {
+        public Long itemId;
+        public String nombrePaso;
+        public Boolean obligatorio;
+        public String estado;
+        public Boolean noAplica;
+        public Boolean permitirNoAplica;
+        public String observacion;
+        public LocalDateTime completedAt;
+        public String completedBy;
     }
 }

@@ -4,8 +4,10 @@ import com.willyes.clemenintegra.produccion.dto.ChecklistEtapaDTO;
 import com.willyes.clemenintegra.produccion.dto.ChecklistItemDTO;
 import com.willyes.clemenintegra.produccion.model.ChecklistEtapaItem;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem;
 import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,8 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
 
     private final ChecklistEtapaItemRepository repository;
     private final EtapaProduccionRepository etapaProduccionRepository;
+    private final ChecklistEtapaTemplateService templateService;
+    private final EtapaPlantillaRepository etapaPlantillaRepository;
     private final UsuarioService usuarioService;
 
     @Override
@@ -39,6 +44,10 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     public ChecklistEtapaDTO obtenerPorEtapa(Long etapaId) {
         EtapaProduccion etapa = obtenerEtapa(etapaId);
         List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
+        if (items.isEmpty()) {
+            generarChecklistDesdeTemplateSiNoExiste(etapaId);
+            items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
+        }
         return buildDto(etapa, items);
     }
 
@@ -72,11 +81,96 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     }
 
     @Override
+    @Transactional
+    public void generarChecklistDesdeTemplateSiNoExiste(Long etapaProduccionId) {
+        if (repository.countByEtapaProduccionId(etapaProduccionId) > 0) {
+            return;
+        }
+        EtapaProduccion etapa = obtenerEtapa(etapaProduccionId);
+        Long etapaPlantillaId = resolverEtapaPlantillaId(etapa);
+        if (etapaPlantillaId == null) {
+            log.warn("No se pudo resolver plantilla para etapa {}, checklist no generado", etapaProduccionId);
+            return;
+        }
+        List<com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate> templates =
+                templateService.listarActivosPorEtapaPlantilla(etapaPlantillaId);
+        if (templates.isEmpty()) {
+            log.info("Etapa {} sin plantilla de checklist, no se generan items", etapaProduccionId);
+            return;
+        }
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        List<ChecklistEtapaItem> nuevos = templates.stream()
+                .map(t -> ChecklistEtapaItem.builder()
+                        .etapaProduccion(etapa)
+                        .nombrePaso(t.getNombreItem())
+                        .obligatorio(Boolean.TRUE.equals(t.getObligatorio()))
+                        .permitirNoAplica(Boolean.TRUE.equals(t.getPermitirNoAplica()))
+                        .estado(EstadoChecklistItem.PENDIENTE)
+                        .completado(false)
+                        .noAplica(false)
+                        .createdBy(usuario)
+                        .updatedBy(usuario)
+                        .build())
+                .toList();
+        repository.saveAll(nuevos);
+        log.info("Checklist generado desde plantilla para etapa {} con {} items", etapaProduccionId, nuevos.size());
+    }
+
+    @Override
+    @Transactional
+    public ChecklistItemDTO completarItem(Long ordenId, Long etapaId, Long itemId, String observacion) {
+        ChecklistEtapaItem item = obtenerItemValidado(ordenId, etapaId, itemId);
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        item.setEstado(EstadoChecklistItem.COMPLETADO);
+        item.setCompletado(true);
+        item.setNoAplica(false);
+        item.setObservacion(observacion);
+        item.setCompletedAt(LocalDateTime.now());
+        item.setCompletedBy(usuario);
+        item.setUpdatedBy(usuario);
+        return toDto(repository.save(item));
+    }
+
+    @Override
+    @Transactional
+    public ChecklistItemDTO marcarNoAplica(Long ordenId, Long etapaId, Long itemId, String observacion) {
+        ChecklistEtapaItem item = obtenerItemValidado(ordenId, etapaId, itemId);
+        if (!Boolean.TRUE.equals(item.getPermitirNoAplica())) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "CHECKLIST_ITEM_NO_APLICA_NO_PERMITIDO",
+                    Map.of("itemId", itemId));
+        }
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        item.setEstado(EstadoChecklistItem.NO_APLICA);
+        item.setCompletado(false);
+        item.setNoAplica(true);
+        item.setObservacion(observacion);
+        item.setCompletedAt(LocalDateTime.now());
+        item.setCompletedBy(usuario);
+        item.setUpdatedBy(usuario);
+        return toDto(repository.save(item));
+    }
+
+    @Override
+    @Transactional
+    public ChecklistItemDTO reabrirItem(Long ordenId, Long etapaId, Long itemId) {
+        ChecklistEtapaItem item = obtenerItemValidado(ordenId, etapaId, itemId);
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        item.setEstado(EstadoChecklistItem.PENDIENTE);
+        item.setCompletado(false);
+        item.setNoAplica(false);
+        item.setCompletedAt(null);
+        item.setCompletedBy(null);
+        item.setUpdatedBy(usuario);
+        return toDto(repository.save(item));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public byte[] exportCsvPorOrden(Long ordenId) {
         List<EtapaProduccion> etapas = etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenId);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        String header = "ordenId,etapaId,etapaNombre,paso,obligatorio,completado,observacion,completedAt,completedBy\n";
+        String header = "ordenId,etapaId,etapaNombre,paso,obligatorio,estado,noAplica,permitirNoAplica,observacion,completedAt,completedBy\n";
         try {
             out.write(header.getBytes(StandardCharsets.UTF_8));
             for (EtapaProduccion etapa : etapas) {
@@ -88,7 +182,9 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
                             csv(etapa.getNombre()),
                             csv(item.getNombrePaso()),
                             safeBool(item.getObligatorio()),
-                            safeBool(item.getCompletado()),
+                            item.getEstado() != null ? item.getEstado().name() : "",
+                            safeBool(item.getNoAplica()),
+                            safeBool(item.getPermitirNoAplica()),
                             csv(item.getObservacion()),
                             safe(item.getCompletedAt()),
                             csv(item.getCompletedBy() != null ? item.getCompletedBy().getNombreCompleto() : null)
@@ -109,7 +205,9 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
         List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
         List<String> faltantes = items.stream()
                 .filter(i -> Boolean.TRUE.equals(i.getObligatorio()))
-                .filter(i -> !Boolean.TRUE.equals(i.getCompletado()))
+                .filter(i -> !(EstadoChecklistItem.COMPLETADO.equals(i.getEstado())
+                        || (EstadoChecklistItem.NO_APLICA.equals(i.getEstado())
+                        && Boolean.TRUE.equals(i.getPermitirNoAplica()))))
                 .map(ChecklistEtapaItem::getNombrePaso)
                 .toList();
         if (!faltantes.isEmpty()) {
@@ -151,7 +249,9 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
                 .toList();
         long faltantes = items.stream()
                 .filter(i -> Boolean.TRUE.equals(i.getObligatorio()))
-                .filter(i -> !Boolean.TRUE.equals(i.getCompletado()))
+                .filter(i -> !(EstadoChecklistItem.COMPLETADO.equals(i.getEstado())
+                        || (EstadoChecklistItem.NO_APLICA.equals(i.getEstado())
+                        && Boolean.TRUE.equals(i.getPermitirNoAplica()))))
                 .count();
         boolean completo = faltantes == 0 && !items.isEmpty();
         return ChecklistEtapaDTO.builder()
@@ -164,16 +264,24 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     }
 
     private ChecklistEtapaItem toEntity(ChecklistItemDTO dto, EtapaProduccion etapa, Usuario usuario) {
-        LocalDateTime completedAt = Boolean.TRUE.equals(dto.getCompletado()) ? LocalDateTime.now() : null;
+        EstadoChecklistItem estado = Boolean.TRUE.equals(dto.getNoAplica())
+                ? EstadoChecklistItem.NO_APLICA
+                : Boolean.TRUE.equals(dto.getCompletado())
+                ? EstadoChecklistItem.COMPLETADO
+                : EstadoChecklistItem.PENDIENTE;
+        LocalDateTime completedAt = estado != EstadoChecklistItem.PENDIENTE ? LocalDateTime.now() : null;
         return ChecklistEtapaItem.builder()
                 .id(dto.getId())
                 .etapaProduccion(etapa)
                 .nombrePaso(dto.getNombrePaso())
                 .obligatorio(Boolean.TRUE.equals(dto.getObligatorio()))
                 .completado(Boolean.TRUE.equals(dto.getCompletado()))
+                .noAplica(Boolean.TRUE.equals(dto.getNoAplica()))
+                .permitirNoAplica(Boolean.TRUE.equals(dto.getPermitirNoAplica()))
+                .estado(estado)
                 .observacion(dto.getObservacion())
                 .completedAt(completedAt)
-                .completedBy(Boolean.TRUE.equals(dto.getCompletado()) ? usuario : null)
+                .completedBy(estado != EstadoChecklistItem.PENDIENTE ? usuario : null)
                 .createdBy(usuario)
                 .updatedBy(usuario)
                 .build();
@@ -185,10 +293,35 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
                 .nombrePaso(item.getNombrePaso())
                 .obligatorio(item.getObligatorio())
                 .completado(item.getCompletado())
+                .noAplica(item.getNoAplica())
+                .permitirNoAplica(item.getPermitirNoAplica())
+                .estado(item.getEstado() != null ? item.getEstado().name() : null)
                 .observacion(item.getObservacion())
                 .completedAt(item.getCompletedAt())
                 .completedByNombre(item.getCompletedBy() != null ? item.getCompletedBy().getNombreCompleto() : null)
                 .build();
+    }
+
+    private ChecklistEtapaItem obtenerItemValidado(Long ordenId, Long etapaId, Long itemId) {
+        EtapaProduccion etapa = obtenerEtapaValidada(ordenId, etapaId);
+        ChecklistEtapaItem item = repository.findById(itemId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "CHECKLIST_ITEM_NO_ENCONTRADO"));
+        if (!Objects.equals(item.getEtapaProduccion() != null ? item.getEtapaProduccion().getId() : null, etapa.getId())) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "ITEM_NO_PERTENECE_A_ETAPA",
+                    Map.of("etapaId", etapaId, "itemId", itemId));
+        }
+        return item;
+    }
+
+    private Long resolverEtapaPlantillaId(EtapaProduccion etapa) {
+        if (etapa.getOrdenProduccion() == null || etapa.getOrdenProduccion().getProducto() == null
+                || etapa.getOrdenProduccion().getProducto().getId() == null) {
+            return null;
+        }
+        Integer productoId = etapa.getOrdenProduccion().getProducto().getId();
+        Optional<com.willyes.clemenintegra.produccion.model.EtapaPlantilla> plantillaOpt =
+                etapaPlantillaRepository.findFirstByProductoIdAndNombreIgnoreCase(productoId, etapa.getNombre());
+        return plantillaOpt.map(com.willyes.clemenintegra.produccion.model.EtapaPlantilla::getId).orElse(null);
     }
 
     private String csv(String value) {

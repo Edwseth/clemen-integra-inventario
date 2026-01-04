@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.produccion.repository;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
+import java.util.Optional;
 
 public interface EtapaPlantillaRepository extends JpaRepository<EtapaPlantilla, Long> {
     List<EtapaPlantilla> findByProductoIdOrderBySecuenciaAsc(Integer productoId);
@@ -16,4 +17,6 @@ public interface EtapaPlantillaRepository extends JpaRepository<EtapaPlantilla, 
     boolean existsByProductoIdAndSecuenciaAndIdNot(Integer productoId, Integer secuencia, Long id);
 
     boolean existsByProductoIdAndNombreIgnoreCaseAndIdNot(Integer productoId, String nombre, Long id);
+
+    Optional<EtapaPlantilla> findFirstByProductoIdAndNombreIgnoreCase(Integer productoId, String nombre);
 }

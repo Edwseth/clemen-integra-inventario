@@ -12,6 +12,9 @@ public class ChecklistItemDTO {
     public String nombrePaso;
     public Boolean obligatorio;
     public Boolean completado;
+    public Boolean noAplica;
+    public Boolean permitirNoAplica;
+    public String estado;
     public String observacion;
     public LocalDateTime completedAt;
     public String completedByNombre;

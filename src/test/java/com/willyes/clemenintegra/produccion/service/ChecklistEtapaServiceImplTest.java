@@ -4,8 +4,14 @@ import com.willyes.clemenintegra.produccion.dto.ChecklistItemDTO;
 import com.willyes.clemenintegra.produccion.model.ChecklistEtapaItem;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
+import com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
+import com.willyes.clemenintegra.produccion.service.ChecklistEtapaTemplateService;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -26,6 +32,8 @@ class ChecklistEtapaServiceImplTest {
 
     private ChecklistEtapaItemRepository checklistRepository;
     private EtapaProduccionRepository etapaProduccionRepository;
+    private ChecklistEtapaTemplateService templateService;
+    private EtapaPlantillaRepository etapaPlantillaRepository;
     private UsuarioService usuarioService;
     private ChecklistEtapaServiceImpl service;
 
@@ -33,8 +41,10 @@ class ChecklistEtapaServiceImplTest {
     void setUp() {
         checklistRepository = mock(ChecklistEtapaItemRepository.class);
         etapaProduccionRepository = mock(EtapaProduccionRepository.class);
+        templateService = mock(ChecklistEtapaTemplateService.class);
+        etapaPlantillaRepository = mock(EtapaPlantillaRepository.class);
         usuarioService = mock(UsuarioService.class);
-        service = new ChecklistEtapaServiceImpl(checklistRepository, etapaProduccionRepository, usuarioService);
+        service = new ChecklistEtapaServiceImpl(checklistRepository, etapaProduccionRepository, templateService, etapaPlantillaRepository, usuarioService);
     }
 
     @Test
@@ -48,6 +58,7 @@ class ChecklistEtapaServiceImplTest {
                 .nombrePaso("Paso 1")
                 .obligatorio(true)
                 .completado(false)
+                .estado(EstadoChecklistItem.PENDIENTE)
                 .build();
         when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(10L)).thenReturn(List.of(incompleto));
 
@@ -123,5 +134,53 @@ class ChecklistEtapaServiceImplTest {
         when(etapaProduccionRepository.findById(6L)).thenReturn(Optional.of(etapa));
 
         assertThrows(CustomBusinessException.class, () -> service.obtenerPorOrdenYEtapa(1L, 6L));
+    }
+
+    @Test
+    @DisplayName("Marcar no aplica falla si el item no lo permite")
+    void marcarNoAplica_noPermitido() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(4L)
+                .ordenProduccion(OrdenProduccion.builder().id(1L).build())
+                .build();
+        when(etapaProduccionRepository.findById(4L)).thenReturn(Optional.of(etapa));
+        ChecklistEtapaItem item = ChecklistEtapaItem.builder()
+                .id(8L)
+                .etapaProduccion(etapa)
+                .obligatorio(true)
+                .permitirNoAplica(false)
+                .estado(EstadoChecklistItem.PENDIENTE)
+                .build();
+        when(checklistRepository.findById(8L)).thenReturn(Optional.of(item));
+
+        assertThrows(CustomBusinessException.class, () -> service.marcarNoAplica(1L, 4L, 8L, "N/A"));
+    }
+
+    @Test
+    @DisplayName("Genera checklist desde plantilla cuando no hay items")
+    void generarChecklistDesdeTemplate() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(11L)
+                .nombre("Mezclado")
+                .ordenProduccion(OrdenProduccion.builder().id(3L)
+                        .producto(Producto.builder().id(5).build())
+                        .build())
+                .build();
+        when(checklistRepository.countByEtapaProduccionId(11L)).thenReturn(0L);
+        when(etapaProduccionRepository.findById(11L)).thenReturn(Optional.of(etapa));
+        EtapaPlantilla etapaPlantilla = EtapaPlantilla.builder().id(20L).build();
+        when(etapaPlantillaRepository.findFirstByProductoIdAndNombreIgnoreCase(5, "Mezclado")).thenReturn(Optional.of(etapaPlantilla));
+        ChecklistEtapaTemplate template = ChecklistEtapaTemplate.builder()
+                .id(30L)
+                .nombreItem("Verificar limpieza")
+                .obligatorio(true)
+                .permitirNoAplica(true)
+                .build();
+        when(templateService.listarActivosPorEtapaPlantilla(20L)).thenReturn(List.of(template));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(new Usuario());
+
+        service.generarChecklistDesdeTemplateSiNoExiste(11L);
+
+        verify(checklistRepository).saveAll(anyList());
     }
 }

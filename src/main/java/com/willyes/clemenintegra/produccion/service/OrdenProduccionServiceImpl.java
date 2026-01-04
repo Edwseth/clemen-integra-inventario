@@ -1791,6 +1791,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         etapa.setUsuarioId(usuario.getId());
         etapa.setUsuarioNombre(usuario.getNombreCompleto());
         EtapaProduccion guardada = etapaProduccionRepository.save(etapa);
+        checklistEtapaService.generarChecklistDesdeTemplateSiNoExiste(guardada.getId());
 
         // Consumo etapa 1: generar SALIDA_PRODUCCION desde Pre-Bodega (idempotente)
         if (etapa.getSecuencia() != null && etapa.getSecuencia() == 1) {
@@ -2129,7 +2130,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return repository.save(orden);
     }
 }
-
 
 
 
