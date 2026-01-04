@@ -242,6 +242,34 @@ public class OrdenProduccionController {
         return ResponseEntity.ok(checklistEtapaService.actualizarEnOrden(ordenId, etapaId, items));
     }
 
+    @PostMapping("/{ordenId}/etapas/{etapaId}/checklist/{itemId}/completar")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<ChecklistItemDTO> completarChecklistItem(@PathVariable Long ordenId,
+                                                                   @PathVariable Long etapaId,
+                                                                   @PathVariable Long itemId,
+                                                                   @RequestBody(required = false) ChecklistAccionRequestDTO request) {
+        String observacion = request != null ? request.getObservacion() : null;
+        return ResponseEntity.ok(checklistEtapaService.completarItem(ordenId, etapaId, itemId, observacion));
+    }
+
+    @PostMapping("/{ordenId}/etapas/{etapaId}/checklist/{itemId}/no-aplica")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    public ResponseEntity<ChecklistItemDTO> marcarNoAplicaChecklistItem(@PathVariable Long ordenId,
+                                                                        @PathVariable Long etapaId,
+                                                                        @PathVariable Long itemId,
+                                                                        @RequestBody(required = false) ChecklistAccionRequestDTO request) {
+        String observacion = request != null ? request.getObservacion() : null;
+        return ResponseEntity.ok(checklistEtapaService.marcarNoAplica(ordenId, etapaId, itemId, observacion));
+    }
+
+    @PostMapping("/{ordenId}/etapas/{etapaId}/checklist/{itemId}/reabrir")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    public ResponseEntity<ChecklistItemDTO> reabrirChecklistItem(@PathVariable Long ordenId,
+                                                                 @PathVariable Long etapaId,
+                                                                 @PathVariable Long itemId) {
+        return ResponseEntity.ok(checklistEtapaService.reabrirItem(ordenId, etapaId, itemId));
+    }
+
     @GetMapping("/{id}/lote")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<LoteProductoResponse> obtenerLote(@PathVariable Long id) {

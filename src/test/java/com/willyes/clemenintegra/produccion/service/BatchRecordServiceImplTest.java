@@ -32,6 +32,8 @@ import com.willyes.clemenintegra.produccion.repository.ControlEmpaqueLoteReposit
 import com.willyes.clemenintegra.produccion.repository.ControlProcesoProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.ObservacionProcesoRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -87,6 +89,10 @@ class BatchRecordServiceImplTest {
     private ControlEmpaqueLoteRepository controlEmpaqueLoteRepository;
     @Mock
     private ObservacionProcesoRepository observacionProcesoRepository;
+    @Mock
+    private EtapaProduccionRepository etapaProduccionRepository;
+    @Mock
+    private ChecklistEtapaItemRepository checklistEtapaItemRepository;
 
     private BatchRecordServiceImpl service;
 
@@ -103,7 +109,9 @@ class BatchRecordServiceImplTest {
                 retencionLoteRepository,
                 controlProcesoProduccionRepository,
                 controlEmpaqueLoteRepository,
-                observacionProcesoRepository
+                observacionProcesoRepository,
+                etapaProduccionRepository,
+                checklistEtapaItemRepository
         );
     }
 

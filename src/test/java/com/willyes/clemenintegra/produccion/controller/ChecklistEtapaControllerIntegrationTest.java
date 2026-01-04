@@ -98,4 +98,22 @@ class ChecklistEtapaControllerIntegrationTest {
                 .andExpect(jsonPath("$.completo").value(false))
                 .andExpect(jsonPath("$.faltantesObligatorios").value(0));
     }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void completarItemChecklist_actualizaEstado() throws Exception {
+        ChecklistEtapaItem item = checklistEtapaItemRepository.save(ChecklistEtapaItem.builder()
+                .etapaProduccion(etapaProduccionRepository.getReferenceById(etapaId))
+                .nombrePaso("Montaje equipo")
+                .obligatorio(true)
+                .completado(false)
+                .estado(com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem.PENDIENTE)
+                .build());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                        "/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist/{itemId}/completar",
+                        ordenId, etapaId, item.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("COMPLETADO"));
+    }
 }

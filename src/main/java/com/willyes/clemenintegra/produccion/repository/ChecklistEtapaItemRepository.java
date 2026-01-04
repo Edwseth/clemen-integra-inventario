@@ -8,4 +8,5 @@ import java.util.List;
 public interface ChecklistEtapaItemRepository extends JpaRepository<ChecklistEtapaItem, Long> {
     List<ChecklistEtapaItem> findByEtapaProduccionIdOrderByIdAsc(Long etapaId);
     void deleteByEtapaProduccionId(Long etapaId);
+    long countByEtapaProduccionId(Long etapaProduccionId);
 }

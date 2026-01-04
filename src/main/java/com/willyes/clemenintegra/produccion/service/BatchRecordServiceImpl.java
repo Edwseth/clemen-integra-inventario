@@ -26,12 +26,17 @@ import com.willyes.clemenintegra.produccion.model.ControlEmpaqueLote;
 import com.willyes.clemenintegra.produccion.model.ControlProcesoProduccion;
 import com.willyes.clemenintegra.produccion.model.ObservacionProceso;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.ChecklistEtapaItem;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoBatchRecord;
 import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.ControlEmpaqueLoteRepository;
 import com.willyes.clemenintegra.produccion.repository.ControlProcesoProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.ObservacionProcesoRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -66,6 +71,8 @@ public class BatchRecordServiceImpl implements BatchRecordService {
     private final ControlProcesoProduccionRepository controlProcesoProduccionRepository;
     private final ControlEmpaqueLoteRepository controlEmpaqueLoteRepository;
     private final ObservacionProcesoRepository observacionProcesoRepository;
+    private final EtapaProduccionRepository etapaProduccionRepository;
+    private final ChecklistEtapaItemRepository checklistEtapaItemRepository;
 
     @Override
     @Transactional
@@ -128,6 +135,7 @@ public class BatchRecordServiceImpl implements BatchRecordService {
         dto.controlesProceso = mapControlesProceso(ordenProduccionId);
         dto.controlesEmpaque = mapControlesEmpaque(ordenProduccionId);
         dto.observacionesProceso = mapObservaciones(ordenProduccionId);
+        dto.checklistEtapas = mapChecklistEtapas(ordenProduccionId);
         dto.estadoBatchRecord = ordenProduccion.getBatchRecordEstado();
         dto.revisadoPorNombre = ordenProduccion.getBatchRecordRevisadoPor() != null
                 ? ordenProduccion.getBatchRecordRevisadoPor().getNombreCompleto()
@@ -548,6 +556,37 @@ public class BatchRecordServiceImpl implements BatchRecordService {
             resultado.add(dto);
         }
         return resultado;
+    }
+
+    private List<BatchRecordDTO.ChecklistEtapaDTO> mapChecklistEtapas(Long ordenProduccionId) {
+        List<EtapaProduccion> etapas = etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenProduccionId);
+        List<BatchRecordDTO.ChecklistEtapaDTO> resultado = new ArrayList<>();
+        for (EtapaProduccion etapa : etapas) {
+            List<ChecklistEtapaItem> items = checklistEtapaItemRepository.findByEtapaProduccionIdOrderByIdAsc(etapa.getId());
+            if (items.isEmpty()) {
+                continue;
+            }
+            BatchRecordDTO.ChecklistEtapaDTO dto = new BatchRecordDTO.ChecklistEtapaDTO();
+            dto.etapaId = etapa.getId();
+            dto.etapaNombre = etapa.getNombre();
+            dto.items = items.stream().map(this::mapChecklistItem).toList();
+            resultado.add(dto);
+        }
+        return resultado;
+    }
+
+    private BatchRecordDTO.ChecklistItemDTO mapChecklistItem(ChecklistEtapaItem item) {
+        BatchRecordDTO.ChecklistItemDTO dto = new BatchRecordDTO.ChecklistItemDTO();
+        dto.itemId = item.getId();
+        dto.nombrePaso = item.getNombrePaso();
+        dto.obligatorio = item.getObligatorio();
+        dto.estado = item.getEstado() != null ? item.getEstado().name() : null;
+        dto.noAplica = item.getNoAplica();
+        dto.permitirNoAplica = item.getPermitirNoAplica();
+        dto.observacion = item.getObservacion();
+        dto.completedAt = item.getCompletedAt();
+        dto.completedBy = item.getCompletedBy() != null ? item.getCompletedBy().getNombreCompleto() : null;
+        return dto;
     }
 
     private Usuario obtenerUsuarioDesdeAuth(Authentication auth) {
