@@ -92,11 +92,7 @@ class ChecklistEtapaControllerIntegrationTest {
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     void obtenerChecklist_sinItems() throws Exception {
         mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist", ordenId, etapaId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items").isArray())
-                .andExpect(jsonPath("$.items").isEmpty())
-                .andExpect(jsonPath("$.completo").value(false))
-                .andExpect(jsonPath("$.faltantesObligatorios").value(0));
+                .andExpect(status().isUnprocessableEntity());
     }
 
     @Test

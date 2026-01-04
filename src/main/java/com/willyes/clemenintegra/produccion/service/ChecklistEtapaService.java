@@ -11,6 +11,7 @@ public interface ChecklistEtapaService {
     ChecklistEtapaDTO actualizar(Long etapaId, List<ChecklistItemDTO> items);
     ChecklistEtapaDTO actualizarEnOrden(Long ordenId, Long etapaId, List<ChecklistItemDTO> items);
     void generarChecklistDesdeTemplateSiNoExiste(Long etapaProduccionId);
+    void ensureChecklistOperativo(Long etapaProduccionId);
     ChecklistItemDTO completarItem(Long ordenId, Long etapaId, Long itemId, String observacion);
     ChecklistItemDTO marcarNoAplica(Long ordenId, Long etapaId, Long itemId, String observacion);
     ChecklistItemDTO reabrirItem(Long ordenId, Long etapaId, Long itemId);
