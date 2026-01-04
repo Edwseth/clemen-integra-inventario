@@ -2,11 +2,12 @@ package com.willyes.clemenintegra.produccion.service;
 
 import com.willyes.clemenintegra.produccion.dto.ChecklistItemDTO;
 import com.willyes.clemenintegra.produccion.model.ChecklistEtapaItem;
+import com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
-import com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 class ChecklistEtapaServiceImplTest {
@@ -182,5 +184,48 @@ class ChecklistEtapaServiceImplTest {
         service.generarChecklistDesdeTemplateSiNoExiste(11L);
 
         verify(checklistRepository).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Generar checklist falla si plantilla solo tiene placeholder")
+    void generarChecklistSoloPlaceholder() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(12L)
+                .nombre("Envasado")
+                .ordenProduccion(OrdenProduccion.builder().id(4L)
+                        .producto(Producto.builder().id(6).build())
+                        .build())
+                .build();
+        when(checklistRepository.countByEtapaProduccionId(12L)).thenReturn(0L);
+        when(etapaProduccionRepository.findById(12L)).thenReturn(Optional.of(etapa));
+        EtapaPlantilla plantilla = EtapaPlantilla.builder().id(30L).build();
+        when(etapaPlantillaRepository.findFirstByProductoIdAndNombreIgnoreCase(6, "Envasado")).thenReturn(Optional.of(plantilla));
+        ChecklistEtapaTemplate placeholder = ChecklistEtapaTemplate.builder()
+                .id(40L)
+                .nombreItem(ChecklistEtapaTemplateService.PLACEHOLDER_NOMBRE)
+                .obligatorio(true)
+                .build();
+        when(templateService.listarActivosPorEtapaPlantilla(30L)).thenReturn(List.of(placeholder));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(new Usuario());
+
+        CustomBusinessException exception = assertThrows(CustomBusinessException.class,
+                () -> service.generarChecklistDesdeTemplateSiNoExiste(12L));
+
+        assertThat(exception.getCode()).isEqualTo(ApiErrorCode.PRODUCCION_CHECKLIST_NO_CONFIGURADO);
+        verify(checklistRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Validar checklist placeholder lanza error configuracion")
+    void validarChecklistSoloPlaceholder() {
+        ChecklistEtapaItem placeholder = ChecklistEtapaItem.builder()
+                .id(1L)
+                .nombrePaso(ChecklistEtapaTemplateService.PLACEHOLDER_NOMBRE)
+                .obligatorio(true)
+                .build();
+
+        when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(15L)).thenReturn(List.of(placeholder));
+
+        assertThrows(CustomBusinessException.class, () -> service.validarChecklistCompleto(15L));
     }
 }

@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -29,9 +30,21 @@ public class UsuarioService {
                 || "anonymousUser".equals(authentication.getPrincipal())) {
             throw new AuthenticationCredentialsNotFoundException("No se encontró autenticación válida");
         }
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        return usuarioRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomUserDetails customUserDetails) {
+            return usuarioRepository.findById(customUserDetails.getId())
+                    .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        }
+        if (principal instanceof UserDetails userDetails) {
+            return usuarioRepository.findByNombreUsuario(userDetails.getUsername())
+                    .orElseGet(() -> {
+                        Usuario usuario = new Usuario();
+                        usuario.setNombreUsuario(userDetails.getUsername());
+                        usuario.setNombreCompleto(userDetails.getUsername());
+                        return usuario;
+                    });
+        }
+        throw new AuthenticationCredentialsNotFoundException("Principal de autenticación no soportado");
     }
 
     public Usuario buscarPorNombreUsuario(String nombreUsuario) {
