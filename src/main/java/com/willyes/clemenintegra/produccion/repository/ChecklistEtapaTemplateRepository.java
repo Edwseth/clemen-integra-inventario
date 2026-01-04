@@ -7,4 +7,8 @@ import java.util.List;
 
 public interface ChecklistEtapaTemplateRepository extends JpaRepository<ChecklistEtapaTemplate, Long> {
     List<ChecklistEtapaTemplate> findByEtapaPlantillaIdAndActivoTrueOrderByOrdenAsc(Long etapaPlantillaId);
+
+    boolean existsByEtapaPlantillaIdAndActivoTrue(Long etapaPlantillaId);
+
+    List<ChecklistEtapaTemplate> findByEtapaPlantillaId(Long etapaPlantillaId);
 }

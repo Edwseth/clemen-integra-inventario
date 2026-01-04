@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem;
 import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
+import com.willyes.clemenintegra.produccion.service.ChecklistEtapaTemplateService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -94,10 +95,7 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
         }
         List<com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate> templates =
                 templateService.listarActivosPorEtapaPlantilla(etapaPlantillaId);
-        if (templates.isEmpty()) {
-            log.info("Etapa {} sin plantilla de checklist, no se generan items", etapaProduccionId);
-            return;
-        }
+        validarChecklistTemplateConfigurado(templates, etapaProduccionId);
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
         List<ChecklistEtapaItem> nuevos = templates.stream()
                 .map(t -> ChecklistEtapaItem.builder()
@@ -108,8 +106,8 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
                         .estado(EstadoChecklistItem.PENDIENTE)
                         .completado(false)
                         .noAplica(false)
-                        .createdBy(usuario)
-                        .updatedBy(usuario)
+                        .createdBy(usuarioPersistido(usuario))
+                        .updatedBy(usuarioPersistido(usuario))
                         .build())
                 .toList();
         repository.saveAll(nuevos);
@@ -126,8 +124,8 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
         item.setNoAplica(false);
         item.setObservacion(observacion);
         item.setCompletedAt(LocalDateTime.now());
-        item.setCompletedBy(usuario);
-        item.setUpdatedBy(usuario);
+        item.setCompletedBy(usuarioPersistido(usuario));
+        item.setUpdatedBy(usuarioPersistido(usuario));
         return toDto(repository.save(item));
     }
 
@@ -146,8 +144,8 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
         item.setNoAplica(true);
         item.setObservacion(observacion);
         item.setCompletedAt(LocalDateTime.now());
-        item.setCompletedBy(usuario);
-        item.setUpdatedBy(usuario);
+        item.setCompletedBy(usuarioPersistido(usuario));
+        item.setUpdatedBy(usuarioPersistido(usuario));
         return toDto(repository.save(item));
     }
 
@@ -161,7 +159,7 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
         item.setNoAplica(false);
         item.setCompletedAt(null);
         item.setCompletedBy(null);
-        item.setUpdatedBy(usuario);
+        item.setUpdatedBy(usuarioPersistido(usuario));
         return toDto(repository.save(item));
     }
 
@@ -203,6 +201,11 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     @Transactional(readOnly = true)
     public void validarChecklistCompleto(Long etapaId) {
         List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
+        if (items.isEmpty() || esSoloPlaceholder(items)) {
+            throw new CustomBusinessException(ApiErrorCode.PRODUCCION_CHECKLIST_NO_CONFIGURADO,
+                    "La etapa no tiene checklist operativo configurado",
+                    Map.of("etapaId", etapaId));
+        }
         List<String> faltantes = items.stream()
                 .filter(i -> Boolean.TRUE.equals(i.getObligatorio()))
                 .filter(i -> !(EstadoChecklistItem.COMPLETADO.equals(i.getEstado())
@@ -215,6 +218,23 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
                     "CHECKLIST_ETAPA_INCOMPLETO",
                     Map.of("etapaId", etapaId, "faltantes", faltantes));
         }
+    }
+
+    private void validarChecklistTemplateConfigurado(List<com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate> templates,
+                                                     Long etapaProduccionId) {
+        if (templates.isEmpty() || (templates.size() == 1 && esPlaceholder(templates.get(0)))) {
+            throw new CustomBusinessException(ApiErrorCode.PRODUCCION_CHECKLIST_NO_CONFIGURADO,
+                    "La etapa no tiene checklist operativo configurado",
+                    Map.of("etapaProduccionId", etapaProduccionId));
+        }
+    }
+
+    private boolean esSoloPlaceholder(List<ChecklistEtapaItem> items) {
+        return items.size() == 1 && ChecklistEtapaTemplateService.PLACEHOLDER_NOMBRE.equals(items.get(0).getNombrePaso());
+    }
+
+    private boolean esPlaceholder(com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate template) {
+        return ChecklistEtapaTemplateService.PLACEHOLDER_NOMBRE.equals(template.getNombreItem());
     }
 
     private List<ChecklistEtapaItem> guardarItems(EtapaProduccion etapa, Usuario usuario, List<ChecklistItemDTO> itemsDto) {
@@ -281,9 +301,9 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
                 .estado(estado)
                 .observacion(dto.getObservacion())
                 .completedAt(completedAt)
-                .completedBy(estado != EstadoChecklistItem.PENDIENTE ? usuario : null)
-                .createdBy(usuario)
-                .updatedBy(usuario)
+                .completedBy(estado != EstadoChecklistItem.PENDIENTE ? usuarioPersistido(usuario) : null)
+                .createdBy(usuarioPersistido(usuario))
+                .updatedBy(usuarioPersistido(usuario))
                 .build();
     }
 
@@ -322,6 +342,10 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
         Optional<com.willyes.clemenintegra.produccion.model.EtapaPlantilla> plantillaOpt =
                 etapaPlantillaRepository.findFirstByProductoIdAndNombreIgnoreCase(productoId, etapa.getNombre());
         return plantillaOpt.map(com.willyes.clemenintegra.produccion.model.EtapaPlantilla::getId).orElse(null);
+    }
+
+    private Usuario usuarioPersistido(Usuario usuario) {
+        return usuario != null && usuario.getId() != null ? usuario : null;
     }
 
     private String csv(String value) {

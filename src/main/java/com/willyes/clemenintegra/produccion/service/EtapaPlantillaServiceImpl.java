@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.produccion.service;
 import com.willyes.clemenintegra.produccion.dto.EtapaPlantillaReordenRequest;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
+import com.willyes.clemenintegra.produccion.service.ChecklistEtapaTemplateService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 public class EtapaPlantillaServiceImpl implements EtapaPlantillaService {
 
     private final EtapaPlantillaRepository repository;
+    private final ChecklistEtapaTemplateService checklistTemplateService;
 
     private void validarUnicidad(Integer productoId, String nombre, Integer secuencia, Long id) {
         if (id == null) {
@@ -51,7 +53,9 @@ public class EtapaPlantillaServiceImpl implements EtapaPlantillaService {
     public EtapaPlantilla crear(EtapaPlantilla etapa) {
         Integer productoId = etapa.getProducto().getId();
         validarUnicidad(productoId, etapa.getNombre(), etapa.getSecuencia(), null);
-        return repository.save(etapa);
+        EtapaPlantilla guardada = repository.save(etapa);
+        checklistTemplateService.crearPlaceholderPorDefectoSiNoExiste(guardada);
+        return guardada;
     }
 
     @Override
@@ -63,12 +67,17 @@ public class EtapaPlantillaServiceImpl implements EtapaPlantillaService {
         existente.setNombre(etapa.getNombre());
         existente.setSecuencia(etapa.getSecuencia());
         existente.setActivo(etapa.getActivo());
-        return repository.save(existente);
+        EtapaPlantilla guardada = repository.save(existente);
+        checklistTemplateService.crearPlaceholderPorDefectoSiNoExiste(guardada);
+        return guardada;
     }
 
     @Override
     public void eliminar(Long id) {
-        repository.deleteById(id);
+        repository.findById(id).ifPresent(etapa -> {
+            checklistTemplateService.eliminarPorEtapaPlantilla(etapa.getId());
+            repository.delete(etapa);
+        });
     }
 
     @Override
