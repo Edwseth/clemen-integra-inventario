@@ -23,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -54,6 +55,7 @@ class ChecklistEtapaServiceImplTest {
     void obtenerChecklist_conFaltantes() {
         EtapaProduccion etapa = EtapaProduccion.builder().id(10L).build();
         when(etapaProduccionRepository.findById(10L)).thenReturn(Optional.of(etapa));
+        when(checklistRepository.countByEtapaProduccionId(10L)).thenReturn(1L);
         ChecklistEtapaItem incompleto = ChecklistEtapaItem.builder()
                 .id(1L)
                 .etapaProduccion(etapa)
@@ -102,6 +104,7 @@ class ChecklistEtapaServiceImplTest {
     @Test
     @DisplayName("Validar checklist incompleto lanza CustomBusinessException")
     void validarChecklist_incompleto() {
+        when(checklistRepository.countByEtapaProduccionId(7L)).thenReturn(1L);
         when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(7L)).thenReturn(List.of(
                 ChecklistEtapaItem.builder().obligatorio(true).completado(false).nombrePaso("Paso faltante").build()
         ));
@@ -110,20 +113,17 @@ class ChecklistEtapaServiceImplTest {
     }
 
     @Test
-    @DisplayName("Obtener checklist por orden valida pertenencia y retorna lista vacía sin plantilla")
+    @DisplayName("Obtener checklist por orden valida pertenencia y falla si no hay checklist configurado")
     void obtenerChecklistPorOrden_sinItems() {
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(3L)
                 .ordenProduccion(OrdenProduccion.builder().id(2L).build())
                 .build();
         when(etapaProduccionRepository.findById(3L)).thenReturn(Optional.of(etapa));
+        when(checklistRepository.countByEtapaProduccionId(3L)).thenReturn(1L);
         when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(3L)).thenReturn(List.of());
 
-        var dto = service.obtenerPorOrdenYEtapa(2L, 3L);
-
-        assertThat(dto.getItems()).isEmpty();
-        assertThat(dto.getFaltantesObligatorios()).isZero();
-        assertThat(dto.getOrdenProduccionId()).isEqualTo(2L);
+        assertThrows(CustomBusinessException.class, () -> service.obtenerPorOrdenYEtapa(2L, 3L));
     }
 
     @Test
@@ -164,6 +164,7 @@ class ChecklistEtapaServiceImplTest {
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(11L)
                 .nombre("Mezclado")
+                .secuencia(2)
                 .ordenProduccion(OrdenProduccion.builder().id(3L)
                         .producto(Producto.builder().id(5).build())
                         .build())
@@ -171,7 +172,7 @@ class ChecklistEtapaServiceImplTest {
         when(checklistRepository.countByEtapaProduccionId(11L)).thenReturn(0L);
         when(etapaProduccionRepository.findById(11L)).thenReturn(Optional.of(etapa));
         EtapaPlantilla etapaPlantilla = EtapaPlantilla.builder().id(20L).build();
-        when(etapaPlantillaRepository.findFirstByProductoIdAndNombreIgnoreCase(5, "Mezclado")).thenReturn(Optional.of(etapaPlantilla));
+        when(etapaPlantillaRepository.findFirstByProductoIdAndSecuencia(5, 2)).thenReturn(Optional.of(etapaPlantilla));
         ChecklistEtapaTemplate template = ChecklistEtapaTemplate.builder()
                 .id(30L)
                 .nombreItem("Verificar limpieza")
@@ -192,6 +193,7 @@ class ChecklistEtapaServiceImplTest {
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(12L)
                 .nombre("Envasado")
+                .secuencia(1)
                 .ordenProduccion(OrdenProduccion.builder().id(4L)
                         .producto(Producto.builder().id(6).build())
                         .build())
@@ -199,7 +201,7 @@ class ChecklistEtapaServiceImplTest {
         when(checklistRepository.countByEtapaProduccionId(12L)).thenReturn(0L);
         when(etapaProduccionRepository.findById(12L)).thenReturn(Optional.of(etapa));
         EtapaPlantilla plantilla = EtapaPlantilla.builder().id(30L).build();
-        when(etapaPlantillaRepository.findFirstByProductoIdAndNombreIgnoreCase(6, "Envasado")).thenReturn(Optional.of(plantilla));
+        when(etapaPlantillaRepository.findFirstByProductoIdAndSecuencia(6, 1)).thenReturn(Optional.of(plantilla));
         ChecklistEtapaTemplate placeholder = ChecklistEtapaTemplate.builder()
                 .id(40L)
                 .nombreItem(ChecklistEtapaTemplateService.PLACEHOLDER_NOMBRE)
@@ -209,7 +211,74 @@ class ChecklistEtapaServiceImplTest {
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(new Usuario());
 
         CustomBusinessException exception = assertThrows(CustomBusinessException.class,
-                () -> service.generarChecklistDesdeTemplateSiNoExiste(12L));
+                () -> service.ensureChecklistOperativo(12L));
+
+        assertThat(exception.getCode()).isEqualTo(ApiErrorCode.PRODUCCION_CHECKLIST_NO_CONFIGURADO);
+        verify(checklistRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Finalizar etapa con plantilla activa genera checklist y valida obligatorios pendientes")
+    void validarChecklistGeneradoDesdeTemplate() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(21L)
+                .secuencia(3)
+                .ordenProduccion(OrdenProduccion.builder().id(8L)
+                        .producto(Producto.builder().id(9).build())
+                        .build())
+                .build();
+        EtapaPlantilla plantilla = EtapaPlantilla.builder().id(31L).build();
+        AtomicReference<List<ChecklistEtapaItem>> almacenados = new AtomicReference<>(List.of());
+
+        when(checklistRepository.countByEtapaProduccionId(21L)).thenReturn(0L);
+        when(etapaProduccionRepository.findById(21L)).thenReturn(Optional.of(etapa));
+        when(etapaPlantillaRepository.findFirstByProductoIdAndSecuencia(9, 3)).thenReturn(Optional.of(plantilla));
+        when(templateService.listarActivosPorEtapaPlantilla(31L)).thenReturn(List.of(
+                ChecklistEtapaTemplate.builder().id(1L).nombreItem("Paso 1").obligatorio(true).build(),
+                ChecklistEtapaTemplate.builder().id(2L).nombreItem("Paso 2").obligatorio(false).build(),
+                ChecklistEtapaTemplate.builder().id(3L).nombreItem("Paso 3").obligatorio(true).build()
+        ));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(new Usuario());
+        when(checklistRepository.saveAll(anyList())).thenAnswer(invocation -> {
+            List<ChecklistEtapaItem> lista = invocation.getArgument(0);
+            almacenados.set(lista);
+            return lista;
+        });
+        when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(21L))
+                .thenAnswer(invocation -> almacenados.get());
+
+        CustomBusinessException exception = assertThrows(CustomBusinessException.class,
+                () -> service.validarChecklistCompleto(21L));
+
+        assertThat(exception.getCode()).isEqualTo(ApiErrorCode.CHECKLIST_ETAPA_INCOMPLETO);
+        assertThat(almacenados.get()).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("Validar checklist con plantilla solo placeholder lanza error de configuración")
+    void validarChecklistSoloPlaceholderDesdeTemplate() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(22L)
+                .secuencia(4)
+                .ordenProduccion(OrdenProduccion.builder().id(10L)
+                        .producto(Producto.builder().id(11).build())
+                        .build())
+                .build();
+        EtapaPlantilla plantilla = EtapaPlantilla.builder().id(32L).build();
+
+        when(checklistRepository.countByEtapaProduccionId(22L)).thenReturn(0L);
+        when(etapaProduccionRepository.findById(22L)).thenReturn(Optional.of(etapa));
+        when(etapaPlantillaRepository.findFirstByProductoIdAndSecuencia(11, 4)).thenReturn(Optional.of(plantilla));
+        when(templateService.listarActivosPorEtapaPlantilla(32L)).thenReturn(List.of(
+                ChecklistEtapaTemplate.builder()
+                        .id(90L)
+                        .nombreItem(ChecklistEtapaTemplateService.PLACEHOLDER_NOMBRE)
+                        .activo(true)
+                        .build()
+        ));
+
+        CustomBusinessException exception = assertThrows(CustomBusinessException.class,
+                () -> service.validarChecklistCompleto(22L));
 
         assertThat(exception.getCode()).isEqualTo(ApiErrorCode.PRODUCCION_CHECKLIST_NO_CONFIGURADO);
         verify(checklistRepository, never()).saveAll(anyList());
@@ -224,6 +293,7 @@ class ChecklistEtapaServiceImplTest {
                 .obligatorio(true)
                 .build();
 
+        when(checklistRepository.countByEtapaProduccionId(15L)).thenReturn(1L);
         when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(15L)).thenReturn(List.of(placeholder));
 
         assertThrows(CustomBusinessException.class, () -> service.validarChecklistCompleto(15L));

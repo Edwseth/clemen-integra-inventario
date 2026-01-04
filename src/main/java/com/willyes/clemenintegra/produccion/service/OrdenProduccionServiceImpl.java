@@ -1882,6 +1882,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             throw new CustomBusinessException(ApiErrorCode.ETAPA_NO_INICIADA, "ETAPA_NO_INICIADA",
                     Map.of("ordenProduccionId", ordenId, "etapaId", etapaId));
         }
+        checklistEtapaService.ensureChecklistOperativo(etapaId);
         checklistEtapaService.validarChecklistCompleto(etapaId);
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USUARIO_NO_ENCONTRADO"));
@@ -2130,6 +2131,5 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return repository.save(orden);
     }
 }
-
 
 

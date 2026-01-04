@@ -41,23 +41,23 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     private final UsuarioService usuarioService;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public ChecklistEtapaDTO obtenerPorEtapa(Long etapaId) {
+        ensureChecklistOperativo(etapaId);
         EtapaProduccion etapa = obtenerEtapa(etapaId);
         List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
-        if (items.isEmpty()) {
-            generarChecklistDesdeTemplateSiNoExiste(etapaId);
-            items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
-        }
+        validarChecklistConfigurado(items, etapaId);
         return buildDto(etapa, items);
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public ChecklistEtapaDTO obtenerPorOrdenYEtapa(Long ordenId, Long etapaId) {
         log.info("ChecklistEtapa - obtenerPorOrdenYEtapa ordenId={}, etapaId={}", ordenId, etapaId);
         EtapaProduccion etapa = obtenerEtapaValidada(ordenId, etapaId);
+        ensureChecklistOperativo(etapaId);
         List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
+        validarChecklistConfigurado(items, etapaId);
         log.debug("ChecklistEtapa - items recuperados: {}", items.size());
         return buildDto(etapa, items);
     }
@@ -84,6 +84,12 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     @Override
     @Transactional
     public void generarChecklistDesdeTemplateSiNoExiste(Long etapaProduccionId) {
+        ensureChecklistOperativo(etapaProduccionId);
+    }
+
+    @Override
+    @Transactional
+    public void ensureChecklistOperativo(Long etapaProduccionId) {
         if (repository.countByEtapaProduccionId(etapaProduccionId) > 0) {
             return;
         }
@@ -93,8 +99,12 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
             log.warn("No se pudo resolver plantilla para etapa {}, checklist no generado", etapaProduccionId);
             return;
         }
-        List<com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate> templates =
-                templateService.listarActivosPorEtapaPlantilla(etapaPlantillaId);
+        List<com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate> templates = templateService
+                .listarActivosPorEtapaPlantilla(etapaPlantillaId).stream()
+                .filter(template -> !esPlaceholder(template))
+                .sorted(Comparator.comparing(com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate::getOrden,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
         validarChecklistTemplateConfigurado(templates, etapaProduccionId);
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
         List<ChecklistEtapaItem> nuevos = templates.stream()
@@ -198,14 +208,11 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public void validarChecklistCompleto(Long etapaId) {
+        ensureChecklistOperativo(etapaId);
         List<ChecklistEtapaItem> items = repository.findByEtapaProduccionIdOrderByIdAsc(etapaId);
-        if (items.isEmpty() || esSoloPlaceholder(items)) {
-            throw new CustomBusinessException(ApiErrorCode.PRODUCCION_CHECKLIST_NO_CONFIGURADO,
-                    "La etapa no tiene checklist operativo configurado",
-                    Map.of("etapaId", etapaId));
-        }
+        validarChecklistConfigurado(items, etapaId);
         List<String> faltantes = items.stream()
                 .filter(i -> Boolean.TRUE.equals(i.getObligatorio()))
                 .filter(i -> !(EstadoChecklistItem.COMPLETADO.equals(i.getEstado())
@@ -222,7 +229,7 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
 
     private void validarChecklistTemplateConfigurado(List<com.willyes.clemenintegra.produccion.model.ChecklistEtapaTemplate> templates,
                                                      Long etapaProduccionId) {
-        if (templates.isEmpty() || (templates.size() == 1 && esPlaceholder(templates.get(0)))) {
+        if (templates.isEmpty()) {
             throw new CustomBusinessException(ApiErrorCode.PRODUCCION_CHECKLIST_NO_CONFIGURADO,
                     "La etapa no tiene checklist operativo configurado",
                     Map.of("etapaProduccionId", etapaProduccionId));
@@ -333,14 +340,22 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
         return item;
     }
 
+    private void validarChecklistConfigurado(List<ChecklistEtapaItem> items, Long etapaId) {
+        if (items.isEmpty() || esSoloPlaceholder(items)) {
+            throw new CustomBusinessException(ApiErrorCode.PRODUCCION_CHECKLIST_NO_CONFIGURADO,
+                    "La etapa no tiene checklist operativo configurado",
+                    Map.of("etapaId", etapaId));
+        }
+    }
+
     private Long resolverEtapaPlantillaId(EtapaProduccion etapa) {
         if (etapa.getOrdenProduccion() == null || etapa.getOrdenProduccion().getProducto() == null
-                || etapa.getOrdenProduccion().getProducto().getId() == null) {
+                || etapa.getOrdenProduccion().getProducto().getId() == null || etapa.getSecuencia() == null) {
             return null;
         }
         Integer productoId = etapa.getOrdenProduccion().getProducto().getId();
         Optional<com.willyes.clemenintegra.produccion.model.EtapaPlantilla> plantillaOpt =
-                etapaPlantillaRepository.findFirstByProductoIdAndNombreIgnoreCase(productoId, etapa.getNombre());
+                etapaPlantillaRepository.findFirstByProductoIdAndSecuencia(productoId, etapa.getSecuencia());
         return plantillaOpt.map(com.willyes.clemenintegra.produccion.model.EtapaPlantilla::getId).orElse(null);
     }
 

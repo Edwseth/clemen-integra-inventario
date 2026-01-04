@@ -16,7 +16,7 @@ public class ChecklistEtapaTemplateServiceImpl implements ChecklistEtapaTemplate
 
     @Override
     public List<ChecklistEtapaTemplate> listarActivosPorEtapaPlantilla(Long etapaPlantillaId) {
-        return repository.findByEtapaPlantillaIdAndActivoTrueOrderByOrdenAsc(etapaPlantillaId);
+        return repository.findActiveByEtapaPlantillaIdOrderByOrdenAsc(etapaPlantillaId);
     }
 
     @Override

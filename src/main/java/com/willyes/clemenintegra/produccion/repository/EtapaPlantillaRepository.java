@@ -10,6 +10,8 @@ public interface EtapaPlantillaRepository extends JpaRepository<EtapaPlantilla, 
 
     List<EtapaPlantilla> findByProductoIdAndActivoTrueOrderBySecuenciaAsc(Integer productoId);
 
+    Optional<EtapaPlantilla> findFirstByProductoIdAndSecuencia(Integer productoId, Integer secuencia);
+
     boolean existsByProductoIdAndSecuencia(Integer productoId, Integer secuencia);
 
     boolean existsByProductoIdAndNombreIgnoreCase(Integer productoId, String nombre);
