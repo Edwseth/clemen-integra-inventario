@@ -10,10 +10,12 @@ import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
 import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.service.BitacoraCambiosInventarioService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -44,6 +46,7 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
     private final UsuarioRepository usuarioRepository;
     private final RetencionLoteMapper mapper;
     private final NoConformidadRepository noConformidadRepository;
+    private final BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
 
     public Page<RetencionLoteDTO> listar(EstadoRetencion estado, Pageable pageable) {
         Page<RetencionLote> page = (estado != null)
@@ -66,13 +69,12 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         if (dto.getAprobadoPorId() == null) {
             throw new CustomBusinessException(ApiErrorCode.RETENCION_APROBADOR_REQUERIDO, "El aprobador es obligatorio.");
         }
-        if (dto.getCausa() == null || dto.getCausa().isBlank()) {
-            throw new CustomBusinessException(ApiErrorCode.RETENCION_CAUSA_REQUERIDA, "La causa de la retención es obligatoria.");
-        }
+        validarObservacion(dto.getCausa());
 
         LoteProducto lote = loteRepository.findById(dto.getLoteId())
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RETENCION_LOTE_NO_ENCONTRADO,
                         "Lote no encontrado con ID: " + dto.getLoteId()));
+        EstadoLote estadoAnterior = lote.getEstado();
         if (lote.getEstado() == EstadoLote.RECHAZADO || lote.getEstado() == EstadoLote.VENCIDO) {
             throw new CustomBusinessException(ApiErrorCode.RETENCION_ESTADO_NO_PERMITIDO,
                     "El estado del lote no permite retenciones.",
@@ -96,6 +98,7 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         RetencionLote guardada = repository.save(entity);
         sincronizarEstadoRetenido(guardada.getLote(), guardada);
         asegurarAlmacenCuarentena(guardada.getLote());
+        registrarBitacora(guardada.getLote(), estadoAnterior, guardada.getLote().getEstado(), "RETENER", dto.getCausa(), user);
         return mapper.toDTO(guardada);
     }
 
@@ -107,6 +110,8 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + dto.getLoteId()));
         Usuario user = usuarioRepository.findById(dto.getAprobadoPorId())
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + dto.getAprobadoPorId()));
+        validarObservacion(dto.getCausa());
+        EstadoLote estadoAnterior = lote.getEstado();
         existing.setLote(lote);
         existing.setCausa(dto.getCausa());
         existing.setFechaRetencion(dto.getFechaRetencion());
@@ -122,10 +127,12 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         RetencionLote guardada = repository.save(existing);
         if (guardada.getEstado() == EstadoRetencion.RETENIDO) {
             sincronizarEstadoRetenido(lote, guardada);
+            registrarBitacora(lote, estadoAnterior, lote.getEstado(), "RETENER", dto.getCausa(), user);
         } else if (guardada.getEstado() == EstadoRetencion.LIBERADO) {
             List<RetencionLote> activas = repository.findByLote_IdAndEstado(lote.getId(), EstadoRetencion.RETENIDO);
             if (activas.isEmpty()) {
                 actualizarEstadoPostLevantamiento(lote);
+                registrarBitacora(lote, estadoAnterior, lote.getEstado(), "LEVANTAR_RETENCION", dto.getCausa(), user);
             }
         }
         return mapper.toDTO(guardada);
@@ -168,11 +175,13 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         if (usuario == null || usuario.getId() == null) {
             throw new IllegalArgumentException("Usuario requerido");
         }
+        validarObservacion(descripcion);
 
         LoteProducto lote = loteRepository.findById(loteId)
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado con ID: " + loteId));
         Usuario aprobadoPor = usuarioRepository.findById(usuario.getId())
                 .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con ID: " + usuario.getId()));
+        EstadoLote estadoAnterior = lote.getEstado();
 
         Optional<RetencionLote> existente = repository.findFirstByLote_IdAndEstadoAndMotivo(
                 loteId, EstadoRetencion.RETENIDO, motivo);
@@ -206,6 +215,7 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         if (moverACuarentena) {
             asegurarAlmacenCuarentena(lote);
         }
+        registrarBitacora(lote, estadoAnterior, lote.getEstado(), "RETENER", descripcion, aprobadoPor);
         return resultado;
     }
 
@@ -223,19 +233,20 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
 
     @Override
     @Transactional
-    public RetencionLote levantar(Long retencionId, Usuario usuario) {
-        return levantarRetencion(retencionId, usuario);
+    public RetencionLote levantar(Long retencionId, Usuario usuario, String observacion) {
+        return levantarRetencion(retencionId, usuario, observacion);
     }
 
     @Override
     @Transactional
-    public RetencionLote levantarRetencion(Long retencionId, Usuario usuario) {
+    public RetencionLote levantarRetencion(Long retencionId, Usuario usuario, String observacion) {
         if (!esJefeOSuper()) {
             throw new AccessDeniedException("Solo Jefe de Calidad o Super Admin pueden levantar retenciones");
         }
         if (retencionId == null) {
             throw new IllegalArgumentException("Retención requerida");
         }
+        validarObservacion(observacion);
         RetencionLote retencion = repository.findById(retencionId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RETENCION_NO_ENCONTRADA,
                         "Retención no encontrada con ID: " + retencionId));
@@ -282,9 +293,11 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
         RetencionLote guardada = repository.save(retencion);
         LoteProducto lote = guardada.getLote();
         if (lote != null) {
+            EstadoLote estadoAnterior = lote.getEstado();
             List<RetencionLote> activas = repository.findByLote_IdAndEstado(lote.getId(), EstadoRetencion.RETENIDO);
             if (activas.isEmpty()) {
                 actualizarEstadoPostLevantamiento(lote);
+                registrarBitacora(lote, estadoAnterior, lote.getEstado(), "LEVANTAR_RETENCION", observacion, aprobador);
             }
         }
         return guardada;
@@ -377,5 +390,49 @@ public class RetencionLoteServiceImpl implements RetencionLoteService {
             }
         }
         return false;
+    }
+
+    private void validarObservacion(String observacion) {
+        if (observacion == null || observacion.isBlank()) {
+            throw new CustomBusinessException(ApiErrorCode.OBSERVACION_REQUERIDA,
+                    "La observación es obligatoria para registrar la transición de estado del lote.");
+        }
+    }
+
+    private void registrarBitacora(LoteProducto lote,
+                                   EstadoLote estadoAnterior,
+                                   EstadoLote estadoNuevo,
+                                   String accion,
+                                   String observacion,
+                                   Usuario usuario) {
+        if (lote == null || usuario == null || usuario.getId() == null) {
+            return;
+        }
+        validarObservacion(observacion);
+        bitacoraCambiosInventarioService.crear(BitacoraCambiosInventarioDTO.builder()
+                .tablaAfectada("lotes_productos")
+                .registroId(lote.getId())
+                .campoModificado("estado")
+                .valorAnt(estadoAnterior != null ? estadoAnterior.name() : "N/A")
+                .valorNuevo(estadoNuevo != null ? estadoNuevo.name() : "N/A")
+                .accion(accion)
+                .observacion(observacion.trim())
+                .fechaCambio(LocalDateTime.now())
+                .usuarioId(usuario.getId())
+                .usuarioNombre(nombreUsuario(usuario))
+                .build());
+    }
+
+    private String nombreUsuario(Usuario usuario) {
+        if (usuario == null) {
+            return "DESCONOCIDO";
+        }
+        if (usuario.getNombreCompleto() != null && !usuario.getNombreCompleto().isBlank()) {
+            return usuario.getNombreCompleto();
+        }
+        if (usuario.getNombreUsuario() != null && !usuario.getNombreUsuario().isBlank()) {
+            return usuario.getNombreUsuario();
+        }
+        return "DESCONOCIDO";
     }
 }

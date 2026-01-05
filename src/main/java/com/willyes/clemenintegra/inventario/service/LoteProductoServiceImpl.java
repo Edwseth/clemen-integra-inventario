@@ -515,16 +515,17 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
     @Transactional
     @Override
-    public LoteProductoResponseDTO liberarLote(Long id) {
+    public LoteProductoResponseDTO liberarLote(Long id, String observacion) {
         // Alias de liberación por calidad. Se recomienda usar /api/calidad/lotes/{id}/liberar.
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
-        return liberarLoteConReglasCalidad(id, usuario, true);
+        return liberarLoteConReglasCalidad(id, usuario, true, observacion, "LIBERAR");
     }
 
     @Transactional
     @Override
-    public LoteProductoResponseDTO rechazarLote(Long id) {
+    public LoteProductoResponseDTO rechazarLote(Long id, String observacion) {
         Usuario usuarioActual = usuarioService.obtenerUsuarioAutenticado();
+        validarObservacionObligatoria(observacion);
 
         ClasificacionMovimientoInventario clasificacion;
         try {
@@ -579,9 +580,12 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         BigDecimal cantidad = lote.getStockLote();
         Producto producto = lote.getProducto();
 
+        EstadoLote estadoAnterior = lote.getEstado();
         lote.setEstado(EstadoLote.RECHAZADO);
         lote.setAlmacen(destino);
         loteRepo.save(lote);
+
+        registrarBitacoraEstadoCalidad(lote, estadoAnterior, lote.getEstado(), "RECHAZAR", observacion, usuarioActual);
 
         MovimientoInventario mov = MovimientoInventario.builder()
                 .cantidad(cantidad)
@@ -603,25 +607,30 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
     @Transactional
     @Override
-    public LoteProductoResponseDTO liberarLoteRetenido(Long id) {
+    public LoteProductoResponseDTO liberarLoteRetenido(Long id, String observacion) {
         // Alias de liberación por calidad. Se recomienda usar /api/calidad/lotes/{id}/liberar.
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
-        return liberarLoteConReglasCalidad(id, usuario, true);
+        return liberarLoteConReglasCalidad(id, usuario, true, observacion, "LIBERAR_RETENIDO");
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, Usuario usuarioActual) {
+    public LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, Usuario usuarioActual, String observacion) {
         if (usuarioActual == null
                 || (usuarioActual.getRol() != RolUsuario.ROL_JEFE_CALIDAD
                 && usuarioActual.getRol() != RolUsuario.ROL_SUPER_ADMIN)) {
             throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
                     "Solo el Jefe de Calidad o Super Admin pueden liberar lotes.");
         }
-        return liberarLoteConReglasCalidad(loteId, usuarioActual, true);
+        return liberarLoteConReglasCalidad(loteId, usuarioActual, true, observacion, "LIBERAR");
     }
 
-    private LoteProductoResponseDTO liberarLoteConReglasCalidad(Long loteId, Usuario usuarioActual, boolean moverAlmacen) {
+    private LoteProductoResponseDTO liberarLoteConReglasCalidad(Long loteId,
+                                                                Usuario usuarioActual,
+                                                                boolean moverAlmacen,
+                                                                String observacion,
+                                                                String accionBitacora) {
+        validarObservacionObligatoria(observacion);
         EstadoLote estadoLiberado;
         ClasificacionMovimientoInventario clasificacion;
         try {
@@ -704,11 +713,14 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 : origen;
         BigDecimal cantidad = lote.getStockLote();
 
+        EstadoLote estadoAnterior = lote.getEstado();
         lote.setEstado(estadoLiberado);
         lote.setFechaLiberacion(LocalDateTime.now());
         lote.setUsuarioLiberador(usuarioActual);
         lote.setAlmacen(destino);
         loteRepo.save(lote);
+
+        registrarBitacoraEstadoCalidad(lote, estadoAnterior, estadoLiberado, accionBitacora, observacion, usuarioActual);
 
         log.info("[INVENTARIO] liberación de lote completada destino={} tipoProducto={} loteId={}",
                 destinoPrincipalId,
@@ -763,25 +775,64 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             return;
         }
         LocalDateTime ahora = LocalDateTime.now();
-        bitacoraCambiosInventarioService.crear(BitacoraCambiosInventarioDTO.builder()
-                .tablaAfectada("lotes_productos")
-                .registroId(lote.getId())
-                .campoModificado("estado")
-                .valorAnt(estadoAnterior != null ? estadoAnterior.name() : "N/A")
-                .valorNuevo(EstadoLote.RETENIDO.name())
-                .fechaCambio(ahora)
-                .usuarioId(usuarioActual.getId())
-                .build());
-
+        String observacion = construirDetalleReapertura(motivo, comentarios, almacenAnterior);
+        registrarBitacoraEstadoCalidad(lote, estadoAnterior, EstadoLote.RETENIDO, "REABRIR", observacion, usuarioActual);
         bitacoraCambiosInventarioService.crear(BitacoraCambiosInventarioDTO.builder()
                 .tablaAfectada("lotes_productos")
                 .registroId(lote.getId())
                 .campoModificado("motivo_reapertura")
                 .valorAnt("N/A")
-                .valorNuevo(construirDetalleReapertura(motivo, comentarios, almacenAnterior))
+                .valorNuevo(observacion)
                 .fechaCambio(ahora)
                 .usuarioId(usuarioActual.getId())
+                .usuarioNombre(resolveNombreUsuario(usuarioActual))
+                .observacion(observacion)
+                .accion("REABRIR")
                 .build());
+    }
+
+    private void registrarBitacoraEstadoCalidad(LoteProducto lote,
+                                                EstadoLote estadoAnterior,
+                                                EstadoLote estadoNuevo,
+                                                String accion,
+                                                String observacion,
+                                                Usuario usuarioActual) {
+        if (lote == null || usuarioActual == null || usuarioActual.getId() == null) {
+            return;
+        }
+        validarObservacionObligatoria(observacion);
+        bitacoraCambiosInventarioService.crear(BitacoraCambiosInventarioDTO.builder()
+                .tablaAfectada("lotes_productos")
+                .registroId(lote.getId())
+                .campoModificado("estado")
+                .valorAnt(estadoAnterior != null ? estadoAnterior.name() : "N/A")
+                .valorNuevo(estadoNuevo != null ? estadoNuevo.name() : "N/A")
+                .fechaCambio(LocalDateTime.now())
+                .usuarioId(usuarioActual.getId())
+                .usuarioNombre(resolveNombreUsuario(usuarioActual))
+                .observacion(observacion != null ? observacion.trim() : null)
+                .accion(accion)
+                .build());
+    }
+
+    private String resolveNombreUsuario(Usuario usuario) {
+        if (usuario == null) {
+            return null;
+        }
+        if (usuario.getNombreCompleto() != null && !usuario.getNombreCompleto().isBlank()) {
+            return usuario.getNombreCompleto();
+        }
+        if (usuario.getNombreUsuario() != null && !usuario.getNombreUsuario().isBlank()) {
+            return usuario.getNombreUsuario();
+        }
+        return "DESCONOCIDO";
+    }
+
+    private void validarObservacionObligatoria(String observacion) {
+        if (observacion == null || observacion.isBlank()) {
+            throw new CustomBusinessException(ApiErrorCode.OBSERVACION_REQUERIDA,
+                    "La observación es obligatoria para registrar la transición de estado del lote.");
+        }
     }
 
     private String construirDetalleReapertura(String motivo,

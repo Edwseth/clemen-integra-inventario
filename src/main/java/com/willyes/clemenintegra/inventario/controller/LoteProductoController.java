@@ -131,20 +131,26 @@ public class LoteProductoController {
 
     @PutMapping("/{id}/liberar")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<LoteProductoResponseDTO> liberar(@PathVariable Long id) {
-        return ResponseEntity.ok(service.liberarLote(id));
+    public ResponseEntity<LoteProductoResponseDTO> liberar(@PathVariable Long id,
+                                                           @RequestBody(required = false) com.willyes.clemenintegra.inventario.dto.ObservacionRequestDTO request) {
+        String observacion = request != null ? request.getObservacion() : null;
+        return ResponseEntity.ok(service.liberarLote(id, observacion));
     }
 
     @PutMapping("/{id}/rechazar")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<LoteProductoResponseDTO> rechazar(@PathVariable Long id) {
-        return ResponseEntity.ok(service.rechazarLote(id));
+    public ResponseEntity<LoteProductoResponseDTO> rechazar(@PathVariable Long id,
+                                                            @RequestBody(required = false) com.willyes.clemenintegra.inventario.dto.ObservacionRequestDTO request) {
+        String observacion = request != null ? request.getObservacion() : null;
+        return ResponseEntity.ok(service.rechazarLote(id, observacion));
     }
 
     @PutMapping("/{id}/liberar-retenido")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<LoteProductoResponseDTO> liberarRetenido(@PathVariable Long id) {
-        return ResponseEntity.ok(service.liberarLoteRetenido(id));
+    public ResponseEntity<LoteProductoResponseDTO> liberarRetenido(@PathVariable Long id,
+                                                                   @RequestBody(required = false) com.willyes.clemenintegra.inventario.dto.ObservacionRequestDTO request) {
+        String observacion = request != null ? request.getObservacion() : null;
+        return ResponseEntity.ok(service.liberarLoteRetenido(id, observacion));
     }
 
 }

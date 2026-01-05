@@ -17,5 +17,7 @@ public class BitacoraCambiosInventarioDTO {
     private String valorNuevo;
     private LocalDateTime fechaCambio;
     private Long usuarioId;
+    private String usuarioNombre;
+    private String observacion;
+    private String accion;
 }
-

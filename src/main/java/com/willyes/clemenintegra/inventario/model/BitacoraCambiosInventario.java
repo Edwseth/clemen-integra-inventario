@@ -33,12 +33,20 @@ public class BitacoraCambiosInventario {
     @Column(name = "valor_nuevo", length = 255, nullable = false)
     private String valorNuevo;
 
+    @Column(name = "accion", length = 60, nullable = false)
+    private String accion;
+
+    @Column(name = "observacion", length = 500, nullable = false)
+    private String observacion;
+
     @Column(name = "fecha_cambio", nullable = false)
     private LocalDateTime fechaCambio;
+
+    @Column(name = "usuario_nombre", length = 255, nullable = false)
+    private String usuarioNombre;
 
     @ManyToOne
     @JoinColumn(name = "usuarios_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_bitacora_usuario"))
     private Usuario usuario;
 }
-

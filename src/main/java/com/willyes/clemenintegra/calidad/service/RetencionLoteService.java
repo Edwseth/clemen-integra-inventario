@@ -42,9 +42,9 @@ public interface RetencionLoteService {
                                                   NoConformidad noConformidad,
                                                   Usuario usuario);
 
-    RetencionLote levantar(Long retencionId, Usuario usuario);
+    RetencionLote levantar(Long retencionId, Usuario usuario, String observacion);
 
-    RetencionLote levantarRetencion(Long retencionId, Usuario usuario);
+    RetencionLote levantarRetencion(Long retencionId, Usuario usuario, String observacion);
 
     Optional<RetencionLote> obtenerActivaPorLote(Long loteId);
 

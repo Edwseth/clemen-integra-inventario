@@ -30,9 +30,11 @@ public class LoteCalidadController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<LoteProductoResponseDTO> liberarLote(
             @PathVariable Long loteId,
+            @RequestBody(required = false) com.willyes.clemenintegra.inventario.dto.ObservacionRequestDTO request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Usuario usuario = userDetails != null ? userDetails.getUsuario() : null;
-        return ResponseEntity.ok(service.liberarLotePorCalidad(loteId, usuario));
+        String observacion = request != null ? request.getObservacion() : null;
+        return ResponseEntity.ok(service.liberarLotePorCalidad(loteId, usuario, observacion));
     }
 
     @GetMapping("/{loteId}/estado-calidad")

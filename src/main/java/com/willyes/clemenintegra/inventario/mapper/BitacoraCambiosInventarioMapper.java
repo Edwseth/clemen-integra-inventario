@@ -18,6 +18,9 @@ public class BitacoraCambiosInventarioMapper {
                 .valorNuevo(entity.getValorNuevo())
                 .fechaCambio(entity.getFechaCambio())
                 .usuarioId(entity.getUsuario().getId())
+                .usuarioNombre(entity.getUsuarioNombre())
+                .observacion(entity.getObservacion())
+                .accion(entity.getAccion())
                 .build();
     }
 
@@ -30,6 +33,9 @@ public class BitacoraCambiosInventarioMapper {
                 .valorAnt(dto.getValorAnt())
                 .valorNuevo(dto.getValorNuevo())
                 .fechaCambio(dto.getFechaCambio())
+                .accion(dto.getAccion())
+                .observacion(dto.getObservacion())
+                .usuarioNombre(dto.getUsuarioNombre())
                 .usuario(Usuario.builder().id(dto.getUsuarioId()).build())
                 .build();
     }
