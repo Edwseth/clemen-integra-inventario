@@ -98,6 +98,12 @@ public class OrdenProduccionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/{id}/trazabilidad")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    public ResponseEntity<ProduccionTrazabilidadResponseDTO> obtenerTrazabilidad(@PathVariable Long id) {
+        return ResponseEntity.ok(service.obtenerTrazabilidad(id));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<ResultadoValidacionOrdenDTO> crear(@RequestBody OrdenProduccionRequestDTO request) {

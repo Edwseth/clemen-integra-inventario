@@ -291,12 +291,18 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
            and (:inicio is null or m.fechaIngreso >= :inicio)
            and (:fin is null or m.fechaIngreso <= :fin)
            and (:almacenId is null or m.almacenOrigen.id = :almacenId or m.almacenDestino.id = :almacenId)
+           and (:ordenProduccionId is null or m.ordenProduccion.id = :ordenProduccionId)
+           and (:etapaProduccionId is null or m.ordenProduccionEtapa.id = :etapaProduccionId)
          order by m.fechaIngreso asc, m.id asc
     """)
     List<MovimientoInventario> buscarParaKardex(@Param("inicio") LocalDateTime inicio,
                                                 @Param("fin") LocalDateTime fin,
                                                 @Param("productoId") Long productoId,
                                                 @Param("loteId") Long loteId,
-                                                @Param("almacenId") Long almacenId);
+                                                @Param("almacenId") Long almacenId,
+                                                @Param("ordenProduccionId") Long ordenProduccionId,
+                                                @Param("etapaProduccionId") Long etapaProduccionId);
+
+    List<MovimientoInventario> findByOrdenProduccionIdOrderByFechaIngresoAsc(Long ordenProduccionId);
 
 }

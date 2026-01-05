@@ -345,6 +345,8 @@ public class BatchRecordServiceImpl implements BatchRecordService {
 
     private BatchRecordDTO.ConsumoDTO crearConsumoDtoDesdeMovimiento(MovimientoInventario movimiento) {
         BatchRecordDTO.ConsumoDTO consumoDTO = new BatchRecordDTO.ConsumoDTO();
+        consumoDTO.movimientoId = movimiento.getId();
+        consumoDTO.etapaId = movimiento.getOrdenProduccionEtapa() != null ? movimiento.getOrdenProduccionEtapa().getId() : null;
         consumoDTO.tipoMovimiento = movimiento.getTipoMovimiento() != null ? movimiento.getTipoMovimiento().name() : null;
         consumoDTO.clasificacionMovimiento = movimiento.getClasificacion() != null ? movimiento.getClasificacion().name() : null;
         consumoDTO.productoId = movimiento.getProducto() != null ? movimiento.getProducto().getId().longValue() : null;
@@ -365,6 +367,8 @@ public class BatchRecordServiceImpl implements BatchRecordService {
                                                                  MovimientoInventario movimientoPs,
                                                                  BigDecimal cantidadTeorica) {
         BatchRecordDTO.ConsumoDTO consumoDTO = new BatchRecordDTO.ConsumoDTO();
+        consumoDTO.movimientoId = movimientoPs.getId();
+        consumoDTO.etapaId = movimientoPs.getOrdenProduccionEtapa() != null ? movimientoPs.getOrdenProduccionEtapa().getId() : null;
         consumoDTO.tipoMovimiento = movimientoPs.getTipoMovimiento() != null ? movimientoPs.getTipoMovimiento().name() : null;
         consumoDTO.clasificacionMovimiento = movimientoPs.getClasificacion() != null ? movimientoPs.getClasificacion().name() : null;
         consumoDTO.productoId = detalle.getInsumo() != null ? detalle.getInsumo().getId().longValue() : null;

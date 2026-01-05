@@ -69,7 +69,9 @@ public class KardexServiceImpl implements KardexService {
                 filtro.getFechaHasta(),
                 productoId,
                 lote != null ? lote.getId() : null,
-                filtro.getAlmacenId()
+                filtro.getAlmacenId(),
+                filtro.getOrdenProduccionId(),
+                filtro.getEtapaProduccionId()
         );
 
         return calcularSaldo(movimientos, producto, lote, filtro.getAlmacenId());

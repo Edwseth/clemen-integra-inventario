@@ -34,7 +34,9 @@ public class KardexController {
             @RequestParam(required = false) String codigoLote,
             @RequestParam(required = false) String fechaDesde,
             @RequestParam(required = false) String fechaHasta,
-            @RequestParam(required = false) Long almacenId
+            @RequestParam(required = false) Long almacenId,
+            @RequestParam(required = false) Long ordenProduccionId,
+            @RequestParam(required = false) Long etapaProduccionId
     ) {
         if (productoId == null && !StringUtils.hasText(codigoSku)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requiere productoId o codigoSku");
@@ -51,6 +53,8 @@ public class KardexController {
                 .fechaDesde(inicio)
                 .fechaHasta(fin)
                 .almacenId(almacenId)
+                .ordenProduccionId(ordenProduccionId)
+                .etapaProduccionId(etapaProduccionId)
                 .build();
 
         try {
