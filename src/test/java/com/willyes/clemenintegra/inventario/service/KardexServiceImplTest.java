@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -71,7 +72,7 @@ class KardexServiceImplTest {
         lote.setId(9L);
         lote.setProducto(producto);
         when(productoRepository.findByCodigoSku("SKU-05")).thenReturn(Optional.of(producto));
-        when(loteProductoRepository.findByCodigoLoteAndProductoId("L-001", 5L)).thenReturn(Optional.of(lote));
+        when(loteProductoRepository.findAllByCodigoLoteAndProductoId("L-001", 5L)).thenReturn(List.of(lote));
 
         when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(5L), eq(9L), any(), any(), any()))
                 .thenReturn(List.of());
@@ -85,6 +86,67 @@ class KardexServiceImplTest {
 
         assertThat(resultado).isEmpty();
         verify(movimientoInventarioRepository).buscarParaKardex(null, null, 5L, 9L, null, null, null);
+    }
+
+    @Test
+    void desambiguaLoteDuplicadoPorAlmacen() {
+        Producto producto = crearProducto(8, "SKU-08", "Producto H");
+        when(productoRepository.findByCodigoSku("SKU-08")).thenReturn(Optional.of(producto));
+
+        Almacen almacen1 = new Almacen(1);
+        Almacen almacen2 = new Almacen(2);
+
+        LoteProducto loteAlmacen1 = new LoteProducto();
+        loteAlmacen1.setId(100L);
+        loteAlmacen1.setProducto(producto);
+        loteAlmacen1.setAlmacen(almacen1);
+
+        LoteProducto loteAlmacen2 = new LoteProducto();
+        loteAlmacen2.setId(200L);
+        loteAlmacen2.setProducto(producto);
+        loteAlmacen2.setAlmacen(almacen2);
+
+        when(loteProductoRepository.findAllByCodigoLoteAndProductoId("L-AMB", 8L))
+                .thenReturn(List.of(loteAlmacen1, loteAlmacen2));
+        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(8L), eq(200L), eq(2L), any(), any()))
+                .thenReturn(List.of());
+
+        KardexFiltro filtro = KardexFiltro.builder()
+                .codigoSku("SKU-08")
+                .codigoLote("L-AMB")
+                .almacenId(2L)
+                .build();
+
+        List<KardexItemDTO> resultado = kardexService.obtenerKardex(filtro);
+
+        assertThat(resultado).isEmpty();
+        verify(movimientoInventarioRepository).buscarParaKardex(null, null, 8L, 200L, 2L, null, null);
+    }
+
+    @Test
+    void lanzaErrorClaroCuandoLoteDuplicadoSinCriterios() {
+        Producto producto = crearProducto(9, "SKU-09", "Producto I");
+        when(productoRepository.findByCodigoSku("SKU-09")).thenReturn(Optional.of(producto));
+
+        LoteProducto loteUno = new LoteProducto();
+        loteUno.setId(300L);
+        loteUno.setProducto(producto);
+
+        LoteProducto loteDos = new LoteProducto();
+        loteDos.setId(301L);
+        loteDos.setProducto(producto);
+
+        when(loteProductoRepository.findAllByCodigoLoteAndProductoId("L-AMB", 9L))
+                .thenReturn(List.of(loteUno, loteDos));
+
+        KardexFiltro filtro = KardexFiltro.builder()
+                .codigoSku("SKU-09")
+                .codigoLote("L-AMB")
+                .build();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> kardexService.obtenerKardex(filtro))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("múltiples lotes");
     }
 
     @Test
