@@ -30,7 +30,14 @@ public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long
     boolean existsByProducto(Producto producto);
     boolean existsByCodigoLote(String codigoLote);
     List<LoteProducto> findByEstado(EstadoLote estado);
-    Optional<LoteProducto> findByCodigoLote(String codigoLote);
+    @Query("""
+SELECT lp
+FROM LoteProducto lp
+WHERE lp.codigoLote = :codigoLote
+  AND lp.ordenProduccion.id = :ordenProduccionId
+""")
+    List<LoteProducto> findByCodigoLoteAndOrdenProduccion(@Param("codigoLote") String codigoLote,
+                                                          @Param("ordenProduccionId") Long ordenProduccionId);
     @Query("""
        SELECT lp
          FROM LoteProducto lp

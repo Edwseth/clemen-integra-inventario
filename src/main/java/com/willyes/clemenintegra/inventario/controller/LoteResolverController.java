@@ -27,8 +27,9 @@ public class LoteResolverController {
             "'ROL_JEFE_CALIDAD'," +
             "'ROL_SUPER_ADMIN'" +
             ")")
-    public ResponseEntity<ProductoPorLoteDTO> resolverProducto(@RequestParam String codigoLote) {
-        ProductoPorLoteDTO dto = loteProductoService.resolverProductoPorLote(codigoLote);
+    public ResponseEntity<ProductoPorLoteDTO> resolverProducto(@RequestParam String codigoLote,
+                                                               @RequestParam Long ordenProduccionId) {
+        ProductoPorLoteDTO dto = loteProductoService.resolverProductoPorLote(codigoLote, ordenProduccionId);
         return ResponseEntity.ok(dto);
     }
 }

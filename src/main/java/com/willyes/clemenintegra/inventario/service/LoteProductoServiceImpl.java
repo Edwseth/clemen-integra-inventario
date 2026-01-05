@@ -1006,14 +1006,23 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
     @Override
     @Transactional(readOnly = true)
-    public ProductoPorLoteDTO resolverProductoPorLote(String codigoLote) {
+    public ProductoPorLoteDTO resolverProductoPorLote(String codigoLote, Long ordenProduccionId) {
         if (!StringUtils.hasText(codigoLote)) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "CODIGO_LOTE_OBLIGATORIO");
         }
+        if (ordenProduccionId == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "ORDEN_PRODUCCION_OBLIGATORIA");
+        }
 
-        LoteProducto lote = loteProductoRepository.findByCodigoLote(codigoLote)
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "LOTE_NO_EXISTE"));
+        List<LoteProducto> lotes = loteProductoRepository.findByCodigoLoteAndOrdenProduccion(codigoLote, ordenProduccionId);
+        if (lotes.isEmpty()) {
+            throw new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "LOTE_NO_ENCONTRADO");
+        }
+        if (lotes.size() > 1) {
+            throw new CustomBusinessException(ApiErrorCode.NEGOCIO_GENERICO, "LOTE_AMBIGUO");
+        }
 
+        LoteProducto lote = lotes.get(0);
         Producto producto = lote.getProducto();
         if (producto == null || producto.getId() == null) {
             throw new CustomBusinessException(ApiErrorCode.NEGOCIO_GENERICO, "LOTE_SIN_PRODUCTO_ASOCIADO");
