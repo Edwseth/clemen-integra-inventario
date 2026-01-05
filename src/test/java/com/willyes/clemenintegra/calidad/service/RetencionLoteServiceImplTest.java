@@ -15,6 +15,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.service.BitacoraCambiosInventarioService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -57,6 +58,8 @@ class RetencionLoteServiceImplTest {
     private RetencionLoteMapper mapper;
     @Mock
     private NoConformidadRepository noConformidadRepository;
+    @Mock
+    private BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
 
     @InjectMocks
     private RetencionLoteServiceImpl service;
@@ -83,6 +86,8 @@ class RetencionLoteServiceImplTest {
 
         Usuario usuario = new Usuario();
         usuario.setId(5L);
+        usuario.setNombreCompleto("Jefe Calidad");
+        usuario.setNombreUsuario("jcalidad");
 
         when(loteRepository.findById(1L)).thenReturn(Optional.of(lote));
         when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
@@ -112,6 +117,7 @@ class RetencionLoteServiceImplTest {
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getEstado()).isEqualTo(EstadoRetencion.RETENIDO);
         assertThat(captor.getValue().getFechaRetencion()).isNotNull();
+        verify(bitacoraCambiosInventarioService).crear(any());
     }
 
     @Test
@@ -129,12 +135,21 @@ class RetencionLoteServiceImplTest {
     }
 
     @Test
+    void levantarRetencionSinObservacionFalla() {
+        autenticarComoJefe();
+        assertThatThrownBy(() -> service.levantarRetencion(10L, null, " "))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.OBSERVACION_REQUERIDA);
+    }
+
+    @Test
     void levantarRetencionInexistenteDevuelveCodigoDominio() {
         autenticarComoJefe();
 
         when(repository.findById(77L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.levantarRetencion(77L, null))
+        assertThatThrownBy(() -> service.levantarRetencion(77L, null, "obs"))
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.RETENCION_NO_ENCONTRADA);
@@ -151,7 +166,7 @@ class RetencionLoteServiceImplTest {
 
         when(repository.findById(88L)).thenReturn(Optional.of(retencion));
 
-        assertThatThrownBy(() -> service.levantarRetencion(88L, null))
+        assertThatThrownBy(() -> service.levantarRetencion(88L, null, "obs"))
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.RETENCION_NO_ACTIVA);
@@ -182,7 +197,7 @@ class RetencionLoteServiceImplTest {
         when(noConformidadRepository.findById(15L)).thenReturn(Optional.of(nc));
         when(noConformidadRepository.findByLote_Id(9L)).thenReturn(List.of(nc));
 
-        assertThatThrownBy(() -> service.levantarRetencion(22L, null))
+        assertThatThrownBy(() -> service.levantarRetencion(22L, null, "obs"))
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.RETENCION_NC_NO_CERRADA);
@@ -217,12 +232,14 @@ class RetencionLoteServiceImplTest {
         when(repository.save(any(RetencionLote.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(repository.findByLote_IdAndEstado(30L, EstadoRetencion.RETENIDO)).thenReturn(List.of());
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(null);
+        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(usuarioAprobador()));
 
-        RetencionLote resultado = service.levantarRetencion(40L, null);
+        RetencionLote resultado = service.levantarRetencion(40L, usuarioAprobador(), "obs");
 
         assertThat(resultado.getEstado()).isEqualTo(EstadoRetencion.LIBERADO);
         assertThat(resultado.getFechaLiberacion()).isNotNull();
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.EN_CUARENTENA);
+        verify(bitacoraCambiosInventarioService).crear(any());
     }
 
     @Test
@@ -245,16 +262,26 @@ class RetencionLoteServiceImplTest {
         when(repository.save(any(RetencionLote.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(repository.findByLote_IdAndEstado(60L, EstadoRetencion.RETENIDO)).thenReturn(List.of());
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(null);
+        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(usuarioAprobador()));
 
-        RetencionLote resultado = service.levantarRetencion(70L, null);
+        RetencionLote resultado = service.levantarRetencion(70L, usuarioAprobador(), "obs");
 
         assertThat(resultado.getEstado()).isEqualTo(EstadoRetencion.LIBERADO);
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.EN_CUARENTENA);
+        verify(bitacoraCambiosInventarioService, org.mockito.Mockito.atLeastOnce()).crear(any());
     }
 
     private void autenticarComoJefe() {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 "jefe", "pass", List.of(new SimpleGrantedAuthority("ROL_JEFE_CALIDAD")));
         SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    private Usuario usuarioAprobador() {
+        Usuario usuario = new Usuario();
+        usuario.setId(10L);
+        usuario.setNombreCompleto("Jefe Calidad");
+        usuario.setNombreUsuario("jcalidad");
+        return usuario;
     }
 }

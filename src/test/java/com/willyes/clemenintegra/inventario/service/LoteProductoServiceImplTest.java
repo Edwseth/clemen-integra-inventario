@@ -65,6 +65,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -134,7 +135,7 @@ class LoteProductoServiceImplTest {
         when(evaluacionRepository.findByLoteProductoId(10L)).thenReturn(evaluacionesConforme());
         when(almacenRepo.findById(2L)).thenReturn(Optional.of(almacenConId(2)));
 
-        service.liberarLotePorCalidad(10L, jefeCalidad);
+        service.liberarLotePorCalidad(10L, jefeCalidad, "Obs liberación");
 
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
         assertThat(lote.getAlmacen().getId()).isEqualTo(2L);
@@ -143,6 +144,12 @@ class LoteProductoServiceImplTest {
         verify(movimientoInventarioRepository).save(movCaptor.capture());
         assertThat(movCaptor.getValue().getAlmacenDestino().getId()).isEqualTo(2L);
         assertThat(movCaptor.getValue().getAlmacenOrigen().getId()).isEqualTo(7L);
+        ArgumentCaptor<com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO> bitacoraCaptor =
+                ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO.class);
+        verify(bitacoraCambiosInventarioService).crear(bitacoraCaptor.capture());
+        assertThat(bitacoraCaptor.getValue().getAccion()).isEqualTo("LIBERAR");
+        assertThat(bitacoraCaptor.getValue().getValorAnt()).isEqualTo(EstadoLote.EN_CUARENTENA.name());
+        assertThat(bitacoraCaptor.getValue().getValorNuevo()).isEqualTo(EstadoLote.LIBERADO.name());
     }
 
     @Test
@@ -162,7 +169,7 @@ class LoteProductoServiceImplTest {
         when(evaluacionRepository.findByLoteProductoId(20L)).thenReturn(evaluacionesConforme());
         when(almacenRepo.findById(8L)).thenReturn(Optional.of(almacenConId(8)));
 
-        service.liberarLotePorCalidad(20L, jefeCalidad);
+        service.liberarLotePorCalidad(20L, jefeCalidad, "Obs liberación");
 
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
         assertThat(lote.getAlmacen().getId()).isEqualTo(8L);
@@ -259,7 +266,7 @@ class LoteProductoServiceImplTest {
         assertThat(entidad.getEstado()).isEqualTo(EstadoLote.EN_CUARENTENA);
         assertThat(creado.getEstado()).isEqualTo(EstadoLote.EN_CUARENTENA);
 
-        LoteProductoResponseDTO liberado = service.liberarLote(44L);
+        LoteProductoResponseDTO liberado = service.liberarLote(44L, "Obs liberación");
 
         assertThat(entidad.getEstado()).isEqualTo(EstadoLote.LIBERADO);
         assertThat(entidad.getFechaLiberacion()).isNotNull();
@@ -295,7 +302,7 @@ class LoteProductoServiceImplTest {
                         .build()));
         when(almacenRepo.findById(2L)).thenReturn(Optional.of(almacenConId(2)));
 
-        service.liberarLotePorCalidad(30L, jefeCalidad);
+        service.liberarLotePorCalidad(30L, jefeCalidad, "Obs liberación");
 
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
         assertThat(lote.getAlmacen().getId()).isEqualTo(2L);
@@ -321,7 +328,7 @@ class LoteProductoServiceImplTest {
                 .estado(EstadoLote.RECHAZADO)
                 .build());
 
-        service.rechazarLote(90L);
+        service.rechazarLote(90L, "Observación rechazo");
 
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.RECHAZADO);
         assertThat(lote.getAlmacen().getId()).isEqualTo(99);
@@ -334,6 +341,26 @@ class LoteProductoServiceImplTest {
         assertThat(movCaptor.getValue().getMotivoMovimiento()).isSameAs(motivo);
         assertThat(movCaptor.getValue().getTipoMovimientoDetalle()).isSameAs(tipoDetalle);
         assertThat(movCaptor.getValue().getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.RECHAZO_CALIDAD);
+        verify(bitacoraCambiosInventarioService).crear(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("Rechazar lote requiere observación")
+    void rechazarLote_requiereObservacion() {
+        assertThatThrownBy(() -> service.rechazarLote(1L, "  "))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.OBSERVACION_REQUERIDA);
+    }
+
+    @Test
+    @DisplayName("Liberar lote requiere observación")
+    void liberarLote_requiereObservacion() {
+        Usuario jefeCalidad = usuarioConRol(RolUsuario.ROL_JEFE_CALIDAD);
+        assertThatThrownBy(() -> service.liberarLotePorCalidad(1L, jefeCalidad, " "))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting("code")
+                .isEqualTo(ApiErrorCode.OBSERVACION_REQUERIDA);
     }
 
     @Test
@@ -354,7 +381,7 @@ class LoteProductoServiceImplTest {
         when(almacenRepo.findById(99L)).thenReturn(Optional.of(almacenConId(99)));
 
         CustomBusinessException ex = assertThrows(CustomBusinessException.class,
-                () -> service.rechazarLote(91L));
+                () -> service.rechazarLote(91L, "Observación rechazo"));
 
         assertThat(ex.getCode()).isEqualTo(ApiErrorCode.LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO);
     }
@@ -382,7 +409,7 @@ class LoteProductoServiceImplTest {
         when(catalogResolver.getAlmacenObsoletosId()).thenReturn(99L);
 
         CustomBusinessException ex = assertThrows(CustomBusinessException.class,
-                () -> service.rechazarLote(92L));
+                () -> service.rechazarLote(92L, "Observación rechazo"));
 
         assertThat(ex.getCode()).isEqualTo(ApiErrorCode.LOTE_EN_ALMACEN_INVALIDO_PARA_RECHAZO);
     }
@@ -547,7 +574,7 @@ class LoteProductoServiceImplTest {
                 .thenReturn(Collections.emptyList());
 
         ResponseStatusException ex = org.junit.jupiter.api.Assertions.assertThrows(ResponseStatusException.class,
-                () -> service.liberarLotePorCalidad(31L, jefeCalidad));
+                () -> service.liberarLotePorCalidad(31L, jefeCalidad, "obs"));
 
         assertThat(ex.getStatusCode().value()).isEqualTo(HttpStatus.CONFLICT.value());
         assertThat(ex.getReason()).isEqualTo("Faltan resultados microbiológicos");
@@ -602,6 +629,8 @@ class LoteProductoServiceImplTest {
         Usuario usuario = new Usuario();
         usuario.setId(1L);
         usuario.setRol(rol);
+        usuario.setNombreCompleto("Usuario " + rol.name());
+        usuario.setNombreUsuario("usuario_" + rol.name());
         return usuario;
     }
 

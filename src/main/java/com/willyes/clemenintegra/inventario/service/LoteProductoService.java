@@ -24,9 +24,9 @@ public interface LoteProductoService {
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
     Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen, Boolean vencidos, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);
 
-    LoteProductoResponseDTO liberarLote(Long id);
-    LoteProductoResponseDTO rechazarLote(Long id);
-    LoteProductoResponseDTO liberarLoteRetenido(Long id);
+    LoteProductoResponseDTO liberarLote(Long id, String observacion);
+    LoteProductoResponseDTO rechazarLote(Long id, String observacion);
+    LoteProductoResponseDTO liberarLoteRetenido(Long id, String observacion);
 
     /**
      * Libera un lote validando las evaluaciones de calidad requeridas.
@@ -35,7 +35,7 @@ public interface LoteProductoService {
      * @param usuarioActual usuario autenticado que realiza la liberación
      * @return información del lote actualizado
      */
-    LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, com.willyes.clemenintegra.shared.model.Usuario usuarioActual);
+    LoteProductoResponseDTO liberarLotePorCalidad(Long loteId, com.willyes.clemenintegra.shared.model.Usuario usuarioActual, String observacion);
 
     EstadoCalidadLoteResponseDTO obtenerEstadoCalidad(Long loteId);
 

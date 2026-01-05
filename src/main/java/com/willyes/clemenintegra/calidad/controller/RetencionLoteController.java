@@ -71,9 +71,11 @@ public class RetencionLoteController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<RetencionLoteDTO> levantarRetencion(
             @PathVariable Long id,
+            @RequestBody(required = false) com.willyes.clemenintegra.calidad.dto.LevantarRetencionRequestDTO request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         RetencionLote retencion = service.levantar(id,
-                userDetails != null ? new com.willyes.clemenintegra.shared.model.Usuario(userDetails.getId()) : null);
+                userDetails != null ? new com.willyes.clemenintegra.shared.model.Usuario(userDetails.getId()) : null,
+                request != null ? request.getObservacion() : null);
         return ResponseEntity.ok(mapper.toDTO(retencion));
     }
 }

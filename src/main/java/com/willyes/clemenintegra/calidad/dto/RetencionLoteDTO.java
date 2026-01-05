@@ -20,6 +20,7 @@ public class RetencionLoteDTO {
     private Long loteId;
 
     @NotNull(message = "La causa es obligatoria")
+    @jakarta.validation.constraints.NotBlank(message = "La causa es obligatoria")
     private String causa;
 
     @NotNull(message = "La fecha de retención es obligatoria")
@@ -38,4 +39,3 @@ public class RetencionLoteDTO {
 
 
 }
-
