@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.calidad.repository.CondicionUsoRepository;
 import com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.ProductoPorLoteDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
+import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -1000,5 +1002,27 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .condicionUsoActiva(!condiciones.isEmpty())
                 .condicionUso(condicionResumen)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductoPorLoteDTO resolverProductoPorLote(String codigoLote) {
+        if (!StringUtils.hasText(codigoLote)) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "CODIGO_LOTE_OBLIGATORIO");
+        }
+
+        LoteProducto lote = loteProductoRepository.findByCodigoLote(codigoLote)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "LOTE_NO_EXISTE"));
+
+        Producto producto = lote.getProducto();
+        if (producto == null || producto.getId() == null) {
+            throw new CustomBusinessException(ApiErrorCode.NEGOCIO_GENERICO, "LOTE_SIN_PRODUCTO_ASOCIADO");
+        }
+
+        return new ProductoPorLoteDTO(
+                producto.getId().longValue(),
+                producto.getCodigoSku(),
+                producto.getNombre()
+        );
     }
 }
