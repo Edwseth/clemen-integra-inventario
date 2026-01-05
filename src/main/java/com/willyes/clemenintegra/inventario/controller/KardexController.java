@@ -26,7 +26,15 @@ public class KardexController {
     private final KardexService kardexService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority(" +
+            "'ROL_JEFE_ALMACENES'," +
+            "'ROL_ALMACENISTA'," +
+            "'ROL_JEFE_PRODUCCION'," +
+            "'ROL_LIDER_ALIMENTOS'," +
+            "'ROL_LIDER_HOMEOPATICOS'," +
+            "'ROL_JEFE_CALIDAD'," +
+            "'ROL_SUPER_ADMIN'" +
+            ")")
     public ResponseEntity<List<KardexItemDTO>> obtenerKardex(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) String codigoSku,
