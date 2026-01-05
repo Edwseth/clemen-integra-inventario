@@ -493,7 +493,7 @@ class OrdenProduccionServiceReservaTest {
         when(almacenRepository.findById(1L)).thenReturn(Optional.of(almacenPt));
         when(almacenRepository.findById(2L)).thenReturn(Optional.of(almacenCuarentena));
         when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L)).thenReturn(Optional.empty());
-        when(loteProductoRepository.findByCodigoLote(any())).thenReturn(Optional.empty());
+        when(loteProductoRepository.existsByCodigoLote(any())).thenReturn(false);
         when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
             LoteProducto lote = invocation.getArgument(0);
             lote.setId(555L);

@@ -44,6 +44,6 @@ public interface LoteProductoService {
 
     LoteProductoResponseDTO reabrirParaReevaluacion(Long loteId, ReaperturaLoteRequestDTO dto, com.willyes.clemenintegra.shared.model.Usuario usuarioActual);
 
-    ProductoPorLoteDTO resolverProductoPorLote(String codigoLote);
+    ProductoPorLoteDTO resolverProductoPorLote(String codigoLote, Long ordenProduccionId);
 
 }

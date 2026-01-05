@@ -1195,8 +1195,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             String codigoLote = dto.getCodigoLote();
             if (lote == null) {
                 if (codigoLote != null && !codigoLote.isBlank()) {
-                    Optional<LoteProducto> existente = loteProductoRepository.findByCodigoLote(codigoLote);
-                    if (existente.isPresent()) {
+                    boolean existeCodigo = loteProductoRepository.existsByCodigoLote(codigoLote);
+                    if (existeCodigo) {
                         throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
                     }
                     orden.setLoteProduccion(codigoLote);
@@ -1226,8 +1226,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_PT_INCOMPATIBLE");
                 }
                 if (codigoLote != null && lote.getCodigoLote() != null && !lote.getCodigoLote().equals(codigoLote)) {
-                    Optional<LoteProducto> existente = loteProductoRepository.findByCodigoLote(codigoLote);
-                    if (existente.isPresent() && !existente.get().getId().equals(lote.getId())) {
+                    boolean existeCodigo = loteProductoRepository.existsByCodigoLote(codigoLote);
+                    if (existeCodigo) {
                         throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
                     }
                 } else if (lote.getCodigoLote() == null && codigoLote != null) {

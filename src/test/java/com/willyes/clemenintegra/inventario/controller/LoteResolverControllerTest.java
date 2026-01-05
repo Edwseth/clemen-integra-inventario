@@ -43,10 +43,11 @@ class LoteResolverControllerTest {
     @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
     void retornaProductoCuandoElLoteExiste() throws Exception {
         ProductoPorLoteDTO dto = new ProductoPorLoteDTO(1L, "SKU-123", "Producto Demo");
-        when(loteProductoService.resolverProductoPorLote(eq("L-001"))).thenReturn(dto);
+        when(loteProductoService.resolverProductoPorLote(eq("L-001"), eq(99L))).thenReturn(dto);
 
         mockMvc.perform(get("/api/inventario/lotes/resolver-producto")
                         .param("codigoLote", "L-001")
+                        .param("ordenProduccionId", "99")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productoId").value(1))
@@ -57,16 +58,17 @@ class LoteResolverControllerTest {
     @Test
     @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
     void retornaErrorControladoCuandoNoExisteLote() throws Exception {
-        when(loteProductoService.resolverProductoPorLote(eq("NOPE")))
-                .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "LOTE_NO_EXISTE"));
+        when(loteProductoService.resolverProductoPorLote(eq("NOPE"), eq(1L)))
+                .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "LOTE_NO_ENCONTRADO"));
 
         mockMvc.perform(get("/api/inventario/lotes/resolver-producto")
                         .param("codigoLote", "NOPE")
+                        .param("ordenProduccionId", "1")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RECURSO_NO_ENCONTRADO"))
-                .andExpect(jsonPath("$.message").value("LOTE_NO_EXISTE"));
+                .andExpect(jsonPath("$.message").value("LOTE_NO_ENCONTRADO"));
 
-        Mockito.verify(loteProductoService).resolverProductoPorLote("NOPE");
+        Mockito.verify(loteProductoService).resolverProductoPorLote("NOPE", 1L);
     }
 }
