@@ -10,7 +10,10 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class KardexServiceImpl implements KardexService {
 
     private static final EnumSet<ClasificacionMovimientoInventario> CLASIFICACIONES_ENTRADA = EnumSet.of(
@@ -62,7 +66,12 @@ public class KardexServiceImpl implements KardexService {
 
         Producto producto = resolverProducto(filtro.getProductoId(), filtro.getCodigoSku());
         Long productoId = producto.getId() != null ? producto.getId().longValue() : null;
-        LoteProducto lote = resolverLote(filtro.getLoteId(), filtro.getCodigoLote(), productoId);
+        LoteProducto lote = resolverLote(
+                filtro.getLoteId(),
+                filtro.getCodigoLote(),
+                productoId,
+                filtro.getAlmacenId(),
+                filtro.getOrdenProduccionId());
 
         List<MovimientoInventario> movimientos = movimientoInventarioRepository.buscarParaKardex(
                 filtro.getFechaDesde(),
@@ -86,17 +95,70 @@ public class KardexServiceImpl implements KardexService {
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
     }
 
-    private LoteProducto resolverLote(Long loteId, String codigoLote, Long productoId) {
+    private LoteProducto resolverLote(Long loteId,
+                                      String codigoLote,
+                                      Long productoId,
+                                      Long almacenId,
+                                      Long ordenProduccionId) {
         if (loteId != null) {
             Optional<LoteProducto> lote = loteProductoRepository.findById(loteId);
             return lote.filter(lp -> Objects.equals(lp.getProducto() != null ? lp.getProducto().getId().longValue() : null, productoId))
                     .orElseThrow(() -> new IllegalArgumentException("Lote no pertenece al producto"));
         }
         if (StringUtils.hasText(codigoLote)) {
-            return loteProductoRepository.findByCodigoLoteAndProductoId(codigoLote, productoId)
-                    .orElseThrow(() -> new IllegalArgumentException("Lote no encontrado"));
+            List<LoteProducto> lotes = loteProductoRepository.findAllByCodigoLoteAndProductoId(codigoLote, productoId);
+            if (lotes.isEmpty()) {
+                log.warn("Kardex: lote no encontrado para codigoLote={}, productoId={}, almacenId={}, ordenProduccionId={}",
+                        codigoLote, productoId, almacenId, ordenProduccionId);
+                throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
+                        "Lote no encontrado para el producto",
+                        detallesLote(codigoLote, productoId, almacenId, ordenProduccionId, lotes));
+            }
+
+            List<LoteProducto> candidatos = lotes;
+            if (ordenProduccionId != null) {
+                candidatos = candidatos.stream()
+                        .filter(lp -> lp.getOrdenProduccion() != null && Objects.equals(lp.getOrdenProduccion().getId(), ordenProduccionId))
+                        .toList();
+            }
+            if (almacenId != null) {
+                candidatos = candidatos.stream()
+                        .filter(lp -> lp.getAlmacen() != null && Objects.equals(lp.getAlmacen().getId().longValue(), almacenId))
+                        .toList();
+            }
+
+            if (candidatos.size() == 1) {
+                return candidatos.get(0);
+            }
+
+            if (candidatos.isEmpty() && lotes.size() == 1) {
+                return lotes.get(0);
+            }
+
+            log.warn("Kardex: múltiples lotes con código {}, productoId {}, sin criterios suficientes para desambiguar (almacenId={}, ordenProduccionId={})",
+                    codigoLote, productoId, almacenId, ordenProduccionId);
+            throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
+                    "Existen múltiples lotes con el mismo código; envíe loteId o almacén para desambiguar",
+                    detallesLote(codigoLote, productoId, almacenId, ordenProduccionId, lotes));
         }
         return null;
+    }
+
+    private Object detallesLote(String codigoLote,
+                                 Long productoId,
+                                 Long almacenId,
+                                 Long ordenProduccionId,
+                                 List<LoteProducto> lotes) {
+        return java.util.Map.of(
+                "codigoLote", codigoLote,
+                "productoId", productoId,
+                "almacenId", almacenId,
+                "ordenProduccionId", ordenProduccionId,
+                "loteIds", lotes != null ? lotes.stream()
+                        .filter(Objects::nonNull)
+                        .map(LoteProducto::getId)
+                        .toList() : List.of()
+        );
     }
 
     private List<KardexItemDTO> calcularSaldo(List<MovimientoInventario> movimientos,
