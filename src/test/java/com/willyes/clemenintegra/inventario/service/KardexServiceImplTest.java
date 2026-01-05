@@ -51,7 +51,7 @@ class KardexServiceImplTest {
         MovimientoInventario salida = movimiento(LocalDateTime.now().minusDays(1), new BigDecimal("3"),
                 TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
 
-        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(1L), any(), any()))
+        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(1L), any(), any(), any(), any()))
                 .thenReturn(List.of(entrada, salida));
 
         KardexFiltro filtro = KardexFiltro.builder().productoId(1L).build();
@@ -73,7 +73,7 @@ class KardexServiceImplTest {
         when(productoRepository.findByCodigoSku("SKU-05")).thenReturn(Optional.of(producto));
         when(loteProductoRepository.findByCodigoLoteAndProductoId("L-001", 5L)).thenReturn(Optional.of(lote));
 
-        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(5L), eq(9L), any()))
+        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(5L), eq(9L), any(), any(), any()))
                 .thenReturn(List.of());
 
         KardexFiltro filtro = KardexFiltro.builder()
@@ -84,7 +84,7 @@ class KardexServiceImplTest {
         List<KardexItemDTO> resultado = kardexService.obtenerKardex(filtro);
 
         assertThat(resultado).isEmpty();
-        verify(movimientoInventarioRepository).buscarParaKardex(null, null, 5L, 9L, null);
+        verify(movimientoInventarioRepository).buscarParaKardex(null, null, 5L, 9L, null, null, null);
     }
 
     @Test
@@ -102,7 +102,7 @@ class KardexServiceImplTest {
         transferencia.setAlmacenOrigen(origen);
         transferencia.setAlmacenDestino(destino);
 
-        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(2L), any(), eq(2L)))
+        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(2L), any(), eq(2L), any(), any()))
                 .thenReturn(List.of(transferencia));
 
         KardexFiltro filtro = KardexFiltro.builder()
@@ -115,6 +115,32 @@ class KardexServiceImplTest {
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).getCantidadEntrada()).isEqualByComparingTo("5");
         assertThat(resultado.get(0).getSaldo()).isEqualByComparingTo("5");
+    }
+
+    @Test
+    void filtraPorOrdenProduccion() {
+        Producto producto = crearProducto(3, "SKU-03", "Producto C");
+        when(productoRepository.findById(3L)).thenReturn(Optional.of(producto));
+
+        MovimientoInventario movOp = movimiento(LocalDateTime.now(), new BigDecimal("4"),
+                TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        com.willyes.clemenintegra.produccion.model.OrdenProduccion op = new com.willyes.clemenintegra.produccion.model.OrdenProduccion();
+        op.setId(10L);
+        movOp.setOrdenProduccion(op);
+
+        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(3L), any(), any(), eq(10L), any()))
+                .thenReturn(List.of(movOp));
+
+        KardexFiltro filtro = KardexFiltro.builder()
+                .productoId(3L)
+                .ordenProduccionId(10L)
+                .build();
+
+        List<KardexItemDTO> resultado = kardexService.obtenerKardex(filtro);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getCodigoSku()).isEqualTo("SKU-03");
+        verify(movimientoInventarioRepository).buscarParaKardex(null, null, 3L, null, null, 10L, null);
     }
 
     private Producto crearProducto(Integer id, String sku, String nombre) {

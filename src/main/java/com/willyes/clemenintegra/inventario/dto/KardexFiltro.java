@@ -19,4 +19,6 @@ public class KardexFiltro {
     private LocalDateTime fechaDesde;
     private LocalDateTime fechaHasta;
     private Long almacenId;
+    private Long ordenProduccionId;
+    private Long etapaProduccionId;
 }

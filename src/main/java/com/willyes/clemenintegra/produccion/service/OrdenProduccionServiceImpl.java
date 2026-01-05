@@ -17,6 +17,7 @@ import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.EtapaProduccionResponse;
 import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
+import com.willyes.clemenintegra.produccion.dto.ProduccionTrazabilidadResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.service.UnidadConversionService;
@@ -28,6 +29,7 @@ import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepositor
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import com.willyes.clemenintegra.produccion.service.spec.OrdenProduccionSpecifications;
+import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
@@ -64,6 +66,7 @@ import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
@@ -137,6 +140,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final ReservaLoteRepository reservaLoteRepository;
     private final DisponibilidadInsumoService disponibilidadInsumoService;
     private final ChecklistEtapaService checklistEtapaService;
+    private final ChecklistEtapaItemRepository checklistEtapaItemRepository;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -2130,6 +2134,145 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         return repository.save(orden);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProduccionTrazabilidadResponseDTO obtenerTrazabilidad(Long ordenProduccionId) {
+        OrdenProduccion orden = repository.findById(ordenProduccionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
+
+        ProduccionTrazabilidadResponseDTO.OpDTO opDTO = ProduccionTrazabilidadResponseDTO.OpDTO.builder()
+                .id(orden.getId())
+                .codigoOrden(orden.getCodigoOrden())
+                .productoId(orden.getProducto() != null ? orden.getProducto().getId().longValue() : null)
+                .nombreProducto(orden.getProducto() != null ? orden.getProducto().getNombre() : null)
+                .codigoSku(orden.getProducto() != null ? orden.getProducto().getCodigoSku() : null)
+                .loteProduccion(orden.getLoteProduccion())
+                .estado(orden.getEstado() != null ? orden.getEstado().name() : null)
+                .fechaInicio(orden.getFechaInicio())
+                .fechaFin(orden.getFechaFin())
+                .build();
+
+        List<ProduccionTrazabilidadResponseDTO.EtapaDTO> etapasDto = etapaProduccionRepository
+                .findByOrdenProduccionIdOrderBySecuenciaAsc(ordenProduccionId).stream()
+                .map(this::mapEtapaTrazabilidad)
+                .toList();
+
+        List<ProduccionTrazabilidadResponseDTO.ConsumoDTO> consumosDto = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacion(
+                        ordenProduccionId,
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                        Pageable.unpaged())
+                .getContent()
+                .stream()
+                .map(this::mapConsumoTrazabilidad)
+                .toList();
+
+        List<ProduccionTrazabilidadResponseDTO.MovimientoDTO> movimientosDto = movimientoInventarioRepository
+                .findByOrdenProduccionIdOrderByFechaIngresoAsc(ordenProduccionId).stream()
+                .map(this::mapMovimientoTrazabilidad)
+                .toList();
+
+        List<ProduccionTrazabilidadResponseDTO.LoteResultanteDTO> lotesDto = loteProductoRepository
+                .findByOrdenProduccionId(ordenProduccionId).stream()
+                .map(lote -> ProduccionTrazabilidadResponseDTO.LoteResultanteDTO.builder()
+                        .loteId(lote.getId())
+                        .codigoLote(lote.getCodigoLote())
+                        .estado(lote.getEstado() != null ? lote.getEstado().name() : null)
+                        .almacenId(lote.getAlmacen() != null ? lote.getAlmacen().getId().longValue() : null)
+                        .almacenNombre(lote.getAlmacen() != null ? lote.getAlmacen().getNombre() : null)
+                        .fechaFabricacion(lote.getFechaFabricacion())
+                        .fechaVencimiento(lote.getFechaVencimiento())
+                        .lotePsOrigenId(lote.getLotePsOrigen() != null ? lote.getLotePsOrigen().getId() : null)
+                        .build())
+                .toList();
+
+        List<ProduccionTrazabilidadResponseDTO.CierreDTO> cierresDto = cierreProduccionRepository
+                .findByOrdenProduccionId(ordenProduccionId, Pageable.unpaged())
+                .getContent()
+                .stream()
+                .map(cierre -> ProduccionTrazabilidadResponseDTO.CierreDTO.builder()
+                        .id(cierre.getId())
+                        .tipoCierre(cierre.getTipo() != null ? cierre.getTipo().name() : null)
+                        .fecha(cierre.getFechaCierre())
+                        .usuarioId(cierre.getUsuarioId())
+                        .usuarioNombre(cierre.getUsuarioNombre())
+                        .observacion(cierre.getObservacion())
+                        .build())
+                .toList();
+
+        return ProduccionTrazabilidadResponseDTO.builder()
+                .op(opDTO)
+                .etapas(etapasDto)
+                .consumos(consumosDto)
+                .movimientos(movimientosDto)
+                .lotesResultantes(lotesDto)
+                .cierres(cierresDto)
+                .build();
+    }
+
+    private ProduccionTrazabilidadResponseDTO.EtapaDTO mapEtapaTrazabilidad(EtapaProduccion etapa) {
+        List<com.willyes.clemenintegra.produccion.model.ChecklistEtapaItem> items =
+                checklistEtapaItemRepository.findByEtapaProduccionIdOrderByIdAsc(etapa.getId());
+        int total = items.size();
+        int obligPendientes = (int) items.stream()
+                .filter(i -> Boolean.TRUE.equals(i.getObligatorio()))
+                .filter(i -> !(EstadoChecklistItem.COMPLETADO.equals(i.getEstado())
+                        || (EstadoChecklistItem.NO_APLICA.equals(i.getEstado())
+                        && Boolean.TRUE.equals(i.getPermitirNoAplica()))))
+                .count();
+        boolean completo = total > 0 && obligPendientes == 0;
+
+        ProduccionTrazabilidadResponseDTO.ChecklistResumenDTO resumenChecklist =
+                ProduccionTrazabilidadResponseDTO.ChecklistResumenDTO.builder()
+                        .total(total)
+                        .obligatoriosPendientes(obligPendientes)
+                        .completo(completo)
+                        .build();
+
+        return ProduccionTrazabilidadResponseDTO.EtapaDTO.builder()
+                .id(etapa.getId())
+                .secuencia(etapa.getSecuencia())
+                .nombreEtapa(etapa.getNombre())
+                .estado(etapa.getEstado() != null ? etapa.getEstado().name() : null)
+                .fechaInicio(etapa.getFechaInicio())
+                .fechaFin(etapa.getFechaFin())
+                .usuarioId(etapa.getUsuarioId())
+                .usuarioNombre(etapa.getUsuarioNombre())
+                .checklist(resumenChecklist)
+                .build();
+    }
+
+    private ProduccionTrazabilidadResponseDTO.ConsumoDTO mapConsumoTrazabilidad(MovimientoInventario movimiento) {
+        return ProduccionTrazabilidadResponseDTO.ConsumoDTO.builder()
+                .movimientoId(movimiento.getId())
+                .etapaId(movimiento.getOrdenProduccionEtapa() != null ? movimiento.getOrdenProduccionEtapa().getId() : null)
+                .tipoMovimiento(movimiento.getTipoMovimiento() != null ? movimiento.getTipoMovimiento().name() : null)
+                .clasificacion(movimiento.getClasificacion() != null ? movimiento.getClasificacion().name() : null)
+                .productoId(movimiento.getProducto() != null ? movimiento.getProducto().getId().longValue() : null)
+                .codigoSku(movimiento.getProducto() != null ? movimiento.getProducto().getCodigoSku() : null)
+                .nombreProducto(movimiento.getProducto() != null ? movimiento.getProducto().getNombre() : null)
+                .loteId(movimiento.getLote() != null ? movimiento.getLote().getId() : null)
+                .codigoLote(movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null)
+                .almacenOrigenId(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId().longValue() : null)
+                .almacenOrigenNombre(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getNombre() : null)
+                .cantidad(movimiento.getCantidad())
+                .fechaMovimiento(movimiento.getFechaIngreso())
+                .build();
+    }
+
+    private ProduccionTrazabilidadResponseDTO.MovimientoDTO mapMovimientoTrazabilidad(MovimientoInventario movimiento) {
+        return ProduccionTrazabilidadResponseDTO.MovimientoDTO.builder()
+                .movimientoId(movimiento.getId())
+                .etapaId(movimiento.getOrdenProduccionEtapa() != null ? movimiento.getOrdenProduccionEtapa().getId() : null)
+                .tipoMovimiento(movimiento.getTipoMovimiento() != null ? movimiento.getTipoMovimiento().name() : null)
+                .clasificacion(movimiento.getClasificacion() != null ? movimiento.getClasificacion().name() : null)
+                .loteId(movimiento.getLote() != null ? movimiento.getLote().getId() : null)
+                .codigoLote(movimiento.getLote() != null ? movimiento.getLote().getCodigoLote() : null)
+                .almacenOrigen(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getNombre() : null)
+                .almacenDestino(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getNombre() : null)
+                .cantidad(movimiento.getCantidad())
+                .fechaMovimiento(movimiento.getFechaIngreso())
+                .build();
+    }
 }
-
-

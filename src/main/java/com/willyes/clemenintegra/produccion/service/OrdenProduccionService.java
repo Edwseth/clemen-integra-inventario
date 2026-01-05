@@ -71,4 +71,6 @@ public interface OrdenProduccionService {
                                  LocalDateTime fechaFin);
 
     OrdenProduccion cancelarOrden(Long ordenProduccionId, @Nullable String motivo);
+
+    com.willyes.clemenintegra.produccion.dto.ProduccionTrazabilidadResponseDTO obtenerTrazabilidad(Long ordenProduccionId);
 }

@@ -55,6 +55,8 @@ public class BatchRecordDTO {
     }
 
     public static class ConsumoDTO {
+        public Long movimientoId;
+        public Long etapaId;
         public String tipoMovimiento;
         public String clasificacionMovimiento;
         public Long productoId;
