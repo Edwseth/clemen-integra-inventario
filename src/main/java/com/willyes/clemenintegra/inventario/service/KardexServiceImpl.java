@@ -101,33 +101,9 @@ public class KardexServiceImpl implements KardexService {
                                       Long almacenId,
                                       Long ordenProduccionId) {
         if (loteId != null) {
-            LoteProducto lote = loteProductoRepository.findById(loteId)
-                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
-                            "Lote no encontrado; verifique loteId",
-                            detallesLoteId(loteId, codigoLote, productoId)));
-
-            Long loteProductoId = lote.getProducto() != null ? lote.getProducto().getId().longValue() : null;
-            if (productoId != null && !Objects.equals(loteProductoId, productoId)) {
-                throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
-                        "El lote indicado no pertenece al producto solicitado",
-                        detallesLoteId(loteId, codigoLote, productoId));
-            }
-            if (StringUtils.hasText(codigoLote) && !codigoLote.equals(lote.getCodigoLote())) {
-                throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
-                        "El codigoLote no coincide con el loteId proporcionado",
-                        detallesLoteId(loteId, codigoLote, productoId));
-            }
-            if (almacenId != null && (lote.getAlmacen() == null || !Objects.equals(lote.getAlmacen().getId().longValue(), almacenId))) {
-                throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
-                        "El lote indicado no pertenece al almacén solicitado",
-                        detallesLoteId(loteId, codigoLote, productoId));
-            }
-            if (ordenProduccionId != null && (lote.getOrdenProduccion() == null || !Objects.equals(lote.getOrdenProduccion().getId(), ordenProduccionId))) {
-                throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
-                        "El lote indicado no pertenece a la orden de producción solicitada",
-                        detallesLoteId(loteId, codigoLote, productoId));
-            }
-            return lote;
+            Optional<LoteProducto> lote = loteProductoRepository.findById(loteId);
+            return lote.filter(lp -> Objects.equals(lp.getProducto() != null ? lp.getProducto().getId().longValue() : null, productoId))
+                    .orElseThrow(() -> new IllegalArgumentException("Lote no pertenece al producto"));
         }
         if (StringUtils.hasText(codigoLote)) {
             List<LoteProducto> lotes = loteProductoRepository.findAllByCodigoLoteAndProductoId(codigoLote, productoId);
@@ -163,21 +139,13 @@ public class KardexServiceImpl implements KardexService {
                         detallesLote(codigoLote, productoId, almacenId, ordenProduccionId, lotes));
             }
 
-            log.warn("Kardex: múltiples lotes con código {}, productoId {}, sin criterios suficientes para desambiguar (almacenId={}, ordenProduccionId={}). Solicite loteId.",
+            log.warn("Kardex: múltiples lotes con código {}, productoId {}, sin criterios suficientes para desambiguar (almacenId={}, ordenProduccionId={})",
                     codigoLote, productoId, almacenId, ordenProduccionId);
             throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
-                    "Existen múltiples lotes con el mismo código; envíe loteId para desambiguar (opcionalmente almacenId u ordenProduccionId)",
+                    "Existen múltiples lotes con el mismo código; envíe loteId, almacenId u ordenProduccionId para desambiguar",
                     detallesLote(codigoLote, productoId, almacenId, ordenProduccionId, lotes));
         }
         return null;
-    }
-
-    private Object detallesLoteId(Long loteId, String codigoLote, Long productoId) {
-        java.util.Map<String, Object> detalles = new java.util.LinkedHashMap<>();
-        detalles.put("loteId", loteId);
-        detalles.put("codigoLote", codigoLote);
-        detalles.put("productoId", productoId);
-        return detalles;
     }
 
     private Object detallesLote(String codigoLote,
