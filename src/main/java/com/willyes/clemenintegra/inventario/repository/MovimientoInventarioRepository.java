@@ -95,31 +95,59 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
 
     boolean existsBySolicitudMovimientoId(Long solicitudMovimientoId);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     Page<MovimientoInventario> findByOrdenProduccionId(Long ordenProduccionId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     Page<MovimientoInventario> findByOrdenProduccionIdAndOrdenProduccionEtapaId(Long ordenProduccionId,
                                                                                Long ordenProduccionEtapaId,
                                                                                Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     Page<MovimientoInventario> findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacion(
             Long ordenProduccionId,
             Long ordenProduccionEtapaId,
             ClasificacionMovimientoInventario clasificacion,
             Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     List<MovimientoInventario> findByOrdenProduccionIdAndOrdenProduccionEtapaIdOrderByFechaIngresoAsc(
             Long ordenProduccionId,
             Long ordenProduccionEtapaId);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     List<MovimientoInventario> findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(
             Long ordenProduccionId,
             Long ordenProduccionEtapaId,
             ClasificacionMovimientoInventario clasificacion);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     List<MovimientoInventario> findByOrdenProduccionIdAndOrdenProduccionEtapaIdOrderByFechaIngresoDesc(
             Long ordenProduccionId,
             Long ordenProduccionEtapaId);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     List<MovimientoInventario> findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoDesc(
             Long ordenProduccionId,
             Long ordenProduccionEtapaId,
@@ -138,6 +166,10 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                                                          @Nullable TipoMovimiento tipoMovimiento,
                                                                          Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     Page<MovimientoInventario> findByOrdenProduccionIdAndClasificacion(Long ordenProduccionId,
                                                                        ClasificacionMovimientoInventario clasificacion,
                                                                        Pageable pageable);
@@ -303,6 +335,10 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                                 @Param("ordenProduccionId") Long ordenProduccionId,
                                                 @Param("etapaProduccionId") Long etapaProduccionId);
 
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.producto",
+            "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
+    })
     List<MovimientoInventario> findByOrdenProduccionIdOrderByFechaIngresoAsc(Long ordenProduccionId);
 
 }

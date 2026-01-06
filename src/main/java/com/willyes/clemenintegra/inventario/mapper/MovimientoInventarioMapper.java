@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.mapper;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import org.mapstruct.*;
 
@@ -62,7 +63,10 @@ public interface MovimientoInventarioMapper {
 
         dto.setCantidad(m.getCantidad());
 
-        var p = m.getProducto();
+        Producto p = m.getProducto();
+        if (p == null && m.getLote() != null) {
+            p = m.getLote().getProducto();
+        }
         dto.setProductoId(p != null ? (p.getId() == null ? null : Long.valueOf(p.getId())) : null);
         dto.setNombreProducto(p != null ? p.getNombre() : null);
         dto.setSku(p != null ? p.getCodigoSku() : null);
