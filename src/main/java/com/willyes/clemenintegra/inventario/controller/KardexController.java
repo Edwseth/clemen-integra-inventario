@@ -39,6 +39,7 @@ public class KardexController {
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) String codigoSku,
             @RequestParam(required = false) Long loteId,
+            @RequestParam(name = "loteProductoId", required = false) Long loteProductoId,
             @RequestParam(required = false) String codigoLote,
             @RequestParam(required = false) String fechaDesde,
             @RequestParam(required = false) String fechaHasta,
@@ -56,7 +57,7 @@ public class KardexController {
         KardexFiltro filtro = KardexFiltro.builder()
                 .productoId(productoId)
                 .codigoSku(codigoSku)
-                .loteId(loteId)
+                .loteId(loteId != null ? loteId : loteProductoId)
                 .codigoLote(codigoLote)
                 .fechaDesde(inicio)
                 .fechaHasta(fin)
