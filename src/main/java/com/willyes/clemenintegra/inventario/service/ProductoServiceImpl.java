@@ -367,7 +367,7 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable) {
+    public Page<ProductoOptionDTO> buscarOpciones(String q, Boolean activo, Pageable pageable) {
         // Mantén tu “safe sort”
         Sort sort = pageable.getSort();
         Sort safe = Sort.by(sort.stream()
@@ -378,7 +378,8 @@ public class ProductoServiceImpl implements ProductoService {
                 }).toList());
         Pageable safePage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
 
-        Page<Producto> page = productoRepository.buscarPorTexto(q, safePage);
+        String term = q == null ? null : q.trim();
+        Page<Producto> page = productoRepository.buscarPorTexto(term, activo, safePage);
 
         // ✅ Ahora mapeamos también la unidad
         return page.map(p -> {
@@ -634,4 +635,3 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
 }
-

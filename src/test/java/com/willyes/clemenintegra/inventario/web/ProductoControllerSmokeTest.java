@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.controller.ProductoController;
+import com.willyes.clemenintegra.inventario.dto.ProductoOptionDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
@@ -34,7 +35,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -154,6 +157,33 @@ class ProductoControllerSmokeTest {
                 .andExpect(jsonPath("$.content[0].sku").value("SKU-010"))
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.totalPages").value(1));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @DisplayName("GET /api/productos/buscar utiliza term/activo y devuelve opciones")
+    void buscarProductos_conTerminoYActivo() throws Exception {
+        ProductoOptionDTO option = ProductoOptionDTO.builder()
+                .id(5L)
+                .nombre("Producto RVC")
+                .sku("RVC001")
+                .build();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<ProductoOptionDTO> page = new PageImpl<>(List.of(option), pageable, 1);
+        when(productoService.buscarOpciones(anyString(), any(Boolean.class), any(Pageable.class))).thenReturn(page);
+
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("term", "RVC")
+                        .param("activo", "true")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content[0].id").value(5))
+                .andExpect(jsonPath("$.content[0].sku").value("RVC001"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        verify(productoService).buscarOpciones(eq("RVC"), eq(true), any(Pageable.class));
     }
 
     @Test

@@ -34,7 +34,7 @@ public interface ProductoService {
      */
     Producto findById(Long id);
 
-    Page<ProductoOptionDTO> buscarOpciones(String q, Pageable pageable);
+    Page<ProductoOptionDTO> buscarOpciones(String q, Boolean activo, Pageable pageable);
 
     Page<ProductoResumenDTO> buscarInsumos(String term, Pageable pageable);
 
