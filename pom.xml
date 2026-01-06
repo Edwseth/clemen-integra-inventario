@@ -267,16 +267,6 @@
       </properties>
     </profile>
 
-    <!-- Perfil: BD demo -->
-    <profile>
-      <id>db-demo</id>
-      <properties>
-        <flyway.url>jdbc:mysql://localhost:3306/clemen_integra_erp_demo?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=America/Bogota</flyway.url>
-        <flyway.user>ci_demo</flyway.user>
-        <flyway.password>DespliegueClemenIntegraErpDemo</flyway.password>
-      </properties>
-    </profile>
-
     <profile>
       <id>release</id>
       <build>
