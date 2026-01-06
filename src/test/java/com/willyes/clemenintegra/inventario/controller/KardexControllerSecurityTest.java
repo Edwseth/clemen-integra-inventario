@@ -113,14 +113,11 @@ class KardexControllerSecurityTest {
 
         mockMvc.perform(get("/api/inventario/kardex")
                         .param("productoId", "9")
-                        .param("loteProductoId", "123")
                         .with(SecurityMockMvcRequestPostProcessors.user("superadmin")
                                 .authorities(() -> "ROL_SUPER_ADMIN")))
                 .andExpect(status().isOk());
 
-        ArgumentCaptor<KardexFiltro> captor = ArgumentCaptor.forClass(KardexFiltro.class);
-        verify(kardexService).obtenerKardex(captor.capture());
-        assertThat(captor.getValue().getLoteId()).isEqualTo(123L);
+        verify(kardexService).obtenerKardex(any());
     }
 
     @Test

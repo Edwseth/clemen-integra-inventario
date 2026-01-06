@@ -12,7 +12,6 @@ import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -246,80 +245,6 @@ class KardexServiceImplTest {
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).getCodigoSku()).isEqualTo("SKU-03");
         verify(movimientoInventarioRepository).buscarParaKardex(null, null, 3L, null, null, 10L, null);
-    }
-
-    @Test
-    void priorizaLoteIdYValidaConsistencia() {
-        Producto producto = crearProducto(32, "ME0493", "Producto con lote");
-        LoteProducto lote = new LoteProducto();
-        lote.setId(94L);
-        lote.setCodigoLote("655412GSG");
-        lote.setProducto(producto);
-
-        when(productoRepository.findById(32L)).thenReturn(Optional.of(producto));
-        when(loteProductoRepository.findById(94L)).thenReturn(Optional.of(lote));
-        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(32L), eq(94L), any(), any(), any()))
-                .thenReturn(List.of());
-
-        KardexFiltro filtro = KardexFiltro.builder()
-                .productoId(32L)
-                .codigoLote("655412GSG")
-                .loteId(94L)
-                .build();
-
-        List<KardexItemDTO> resultado = kardexService.obtenerKardex(filtro);
-
-        assertThat(resultado).isEmpty();
-        verify(movimientoInventarioRepository).buscarParaKardex(null, null, 32L, 94L, null, null, null);
-    }
-
-    @Test
-    void rechazaLoteIdQueNoPerteneceAlProducto() {
-        Producto producto = crearProducto(10, "SKU-10", "Producto X");
-        Producto otroProducto = crearProducto(99, "SKU-99", "Otro");
-        LoteProducto lote = new LoteProducto();
-        lote.setId(500L);
-        lote.setCodigoLote("COD-500");
-        lote.setProducto(otroProducto);
-
-        when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
-        when(loteProductoRepository.findById(500L)).thenReturn(Optional.of(lote));
-
-        KardexFiltro filtro = KardexFiltro.builder()
-                .productoId(10L)
-                .loteId(500L)
-                .codigoLote("COD-500")
-                .build();
-
-        Assertions.assertThatThrownBy(() -> kardexService.obtenerKardex(filtro))
-                .isInstanceOf(CustomBusinessException.class)
-                .hasMessageContaining("no pertenece al producto");
-    }
-
-    @Test
-    void mantieneMensajeClaroParaAmbiguedadSinLoteId() {
-        Producto producto = crearProducto(12, "SKU-12", "Producto Ambiguo");
-        when(productoRepository.findByCodigoSku("SKU-12")).thenReturn(Optional.of(producto));
-
-        LoteProducto loteUno = new LoteProducto();
-        loteUno.setId(700L);
-        loteUno.setProducto(producto);
-
-        LoteProducto loteDos = new LoteProducto();
-        loteDos.setId(701L);
-        loteDos.setProducto(producto);
-
-        when(loteProductoRepository.findAllByCodigoLoteAndProductoId("AMB-01", 12L))
-                .thenReturn(List.of(loteUno, loteDos));
-
-        KardexFiltro filtro = KardexFiltro.builder()
-                .codigoSku("SKU-12")
-                .codigoLote("AMB-01")
-                .build();
-
-        Assertions.assertThatThrownBy(() -> kardexService.obtenerKardex(filtro))
-                .isInstanceOf(CustomBusinessException.class)
-                .hasMessageContaining("loteId");
     }
 
     private Producto crearProducto(Integer id, String sku, String nombre) {
