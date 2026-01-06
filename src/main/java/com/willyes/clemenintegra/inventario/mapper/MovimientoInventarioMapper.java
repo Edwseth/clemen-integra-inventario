@@ -85,7 +85,9 @@ public interface MovimientoInventarioMapper {
         dto.setNombreUsuarioRegistrador(u != null ? u.getNombreCompleto() : null);
         dto.setOrdenProduccionId(m.getOrdenProduccion() != null ? m.getOrdenProduccion().getId() : null);
         dto.setCodigoOrdenProduccion(m.getOrdenProduccion() != null ? m.getOrdenProduccion().getCodigoOrden() : null);
-        dto.setOrdenProduccionEtapaId(m.getOrdenProduccionEtapa() != null ? m.getOrdenProduccionEtapa().getId() : null);
+        var etapa = m.getOrdenProduccionEtapa();
+        dto.setOrdenProduccionEtapaId(etapa != null ? etapa.getId() : null);
+        dto.setNombreEtapaProduccion(etapa != null ? etapa.getNombre() : null);
         dto.setUnidad(m.getProducto() != null && m.getProducto().getUnidadMedida() != null
                 ? m.getProducto().getUnidadMedida().getNombre()
                 : null);

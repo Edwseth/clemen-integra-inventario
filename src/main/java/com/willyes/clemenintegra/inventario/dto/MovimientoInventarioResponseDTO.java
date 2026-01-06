@@ -37,6 +37,7 @@ public class MovimientoInventarioResponseDTO {
     private String unidad;
     private Long ordenProduccionId;
     private Long ordenProduccionEtapaId;
+    private String nombreEtapaProduccion;
     private String codigoOrdenProduccion;
     private Long solicitudId;
     private EstadoSolicitudMovimiento estadoSolicitud;

@@ -792,6 +792,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             ? solicitud.getOrdenProduccion().getCodigoOrden()
                             : null)
                     .ordenProduccionEtapaId(dto.ordenProduccionEtapaId())
+                    .nombreEtapaProduccion(resolverNombreEtapaProduccion(dto.ordenProduccionEtapaId()))
                     .detallesSolicitud(detallesRespuesta == null ? List.of() : List.copyOf(detallesRespuesta))
                     .build();
         }
@@ -3384,6 +3385,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 det.setEstado(com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle.ATENDIDO);
             }
         }
+    }
+
+    private String resolverNombreEtapaProduccion(Long etapaId) {
+        if (etapaId == null) {
+            return null;
+        }
+        return etapaProduccionRepository.findById(etapaId)
+                .map(EtapaProduccion::getNombre)
+                .orElse(null);
     }
 
     private Long resolverEtapaConsumo(Long ordenProduccionId, Long etapaId) {
