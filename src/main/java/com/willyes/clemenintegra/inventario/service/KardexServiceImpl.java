@@ -116,14 +116,14 @@ public class KardexServiceImpl implements KardexService {
             }
 
             List<LoteProducto> candidatos = lotes;
-            if (ordenProduccionId != null) {
-                candidatos = candidatos.stream()
-                        .filter(lp -> lp.getOrdenProduccion() != null && Objects.equals(lp.getOrdenProduccion().getId(), ordenProduccionId))
-                        .toList();
-            }
             if (almacenId != null) {
                 candidatos = candidatos.stream()
                         .filter(lp -> lp.getAlmacen() != null && Objects.equals(lp.getAlmacen().getId().longValue(), almacenId))
+                        .toList();
+            }
+            if (ordenProduccionId != null) {
+                candidatos = candidatos.stream()
+                        .filter(lp -> lp.getOrdenProduccion() != null && Objects.equals(lp.getOrdenProduccion().getId(), ordenProduccionId))
                         .toList();
             }
 
@@ -131,14 +131,18 @@ public class KardexServiceImpl implements KardexService {
                 return candidatos.get(0);
             }
 
-            if (candidatos.isEmpty() && lotes.size() == 1) {
-                return lotes.get(0);
+            if (candidatos.isEmpty()) {
+                log.warn("Kardex: lote no encontrado tras aplicar filtros para codigoLote={}, productoId={}, almacenId={}, ordenProduccionId={}",
+                        codigoLote, productoId, almacenId, ordenProduccionId);
+                throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
+                        "Lote no encontrado con los filtros proporcionados; envíe loteId para precisión",
+                        detallesLote(codigoLote, productoId, almacenId, ordenProduccionId, lotes));
             }
 
             log.warn("Kardex: múltiples lotes con código {}, productoId {}, sin criterios suficientes para desambiguar (almacenId={}, ordenProduccionId={})",
                     codigoLote, productoId, almacenId, ordenProduccionId);
             throw new CustomBusinessException(ApiErrorCode.KARDEX_PARAM_INVALIDO,
-                    "Existen múltiples lotes con el mismo código; envíe loteId o almacén para desambiguar",
+                    "Existen múltiples lotes con el mismo código; envíe loteId, almacenId u ordenProduccionId para desambiguar",
                     detallesLote(codigoLote, productoId, almacenId, ordenProduccionId, lotes));
         }
         return null;
@@ -149,16 +153,16 @@ public class KardexServiceImpl implements KardexService {
                                  Long almacenId,
                                  Long ordenProduccionId,
                                  List<LoteProducto> lotes) {
-        return java.util.Map.of(
-                "codigoLote", codigoLote,
-                "productoId", productoId,
-                "almacenId", almacenId,
-                "ordenProduccionId", ordenProduccionId,
-                "loteIds", lotes != null ? lotes.stream()
-                        .filter(Objects::nonNull)
-                        .map(LoteProducto::getId)
-                        .toList() : List.of()
-        );
+        java.util.Map<String, Object> detalles = new java.util.LinkedHashMap<>();
+        detalles.put("codigoLote", codigoLote);
+        detalles.put("productoId", productoId);
+        detalles.put("almacenId", almacenId);
+        detalles.put("ordenProduccionId", ordenProduccionId);
+        detalles.put("loteIds", lotes != null ? lotes.stream()
+                .filter(Objects::nonNull)
+                .map(LoteProducto::getId)
+                .toList() : List.of());
+        return detalles;
     }
 
     private List<KardexItemDTO> calcularSaldo(List<MovimientoInventario> movimientos,

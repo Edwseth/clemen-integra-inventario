@@ -150,6 +150,48 @@ class KardexServiceImplTest {
     }
 
     @Test
+    void lanzaErrorCuandoCodigoLoteInexistente() {
+        Producto producto = crearProducto(10, "SKU-10", "Producto J");
+        when(productoRepository.findByCodigoSku("SKU-10")).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.findAllByCodigoLoteAndProductoId("NO-EXISTE", 10L))
+                .thenReturn(List.of());
+
+        KardexFiltro filtro = KardexFiltro.builder()
+                .codigoSku("SKU-10")
+                .codigoLote("NO-EXISTE")
+                .build();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> kardexService.obtenerKardex(filtro))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("Lote no encontrado");
+    }
+
+    @Test
+    void noSeleccionaLoteCuandoNoCoincideAlmacen() {
+        Producto producto = crearProducto(11, "SKU-11", "Producto K");
+        when(productoRepository.findByCodigoSku("SKU-11")).thenReturn(Optional.of(producto));
+
+        Almacen almacenDisponible = new Almacen(5);
+        LoteProducto lote = new LoteProducto();
+        lote.setId(400L);
+        lote.setProducto(producto);
+        lote.setAlmacen(almacenDisponible);
+
+        when(loteProductoRepository.findAllByCodigoLoteAndProductoId("L-ALM", 11L))
+                .thenReturn(List.of(lote));
+
+        KardexFiltro filtro = KardexFiltro.builder()
+                .codigoSku("SKU-11")
+                .codigoLote("L-ALM")
+                .almacenId(999L)
+                .build();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> kardexService.obtenerKardex(filtro))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("Lote no encontrado");
+    }
+
+    @Test
     void calculaTransferenciaPorAlmacenDestino() {
         Producto producto = crearProducto(2, "SKU-02", "Producto B");
         when(productoRepository.findById(2L)).thenReturn(Optional.of(producto));
