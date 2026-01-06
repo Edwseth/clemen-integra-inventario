@@ -27,13 +27,6 @@ public class FlywayBootstrap implements CommandLineRunner {
     @Value("${spring.datasource.password:${DB_PASS:}}")
     private String primaryPass;
 
-    @Value("${app.flyway.secondary.url}")
-    private String secondaryUrl;
-    @Value("${app.flyway.secondary.user:${DB_USERNAME:root}}")
-    private String secondaryUser;
-    @Value("${app.flyway.secondary.password:${DB_PASS:}}")
-    private String secondaryPass;
-
     @Value("${app.flyway.migrations.locations:classpath:db/migration/inventario}")
     private String locations;
 
@@ -46,7 +39,6 @@ public class FlywayBootstrap implements CommandLineRunner {
     @Override
     public void run(String... args) {
         migrateIfFirstTime(primaryUrl, primaryUser, primaryPass);
-        migrateIfFirstTime(secondaryUrl, secondaryUser, secondaryPass);
     }
 
     private void migrateIfFirstTime(String url, String user, String pass) {
