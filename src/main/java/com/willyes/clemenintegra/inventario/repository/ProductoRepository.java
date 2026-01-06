@@ -47,11 +47,15 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     @Query("""
     select p
     from Producto p
-    where (:q is null or :q = ''
-           or lower(p.nombre) like lower(concat('%', :q, '%'))
-           or lower(p.codigoSku) like lower(concat('%', :q, '%')))
+    where (:activo is null or p.activo = :activo)
+      and (
+            :q is null or :q = ''
+         or lower(p.nombre) like lower(concat('%', :q, '%'))
+         or lower(p.codigoSku) like lower(concat('%', :q, '%'))
+         or lower(concat(p.nombre, ' (', p.codigoSku, ')')) like lower(concat('%', :q, '%'))
+      )
     """)
-    Page<Producto> buscarPorTexto(@Param("q") String q, Pageable pageable);
+    Page<Producto> buscarPorTexto(@Param("q") String q, @Param("activo") Boolean activo, Pageable pageable);
 
     /**
      * Busca insumos (MP, ME, suministros y semielaborados) por nombre.
@@ -134,4 +138,3 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
             Pageable pageable
     );
 }
-

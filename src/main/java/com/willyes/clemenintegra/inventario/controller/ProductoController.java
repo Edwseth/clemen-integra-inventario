@@ -44,8 +44,11 @@ public class ProductoController {
             "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD')")
     public ResponseEntity<Page<ProductoOptionDTO>> buscarProductos(
             @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "term", required = false) String term,
+            @RequestParam(name = "activo", required = false) Boolean activo,
             @PageableDefault(size = 10, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<ProductoOptionDTO> page = productoService.buscarOpciones(q, pageable);
+        String criterio = (term != null && !term.isBlank()) ? term : q;
+        Page<ProductoOptionDTO> page = productoService.buscarOpciones(criterio, activo, pageable);
         return ResponseEntity.ok(page);
     }
 
@@ -260,4 +263,3 @@ public class ProductoController {
     }
 
 }
-

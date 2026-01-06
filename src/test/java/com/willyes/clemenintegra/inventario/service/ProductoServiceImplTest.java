@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.ProductoOptionDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.ProductoMapper;
@@ -31,6 +32,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -295,6 +298,38 @@ class ProductoServiceImplTest {
                         TipoCategoria.PRODUCTO_SEMI_ELABORADO
                 );
         assertThat(termCaptor.getValue()).isEqualTo("ps");
+    }
+
+    @Test
+    @DisplayName("buscarOpciones debe normalizar el término y respetar filtro activo")
+    void buscarOpciones_normalizaTerminoYFiltraActivos() {
+        Pageable pageable = PageRequest.of(0, 5, Sort.by("nombre").ascending());
+        Producto producto = new Producto();
+        Page<Producto> page = new PageImpl<>(List.of(producto), pageable, 1);
+        when(productoRepository.buscarPorTexto(anyString(), any(Boolean.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        Page<ProductoOptionDTO> resultado = service.buscarOpciones("  RVC ", true, pageable);
+
+        assertThat(resultado.getTotalElements()).isEqualTo(1);
+        ArgumentCaptor<String> termCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Boolean> activoCaptor = ArgumentCaptor.forClass(Boolean.class);
+        verify(productoRepository).buscarPorTexto(termCaptor.capture(), activoCaptor.capture(), any(Pageable.class));
+        assertThat(termCaptor.getValue()).isEqualTo("RVC");
+        assertThat(activoCaptor.getValue()).isTrue();
+    }
+
+    @Test
+    @DisplayName("buscarOpciones debe permitir consultas sin término y sin filtro de estado")
+    void buscarOpciones_sinTerminoNoFiltraEstado() {
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("codigoSku"));
+        when(productoRepository.buscarPorTexto(null, null, pageable))
+                .thenReturn(Page.empty(pageable));
+
+        Page<ProductoOptionDTO> resultado = service.buscarOpciones(null, null, pageable);
+
+        assertThat(resultado).isEmpty();
+        verify(productoRepository).buscarPorTexto(null, null, pageable);
     }
 
     private CategoriaProducto categoria(TipoCategoria tipo) {
