@@ -20,7 +20,7 @@ import java.util.Optional;
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
 
     @EntityGraph(attributePaths = {
-            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor"
+            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
     })
     @Query("""
     select m
@@ -43,7 +43,7 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
     );
 
     @EntityGraph(attributePaths = {
-            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor"
+            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
     })
     @Query("""
     select m
@@ -154,7 +154,7 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             ClasificacionMovimientoInventario clasificacion);
 
     @EntityGraph(attributePaths = {
-            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor"
+            "producto", "lote", "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa"
     })
     @Query("""
             select m
