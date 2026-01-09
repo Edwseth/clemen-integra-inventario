@@ -87,6 +87,8 @@ public class SecurityConfig {
                             "/actuator/health",
                             "/actuator/health/**",
                             "/actuator/info",
+                            "/api/health",
+                            "/api/health/**",
                             "/auth/login",
                             "/api/auth/**",
                             "/v3/api-docs/**",
@@ -347,7 +349,14 @@ public class SecurityConfig {
 
         configuration.setAllowedOriginPatterns(new java.util.ArrayList<>(originPatterns));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setAllowedHeaders(java.util.List.of(
+                "Authorization",
+                "Content-Type",
+                "Idempotency-Key",
+                "X-Requested-With",
+                "Accept",
+                "Origin"
+        ));
         configuration.setExposedHeaders(java.util.List.of("Content-Disposition", "Location"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
