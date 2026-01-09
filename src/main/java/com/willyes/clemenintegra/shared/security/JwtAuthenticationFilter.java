@@ -31,6 +31,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final List<String> publicMatchers = List.of(
             "/api/auth/**",
             "/api/public/**",
+            "/api/health",
+            "/api/health/**",
             "/actuator/health",
             "/actuator/health/**",
             "/actuator/info",
