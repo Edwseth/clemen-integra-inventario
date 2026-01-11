@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 /**
  * Manejador global de excepciones para toda la aplicación.
@@ -179,10 +183,45 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponseDTO> handleRuntime(RuntimeException ex,
                                                           HttpServletRequest request) {
-        log.error("Error inesperado procesando la solicitud {}", request != null ? request.getRequestURI() : "", ex);
+        logInternalError(ex, request);
         return buildResponse(ApiErrorCode.ERROR_INTERNO,
                 "Ocurrió un error inesperado. Intente nuevamente o contacte soporte.",
                 null);
+    }
+
+    private void logInternalError(Exception ex, HttpServletRequest request) {
+        Throwable root = getRootCause(ex);
+        String requestId = MDC.get("requestId");
+        String method = request != null ? request.getMethod() : null;
+        String uri = request != null ? request.getRequestURI() : null;
+        String query = request != null ? request.getQueryString() : null;
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String usuario = auth != null ? auth.getName() : null;
+        String roles = auth != null
+                ? auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","))
+                : null;
+
+        log.error("Error inesperado requestId={} method={} uri={} query={} usuario={} roles={} rootType={} rootMessage={}",
+                requestId,
+                method,
+                uri,
+                query,
+                usuario,
+                roles,
+                root != null ? root.getClass().getSimpleName() : null,
+                root != null ? root.getMessage() : null,
+                ex);
+    }
+
+    private Throwable getRootCause(Throwable ex) {
+        Throwable current = ex;
+        while (current != null && current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        return current;
     }
 
     private ResponseEntity<ErrorResponseDTO> buildResponse(ApiErrorCode code, String message, Object details) {

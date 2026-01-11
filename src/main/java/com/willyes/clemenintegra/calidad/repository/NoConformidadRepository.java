@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -16,24 +17,37 @@ public interface NoConformidadRepository extends JpaRepository<NoConformidad, Lo
 
     Optional<NoConformidad> findFirstByCodigoStartingWithOrderByCodigoDesc(String codigoPrefix);
 
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
+    Page<NoConformidad> findAll(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
+    Optional<NoConformidad> findById(Long id);
+
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
     Page<NoConformidad> findBySeveridad(SeveridadNoConformidad severidad, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
     Page<NoConformidad> findByOrigen(OrigenNoConformidad origen, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
     Page<NoConformidad> findBySeveridadAndOrigen(SeveridadNoConformidad severidad,
                                                  OrigenNoConformidad origen,
                                                  Pageable pageable);
 
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
     Page<NoConformidad> findByTipoIncidente(TipoIncidente tipoIncidente, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
     Page<NoConformidad> findBySeveridadAndTipoIncidente(SeveridadNoConformidad severidad,
-                                                         TipoIncidente tipoIncidente,
-                                                         Pageable pageable);
+                                                        TipoIncidente tipoIncidente,
+                                                        Pageable pageable);
 
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
     Page<NoConformidad> findByOrigenAndTipoIncidente(OrigenNoConformidad origen,
                                                      TipoIncidente tipoIncidente,
                                                      Pageable pageable);
 
+    @EntityGraph(attributePaths = {"lote", "producto", "evaluacion"})
     Page<NoConformidad> findBySeveridadAndOrigenAndTipoIncidente(SeveridadNoConformidad severidad,
                                                                  OrigenNoConformidad origen,
                                                                  TipoIncidente tipoIncidente,

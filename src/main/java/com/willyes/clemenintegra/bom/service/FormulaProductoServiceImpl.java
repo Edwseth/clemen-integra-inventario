@@ -220,11 +220,16 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FormulaProductoResponse obtenerFormulaActivaPorProducto(Long productoId, BigDecimal cantidad) {
         FormulaProducto formula = formulaRepository
                 .findByProductoIdAndEstadoAndActivoTrue(productoId, EstadoFormula.APROBADA)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No existe fórmula activa aprobada para este producto."));
+
+        if (formula.getDocumentos() != null) {
+            formula.getDocumentos().size();
+        }
 
         FormulaProductoResponse response = bomMapper.toResponseDTO(formula);
         response.unidadBaseFormula = formula.getProducto() != null && formula.getProducto().getUnidadMedida() != null
@@ -362,4 +367,3 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
         return bomMapper.toFormulaActivaProduccionDTO(formula);
     }
 }
-

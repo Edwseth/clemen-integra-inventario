@@ -533,6 +533,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
                                                            EstadoProduccion estado,
                                                            String responsable,
@@ -549,6 +550,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<OrdenProduccion> listar(String codigo,
                                         EstadoProduccion estado,
                                         String responsable,
