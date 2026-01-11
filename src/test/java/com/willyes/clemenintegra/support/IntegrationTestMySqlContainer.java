@@ -3,11 +3,13 @@ package com.willyes.clemenintegra.support;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
+import org.junit.jupiter.api.Tag;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 // Activa TestcontainersExtension para los tests que necesitan Docker (vía @Testcontainers).
 @Testcontainers
+@Tag("docker")
 public abstract class IntegrationTestMySqlContainer {
 
     // La presencia del @Container registra y arranca el GenericContainer.
