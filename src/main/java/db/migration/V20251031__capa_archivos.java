@@ -8,21 +8,39 @@ public class V20251031__capa_archivos extends BaseJavaMigration {
     public void migrate(Context context) throws Exception {
         var conn = context.getConnection();
         try (var st = conn.createStatement()) {
-            st.execute("""
-                    CREATE TABLE IF NOT EXISTS capa_archivos (
-                        id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                        capa_id BIGINT NOT NULL,
-                        nombre_archivo VARCHAR(255) NOT NULL,
-                        nombre_visible VARCHAR(255) NULL,
-                        content_type VARCHAR(150) NULL,
-                        tamano_bytes BIGINT NULL,
-                        creado_por BIGINT NULL,
-                        fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT fk_capa_archivos_capa FOREIGN KEY (capa_id)
-                            REFERENCES capa (id)
-                            ON DELETE CASCADE
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-                    """);
+            if (isH2(context)) {
+                st.execute("""
+                        CREATE TABLE IF NOT EXISTS capa_archivos (
+                            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            capa_id BIGINT NOT NULL,
+                            nombre_archivo VARCHAR(255) NOT NULL,
+                            nombre_visible VARCHAR(255) NULL,
+                            content_type VARCHAR(150) NULL,
+                            tamano_bytes BIGINT NULL,
+                            creado_por BIGINT NULL,
+                            fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            CONSTRAINT fk_capa_archivos_capa FOREIGN KEY (capa_id)
+                                REFERENCES capa (id)
+                                ON DELETE CASCADE
+                        );
+                        """);
+            } else {
+                st.execute("""
+                        CREATE TABLE IF NOT EXISTS capa_archivos (
+                            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            capa_id BIGINT NOT NULL,
+                            nombre_archivo VARCHAR(255) NOT NULL,
+                            nombre_visible VARCHAR(255) NULL,
+                            content_type VARCHAR(150) NULL,
+                            tamano_bytes BIGINT NULL,
+                            creado_por BIGINT NULL,
+                            fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            CONSTRAINT fk_capa_archivos_capa FOREIGN KEY (capa_id)
+                                REFERENCES capa (id)
+                                ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                        """);
+            }
 
             try {
                 st.execute("""
@@ -33,5 +51,13 @@ public class V20251031__capa_archivos extends BaseJavaMigration {
                 // Si ya existe el índice, continuar
             }
         }
+    }
+
+    private boolean isH2(Context context) throws Exception {
+        return context.getConnection()
+                .getMetaData()
+                .getDatabaseProductName()
+                .toLowerCase()
+                .contains("h2");
     }
 }

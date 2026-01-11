@@ -10,6 +10,10 @@ public class V20251013__triggers_mov_inv extends BaseJavaMigration {
 
     @Override
     public void migrate(Context context) throws Exception {
+        if (isH2(context)) {
+            LOGGER.info("[MIGRATION] H2 detectado, se omite creación de triggers de movimientos_inventario");
+            return;
+        }
         var conn = context.getConnection();
         try (var st = conn.createStatement()) {
             String db;
@@ -50,5 +54,13 @@ public class V20251013__triggers_mov_inv extends BaseJavaMigration {
                     """.formatted("`" + db + "`"));
             LOGGER.info("[MIGRATION] Triggers creados/actualizados OK en {}", db);
         }
+    }
+
+    private boolean isH2(Context context) throws Exception {
+        return context.getConnection()
+                .getMetaData()
+                .getDatabaseProductName()
+                .toLowerCase()
+                .contains("h2");
     }
 }

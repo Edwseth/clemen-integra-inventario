@@ -8,25 +8,47 @@ public class V20251124__etapa_checklist extends BaseJavaMigration {
     public void migrate(Context context) throws Exception {
         var conn = context.getConnection();
         try (var st = conn.createStatement()) {
-            st.execute("""
-                    CREATE TABLE IF NOT EXISTS etapa_checklist_item (
-                        id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                        etapa_produccion_id BIGINT NOT NULL,
-                        nombre_paso VARCHAR(255) NOT NULL,
-                        obligatorio BOOLEAN NOT NULL DEFAULT FALSE,
-                        completado BOOLEAN NOT NULL DEFAULT FALSE,
-                        observacion TEXT NULL,
-                        completed_at DATETIME NULL,
-                        completed_by_id BIGINT NULL,
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        created_by_id BIGINT NULL,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        updated_by_id BIGINT NULL,
-                        CONSTRAINT fk_checklist_etapa FOREIGN KEY (etapa_produccion_id)
-                            REFERENCES etapa_produccion(id)
-                            ON DELETE CASCADE
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-                    """);
+            if (isH2(context)) {
+                st.execute("""
+                        CREATE TABLE IF NOT EXISTS etapa_checklist_item (
+                            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            etapa_produccion_id BIGINT NOT NULL,
+                            nombre_paso VARCHAR(255) NOT NULL,
+                            obligatorio BOOLEAN NOT NULL DEFAULT FALSE,
+                            completado BOOLEAN NOT NULL DEFAULT FALSE,
+                            observacion TEXT NULL,
+                            completed_at TIMESTAMP NULL,
+                            completed_by_id BIGINT NULL,
+                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            created_by_id BIGINT NULL,
+                            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            updated_by_id BIGINT NULL,
+                            CONSTRAINT fk_checklist_etapa FOREIGN KEY (etapa_produccion_id)
+                                REFERENCES etapa_produccion(id)
+                                ON DELETE CASCADE
+                        );
+                        """);
+            } else {
+                st.execute("""
+                        CREATE TABLE IF NOT EXISTS etapa_checklist_item (
+                            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                            etapa_produccion_id BIGINT NOT NULL,
+                            nombre_paso VARCHAR(255) NOT NULL,
+                            obligatorio BOOLEAN NOT NULL DEFAULT FALSE,
+                            completado BOOLEAN NOT NULL DEFAULT FALSE,
+                            observacion TEXT NULL,
+                            completed_at DATETIME NULL,
+                            completed_by_id BIGINT NULL,
+                            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            created_by_id BIGINT NULL,
+                            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            updated_by_id BIGINT NULL,
+                            CONSTRAINT fk_checklist_etapa FOREIGN KEY (etapa_produccion_id)
+                                REFERENCES etapa_produccion(id)
+                                ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                        """);
+            }
 
             try {
                 st.execute("""
@@ -37,5 +59,13 @@ public class V20251124__etapa_checklist extends BaseJavaMigration {
                 // índice puede existir en entornos previos
             }
         }
+    }
+
+    private boolean isH2(Context context) throws Exception {
+        return context.getConnection()
+                .getMetaData()
+                .getDatabaseProductName()
+                .toLowerCase()
+                .contains("h2");
     }
 }

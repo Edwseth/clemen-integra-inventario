@@ -12,6 +12,12 @@ public class V20251014__nc_fecha_cierre extends BaseJavaMigration {
 
     @Override
     public void migrate(Context context) throws Exception {
+        if (isH2(context)) {
+            JdbcTemplate jdbcTemplate = new JdbcTemplate(new SingleConnectionDataSource(context.getConnection(), true));
+            LOGGER.info("[MIGRATION] H2 detectado, asegurando columna fecha_cierre en no_conformidad");
+            jdbcTemplate.execute("ALTER TABLE no_conformidad ADD COLUMN IF NOT EXISTS fecha_cierre TIMESTAMP NULL");
+            return;
+        }
         JdbcTemplate jdbcTemplate = new JdbcTemplate(new SingleConnectionDataSource(context.getConnection(), true));
 
         String existsQuery = """
@@ -31,5 +37,13 @@ public class V20251014__nc_fecha_cierre extends BaseJavaMigration {
         } else {
             LOGGER.info("[MIGRATION] La columna fecha_cierre ya existe en no_conformidad. No se realizan cambios");
         }
+    }
+
+    private boolean isH2(Context context) throws Exception {
+        return context.getConnection()
+                .getMetaData()
+                .getDatabaseProductName()
+                .toLowerCase()
+                .contains("h2");
     }
 }
