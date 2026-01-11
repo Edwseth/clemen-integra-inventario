@@ -30,6 +30,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mail.javamail.JavaMailSender;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -61,6 +64,9 @@ class LoteProductoServiceLazyLoadingTest {
 
     @MockBean
     private InventoryCatalogResolver inventoryCatalogResolver;
+    @MockBean
+    private JavaMailSender javaMailSender;
+
 
     @Test
     void listarTodosPrecargaRelacionesParaMapper() {
