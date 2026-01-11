@@ -26,16 +26,17 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
-import com.willyes.clemenintegra.support.IntegrationTestMySqlContainer;
+import com.willyes.clemenintegra.support.IntegrationTestH2;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Se usa base H2 para evitar Testcontainers/Docker en este test.
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-class OrdenProduccionListadoIntegrationTest extends IntegrationTestMySqlContainer {
+class OrdenProduccionListadoIntegrationTest extends IntegrationTestH2 {
 
     @Autowired
     private MockMvc mockMvc;
