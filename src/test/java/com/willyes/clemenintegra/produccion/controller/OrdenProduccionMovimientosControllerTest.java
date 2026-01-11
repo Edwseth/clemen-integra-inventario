@@ -31,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.willyes.clemenintegra.support.IntegrationTestMySqlContainer;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -40,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-class OrdenProduccionMovimientosControllerTest {
+class OrdenProduccionMovimientosControllerTest extends IntegrationTestMySqlContainer {
 
     @Autowired
     private MockMvc mockMvc;

@@ -25,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.willyes.clemenintegra.support.IntegrationTestMySqlContainer;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
-class RecepcionOCControllerIntegrationTest {
+class RecepcionOCControllerIntegrationTest extends IntegrationTestMySqlContainer {
 
     private static final String CODIGO_RECEPCION = "RC-20240101-01";
 
