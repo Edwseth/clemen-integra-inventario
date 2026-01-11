@@ -30,8 +30,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
-import org.springframework.core.io.ClassPathResource;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -47,10 +45,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@org.springframework.test.context.jdbc.Sql(
-        scripts = {"classpath:schema-test.sql", "classpath:data-test.sql"},
-        executionPhase = org.springframework.test.context.jdbc.Sql.ExecutionPhase.BEFORE_TEST_METHOD
-)
 class PlanProduccionControllerIntegrationTest {
 
     @Autowired
@@ -83,20 +77,11 @@ class PlanProduccionControllerIntegrationTest {
     @MockBean
     private JavaMailSender javaMailSender;
 
-    @Autowired
-    private javax.sql.DataSource dataSource;
-
     private Usuario usuario;
     private Producto producto;
 
     @BeforeEach
     void setUp() {
-        ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-                new ClassPathResource("schema-test.sql"),
-                new ClassPathResource("data-test.sql")
-        );
-        populator.execute(dataSource);
-
         usuario = usuarioRepository.save(Usuario.builder()
                 .nombreUsuario("jefe")
                 .clave("secret")
