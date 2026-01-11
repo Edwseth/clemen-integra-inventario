@@ -13,11 +13,20 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FormulaProductoRepository extends JpaRepository<FormulaProducto, Long> {
-    @EntityGraph(attributePaths = "detalles")
+    @EntityGraph(attributePaths = {
+            "producto",
+            "producto.unidadMedida",
+            "detalles",
+            "detalles.insumo",
+            "detalles.unidadMedida",
+            "actualizadoPor",
+            "creadoPor"
+    })
     Optional<FormulaProducto> findByProductoId(Long productoId);
 
     @EntityGraph(attributePaths = {
             "producto",
+            "producto.unidadMedida",
             "detalles",
             "detalles.insumo",
             "detalles.unidadMedida",

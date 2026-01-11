@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.shared.security;
 
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
+import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.model.UsuarioPrincipal;
@@ -39,6 +40,7 @@ public class SecurityConfig {
 
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final RequestTimingFilter requestTimingFilter;
+    private final RequestIdFilter requestIdFilter;
     private final ObjectProvider<JwtAuthenticationProvider> jwtAuthenticationProviderProvider;
 
     // Orígenes permitidos por perfil (lista separada por comas)
@@ -292,6 +294,8 @@ public class SecurityConfig {
                                     response.getWriter().write("{\"error\":\"No autorizado\"}");
                                 }
                 ));
+
+        http.addFilterBefore(requestIdFilter, UsernamePasswordAuthenticationFilter.class);
 
         JwtAuthenticationProvider jwtAuthenticationProvider = jwtAuthenticationProviderProvider.getIfAvailable();
         if (jwtAuthenticationProvider != null) {

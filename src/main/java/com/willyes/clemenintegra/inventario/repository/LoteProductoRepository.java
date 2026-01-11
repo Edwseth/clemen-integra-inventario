@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.data.jpa.domain.Specification;
 
 @Repository
 public interface LoteProductoRepository extends JpaRepository<LoteProducto, Long>, JpaSpecificationExecutor<LoteProducto> {
@@ -152,6 +154,17 @@ WHERE lp.codigoLote = :codigoLote
     })
     org.springframework.data.domain.Page<LoteProducto> findAll(org.springframework.data.jpa.domain.Specification<LoteProducto> spec,
                                                               org.springframework.data.domain.Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "almacen",
+            "producto",
+            "producto.plantillaAnalisisMicrobiologico",
+            "usuarioLiberador",
+            "lotePsOrigen",
+            "ubicacionFisica",
+            "ordenProduccion"
+    })
+    List<LoteProducto> findAll(Specification<LoteProducto> spec, Sort sort);
 
     @Query("""
       select l
