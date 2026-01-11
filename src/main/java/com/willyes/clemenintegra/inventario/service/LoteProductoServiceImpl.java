@@ -388,6 +388,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen,
                                                      Boolean vencidos, LocalDateTime fechaInicio,
                                                      LocalDateTime fechaFin, Pageable pageable) {

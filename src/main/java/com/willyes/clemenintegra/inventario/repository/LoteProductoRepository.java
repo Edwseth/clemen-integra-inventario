@@ -141,6 +141,18 @@ WHERE lp.codigoLote = :codigoLote
     @EntityGraph(attributePaths = {"producto", "almacen"})
     List<LoteProducto> findByOrdenProduccionId(Long ordenProduccionId);
 
+    @EntityGraph(attributePaths = {
+            "almacen",
+            "producto",
+            "producto.plantillaAnalisisMicrobiologico",
+            "usuarioLiberador",
+            "lotePsOrigen",
+            "ubicacionFisica",
+            "ordenProduccion"
+    })
+    org.springframework.data.domain.Page<LoteProducto> findAll(org.springframework.data.jpa.domain.Specification<LoteProducto> spec,
+                                                              org.springframework.data.domain.Pageable pageable);
+
     @Query("""
       select l
       from LoteProducto l
