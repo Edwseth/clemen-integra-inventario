@@ -35,6 +35,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import com.willyes.clemenintegra.support.IntegrationTestMySqlContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -45,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-class PlanProduccionControllerIntegrationTest {
+class PlanProduccionControllerIntegrationTest extends IntegrationTestMySqlContainer {
 
     @Autowired
     private MockMvc mockMvc;

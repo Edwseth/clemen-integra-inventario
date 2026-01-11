@@ -36,12 +36,13 @@ import org.springframework.mail.javamail.JavaMailSender;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.willyes.clemenintegra.support.IntegrationTestMySqlContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class LoteProductoServiceLazyLoadingTest {
+class LoteProductoServiceLazyLoadingTest extends IntegrationTestMySqlContainer {
 
     @Autowired
     private LoteProductoService loteProductoService;
