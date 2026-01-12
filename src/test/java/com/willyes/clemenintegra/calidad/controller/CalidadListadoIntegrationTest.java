@@ -82,6 +82,7 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
     private Usuario usuario;
     private LoteProducto loteProducto;
     private EvaluacionCalidad evaluacion;
+    private NoConformidad noConformidad;
 
     @BeforeEach
     void setUp() {
@@ -151,7 +152,7 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
                 .usuarioEvaluador(usuario)
                 .build());
 
-        noConformidadRepository.save(NoConformidad.builder()
+        noConformidad = noConformidadRepository.save(NoConformidad.builder()
                 .codigo("NC-TEST-001")
                 .origen(OrigenNoConformidad.LOTE)
                 .severidad(SeveridadNoConformidad.MAYOR)
@@ -190,5 +191,14 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].reportadoPorNombre").value("Usuario Calidad Listado"))
                 .andExpect(jsonPath("$.content[0].codigo").value("NC-TEST-001"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void obtenerNoConformidadIncluyeNombresRelacionados() throws Exception {
+        mockMvc.perform(get("/api/calidad/no-conformidades/{id}", noConformidad.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportadoPorNombre").value("Usuario Calidad Listado"))
+                .andExpect(jsonPath("$.productoNombre").value("Producto Calidad"));
     }
 }
