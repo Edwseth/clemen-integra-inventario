@@ -65,8 +65,17 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     @Override
     @Transactional(readOnly = true)
     public Optional<FormulaProductoDetalleDTO> buscarDetallePorId(Long id) {
-        return formulaRepository.findByIdConDetalles(id)
-                .map(this::mapDetalleFormula);
+        Optional<FormulaProducto> formulaOpt = formulaRepository.findByIdConDetalles(id);
+        if (formulaOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        FormulaProducto formula = formulaOpt.get();
+        List<DocumentoFormula> documentos = formulaRepository.findByIdWithDocumentos(id)
+                .map(FormulaProducto::getDocumentos)
+                .orElse(Collections.emptyList());
+
+        return Optional.of(mapDetalleFormula(formula, documentos));
     }
 
     public FormulaProducto guardar(FormulaProducto formula) {
@@ -226,7 +235,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
         return String.valueOf(numeroVersion);
     }
 
-    private FormulaProductoDetalleDTO mapDetalleFormula(FormulaProducto formula) {
+    private FormulaProductoDetalleDTO mapDetalleFormula(FormulaProducto formula, List<DocumentoFormula> documentos) {
         FormulaProductoDetalleDTO dto = new FormulaProductoDetalleDTO();
         dto.id = formula.getId();
         dto.codigo = formula.getProducto() != null ? formula.getProducto().getCodigoSku() : null;
@@ -254,7 +263,8 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                     return detalleDto;
                 })
                 .collect(Collectors.toList());
-        dto.documentos = formula.getDocumentos() == null ? Collections.emptyList() : formula.getDocumentos().stream()
+        List<DocumentoFormula> documentosSeguro = documentos == null ? Collections.emptyList() : documentos;
+        dto.documentos = documentosSeguro.stream()
                 .map(bomMapper::toResponseDTO)
                 .collect(Collectors.toList());
         return dto;
