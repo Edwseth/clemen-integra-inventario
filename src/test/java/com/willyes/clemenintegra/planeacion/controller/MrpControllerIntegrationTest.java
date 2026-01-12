@@ -17,6 +17,7 @@ import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.repository.PlanProduccionSemanalRepository;
+import com.willyes.clemenintegra.planeacion.repository.CorridaMrpRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -39,6 +40,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -63,6 +65,8 @@ class MrpControllerIntegrationTest extends IntegrationTestMySqlContainer {
     private FormulaProductoRepository formulaProductoRepository;
     @Autowired
     private PlanProduccionSemanalRepository planProduccionSemanalRepository;
+    @Autowired
+    private CorridaMrpRepository corridaMrpRepository;
 
     @MockBean
     private InventoryCatalogResolver inventoryCatalogResolver;
@@ -189,5 +193,23 @@ class MrpControllerIntegrationTest extends IntegrationTestMySqlContainer {
                         .content("{\"planSemanalId\":" + plan.getId() + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.detalles").isArray());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_COMPRADOR")
+    void obtenerCorridaNoGeneraStackOverflow() throws Exception {
+        mockMvc.perform(post("/api/mrp/corridas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planSemanalId\":" + plan.getId() + "}"))
+                .andExpect(status().isOk());
+
+        Long corridaId = corridaMrpRepository.findAll().stream()
+                .findFirst()
+                .orElseThrow()
+                .getId();
+
+        mockMvc.perform(get("/api/mrp/corridas/" + corridaId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(corridaId));
     }
 }

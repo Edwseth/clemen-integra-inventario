@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoCapa;
+import com.willyes.clemenintegra.calidad.repository.NoConformidadListadoProjection;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
 import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
@@ -50,25 +51,8 @@ public class NoConformidadServiceImpl implements NoConformidadService {
                                          OrigenNoConformidad origen,
                                          TipoIncidente tipoIncidente,
                                          Pageable pageable) {
-        Page<NoConformidad> page;
-        if (severidad != null && origen != null && tipoIncidente != null) {
-            page = repository.findBySeveridadAndOrigenAndTipoIncidente(severidad, origen, tipoIncidente, pageable);
-        } else if (severidad != null && origen != null) {
-            page = repository.findBySeveridadAndOrigen(severidad, origen, pageable);
-        } else if (severidad != null && tipoIncidente != null) {
-            page = repository.findBySeveridadAndTipoIncidente(severidad, tipoIncidente, pageable);
-        } else if (origen != null && tipoIncidente != null) {
-            page = repository.findByOrigenAndTipoIncidente(origen, tipoIncidente, pageable);
-        } else if (severidad != null) {
-            page = repository.findBySeveridad(severidad, pageable);
-        } else if (origen != null) {
-            page = repository.findByOrigen(origen, pageable);
-        } else if (tipoIncidente != null) {
-            page = repository.findByTipoIncidente(tipoIncidente, pageable);
-        } else {
-            page = repository.findAll(pageable);
-        }
-        return page.map(mapper::toDTO);
+        Page<NoConformidadListadoProjection> page = repository.findListado(severidad, origen, tipoIncidente, pageable);
+        return page.map(this::toListadoDTO);
     }
 
     @Override
@@ -254,6 +238,31 @@ public class NoConformidadServiceImpl implements NoConformidadService {
         NoConformidad guardada = repository.save(nueva);
         vincularRetencionConNoConformidad(guardada);
         return guardada;
+    }
+
+    private NoConformidadDTO toListadoDTO(NoConformidadListadoProjection projection) {
+        return NoConformidadDTO.builder()
+                .id(projection.getId())
+                .codigo(projection.getCodigo())
+                .origen(projection.getOrigen())
+                .severidad(projection.getSeveridad())
+                .estado(projection.getEstado())
+                .tipoIncidente(projection.getTipoIncidente())
+                .descripcion(projection.getDescripcion())
+                .evidencia(projection.getEvidencia())
+                .fechaRegistro(projection.getFechaRegistro())
+                .fechaCierre(projection.getFechaCierre())
+                .usuarioReportaId(projection.getUsuarioReportaId())
+                .loteId(projection.getLoteId())
+                .productoId(projection.getProductoId() != null ? projection.getProductoId().longValue() : null)
+                .evaluacionId(projection.getEvaluacionId())
+                .codigoLote(projection.getCodigoLote())
+                .reportadoPorNombre(projection.getReportadoPorNombre())
+                .productoNombre(projection.getProductoNombre())
+                .creadoPor(projection.getCreadoPor())
+                .actualizadoPor(projection.getActualizadoPor())
+                .actualizadoEn(projection.getActualizadoEn())
+                .build();
     }
 
     @Override
