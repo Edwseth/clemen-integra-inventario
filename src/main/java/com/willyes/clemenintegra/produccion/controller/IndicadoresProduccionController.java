@@ -35,7 +35,7 @@ public class IndicadoresProduccionController {
     }
 
     @GetMapping("/ordenes/alertas")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<AlertaOrdenProduccionDTO>> obtenerAlertas(
             @RequestParam(required = false) LocalDate fechaReferencia,
             @RequestParam(required = false, defaultValue = "3") Integer diasVentana) {
