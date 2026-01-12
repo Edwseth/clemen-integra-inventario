@@ -3,7 +3,12 @@ package com.willyes.clemenintegra.planeacion.model;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoSugerenciaAbastecimiento;
 import com.willyes.clemenintegra.planeacion.model.enums.TipoSugerenciaAbastecimiento;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -12,14 +17,17 @@ import java.util.List;
 
 @Entity
 @Table(name = "sugerencias_abastecimiento")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class SugerenciaAbastecimiento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)

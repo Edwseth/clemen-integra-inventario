@@ -3,7 +3,12 @@ package com.willyes.clemenintegra.planeacion.model;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoCorridaMrp;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,14 +17,17 @@ import java.util.List;
 
 @Entity
 @Table(name = "corridas_mrp")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class CorridaMrp {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

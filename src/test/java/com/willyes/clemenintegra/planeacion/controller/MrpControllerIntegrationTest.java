@@ -180,4 +180,14 @@ class MrpControllerIntegrationTest extends IntegrationTestMySqlContainer {
                 .andExpect(jsonPath("$.detalles[0].categoriaInsumo").value("MP"))
                 .andExpect(jsonPath("$.sugerencias[0].productoNombre").value(insumo.getNombre()));
     }
+
+    @Test
+    @WithMockUser(authorities = "ROL_COMPRADOR")
+    void ejecutarCorridaMrpNoGeneraErrorServidor() throws Exception {
+        mockMvc.perform(post("/api/mrp/corridas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planSemanalId\":" + plan.getId() + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.detalles").isArray());
+    }
 }
