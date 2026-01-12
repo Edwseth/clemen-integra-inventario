@@ -20,9 +20,22 @@ public interface CorridaMrpRepository extends JpaRepository<CorridaMrp, Long> {
             "detalles.producto.categoriaProducto",
             "detalles.sugerencia",
             "detalles.sugerencia.detalleCorrida",
-            "detalles.sugerencia.detalleCorrida.producto"
+            "detalles.sugerencia.detalleCorrida.producto",
+            "detalles.sugerencia.detalleCorrida.producto.categoriaProducto"
     })
     Optional<CorridaMrp> findWithDetallesById(Long id);
+
+    @EntityGraph(attributePaths = {
+            "planProduccionSemanal",
+            "detalles",
+            "detalles.producto",
+            "detalles.producto.categoriaProducto",
+            "detalles.sugerencia",
+            "detalles.sugerencia.detalleCorrida",
+            "detalles.sugerencia.detalleCorrida.producto",
+            "detalles.sugerencia.detalleCorrida.producto.categoriaProducto"
+    })
+    Optional<CorridaMrp> findByIdWithGraph(Long id);
 
     Optional<CorridaMrp> findTopByPlanProduccionSemanalAndEstadoOrderByFechaEjecucionDesc(
             PlanProduccionSemanal plan, EstadoCorridaMrp estado
