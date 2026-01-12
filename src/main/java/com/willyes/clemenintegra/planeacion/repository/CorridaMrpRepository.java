@@ -19,7 +19,8 @@ public interface CorridaMrpRepository extends JpaRepository<CorridaMrp, Long> {
             "detalles.producto",
             "detalles.producto.categoriaProducto",
             "detalles.sugerencia",
-            "detalles.sugerencia.detalleCorrida"
+            "detalles.sugerencia.detalleCorrida",
+            "detalles.sugerencia.detalleCorrida.producto"
     })
     Optional<CorridaMrp> findWithDetallesById(Long id);
 

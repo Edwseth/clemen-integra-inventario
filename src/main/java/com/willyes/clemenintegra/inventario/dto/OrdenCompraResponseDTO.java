@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -21,6 +22,41 @@ public class OrdenCompraResponseDTO {
     private BigDecimal totalRecibido;
     private BigDecimal totalPendiente;
     private BigDecimal porcentajeAvance;
+
+    public OrdenCompraResponseDTO(Integer id,
+                                  String codigoOrden,
+                                  EstadoOrdenCompra estado,
+                                  String proveedorNombre,
+                                  LocalDateTime fechaOrden,
+                                  LocalDate fechaCompromisoEntrega,
+                                  BigDecimal descuento,
+                                  BigDecimal totalPedido,
+                                  BigDecimal totalRecibido) {
+        this.id = id != null ? id.longValue() : null;
+        this.codigoOrden = codigoOrden;
+        this.estado = estado != null ? estado.name() : null;
+        this.proveedorNombre = proveedorNombre;
+        this.fechaOrden = fechaOrden;
+        this.fechaCompromisoEntrega = fechaCompromisoEntrega;
+        this.descuento = descuento;
+        this.totalPedido = totalPedido != null ? totalPedido : BigDecimal.ZERO;
+        this.totalRecibido = totalRecibido != null ? totalRecibido : BigDecimal.ZERO;
+        this.totalPendiente = calcularPendiente(this.totalPedido, this.totalRecibido);
+        this.porcentajeAvance = calcularPorcentaje(this.totalPedido, this.totalRecibido);
+    }
+
+    private BigDecimal calcularPendiente(BigDecimal totalPedido, BigDecimal totalRecibido) {
+        BigDecimal pendiente = totalPedido.subtract(totalRecibido);
+        return pendiente.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : pendiente;
+    }
+
+    private BigDecimal calcularPorcentaje(BigDecimal totalPedido, BigDecimal totalRecibido) {
+        if (totalPedido.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return totalRecibido.multiply(BigDecimal.valueOf(100))
+                .divide(totalPedido, 2, java.math.RoundingMode.HALF_UP);
+    }
 
     public String getEstado() {return estado;}
     public String getProveedorNombre() {return proveedorNombre;}

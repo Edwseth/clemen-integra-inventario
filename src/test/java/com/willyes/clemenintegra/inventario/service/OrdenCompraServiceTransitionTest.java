@@ -7,7 +7,6 @@ import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.HistorialEstadoOrdenRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
-import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -38,8 +37,6 @@ class OrdenCompraServiceTransitionTest {
     private OrdenCompraRepository ordenCompraRepository;
     @Mock
     private HistorialEstadoOrdenRepository historialEstadoOrdenRepository;
-    @Mock
-    private OrdenCompraMapper ordenCompraMapper;
 
     @InjectMocks
     private OrdenCompraService ordenCompraService;
@@ -106,11 +103,11 @@ class OrdenCompraServiceTransitionTest {
     @Test
     void atrasadasBranchUsesRepository() {
         Pageable pageable = Pageable.unpaged();
-        when(ordenCompraRepository.findAtrasadas(any(), any(Set.class)))
+        when(ordenCompraRepository.findListadoAtrasadas(any(), any(Set.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         Page<?> result = ordenCompraService.listar(pageable, true);
         assertNotNull(result);
-        verify(ordenCompraRepository).findAtrasadas(eq(pageable), any(Set.class));
+        verify(ordenCompraRepository).findListadoAtrasadas(eq(pageable), any(Set.class));
     }
 
     @Test

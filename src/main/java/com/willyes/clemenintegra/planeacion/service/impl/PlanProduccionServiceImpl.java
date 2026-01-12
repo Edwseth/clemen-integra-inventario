@@ -112,7 +112,7 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
     @Override
     @Transactional(readOnly = true)
     public Optional<PlanProduccionSemanal> buscarPorId(Long id) {
-        return planProduccionSemanalRepository.findById(id);
+        return planProduccionSemanalRepository.findWithDetallesById(id);
     }
 
     @Override

@@ -2,7 +2,6 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.OrdenCompraDetalleRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO;
-import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
 import com.willyes.clemenintegra.inventario.model.HistorialEstadoOrden;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
@@ -35,7 +34,6 @@ public class OrdenCompraService {
 
     private final OrdenCompraRepository ordenCompraRepository;
     private final HistorialEstadoOrdenRepository historialEstadoOrdenRepository;
-    private final OrdenCompraMapper mapper;
 
     /**
      * Busca una orden de compra por su ID incluyendo proveedor y detalles.
@@ -47,19 +45,15 @@ public class OrdenCompraService {
     }
 
     public Page<OrdenCompraResponseDTO> listar(Pageable pageable, boolean atrasadas) {
-        Page<OrdenCompra> page;
         if (atrasadas) {
-            page = ordenCompraRepository.findAtrasadas(pageable,
+            return ordenCompraRepository.findListadoAtrasadas(pageable,
                     EnumSet.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.PARCIALMENTE_RECIBIDA));
-        } else {
-            page = ordenCompraRepository.findAll(pageable);
         }
-        return page.map(mapper::toDTO);
+        return ordenCompraRepository.findListado(pageable);
     }
 
     public Page<OrdenCompraResponseDTO> listarPorEstado(EstadoOrdenCompra estado, Pageable pageable) {
-        return ordenCompraRepository.findByEstado(estado, pageable)
-                .map(mapper::toDTO);
+        return ordenCompraRepository.findListadoPorEstado(estado, pageable);
     }
 
     public String generarCodigoOrdenCompra() {
