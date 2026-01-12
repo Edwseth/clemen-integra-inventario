@@ -4,19 +4,16 @@ import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
-import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO;
 import com.willyes.clemenintegra.calidad.dto.CondicionUsoCreateDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCondicionDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
-import com.willyes.clemenintegra.calidad.model.ResultadoAnalisisMicrobiologico;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
-import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.repository.EvaluacionCalidadRepository;
 import com.willyes.clemenintegra.calidad.repository.ResultadoAnalisisMicrobiologicoRepository;
-import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.service.CondicionUsoService;
 import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
@@ -52,7 +49,6 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -267,39 +263,15 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     }
 
     @Override
-    public java.util.List<EvaluacionConsolidadaResponseDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio, LocalDate fechaFin) {
+    public Page<EvaluacionConsolidadaListadoDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio,
+                                                                                 LocalDate fechaFin,
+                                                                                 Pageable pageable) {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(LocalTime.MAX);
-        java.util.List<EvaluacionCalidad> evaluaciones = repository.findAllWithinFechaEvaluacion(inicio, fin);
-
-        java.util.Map<LoteProducto, java.util.List<EvaluacionCalidad>> agrupado = evaluaciones.stream()
-                .collect(java.util.stream.Collectors.groupingBy(EvaluacionCalidad::getLoteProducto));
-
-        java.util.Set<Long> evaluacionesQuimicoMicro = evaluaciones.stream()
-                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
-                .map(EvaluacionCalidad::getId)
-                .collect(java.util.stream.Collectors.toSet());
-
-        java.util.Set<Long> evaluacionesConResultadosMicro = evaluacionesQuimicoMicro.isEmpty()
-                ? java.util.Collections.emptySet()
-                : resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(evaluacionesQuimicoMicro.stream().toList())
-                .stream()
-                .map(r -> r.getEvaluacion().getId())
-                .collect(java.util.stream.Collectors.toSet());
-
-        java.util.Map<Long, Boolean> conformidadMicro = resultadoAnalisisMicrobiologicoRepository
-                .findByEvaluacionIdIn(evaluacionesQuimicoMicro.stream().toList())
-                .stream()
-                .collect(java.util.stream.Collectors.groupingBy(r -> r.getEvaluacion().getId(),
-                        java.util.stream.Collectors.mapping(ResultadoAnalisisMicrobiologico::getCumple,
-                                java.util.stream.Collectors.collectingAndThen(
-                                        java.util.stream.Collectors.toList(),
-                                        lista -> lista.isEmpty() ? null : lista.stream().allMatch(Boolean.TRUE::equals)))));
-
-        return agrupado.entrySet().stream()
-                .map(entry -> mapper.toConsolidadoDTO(entry.getKey(), entry.getValue(),
-                        evaluacionesConResultadosMicro, conformidadMicro))
-                .toList();
+        Pageable effective = pageable.getSort().isSorted() ? pageable
+                : org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaEvaluacion"));
+        return repository.findConsolidadoListado(inicio, fin, effective);
     }
 
     public void eliminar(Long id) {

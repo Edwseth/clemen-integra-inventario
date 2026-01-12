@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.repository;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -35,6 +36,23 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
     java.util.List<EvaluacionCalidad> findAllWithinFechaEvaluacion(
             @Param("inicio") LocalDateTime inicio,
             @Param("fin") LocalDateTime fin);
+
+    @Query(value = "SELECT new com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO(" +
+            "e.id, e.fechaEvaluacion, l.codigoLote, p.nombre, e.resultado, e.tipoEvaluacion, " +
+            "u.nombreCompleto, COUNT(a)) " +
+            "FROM EvaluacionCalidad e " +
+            "JOIN e.loteProducto l " +
+            "JOIN l.producto p " +
+            "JOIN e.usuarioEvaluador u " +
+            "LEFT JOIN e.archivosAdjuntos a " +
+            "WHERE e.fechaEvaluacion BETWEEN :inicio AND :fin " +
+            "GROUP BY e.id, e.fechaEvaluacion, l.codigoLote, p.nombre, e.resultado, e.tipoEvaluacion, u.nombreCompleto",
+            countQuery = "SELECT COUNT(e.id) FROM EvaluacionCalidad e " +
+                    "WHERE e.fechaEvaluacion BETWEEN :inicio AND :fin")
+    Page<EvaluacionConsolidadaListadoDTO> findConsolidadoListado(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            Pageable pageable);
 
     boolean existsByLoteProductoIdAndTipoEvaluacion(Long loteId, TipoEvaluacion tipo);
 

@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -60,4 +62,27 @@ public interface NoConformidadRepository extends JpaRepository<NoConformidad, Lo
                                                                         EstadoNoConformidad estado);
 
     java.util.List<NoConformidad> findByLote_Id(Long loteId);
+
+    @Query(value = "SELECT n.id as id, n.codigo as codigo, n.origen as origen, n.severidad as severidad, " +
+            "n.tipoIncidente as tipoIncidente, n.estado as estado, n.descripcion as descripcion, " +
+            "n.evidencia as evidencia, n.fechaRegistro as fechaRegistro, n.fechaCierre as fechaCierre, " +
+            "u.id as usuarioReportaId, l.id as loteId, p.id as productoId, e.id as evaluacionId, " +
+            "l.codigoLote as codigoLote, u.nombreCompleto as reportadoPorNombre, p.nombre as productoNombre, " +
+            "n.creadoPor as creadoPor, n.actualizadoPor as actualizadoPor, n.actualizadoEn as actualizadoEn " +
+            "FROM NoConformidad n " +
+            "JOIN n.usuarioReporta u " +
+            "LEFT JOIN n.lote l " +
+            "LEFT JOIN n.producto p " +
+            "LEFT JOIN n.evaluacion e " +
+            "WHERE (:severidad IS NULL OR n.severidad = :severidad) " +
+            "AND (:origen IS NULL OR n.origen = :origen) " +
+            "AND (:tipoIncidente IS NULL OR n.tipoIncidente = :tipoIncidente)",
+            countQuery = "SELECT COUNT(n.id) FROM NoConformidad n " +
+                    "WHERE (:severidad IS NULL OR n.severidad = :severidad) " +
+                    "AND (:origen IS NULL OR n.origen = :origen) " +
+                    "AND (:tipoIncidente IS NULL OR n.tipoIncidente = :tipoIncidente)")
+    Page<NoConformidadListadoProjection> findListado(@Param("severidad") SeveridadNoConformidad severidad,
+                                                     @Param("origen") OrigenNoConformidad origen,
+                                                     @Param("tipoIncidente") TipoIncidente tipoIncidente,
+                                                     Pageable pageable);
 }

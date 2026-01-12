@@ -5,6 +5,8 @@ import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoCorridaMrp;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,7 +37,8 @@ public interface CorridaMrpRepository extends JpaRepository<CorridaMrp, Long> {
             "detalles.sugerencia.detalleCorrida.producto",
             "detalles.sugerencia.detalleCorrida.producto.categoriaProducto"
     })
-    Optional<CorridaMrp> findWithGraphById(Long id);
+    @Query("select c from CorridaMrp c where c.id = :id")
+    Optional<CorridaMrp> findWithGraphById(@Param("id") Long id);
 
     Optional<CorridaMrp> findTopByPlanProduccionSemanalAndEstadoOrderByFechaEjecucionDesc(
             PlanProduccionSemanal plan, EstadoCorridaMrp estado
