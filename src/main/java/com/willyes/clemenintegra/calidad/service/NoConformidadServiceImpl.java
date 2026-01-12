@@ -12,11 +12,8 @@ import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoCapa;
-import com.willyes.clemenintegra.calidad.repository.NoConformidadListadoProjection;
+import com.willyes.clemenintegra.calidad.repository.*;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
-import com.willyes.clemenintegra.calidad.repository.NoConformidadRepository;
-import com.willyes.clemenintegra.calidad.repository.RetencionLoteRepository;
-import com.willyes.clemenintegra.calidad.repository.CapaRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -156,11 +153,37 @@ public class NoConformidadServiceImpl implements NoConformidadService {
 
     @Transactional(readOnly = true)
     public NoConformidadDetalleDTO obtenerPorId(Long id) {
-        return repository.findDetalleById(id)
+
+        NoConformidadDetalleProjection p = repository.findDetalleProjectionById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "No conformidad no encontrada con ID: " + id));
+                        "No conformidad no encontrada con ID: " + id
+                ));
+
+        return new NoConformidadDetalleDTO(
+                p.getId(),
+                p.getCodigo(),
+                p.getOrigen(),
+                p.getSeveridad(),
+                p.getTipoIncidente(),
+                p.getEstado(),
+                p.getDescripcion(),
+                p.getEvidencia(),
+                p.getFechaRegistro(),
+                p.getFechaCierre(),
+                p.getUsuarioReportaId(),
+                p.getLoteId(),
+                p.getProductoId(),
+                p.getEvaluacionId(),
+                p.getCodigoLote(),
+                p.getReportadoPorNombre(),
+                p.getProductoNombre(),
+                p.getCreadoPor(),
+                p.getActualizadoPor(),
+                p.getActualizadoEn()
+        );
     }
+
 
     @Override
     @Transactional

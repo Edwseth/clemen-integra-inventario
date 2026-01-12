@@ -87,15 +87,34 @@ public interface NoConformidadRepository extends JpaRepository<NoConformidad, Lo
                                                      @Param("tipoIncidente") TipoIncidente tipoIncidente,
                                                      Pageable pageable);
 
-    @Query("SELECT new com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO(" +
-            "n.id, n.codigo, n.origen, n.severidad, n.tipoIncidente, n.estado, n.descripcion, n.evidencia, " +
-            "n.fechaRegistro, n.fechaCierre, u.id, l.id, p.id, e.id, l.codigoLote, u.nombreCompleto, p.nombre, " +
-            "n.creadoPor, n.actualizadoPor, n.actualizadoEn) " +
-            "FROM NoConformidad n " +
-            "JOIN n.usuarioReporta u " +
-            "LEFT JOIN n.lote l " +
-            "LEFT JOIN n.producto p " +
-            "LEFT JOIN n.evaluacion e " +
-            "WHERE n.id = :id")
-    Optional<NoConformidadDetalleDTO> findDetalleById(@Param("id") Long id);
+    @Query("""
+        SELECT 
+                n.id as id,
+                n.codigo as codigo,
+                n.origen as origen,
+                n.severidad as severidad,
+                n.tipoIncidente as tipoIncidente,
+                n.estado as estado,
+                n.descripcion as descripcion,
+                n.evidencia as evidencia,
+                n.fechaRegistro as fechaRegistro,
+                n.fechaCierre as fechaCierre,
+                u.id as usuarioReportaId,
+                l.id as loteId,
+                p.id as productoId,
+                e.id as evaluacionId,
+                l.codigoLote as codigoLote,
+                u.nombreCompleto as reportadoPorNombre,
+                p.nombre as productoNombre,
+                n.creadoPor as creadoPor,
+                n.actualizadoPor as actualizadoPor,
+                n.actualizadoEn as actualizadoEn
+            FROM NoConformidad n
+            JOIN n.usuarioReporta u
+            LEFT JOIN n.lote l
+            LEFT JOIN n.producto p
+            LEFT JOIN n.evaluacion e
+            WHERE n.id = :id
+        """)
+    Optional<NoConformidadDetalleProjection> findDetalleProjectionById(@Param("id") Long id);
 }
