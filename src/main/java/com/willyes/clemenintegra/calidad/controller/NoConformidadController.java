@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
-import com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
@@ -38,7 +37,7 @@ public class NoConformidadController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
-    public ResponseEntity<NoConformidadDetalleDTO> obtener(@PathVariable Long id) {
+    public ResponseEntity<NoConformidadDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
@@ -86,3 +85,4 @@ public class NoConformidadController {
         return ResponseEntity.noContent().build();
     }
 }
+

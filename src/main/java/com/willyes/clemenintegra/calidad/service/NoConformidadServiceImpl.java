@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
-import com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.mapper.NoConformidadMapper;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
@@ -152,8 +151,9 @@ public class NoConformidadServiceImpl implements NoConformidadService {
         repository.deleteById(id);
     }
 
-    public NoConformidadDetalleDTO obtenerPorId(Long id) {
-        return repository.findDetalleById(id)
+    public NoConformidadDTO obtenerPorId(Long id) {
+        return repository.findById(id)
+                .map(mapper::toDTO)
                 .orElseThrow(() -> new NoSuchElementException("No conformidad no encontrada con ID: " + id));
     }
 
