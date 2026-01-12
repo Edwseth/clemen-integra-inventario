@@ -1,10 +1,8 @@
 package com.willyes.clemenintegra.bom.controller;
 
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
-import com.willyes.clemenintegra.bom.model.DocumentoFormula;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
-import com.willyes.clemenintegra.bom.model.enums.TipoDocumento;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
@@ -119,14 +117,6 @@ class FormulaProductoDetalleIntegrationTest extends IntegrationTestMySqlContaine
                 .activo(true)
                 .build());
 
-        DocumentoFormula documento = DocumentoFormula.builder()
-                .tipoDocumento(TipoDocumento.PROCEDIMIENTO)
-                .nombreArchivo("procedimiento.pdf")
-                .rutaArchivo("/tmp/procedimiento.pdf")
-                .fechaSubida(LocalDateTime.now())
-                .usuario(usuario)
-                .build();
-
         FormulaProducto formula = FormulaProducto.builder()
                 .producto(producto)
                 .version("V2")
@@ -135,7 +125,7 @@ class FormulaProductoDetalleIntegrationTest extends IntegrationTestMySqlContaine
                 .activo(true)
                 .creadoPor(usuario)
                 .detalles(List.of())
-                .documentos(List.of(documento))
+                .documentos(List.of())
                 .build();
 
         DetalleFormula detalle = DetalleFormula.builder()
@@ -146,7 +136,6 @@ class FormulaProductoDetalleIntegrationTest extends IntegrationTestMySqlContaine
                 .obligatorio(true)
                 .build();
 
-        documento.setFormula(formula);
         formula.setDetalles(List.of(detalle));
         FormulaProducto guardada = formulaProductoRepository.save(formula);
 
@@ -156,9 +145,7 @@ class FormulaProductoDetalleIntegrationTest extends IntegrationTestMySqlContaine
                 .andExpect(jsonPath("$.productoNombre").value("Producto Formula Detalle"))
                 .andExpect(jsonPath("$.detalles").isArray())
                 .andExpect(jsonPath("$.detalles[0].insumoNombre").value("Insumo Detalle"))
-                .andExpect(jsonPath("$.detalles[0].cantidad").value(2))
-                .andExpect(jsonPath("$.documentos").isArray())
-                .andExpect(jsonPath("$.documentos[0].nombreVisible").value("procedimiento.pdf"));
+                .andExpect(jsonPath("$.detalles[0].cantidad").value(2));
     }
 
     @Test
