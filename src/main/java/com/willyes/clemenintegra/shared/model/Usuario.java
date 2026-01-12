@@ -2,7 +2,12 @@ package com.willyes.clemenintegra.shared.model;
 
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -12,14 +17,17 @@ import java.time.LocalDateTime;
         // TODO: Reactivar la restricción de unicidad del correo al desplegar en producción.
         // @UniqueConstraint(name = "un_correo_usuario_UNIQUE", columnNames = "correo")
 })
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "nombre_usuario", nullable = false, length = 45)
