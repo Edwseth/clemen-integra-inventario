@@ -45,7 +45,9 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
             "actualizadoPor",
             "creadoPor"
     })
-    Optional<FormulaProducto> findByIdConDetalles(Long id);
+    @Query("SELECT f FROM FormulaProducto f WHERE f.id = :id")
+    Optional<FormulaProducto> findByIdWithDetalles(@Param("id") Long id);
+
 
     List<FormulaProducto> findAllByProductoId(Long productoId);
 

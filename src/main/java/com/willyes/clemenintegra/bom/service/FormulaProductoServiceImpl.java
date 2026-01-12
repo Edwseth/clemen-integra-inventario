@@ -65,7 +65,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
     @Override
     @Transactional(readOnly = true)
     public Optional<FormulaProductoDetalleDTO> buscarDetallePorId(Long id) {
-        return formulaRepository.findByIdConDetalles(id)
+        return formulaRepository.findByIdWithDetalles(id)
                 .map(this::mapDetalleFormula);
     }
 
