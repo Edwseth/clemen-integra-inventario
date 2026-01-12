@@ -36,6 +36,11 @@ public interface ConteoCiclicoRepository extends JpaRepository<ConteoCiclico, Lo
     @Query("select distinct c from ConteoCiclico c left join c.detalles d where c.id = :id")
     Optional<ConteoCiclico> findByIdWithDetallesForUpdate(@Param("id") Long id);
 
+    @EntityGraph(attributePaths = {
+            "almacen",
+            "creadoPor",
+            "aplicadoPor"
+    })
     @Query("select c from ConteoCiclico c where (:almacenId is null or c.almacen.id = :almacenId) " +
             "and (:estado is null or c.estado = :estado)")
     Page<ConteoCiclico> buscar(@Param("almacenId") Integer almacenId,

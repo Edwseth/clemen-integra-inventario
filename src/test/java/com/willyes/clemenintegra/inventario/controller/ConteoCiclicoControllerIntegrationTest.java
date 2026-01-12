@@ -141,6 +141,7 @@ class ConteoCiclicoControllerIntegrationTest extends IntegrationTestMySqlContain
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(conteo.getId()))
+                .andExpect(jsonPath("$.content[0].creadoPorNombre").value("Usuario Contador"))
                 .andExpect(jsonPath("$.content[0].detalles").doesNotExist());
     }
 

@@ -16,6 +16,8 @@ public class ConteoCiclicoResponseDTO {
     LocalDateTime fechaCreacion;
     LocalDateTime aplicadoEn;
     Long creadoPorId;
+    String creadoPorNombre;
     Long aplicadoPorId;
+    String aplicadoPorNombre;
     List<ConteoCiclicoDetalleResponseDTO> detalles;
 }

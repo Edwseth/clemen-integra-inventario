@@ -22,6 +22,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -42,6 +45,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -226,6 +230,94 @@ class ProductoServiceImplTest {
                 .containsExactly("PT-001", "PS-001");
     }
 
+    @ParameterizedTest(name = "Crear producto con banderas F={0} Q={1} M={2}")
+    @MethodSource("banderasCalidad")
+    void crearProducto_persisteBanderasCalidad(Boolean requiereFisico,
+                                               Boolean requiereQuimico,
+                                               Boolean requiereMicro) {
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(5L);
+        when(unidadMedidaRepository.findById(5L)).thenReturn(Optional.of(unidad));
+
+        CategoriaProducto categoriaMp = new CategoriaProducto();
+        categoriaMp.setId(3L);
+        categoriaMp.setTipo(TipoCategoria.MATERIA_PRIMA);
+        when(categoriaProductoRepository.findById(3L)).thenReturn(Optional.of(categoriaMp));
+
+        when(productoRepository.existsByCodigoSku("MP0001")).thenReturn(false);
+        when(productoRepository.existsByNombre("Producto MP")).thenReturn(false);
+
+        ProductoRequestDTO dto = ProductoRequestDTO.builder()
+                .sku("MP0001")
+                .nombre("Producto MP")
+                .descripcionProducto("desc")
+                .stockMinimo(BigDecimal.ONE)
+                .unidadMedidaId(5L)
+                .categoriaProductoId(3L)
+                .requiereAnalisisFisico(requiereFisico)
+                .requiereAnalisisQuimico(requiereQuimico)
+                .requiereAnalisisMicrobiologico(requiereMicro)
+                .build();
+
+        ArgumentCaptor<Producto> captor = ArgumentCaptor.forClass(Producto.class);
+        service.crearProducto(dto);
+
+        verify(productoRepository).save(captor.capture());
+        Producto guardado = captor.getValue();
+        assertThat(guardado.isRequiereAnalisisFisico()).isEqualTo(Boolean.TRUE.equals(requiereFisico));
+        assertThat(guardado.isRequiereAnalisisQuimico()).isEqualTo(Boolean.TRUE.equals(requiereQuimico));
+        assertThat(guardado.isRequiereAnalisisMicrobiologico()).isEqualTo(Boolean.TRUE.equals(requiereMicro));
+    }
+
+    @Test
+    @DisplayName("Actualizar producto debe reemplazar banderas de calidad")
+    void actualizarProducto_actualizaBanderasCalidad() {
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(5L);
+        when(unidadMedidaRepository.findById(5L)).thenReturn(Optional.of(unidad));
+
+        CategoriaProducto categoriaMp = new CategoriaProducto();
+        categoriaMp.setId(3L);
+        categoriaMp.setTipo(TipoCategoria.MATERIA_PRIMA);
+        when(categoriaProductoRepository.findById(3L)).thenReturn(Optional.of(categoriaMp));
+
+        Producto existente = Producto.builder()
+                .id(10)
+                .codigoSku("MP0001")
+                .nombre("Producto MP")
+                .stockMinimo(BigDecimal.ONE)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoriaMp)
+                .requiereAnalisisFisico(false)
+                .requiereAnalisisQuimico(false)
+                .requiereAnalisisMicrobiologico(false)
+                .build();
+        when(productoRepository.findById(10L)).thenReturn(Optional.of(existente));
+        when(productoRepository.existsByCodigoSkuAndIdNot("MP0001", 10L)).thenReturn(false);
+        when(productoRepository.existsByNombreAndIdNot("Producto MP", 10L)).thenReturn(false);
+
+        ProductoRequestDTO dto = ProductoRequestDTO.builder()
+                .sku("MP0001")
+                .nombre("Producto MP")
+                .descripcionProducto("desc")
+                .stockMinimo(BigDecimal.ONE)
+                .unidadMedidaId(5L)
+                .categoriaProductoId(3L)
+                .requiereAnalisisFisico(true)
+                .requiereAnalisisQuimico(true)
+                .requiereAnalisisMicrobiologico(false)
+                .build();
+
+        ArgumentCaptor<Producto> captor = ArgumentCaptor.forClass(Producto.class);
+        service.actualizarProducto(10L, dto);
+
+        verify(productoRepository).save(captor.capture());
+        Producto actualizado = captor.getValue();
+        assertThat(actualizado.isRequiereAnalisisFisico()).isTrue();
+        assertThat(actualizado.isRequiereAnalisisQuimico()).isTrue();
+        assertThat(actualizado.isRequiereAnalisisMicrobiologico()).isFalse();
+    }
+
     @Test
     @DisplayName("Debe devolver página vacía si el término de autocomplete está vacío")
     void buscarInsumosAutocomplete_sinTermino_devuelveVacio() {
@@ -330,6 +422,15 @@ class ProductoServiceImplTest {
 
         assertThat(resultado).isEmpty();
         verify(productoRepository).buscarPorTexto(null, null, pageable);
+    }
+
+    private static Stream<Arguments> banderasCalidad() {
+        return Stream.of(
+                Arguments.of(false, false, false),
+                Arguments.of(true, false, false),
+                Arguments.of(true, true, false),
+                Arguments.of(true, true, true)
+        );
     }
 
     private CategoriaProducto categoria(TipoCategoria tipo) {
