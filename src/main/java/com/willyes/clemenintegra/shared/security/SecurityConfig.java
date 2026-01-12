@@ -104,6 +104,16 @@ public class SecurityConfig {
                             "/api/public/**"
                     ).permitAll();
 
+                    auth.requestMatchers(HttpMethod.PATCH, "/api/inventario/productos/*/calidad").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/productos/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers(
                             "/api/productos/**",
                             "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**",

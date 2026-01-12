@@ -10,6 +10,8 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.calidad.repository.PlantillaAnalisisMicrobiologicoRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import io.jsonwebtoken.Claims;
@@ -303,6 +305,23 @@ public class ProductoServiceImpl implements ProductoService {
         aplicarBanderasCalidadDesdeDto(producto, dto);
 
         producto.setRendimientoUnidad(resolverRendimientoUnidad(dto, categoria));
+
+        productoRepository.save(producto);
+        BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
+        return buildDto(producto, stock);
+    }
+
+    @Override
+    @Transactional
+    public ProductoResponseDTO actualizarCamposCalidad(Long id, ProductoCalidadUpdateDTO dto) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Producto no encontrado con ID: " + id));
+
+        producto.setRequiereAnalisisFisico(dto.getRequiereAnalisisFisico());
+        producto.setRequiereAnalisisQuimico(dto.getRequiereAnalisisQuimico());
+        producto.setRequiereAnalisisMicrobiologico(dto.getRequiereAnalisisMicrobiologico());
+        producto.recomputarTipoAnalisisDesdeBanderas();
 
         productoRepository.save(producto);
         BigDecimal stock = stockQueryService.obtenerStockDisponible(producto.getId().longValue());
