@@ -52,9 +52,8 @@ public class FormulaProductoController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<FormulaProductoResponse> obtenerPorId(@PathVariable Long id) {
-        return formulaService.buscarPorId(id)
-                .map(formula -> bomMapper.toResponseDTO(formula))
+    public ResponseEntity<FormulaProductoDetalleDTO> obtenerPorId(@PathVariable Long id) {
+        return formulaService.buscarDetallePorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -190,4 +189,3 @@ public class FormulaProductoController {
         return ResponseEntity.ok(formulaService.obtenerFormulaActivaProduccion(productoId));
     }
 }
-
