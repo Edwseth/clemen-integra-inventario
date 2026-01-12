@@ -202,6 +202,7 @@ class EvaluacionCalidadServiceImplTest {
 
         EvaluacionConsolidadaListadoDTO consolidado = new EvaluacionConsolidadaListadoDTO(
                 71L,
+                lote.getId(),
                 evalFisico.getFechaEvaluacion(),
                 "LOT-10",
                 "Producto Q",
@@ -218,6 +219,7 @@ class EvaluacionCalidadServiceImplTest {
 
         assertThat(consolidados).hasSize(1);
         var dto = consolidados.getContent().get(0);
+        assertThat(dto.getLoteId()).isEqualTo(lote.getId());
         assertThat(dto.getCodigoLote()).isEqualTo("LOT-10");
         assertThat(dto.getNombreProducto()).isEqualTo("Producto Q");
         assertThat(dto.getTipoEvaluacion()).isEqualTo(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
@@ -246,6 +248,7 @@ class EvaluacionCalidadServiceImplTest {
 
         EvaluacionConsolidadaListadoDTO consolidado = new EvaluacionConsolidadaListadoDTO(
                 80L,
+                loteSoloMicro.getId(),
                 evalMicro.getFechaEvaluacion(),
                 "LOT-30",
                 "Producto Micro",
@@ -261,6 +264,7 @@ class EvaluacionCalidadServiceImplTest {
 
         assertThat(consolidados).hasSize(1);
         var dto = consolidados.getContent().get(0);
+        assertThat(dto.getLoteId()).isEqualTo(loteSoloMicro.getId());
         assertThat(dto.getCodigoLote()).isEqualTo("LOT-30");
         assertThat(dto.isTieneAdjuntos()).isFalse();
     }
@@ -286,6 +290,7 @@ class EvaluacionCalidadServiceImplTest {
 
         EvaluacionConsolidadaListadoDTO consolidado = new EvaluacionConsolidadaListadoDTO(
                 90L,
+                loteSinMicro.getId(),
                 evalFisico.getFechaEvaluacion(),
                 "LOT-40",
                 "Producto F",
@@ -301,6 +306,7 @@ class EvaluacionCalidadServiceImplTest {
 
         assertThat(consolidados).hasSize(1);
         var dto = consolidados.getContent().get(0);
+        assertThat(dto.getLoteId()).isEqualTo(loteSinMicro.getId());
         assertThat(dto.getCodigoLote()).isEqualTo("LOT-40");
         assertThat(dto.isTieneAdjuntos()).isTrue();
     }

@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public class EvaluacionConsolidadaListadoDTO {
 
     private final Long id;
+    private final Long loteId;
     private final LocalDateTime fechaEvaluacion;
     private final String codigoLote;
     private final String nombreProducto;
@@ -20,6 +21,7 @@ public class EvaluacionConsolidadaListadoDTO {
     private final boolean tieneAdjuntos;
 
     public EvaluacionConsolidadaListadoDTO(Long id,
+                                           Long loteId,
                                            LocalDateTime fechaEvaluacion,
                                            String codigoLote,
                                            String nombreProducto,
@@ -28,6 +30,7 @@ public class EvaluacionConsolidadaListadoDTO {
                                            String usuarioCreador,
                                            Long cantidadAdjuntos) {
         this.id = id;
+        this.loteId = loteId;
         this.fechaEvaluacion = fechaEvaluacion;
         this.codigoLote = codigoLote;
         this.nombreProducto = nombreProducto;
