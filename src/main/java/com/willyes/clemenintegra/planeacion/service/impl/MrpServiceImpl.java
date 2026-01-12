@@ -92,7 +92,7 @@ public class MrpServiceImpl implements MrpService {
         corrida.setEstado(EstadoCorridaMrp.COMPLETADA);
 
         CorridaMrp guardada = corridaMrpRepository.save(corrida);
-        CorridaMrp corridaCargada = corridaMrpRepository.findByIdWithGraph(guardada.getId())
+        CorridaMrp corridaCargada = corridaMrpRepository.findWithGraphById(guardada.getId())
                 .orElse(guardada);
         enriquecerCorrida(corridaCargada);
         log.info("Corrida MRP semanal {} finalizada. Insumos evaluados: {}", guardada.getId(), requerimientosNetos.size());
@@ -194,7 +194,7 @@ public class MrpServiceImpl implements MrpService {
     @Override
     @Transactional(readOnly = true)
     public CorridaMrp obtenerCorrida(Long id) {
-        CorridaMrp corrida = corridaMrpRepository.findByIdWithGraph(id)
+        CorridaMrp corrida = corridaMrpRepository.findWithGraphById(id)
                 .orElseThrow(() -> new NoSuchElementException("Corrida MRP no encontrada"));
         // Las métricas de cobertura y criticidad son transitorias; al cargar desde BD deben recalcularse
         // para que el GET entregue el mismo DTO enriquecido que el POST.
