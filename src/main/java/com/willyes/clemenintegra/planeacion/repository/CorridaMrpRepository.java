@@ -35,7 +35,7 @@ public interface CorridaMrpRepository extends JpaRepository<CorridaMrp, Long> {
             "detalles.sugerencia.detalleCorrida.producto",
             "detalles.sugerencia.detalleCorrida.producto.categoriaProducto"
     })
-    Optional<CorridaMrp> findByIdWithGraph(Long id);
+    Optional<CorridaMrp> findWithGraphById(Long id);
 
     Optional<CorridaMrp> findTopByPlanProduccionSemanalAndEstadoOrderByFechaEjecucionDesc(
             PlanProduccionSemanal plan, EstadoCorridaMrp estado
