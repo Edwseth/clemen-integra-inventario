@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
+import com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.mapper.NoConformidadMapper;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
@@ -21,10 +22,12 @@ import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -151,10 +154,12 @@ public class NoConformidadServiceImpl implements NoConformidadService {
         repository.deleteById(id);
     }
 
-    public NoConformidadDTO obtenerPorId(Long id) {
-        return repository.findById(id)
-                .map(mapper::toDTO)
-                .orElseThrow(() -> new NoSuchElementException("No conformidad no encontrada con ID: " + id));
+    @Transactional(readOnly = true)
+    public NoConformidadDetalleDTO obtenerPorId(Long id) {
+        return repository.findDetalleById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No conformidad no encontrada con ID: " + id));
     }
 
     @Override

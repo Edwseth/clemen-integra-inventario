@@ -209,6 +209,8 @@ class EvaluacionCalidadServiceImplTest {
                 ResultadoEvaluacion.CONFORME,
                 TipoEvaluacion.QUIMICO_MICROBIOLOGICO,
                 evaluador.getNombreCompleto(),
+                com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO,
+                EstadoLote.EN_CUARENTENA,
                 2L);
 
         when(repository.findConsolidadoListado(any(), any(), any()))
@@ -255,6 +257,8 @@ class EvaluacionCalidadServiceImplTest {
                 ResultadoEvaluacion.CONFORME,
                 TipoEvaluacion.QUIMICO_MICROBIOLOGICO,
                 evaluador.getNombreCompleto(),
+                com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO,
+                EstadoLote.EN_CUARENTENA,
                 0L);
         when(repository.findConsolidadoListado(any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(consolidado)));
@@ -297,6 +301,8 @@ class EvaluacionCalidadServiceImplTest {
                 ResultadoEvaluacion.CONFORME,
                 TipoEvaluacion.FISICO,
                 evaluador.getNombreCompleto(),
+                com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO,
+                EstadoLote.EN_CUARENTENA,
                 1L);
         when(repository.findConsolidadoListado(any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(consolidado)));

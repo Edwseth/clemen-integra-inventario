@@ -82,6 +82,7 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
     private Usuario usuario;
     private LoteProducto loteProducto;
     private EvaluacionCalidad evaluacion;
+    private NoConformidad noConformidad;
 
     @BeforeEach
     void setUp() {
@@ -151,7 +152,7 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
                 .usuarioEvaluador(usuario)
                 .build());
 
-        noConformidadRepository.save(NoConformidad.builder()
+        noConformidad = noConformidadRepository.save(NoConformidad.builder()
                 .codigo("NC-TEST-001")
                 .origen(OrigenNoConformidad.LOTE)
                 .severidad(SeveridadNoConformidad.MAYOR)
@@ -177,6 +178,8 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].codigoLote").value("LP-CAL-1"))
+                .andExpect(jsonPath("$.content[0].loteId").value(loteProducto.getId()))
+                .andExpect(jsonPath("$.content[0].estadoEvaluacion").value("EVALUADO"))
                 .andExpect(jsonPath("$.content[0].cantidadAdjuntos").value(1))
                 .andExpect(jsonPath("$.content[0].tieneAdjuntos").value(true));
     }
@@ -190,5 +193,24 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].reportadoPorNombre").value("Usuario Calidad Listado"))
                 .andExpect(jsonPath("$.content[0].codigo").value("NC-TEST-001"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void obtenerNoConformidadDetalleNoDisparaLazy() throws Exception {
+        mockMvc.perform(get("/api/calidad/no-conformidades/{id}", noConformidad.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(noConformidad.getId()))
+                .andExpect(jsonPath("$.reportadoPorNombre").value("Usuario Calidad Listado"))
+                .andExpect(jsonPath("$.productoNombre").value("Producto Calidad"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void obtenerAuditoriaLoteDevuelveOk() throws Exception {
+        mockMvc.perform(get("/api/calidad/auditoria-lote/{loteId}", loteProducto.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.loteId").value(loteProducto.getId()))
+                .andExpect(jsonPath("$.codigoLote").value("LP-CAL-1"));
     }
 }
