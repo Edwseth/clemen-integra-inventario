@@ -38,7 +38,7 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
             @Param("fin") LocalDateTime fin);
 
     @Query(value = "SELECT new com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO(" +
-            "e.id, e.fechaEvaluacion, l.codigoLote, p.nombre, e.resultado, e.tipoEvaluacion, " +
+            "e.id, l.id, e.fechaEvaluacion, l.codigoLote, p.nombre, e.resultado, e.tipoEvaluacion, " +
             "u.nombreCompleto, COUNT(a)) " +
             "FROM EvaluacionCalidad e " +
             "JOIN e.loteProducto l " +
@@ -46,7 +46,7 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
             "JOIN e.usuarioEvaluador u " +
             "LEFT JOIN e.archivosAdjuntos a " +
             "WHERE e.fechaEvaluacion BETWEEN :inicio AND :fin " +
-            "GROUP BY e.id, e.fechaEvaluacion, l.codigoLote, p.nombre, e.resultado, e.tipoEvaluacion, u.nombreCompleto",
+            "GROUP BY e.id, l.id, e.fechaEvaluacion, l.codigoLote, p.nombre, e.resultado, e.tipoEvaluacion, u.nombreCompleto",
             countQuery = "SELECT COUNT(e.id) FROM EvaluacionCalidad e " +
                     "WHERE e.fechaEvaluacion BETWEEN :inicio AND :fin")
     Page<EvaluacionConsolidadaListadoDTO> findConsolidadoListado(
