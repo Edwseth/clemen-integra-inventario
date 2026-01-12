@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResumenResponseDTO;
 import com.willyes.clemenintegra.inventario.model.ConteoCiclico;
 import com.willyes.clemenintegra.inventario.model.ConteoCiclicoDetalle;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -26,7 +27,9 @@ public class ConteoCiclicoMapper {
                 .fechaCreacion(conteo.getFechaCreacion())
                 .aplicadoEn(conteo.getAplicadoEn())
                 .creadoPorId(conteo.getCreadoPor() != null ? conteo.getCreadoPor().getId() : null)
+                .creadoPorNombre(resolveUsuarioNombre(conteo.getCreadoPor()))
                 .aplicadoPorId(conteo.getAplicadoPor() != null ? conteo.getAplicadoPor().getId() : null)
+                .aplicadoPorNombre(resolveUsuarioNombre(conteo.getAplicadoPor()))
                 .build();
     }
 
@@ -41,7 +44,9 @@ public class ConteoCiclicoMapper {
                 .fechaCreacion(conteo.getFechaCreacion())
                 .aplicadoEn(conteo.getAplicadoEn())
                 .creadoPorId(conteo.getCreadoPor() != null ? conteo.getCreadoPor().getId() : null)
+                .creadoPorNombre(resolveUsuarioNombre(conteo.getCreadoPor()))
                 .aplicadoPorId(conteo.getAplicadoPor() != null ? conteo.getAplicadoPor().getId() : null)
+                .aplicadoPorNombre(resolveUsuarioNombre(conteo.getAplicadoPor()))
                 .detalles(toDetalles(conteo.getDetalles()))
                 .build();
     }
@@ -69,5 +74,18 @@ public class ConteoCiclicoMapper {
                 .conteoFisico(detalle.getConteoFisico())
                 .diferencia(detalle.getDiferencia())
                 .build();
+    }
+
+    private String resolveUsuarioNombre(Usuario usuario) {
+        if (usuario == null) {
+            return null;
+        }
+        if (usuario.getNombreCompleto() != null && !usuario.getNombreCompleto().isBlank()) {
+            return usuario.getNombreCompleto();
+        }
+        if (usuario.getNombreUsuario() != null && !usuario.getNombreUsuario().isBlank()) {
+            return usuario.getNombreUsuario();
+        }
+        return null;
     }
 }
