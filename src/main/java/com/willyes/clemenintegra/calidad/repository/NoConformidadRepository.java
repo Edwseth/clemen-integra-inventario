@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.calidad.repository;
 
+import com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
@@ -85,4 +86,21 @@ public interface NoConformidadRepository extends JpaRepository<NoConformidad, Lo
                                                      @Param("origen") OrigenNoConformidad origen,
                                                      @Param("tipoIncidente") TipoIncidente tipoIncidente,
                                                      Pageable pageable);
+
+    @Query("SELECT new com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO(" +
+            "n.id, n.codigo, n.origen, n.severidad, n.tipoIncidente, n.estado, " +
+            "n.descripcion, n.evidencia, n.fechaRegistro, n.fechaCierre, " +
+            "u.id, l.id, p.id, e.id, l.codigoLote, u.nombreCompleto, p.nombre, " +
+            "n.creadoPor, n.actualizadoPor, n.actualizadoEn, " +
+            "CASE WHEN r.id IS NOT NULL THEN true ELSE false END) " +
+            "FROM NoConformidad n " +
+            "JOIN n.usuarioReporta u " +
+            "LEFT JOIN n.lote l " +
+            "LEFT JOIN n.producto p " +
+            "LEFT JOIN n.evaluacion e " +
+            "LEFT JOIN RetencionLote r ON r.noConformidad = n " +
+            "AND r.estado = com.willyes.clemenintegra.calidad.model.enums.EstadoRetencion.RETENIDO " +
+            "AND r.motivo = com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion.NO_CONFORMIDAD " +
+            "WHERE n.id = :id")
+    Optional<NoConformidadDetalleDTO> findDetalleById(@Param("id") Long id);
 }
