@@ -11,6 +11,8 @@ import com.willyes.clemenintegra.inventario.repository.CategoriaProductoReposito
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
+import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.repository.PlanProduccionDetalleRepository;
 import com.willyes.clemenintegra.planeacion.repository.PlanProduccionSemanalRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
@@ -32,6 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mail.javamail.JavaMailSender;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +42,9 @@ import com.willyes.clemenintegra.support.IntegrationTestMySqlContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -153,5 +158,36 @@ class PlanProduccionControllerIntegrationTest extends IntegrationTestMySqlContai
         assertThat(detalleGuardado.getCreadoPor()).isNotNull();
         assertThat(detalleGuardado.getCreadoPor().getId()).isEqualTo(usuario.getId());
         assertThat(detalleGuardado.getFechaCreacion()).isNotNull();
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void obtenerPlanSemanalIncluyeDetalles() throws Exception {
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .semanaInicio(LocalDate.now())
+                .semanaFin(LocalDate.now().plusDays(6))
+                .estado(EstadoPlanProduccion.CONFIRMADO)
+                .creadoPor(usuario)
+                .build();
+
+        PlanProduccionDetalle detalle = PlanProduccionDetalle.builder()
+                .plan(plan)
+                .producto(producto)
+                .unidadMedida(producto.getUnidadMedida())
+                .cantidadPlanificada(new BigDecimal("5.00"))
+                .prioridad(1)
+                .origenDemanda("Test")
+                .observacion("Obs")
+                .creadoPor(usuario)
+                .fechaCreacion(LocalDateTime.now())
+                .build();
+        plan.getDetalles().add(detalle);
+
+        plan = planProduccionSemanalRepository.save(plan);
+
+        mockMvc.perform(get("/api/planeacion/planes-semanales/{id}", plan.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.detalles[0].producto.id").value(producto.getId().longValue()))
+                .andExpect(jsonPath("$.detalles[0].unidadMedida.id").value(producto.getUnidadMedida().getId()));
     }
 }

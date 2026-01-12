@@ -4,13 +4,23 @@ import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 public interface PlanProduccionSemanalRepository extends JpaRepository<PlanProduccionSemanal, Long> {
+
+    @EntityGraph(attributePaths = {
+            "creadoPor",
+            "detalles",
+            "detalles.producto",
+            "detalles.unidadMedida"
+    })
+    Optional<PlanProduccionSemanal> findWithDetallesById(Long id);
 
     @Query("select p from PlanProduccionSemanal p where (:inicio is null or p.semanaInicio >= :inicio) " +
             "and (:fin is null or p.semanaInicio <= :fin) " +

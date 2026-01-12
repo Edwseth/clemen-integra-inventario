@@ -92,8 +92,11 @@ public class MrpServiceImpl implements MrpService {
         corrida.setEstado(EstadoCorridaMrp.COMPLETADA);
 
         CorridaMrp guardada = corridaMrpRepository.save(corrida);
+        CorridaMrp corridaCargada = corridaMrpRepository.findWithDetallesById(guardada.getId())
+                .orElse(guardada);
+        enriquecerCorrida(corridaCargada);
         log.info("Corrida MRP semanal {} finalizada. Insumos evaluados: {}", guardada.getId(), requerimientosNetos.size());
-        return guardada;
+        return corridaCargada;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
+import com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -38,4 +39,81 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
               AND d.cantidadRecibida < d.cantidad
             """)
     Page<OrdenCompra> findAtrasadas(Pageable pageable, @Param("estados") Set<EstadoOrdenCompra> estados);
+
+    @Query(value = """
+            select new com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO(
+                o.id,
+                o.codigoOrden,
+                o.estado,
+                p.nombre,
+                o.fechaOrden,
+                o.fechaCompromisoEntrega,
+                o.descuento,
+                coalesce(sum(d.cantidad), 0),
+                coalesce(sum(d.cantidadRecibida), 0)
+            )
+            from OrdenCompra o
+            join o.proveedor p
+            left join o.detalles d
+            group by o.id, o.codigoOrden, o.estado, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
+            """,
+            countQuery = "select count(o) from OrdenCompra o")
+    Page<OrdenCompraResponseDTO> findListado(Pageable pageable);
+
+    @Query(value = """
+            select new com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO(
+                o.id,
+                o.codigoOrden,
+                o.estado,
+                p.nombre,
+                o.fechaOrden,
+                o.fechaCompromisoEntrega,
+                o.descuento,
+                coalesce(sum(d.cantidad), 0),
+                coalesce(sum(d.cantidadRecibida), 0)
+            )
+            from OrdenCompra o
+            join o.proveedor p
+            left join o.detalles d
+            where o.estado = :estado
+            group by o.id, o.codigoOrden, o.estado, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
+            """,
+            countQuery = "select count(o) from OrdenCompra o where o.estado = :estado")
+    Page<OrdenCompraResponseDTO> findListadoPorEstado(@Param("estado") EstadoOrdenCompra estado, Pageable pageable);
+
+    @Query(value = """
+            select new com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO(
+                o.id,
+                o.codigoOrden,
+                o.estado,
+                p.nombre,
+                o.fechaOrden,
+                o.fechaCompromisoEntrega,
+                o.descuento,
+                coalesce(sum(d.cantidad), 0),
+                coalesce(sum(d.cantidadRecibida), 0)
+            )
+            from OrdenCompra o
+            join o.proveedor p
+            left join o.detalles d
+            where o.fechaCompromisoEntrega is not null
+              and o.fechaCompromisoEntrega < current_date
+              and o.estado in :estados
+              and exists (
+                  select 1 from OrdenCompraDetalle d1
+                  where d1.ordenCompra = o and d1.cantidadRecibida < d1.cantidad
+              )
+            group by o.id, o.codigoOrden, o.estado, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
+            """,
+            countQuery = """
+            select count(o) from OrdenCompra o
+            where o.fechaCompromisoEntrega is not null
+              and o.fechaCompromisoEntrega < current_date
+              and o.estado in :estados
+              and exists (
+                  select 1 from OrdenCompraDetalle d1
+                  where d1.ordenCompra = o and d1.cantidadRecibida < d1.cantidad
+              )
+            """)
+    Page<OrdenCompraResponseDTO> findListadoAtrasadas(Pageable pageable, @Param("estados") Set<EstadoOrdenCompra> estados);
 }
