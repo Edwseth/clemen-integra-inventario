@@ -62,6 +62,13 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
         return formulaRepository.findById(id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<FormulaProductoDetalleDTO> buscarDetallePorId(Long id) {
+        return formulaRepository.findByIdConDetalles(id)
+                .map(this::mapDetalleFormula);
+    }
+
     public FormulaProducto guardar(FormulaProducto formula) {
         if (formula.getEstado() == EstadoFormula.APROBADA) {
             formula.setActivo(true);
@@ -217,6 +224,40 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
             return prefijo + numeroVersion + (sufijo != null ? sufijo : "");
         }
         return String.valueOf(numeroVersion);
+    }
+
+    private FormulaProductoDetalleDTO mapDetalleFormula(FormulaProducto formula) {
+        FormulaProductoDetalleDTO dto = new FormulaProductoDetalleDTO();
+        dto.id = formula.getId();
+        dto.codigo = formula.getProducto() != null ? formula.getProducto().getCodigoSku() : null;
+        dto.version = formula.getVersion();
+        dto.estado = formula.getEstado() != null ? formula.getEstado().name() : null;
+        dto.productoId = formula.getProducto() != null && formula.getProducto().getId() != null
+                ? formula.getProducto().getId().longValue()
+                : null;
+        dto.productoNombre = formula.getProducto() != null ? formula.getProducto().getNombre() : null;
+        dto.fechaCreacion = formula.getFechaCreacion();
+        dto.creadoPorNombre = formula.getCreadoPor() != null ? formula.getCreadoPor().getNombreCompleto() : null;
+        dto.observacion = formula.getObservacion();
+        dto.fechaActualizacion = formula.getFechaActualizacion();
+        dto.actualizadoPorNombre = formula.getActualizadoPor() != null ? formula.getActualizadoPor().getNombreCompleto() : null;
+        dto.detalles = formula.getDetalles() == null ? Collections.emptyList() : formula.getDetalles().stream()
+                .map(detalle -> {
+                    DetalleFormulaDetalleDTO detalleDto = new DetalleFormulaDetalleDTO();
+                    detalleDto.id = detalle.getId();
+                    detalleDto.insumoId = detalle.getInsumo() != null && detalle.getInsumo().getId() != null
+                            ? detalle.getInsumo().getId().longValue()
+                            : null;
+                    detalleDto.insumoNombre = detalle.getInsumo() != null ? detalle.getInsumo().getNombre() : null;
+                    detalleDto.cantidad = detalle.getCantidadNecesaria();
+                    detalleDto.unidad = detalle.getUnidadMedida() != null ? detalle.getUnidadMedida().getSimbolo() : null;
+                    return detalleDto;
+                })
+                .collect(Collectors.toList());
+        dto.documentos = formula.getDocumentos() == null ? Collections.emptyList() : formula.getDocumentos().stream()
+                .map(bomMapper::toResponseDTO)
+                .collect(Collectors.toList());
+        return dto;
     }
 
     @Override

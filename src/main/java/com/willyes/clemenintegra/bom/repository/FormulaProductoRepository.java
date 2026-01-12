@@ -35,6 +35,18 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
     })
     Optional<FormulaProducto> findByProductoIdAndEstadoAndActivoTrue(Long productoId, EstadoFormula estado);
 
+    @EntityGraph(attributePaths = {
+            "producto",
+            "detalles",
+            "detalles.insumo",
+            "detalles.unidadMedida",
+            "documentos",
+            "documentos.usuario",
+            "actualizadoPor",
+            "creadoPor"
+    })
+    Optional<FormulaProducto> findByIdConDetalles(Long id);
+
     List<FormulaProducto> findAllByProductoId(Long productoId);
 
     @Query("select f from FormulaProducto f " +
