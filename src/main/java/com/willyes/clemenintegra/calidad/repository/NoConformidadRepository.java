@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.calidad.model.enums.EstadoNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.TipoIncidente;
+import com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -85,4 +86,16 @@ public interface NoConformidadRepository extends JpaRepository<NoConformidad, Lo
                                                      @Param("origen") OrigenNoConformidad origen,
                                                      @Param("tipoIncidente") TipoIncidente tipoIncidente,
                                                      Pageable pageable);
+
+    @Query("SELECT new com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO(" +
+            "n.id, n.codigo, n.origen, n.severidad, n.tipoIncidente, n.estado, n.descripcion, n.evidencia, " +
+            "n.fechaRegistro, n.fechaCierre, u.id, l.id, p.id, e.id, l.codigoLote, u.nombreCompleto, p.nombre, " +
+            "n.creadoPor, n.actualizadoPor, n.actualizadoEn) " +
+            "FROM NoConformidad n " +
+            "JOIN n.usuarioReporta u " +
+            "LEFT JOIN n.lote l " +
+            "LEFT JOIN n.producto p " +
+            "LEFT JOIN n.evaluacion e " +
+            "WHERE n.id = :id")
+    Optional<NoConformidadDetalleDTO> findDetalleById(@Param("id") Long id);
 }

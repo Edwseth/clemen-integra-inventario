@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.calidad.dto.NoConformidadDTO;
+import com.willyes.clemenintegra.calidad.dto.NoConformidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.model.NoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.OrigenNoConformidad;
 import com.willyes.clemenintegra.calidad.model.enums.SeveridadNoConformidad;
@@ -25,7 +26,7 @@ public interface NoConformidadService {
 
     void eliminar(Long id);
 
-    NoConformidadDTO obtenerPorId(Long id);
+    NoConformidadDetalleDTO obtenerPorId(Long id);
 
     NoConformidadDTO cerrar(Long id, Usuario authUser);
 

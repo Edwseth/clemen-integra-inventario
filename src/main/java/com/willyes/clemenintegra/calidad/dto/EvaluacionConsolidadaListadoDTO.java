@@ -1,7 +1,9 @@
 package com.willyes.clemenintegra.calidad.dto;
 
+import com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -17,6 +19,8 @@ public class EvaluacionConsolidadaListadoDTO {
     private final ResultadoEvaluacion resultado;
     private final TipoEvaluacion tipoEvaluacion;
     private final String usuarioCreador;
+    private final EstadoEvaluacionCalidad estadoEvaluacion;
+    private final EstadoLote estadoLote;
     private final long cantidadAdjuntos;
     private final boolean tieneAdjuntos;
 
@@ -28,6 +32,8 @@ public class EvaluacionConsolidadaListadoDTO {
                                            ResultadoEvaluacion resultado,
                                            TipoEvaluacion tipoEvaluacion,
                                            String usuarioCreador,
+                                           EstadoEvaluacionCalidad estadoEvaluacion,
+                                           EstadoLote estadoLote,
                                            Long cantidadAdjuntos) {
         this.id = id;
         this.loteId = loteId;
@@ -37,6 +43,8 @@ public class EvaluacionConsolidadaListadoDTO {
         this.resultado = resultado;
         this.tipoEvaluacion = tipoEvaluacion;
         this.usuarioCreador = usuarioCreador;
+        this.estadoEvaluacion = estadoEvaluacion;
+        this.estadoLote = estadoLote;
         this.cantidadAdjuntos = cantidadAdjuntos != null ? cantidadAdjuntos : 0L;
         this.tieneAdjuntos = this.cantidadAdjuntos > 0;
     }
