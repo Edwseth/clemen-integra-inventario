@@ -16,6 +16,7 @@ public interface ProductoService {
     ProductoResponseDTO crearProducto(ProductoRequestDTO dto);
     ProductoResponseDTO obtenerPorId(Long id);
     ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto);
+    ProductoResponseDTO actualizarCamposCalidad(Long id, ProductoCalidadUpdateDTO dto);
     // PROD-INACTIVAR BEGIN
     ProductoResponseDTO actualizarEstado(Long id, Boolean activo);
     // PROD-INACTIVAR END
