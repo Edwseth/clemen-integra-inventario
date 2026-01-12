@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResumenResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoUpdateRequestDTO;
 import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
 import com.willyes.clemenintegra.shared.util.PaginationUtil;
@@ -28,7 +29,7 @@ public class ConteoCiclicoController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
-    public ResponseEntity<Page<ConteoCiclicoResponseDTO>> listar(
+    public ResponseEntity<Page<ConteoCiclicoResumenResponseDTO>> listar(
             @RequestParam(required = false) Integer almacenId,
             @RequestParam(required = false) String estado,
             @PageableDefault(size = 10, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -36,7 +37,7 @@ public class ConteoCiclicoController {
             return ResponseEntity.badRequest().build();
         }
         Pageable sanitized = PaginationUtil.sanitize(pageable, List.of("fechaCreacion", "id"), "fechaCreacion");
-        Page<ConteoCiclicoResponseDTO> respuesta = conteoCiclicoService.listar(almacenId, estado, sanitized);
+        Page<ConteoCiclicoResumenResponseDTO> respuesta = conteoCiclicoService.listar(almacenId, estado, sanitized);
         return ResponseEntity.ok(respuesta);
     }
 

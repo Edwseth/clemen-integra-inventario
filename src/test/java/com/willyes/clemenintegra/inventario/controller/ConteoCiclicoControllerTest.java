@@ -1,9 +1,10 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
-import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResumenResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico;
 import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
@@ -62,12 +63,12 @@ class ConteoCiclicoControllerTest {
     @Test
     @WithMockUser(authorities = "ROL_ALMACENISTA")
     void listarConteosDevuelve200() throws Exception {
-        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
+        ConteoCiclicoResumenResponseDTO response = ConteoCiclicoResumenResponseDTO.builder()
                 .id(5L)
                 .almacenId(1)
                 .estado(EstadoConteoCiclico.BORRADOR)
                 .build();
-        Page<ConteoCiclicoResponseDTO> page = new PageImpl<>(List.of(response));
+        Page<ConteoCiclicoResumenResponseDTO> page = new PageImpl<>(List.of(response));
         when(conteoCiclicoService.listar(ArgumentMatchers.isNull(), ArgumentMatchers.isNull(), ArgumentMatchers.any(Pageable.class)))
                 .thenReturn(page);
 
