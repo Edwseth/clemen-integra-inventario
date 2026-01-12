@@ -527,7 +527,7 @@ class ConteoCiclicoServiceTest {
                 .build();
         detalle.setConteo(conteo);
 
-        ConteoCiclicoResponseDTO response = mapper.toResponse(conteo);
+        ConteoCiclicoResponseDTO response = mapper.toResponseCompleto(conteo);
 
         assertThat(response.getDetalles()).hasSize(1);
         assertThat(response.getDetalles().getFirst().getLoteCodigo()).isEqualTo("L-0401");

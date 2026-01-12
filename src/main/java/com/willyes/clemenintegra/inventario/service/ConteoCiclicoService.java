@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResumenResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.mapper.ConteoCiclicoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
@@ -53,17 +54,17 @@ public class ConteoCiclicoService {
     private final UsuarioService usuarioService;
     private final ConteoCiclicoMapper mapper;
 
-    public Page<ConteoCiclicoResponseDTO> listar(Integer almacenId, String estado, Pageable pageable) {
+    public Page<ConteoCiclicoResumenResponseDTO> listar(Integer almacenId, String estado, Pageable pageable) {
         EstadoConteoCiclico estadoEnum = parseEstado(estado);
         Page<ConteoCiclico> conteos = conteoRepository.buscar(almacenId, estadoEnum, pageable);
-        return conteos.map(mapper::toResponse);
+        return conteos.map(mapper::toResumen);
     }
 
     public ConteoCiclicoResponseDTO obtenerPorId(Long conteoId) {
         ConteoCiclico conteo = conteoRepository.findByIdWithDetalles(conteoId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Conteo no encontrado"));
-        return mapper.toResponse(conteo);
+        return mapper.toResponseCompleto(conteo);
     }
 
     public List<ConteoCiclicoLoteResponseDTO> listarLotesParaConteo(Long conteoId,
@@ -147,7 +148,7 @@ public class ConteoCiclicoService {
                 .build();
 
         ConteoCiclico guardado = conteoRepository.save(conteo);
-        return mapper.toResponse(guardado);
+        return mapper.toResponseCompleto(guardado);
     }
 
     @Transactional
@@ -172,7 +173,7 @@ public class ConteoCiclicoService {
         }
 
         ConteoCiclico actualizado = conteoRepository.save(conteo);
-        return mapper.toResponse(actualizado);
+        return mapper.toResponseCompleto(actualizado);
     }
 
     @Transactional
@@ -199,19 +200,19 @@ public class ConteoCiclicoService {
         }
 
         ConteoCiclico actualizado = conteoRepository.save(conteo);
-        return mapper.toResponse(actualizado);
+        return mapper.toResponseCompleto(actualizado);
     }
 
     @Transactional
     public ConteoCiclicoResponseDTO marcarEnConteo(Long conteoId) {
         ConteoCiclico conteo = cambiarEstado(conteoId, EstadoConteoCiclico.EN_CONTEO);
-        return mapper.toResponse(conteo);
+        return mapper.toResponseCompleto(conteo);
     }
 
     @Transactional
     public ConteoCiclicoResponseDTO cerrar(Long conteoId) {
         ConteoCiclico conteo = cambiarEstado(conteoId, EstadoConteoCiclico.CERRADO);
-        return mapper.toResponse(conteo);
+        return mapper.toResponseCompleto(conteo);
     }
 
     @Transactional
@@ -262,7 +263,7 @@ public class ConteoCiclicoService {
         conteo.setAplicadoEn(LocalDateTime.now());
         conteo.setAplicadoPor(usuario);
         ConteoCiclico aplicado = conteoRepository.save(conteo);
-        return mapper.toResponse(aplicado);
+        return mapper.toResponseCompleto(aplicado);
     }
 
     private ConteoCiclico cambiarEstado(Long conteoId, EstadoConteoCiclico destino) {

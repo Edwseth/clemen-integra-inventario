@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.mapper;
 
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResumenResponseDTO;
 import com.willyes.clemenintegra.inventario.model.ConteoCiclico;
 import com.willyes.clemenintegra.inventario.model.ConteoCiclicoDetalle;
 import org.springframework.stereotype.Component;
@@ -14,7 +15,22 @@ import java.util.stream.Collectors;
 @Component
 public class ConteoCiclicoMapper {
 
-    public ConteoCiclicoResponseDTO toResponse(ConteoCiclico conteo) {
+    public ConteoCiclicoResumenResponseDTO toResumen(ConteoCiclico conteo) {
+        if (conteo == null) {
+            return null;
+        }
+        return ConteoCiclicoResumenResponseDTO.builder()
+                .id(conteo.getId())
+                .almacenId(conteo.getAlmacen() != null ? conteo.getAlmacen().getId() : null)
+                .estado(conteo.getEstado())
+                .fechaCreacion(conteo.getFechaCreacion())
+                .aplicadoEn(conteo.getAplicadoEn())
+                .creadoPorId(conteo.getCreadoPor() != null ? conteo.getCreadoPor().getId() : null)
+                .aplicadoPorId(conteo.getAplicadoPor() != null ? conteo.getAplicadoPor().getId() : null)
+                .build();
+    }
+
+    public ConteoCiclicoResponseDTO toResponseCompleto(ConteoCiclico conteo) {
         if (conteo == null) {
             return null;
         }
