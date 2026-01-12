@@ -40,13 +40,18 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
             "detalles",
             "detalles.insumo",
             "detalles.unidadMedida",
-            "documentos",
-            "documentos.usuario",
             "actualizadoPor",
             "creadoPor"
     })
-    @Query("SELECT f FROM FormulaProducto f WHERE f.id = :id")
-    Optional<FormulaProducto> findByIdWithDetalles(@Param("id") Long id);
+    @Query("select f from FormulaProducto f where f.id = :id")
+    Optional<FormulaProducto> findByIdConDetalles(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {
+            "documentos",
+            "documentos.usuario"
+    })
+    @Query("select f from FormulaProducto f where f.id = :id")
+    Optional<FormulaProducto> findByIdWithDocumentos(@Param("id") Long id);
 
 
     List<FormulaProducto> findAllByProductoId(Long productoId);
