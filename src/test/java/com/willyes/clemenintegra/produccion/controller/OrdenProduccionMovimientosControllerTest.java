@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
@@ -74,6 +75,9 @@ class OrdenProduccionMovimientosControllerTest extends IntegrationTestMySqlConta
     private MovimientoInventarioRepository movimientoInventarioRepository;
 
     @Autowired
+    private SolicitudMovimientoRepository solicitudMovimientoRepository;
+
+    @Autowired
     private OrdenProduccionRepository ordenProduccionRepository;
 
     @Autowired
@@ -88,6 +92,7 @@ class OrdenProduccionMovimientosControllerTest extends IntegrationTestMySqlConta
     @BeforeEach
     void setup() {
         movimientoInventarioRepository.deleteAll();
+        solicitudMovimientoRepository.deleteAll();
         etapaProduccionRepository.deleteAll();
         loteProductoRepository.deleteAll();
         ordenProduccionRepository.deleteAll();
@@ -306,5 +311,114 @@ class OrdenProduccionMovimientosControllerTest extends IntegrationTestMySqlConta
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].ordenProduccionEtapaId").value(etapa.getId()))
                 .andExpect(jsonPath("$.content[0].nombreEtapaProduccion").value(etapa.getNombre()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void listarMovimientosIncluyeEstadoDeSolicitud() throws Exception {
+        Usuario usuario = usuarioRepository.save(Usuario.builder()
+                .nombreUsuario("tester-solicitud")
+                .clave("clave")
+                .nombreCompleto("Usuario Solicitud")
+                .correo("tester+solicitud@example.com")
+                .rol(RolUsuario.ROL_JEFE_PRODUCCION)
+                .activo(true)
+                .bloqueado(false)
+                .build());
+
+        UnidadMedida unidadMedida = unidadMedidaRepository.save(UnidadMedida.builder()
+                .nombre("Unidad")
+                .nombrePlural("Unidades")
+                .simbolo("u")
+                .codigo("UND")
+                .simboloImpresion("u")
+                .build());
+
+        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
+                .nombre("MP")
+                .tipo(TipoCategoria.MATERIA_PRIMA)
+                .build());
+
+        Producto producto = productoRepository.save(Producto.builder()
+                .codigoSku("SKU-SOL")
+                .nombre("Producto Solicitud")
+                .stockMinimo(BigDecimal.ZERO)
+                .activo(true)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .requiereAnalisisFisico(false)
+                .requiereAnalisisQuimico(false)
+                .requiereAnalisisMicrobiologico(false)
+                .unidadMedida(unidadMedida)
+                .categoriaProducto(categoria)
+                .creadoPor(usuario)
+                .modoControlInventario(ModoControlInventario.CONTROL_STOCK)
+                .build());
+
+        OrdenProduccion ordenProduccion = ordenProduccionRepository.save(OrdenProduccion.builder()
+                .codigoOrden("OP-300")
+                .loteProduccion("LOTE-OP-300")
+                .fechaInicio(LocalDateTime.now())
+                .cantidadProgramada(new BigDecimal("30"))
+                .cantidadProducida(BigDecimal.ZERO)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .producto(producto)
+                .unidadMedida(unidadMedida)
+                .responsable(usuario)
+                .build());
+
+        Almacen almacen = almacenRepository.save(Almacen.builder()
+                .nombre("Principal")
+                .ubicacion("Bodega Central")
+                .categoria(TipoCategoria.MATERIA_PRIMA)
+                .tipo(TipoAlmacen.PRINCIPAL)
+                .build());
+
+        LoteProducto lote = loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote("LOTE-789")
+                .stockLote(new BigDecimal("15"))
+                .estado(EstadoLote.DISPONIBLE)
+                .producto(producto)
+                .almacen(almacen)
+                .build());
+
+        MotivoMovimiento motivo = motivoMovimientoRepository.save(MotivoMovimiento.builder()
+                .descripcion("Solicitud producción")
+                .motivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
+                .build());
+
+        TipoMovimientoDetalle tipoDetalle = tipoMovimientoDetalleRepository.save(
+                TipoMovimientoDetalle.builder()
+                        .descripcion("Consumo solicitud")
+                        .build()
+        );
+
+        SolicitudMovimiento solicitud = solicitudMovimientoRepository.save(SolicitudMovimiento.builder()
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .producto(producto)
+                .cantidad(new BigDecimal("3"))
+                .usuarioSolicitante(usuario)
+                .ordenProduccion(ordenProduccion)
+                .estado(EstadoSolicitudMovimiento.AUTORIZADA)
+                .build());
+
+        movimientoInventarioRepository.save(MovimientoInventario.builder()
+                .cantidad(new BigDecimal("3"))
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .clasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
+                .registradoPor(usuario)
+                .producto(producto)
+                .lote(lote)
+                .almacenOrigen(almacen)
+                .motivoMovimiento(motivo)
+                .tipoMovimientoDetalle(tipoDetalle)
+                .ordenProduccion(ordenProduccion)
+                .solicitudMovimiento(solicitud)
+                .build());
+
+        mockMvc.perform(get("/api/produccion/ordenes/{id}/movimientos", ordenProduccion.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].solicitudId").value(solicitud.getId()))
+                .andExpect(jsonPath("$.content[0].estadoSolicitud").value(EstadoSolicitudMovimiento.AUTORIZADA.name()));
     }
 }
