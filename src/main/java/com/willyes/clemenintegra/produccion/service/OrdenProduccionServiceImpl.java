@@ -569,8 +569,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return repository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public Optional<OrdenProduccion> buscarPorId(Long id) {
-        return repository.findById(id).map(this::adjuntarFechaVencimientoLotePt);
+        return repository.findByIdWithProductoCategoria(id).map(this::adjuntarFechaVencimientoLotePt);
     }
 
     private OrdenProduccion adjuntarFechaVencimientoLotePt(OrdenProduccion orden) {
