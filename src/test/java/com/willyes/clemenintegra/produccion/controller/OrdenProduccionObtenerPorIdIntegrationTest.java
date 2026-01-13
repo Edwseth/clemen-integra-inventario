@@ -115,6 +115,8 @@ class OrdenProduccionObtenerPorIdIntegrationTest extends IntegrationTestH2 {
         mockMvc.perform(get("/api/produccion/ordenes/{id}", orden.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombreProducto").value("Producto OP"))
-                .andExpect(jsonPath("$.categoriaProducto").value(TipoCategoria.PRODUCTO_TERMINADO.name()));
+                .andExpect(jsonPath("$.categoriaProducto").value(TipoCategoria.PRODUCTO_TERMINADO.name()))
+                .andExpect(jsonPath("$.unidadMedida").value("UNIDAD OP"))
+                .andExpect(jsonPath("$.unidadMedidaSimbolo").value("UOP"));
     }
 }
