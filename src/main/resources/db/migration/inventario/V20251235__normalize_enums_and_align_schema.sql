@@ -146,7 +146,39 @@ ALTER TABLE documentos
 -- ============================================
 -- 9) inventario.ordenes_compra - columnas pendientes de la entidad
 -- ============================================
-ALTER TABLE ordenes_compra
-    ADD COLUMN IF NOT EXISTS condiciones_pago ENUM('ANTICIPADO','CONTADO','DIAS_30','DIAS_60') NULL,
-    ADD COLUMN IF NOT EXISTS comprador VARCHAR(100) NULL;
+-- condiciones_pago
+SET @col_exists := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'ordenes_compra'
+    AND COLUMN_NAME = 'condiciones_pago'
+);
+
+SET @sql := IF(@col_exists = 0,
+  "ALTER TABLE ordenes_compra ADD COLUMN condiciones_pago ENUM('ANTICIPADO','CONTADO','DIAS_30','DIAS_60') NULL",
+  "SELECT 'condiciones_pago already exists'");
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- comprador
+SET @col_exists := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'ordenes_compra'
+    AND COLUMN_NAME = 'comprador'
+);
+
+SET @sql := IF(@col_exists = 0,
+  "ALTER TABLE ordenes_compra ADD COLUMN comprador VARCHAR(100) NULL",
+  "SELECT 'comprador already exists'");
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+
 
