@@ -64,8 +64,10 @@ class PicklistPtServiceImplTest {
         Producto producto = crearProducto(10);
         LoteProducto loteInvalido = crearLote(1L, producto, LocalDateTime.now().plusDays(5),
                 new BigDecimal("10"), BigDecimal.ZERO, 10);
-        LoteProducto loteValido = crearLote(2L, producto, LocalDateTime.now().plusDays(20),
-                new BigDecimal("10"), BigDecimal.ZERO, 10);
+        LoteProducto loteValidoUno = crearLote(2L, producto, LocalDateTime.now().plusDays(20),
+                new BigDecimal("2"), BigDecimal.ZERO, 10);
+        LoteProducto loteValidoDos = crearLote(3L, producto, LocalDateTime.now().plusDays(40),
+                new BigDecimal("4"), BigDecimal.ZERO, 10);
 
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(new Usuario(1L));
         given(catalogResolver.getAlmacenPtId()).willReturn(10L);
@@ -74,12 +76,13 @@ class PicklistPtServiceImplTest {
                 .willReturn(Optional.empty());
         given(productoRepository.findById(10L)).willReturn(Optional.of(producto));
         given(loteProductoRepository.findFefoSalidaPt(eq(10L), eq(10L), any()))
-                .willReturn(List.of(loteInvalido, loteValido));
+                .willReturn(List.of(loteInvalido, loteValidoUno, loteValidoDos));
         given(picklistRepository.save(any(PicklistPt.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         PicklistPtCreateRequest request = new PicklistPtCreateRequest(
                 "Cliente X",
                 10,
+                null,
                 "DOC-1",
                 null,
                 List.of(new PicklistPtLineaRequest(10L, new BigDecimal("5"),
@@ -88,8 +91,11 @@ class PicklistPtServiceImplTest {
 
         var response = service.crear(request);
 
-        assertThat(response.asignaciones()).hasSize(1);
+        assertThat(response.asignaciones()).hasSize(2);
         assertThat(response.asignaciones().get(0).loteProductoId()).isEqualTo(2L);
+        assertThat(response.asignaciones().get(0).cantidadAsignada()).isEqualByComparingTo("2.000000");
+        assertThat(response.asignaciones().get(1).loteProductoId()).isEqualTo(3L);
+        assertThat(response.asignaciones().get(1).cantidadAsignada()).isEqualByComparingTo("3.000000");
     }
 
     @Test
@@ -111,6 +117,7 @@ class PicklistPtServiceImplTest {
                 30,
                 null,
                 null,
+                null,
                 List.of(new PicklistPtLineaRequest(11L, new BigDecimal("4"),
                         PicklistPtModoAsignacion.MANUAL_LOTE, 3L))
         );
@@ -119,6 +126,97 @@ class PicklistPtServiceImplTest {
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting(ex -> ((CustomBusinessException) ex).getCode())
                 .isEqualTo(ApiErrorCode.PICKLIST_VIDA_UTIL_INSUFICIENTE);
+    }
+
+    @Test
+    void modoManualFallaSiLoteNoEsDePt() {
+        Producto producto = crearProducto(12);
+        LoteProducto lote = crearLote(6L, producto, LocalDateTime.now().plusDays(20),
+                new BigDecimal("10"), BigDecimal.ZERO, 11);
+
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(new Usuario(1L));
+        given(catalogResolver.getAlmacenPtId()).willReturn(10L);
+        given(catalogResolver.getTipoDetalleSalidaPtId()).willReturn(20L);
+        given(picklistRepository.findTopByCodigoStartingWithOrderByCodigoDesc(any()))
+                .willReturn(Optional.empty());
+        given(productoRepository.findById(12L)).willReturn(Optional.of(producto));
+        given(loteProductoRepository.findById(6L)).willReturn(Optional.of(lote));
+
+        PicklistPtCreateRequest request = new PicklistPtCreateRequest(
+                "Cliente Z",
+                null,
+                null,
+                null,
+                null,
+                List.of(new PicklistPtLineaRequest(12L, new BigDecimal("4"),
+                        PicklistPtModoAsignacion.MANUAL_LOTE, 6L))
+        );
+
+        assertThatThrownBy(() -> service.crear(request))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting(ex -> ((CustomBusinessException) ex).getCode())
+                .isEqualTo(ApiErrorCode.PICKLIST_LOTE_INVALIDO);
+    }
+
+    @Test
+    void modoManualFallaSiLoteNoLiberado() {
+        Producto producto = crearProducto(13);
+        LoteProducto lote = crearLote(7L, producto, LocalDateTime.now().plusDays(20),
+                new BigDecimal("10"), BigDecimal.ZERO, 10);
+        lote.setEstado(com.willyes.clemenintegra.inventario.model.enums.EstadoLote.DISPONIBLE);
+
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(new Usuario(1L));
+        given(catalogResolver.getAlmacenPtId()).willReturn(10L);
+        given(catalogResolver.getTipoDetalleSalidaPtId()).willReturn(20L);
+        given(picklistRepository.findTopByCodigoStartingWithOrderByCodigoDesc(any()))
+                .willReturn(Optional.empty());
+        given(productoRepository.findById(13L)).willReturn(Optional.of(producto));
+        given(loteProductoRepository.findById(7L)).willReturn(Optional.of(lote));
+
+        PicklistPtCreateRequest request = new PicklistPtCreateRequest(
+                "Cliente Z",
+                null,
+                null,
+                null,
+                null,
+                List.of(new PicklistPtLineaRequest(13L, new BigDecimal("4"),
+                        PicklistPtModoAsignacion.MANUAL_LOTE, 7L))
+        );
+
+        assertThatThrownBy(() -> service.crear(request))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting(ex -> ((CustomBusinessException) ex).getCode())
+                .isEqualTo(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO);
+    }
+
+    @Test
+    void modoManualFallaSiStockInsuficiente() {
+        Producto producto = crearProducto(14);
+        LoteProducto lote = crearLote(8L, producto, LocalDateTime.now().plusDays(20),
+                new BigDecimal("2"), BigDecimal.ZERO, 10);
+
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(new Usuario(1L));
+        given(catalogResolver.getAlmacenPtId()).willReturn(10L);
+        given(catalogResolver.getTipoDetalleSalidaPtId()).willReturn(20L);
+        given(picklistRepository.findTopByCodigoStartingWithOrderByCodigoDesc(any()))
+                .willReturn(Optional.empty());
+        given(productoRepository.findById(14L)).willReturn(Optional.of(producto));
+        given(loteProductoRepository.findById(8L)).willReturn(Optional.of(lote));
+
+        PicklistPtCreateRequest request = new PicklistPtCreateRequest(
+                "Cliente Z",
+                null,
+                null,
+                null,
+                null,
+                List.of(new PicklistPtLineaRequest(14L, new BigDecimal("4"),
+                        PicklistPtModoAsignacion.MANUAL_LOTE, 8L))
+        );
+
+        assertThatThrownBy(() -> service.crear(request))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting(ex -> ((CustomBusinessException) ex).getCode())
+                .isEqualTo(ApiErrorCode.PICKLIST_STOCK_INSUFICIENTE);
     }
 
     @Test
@@ -173,6 +271,7 @@ class PicklistPtServiceImplTest {
         LoteProducto lote = new LoteProducto();
         lote.setId(id);
         lote.setProducto(producto);
+        lote.setEstado(com.willyes.clemenintegra.inventario.model.enums.EstadoLote.LIBERADO);
         lote.setFechaVencimiento(vencimiento);
         lote.setStockLote(stock);
         lote.setStockReservado(reservado);

@@ -60,7 +60,7 @@ public class SalidaPtController {
             return ResponseEntity.ok(List.of());
         }
 
-        EnumSet<EstadoLote> estadosElegibles = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+        EnumSet<EstadoLote> estadosElegibles = EnumSet.of(EstadoLote.LIBERADO);
         List<LoteProducto> candidatos = loteProductoRepository.findFefoSalidaPt(
                 productoId,
                 almacenPtId,

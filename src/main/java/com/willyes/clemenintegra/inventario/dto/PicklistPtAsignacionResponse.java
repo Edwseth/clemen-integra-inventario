@@ -11,6 +11,8 @@ public record PicklistPtAsignacionResponse(
         String codigoLote,
         BigDecimal cantidadAsignada,
         LocalDateTime fechaVencimiento,
+        String codigoUbicacionInterna,
+        String descripcionUbicacionInterna,
         Integer almacenId,
         Short orden
 ) {

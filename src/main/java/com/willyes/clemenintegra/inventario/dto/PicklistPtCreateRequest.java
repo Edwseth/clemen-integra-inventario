@@ -8,6 +8,7 @@ import java.util.List;
 public record PicklistPtCreateRequest(
         @NotBlank String clienteNombre,
         Integer minVidaUtilDias,
+        Integer minVidaUtilSemanas,
         String docReferencia,
         String observaciones,
         @NotEmpty List<PicklistPtLineaRequest> lineas
