@@ -13,9 +13,9 @@ public interface ProductoService {
     List<ProductoResponseDTO> buscarPorCategoria(String categoria);
     List<ProductoResponseDTO> findByCategoriaTipo(String tipo);
     List<ProductoResponseDTO> findByCategoriaTipoIn(List<String> tipos);
-    ProductoResponseDTO crearProducto(ProductoRequestDTO dto);
+    ProductoResponseDTO crearProducto(ProductoRequestDTO dto, Long usuarioId);
     ProductoResponseDTO obtenerPorId(Long id);
-    ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto);
+    ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto, Long usuarioId);
     ProductoResponseDTO actualizarCamposCalidad(Long id, ProductoCalidadUpdateDTO dto);
     // PROD-INACTIVAR BEGIN
     ProductoResponseDTO actualizarEstado(Long id, Boolean activo);

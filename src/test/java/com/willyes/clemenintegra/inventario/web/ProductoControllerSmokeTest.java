@@ -11,9 +11,12 @@ import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepos
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
+import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
+import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +29,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -82,7 +86,6 @@ class ProductoControllerSmokeTest {
     private UsuarioInactivoFilter usuarioInactivoFilter;
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
     @DisplayName("POST /api/productos devuelve 201 y datos mínimos al crear un producto")
     void crearProducto_deberiaRetornar201() throws Exception {
         ProductoRequestDTO request = ProductoRequestDTO.builder()
@@ -102,11 +105,21 @@ class ProductoControllerSmokeTest {
                 .fechaCreacion(LocalDateTime.now())
                 .build();
 
-        when(productoService.crearProducto(any(ProductoRequestDTO.class))).thenReturn(response);
+        Usuario usuario = Usuario.builder()
+                .id(1L)
+                .rol(RolUsuario.ROL_JEFE_ALMACENES)
+                .nombreUsuario("almacen")
+                .clave("secret")
+                .activo(true)
+                .bloqueado(false)
+                .build();
+
+        when(productoService.crearProducto(any(ProductoRequestDTO.class), eq(1L))).thenReturn(response);
 
         mockMvc.perform(post("/api/productos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(SecurityMockMvcRequestPostProcessors.user(new CustomUserDetails(usuario))))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(100))
@@ -118,6 +131,14 @@ class ProductoControllerSmokeTest {
     @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
     @DisplayName("POST /api/productos con datos inválidos devuelve 400 y estructura de error global")
     void crearProducto_conBodyInvalido_deberiaRetornar400() throws Exception {
+        Usuario usuario = Usuario.builder()
+                .id(2L)
+                .rol(RolUsuario.ROL_JEFE_ALMACENES)
+                .nombreUsuario("almacen")
+                .clave("secret")
+                .activo(true)
+                .bloqueado(false)
+                .build();
         Map<String, Object> payload = Map.of(
                 "stockMinimo", 5,
                 "unidadMedidaId", 1,
@@ -126,7 +147,8 @@ class ProductoControllerSmokeTest {
 
         mockMvc.perform(post("/api/productos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(payload)))
+                        .content(objectMapper.writeValueAsString(payload))
+                        .with(SecurityMockMvcRequestPostProcessors.user(new CustomUserDetails(usuario))))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code").value("SOLICITUD_INVALIDA"))
