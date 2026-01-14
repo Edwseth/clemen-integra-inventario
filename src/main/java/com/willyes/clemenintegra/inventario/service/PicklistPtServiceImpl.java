@@ -111,18 +111,14 @@ public class PicklistPtServiceImpl implements PicklistPtService {
     @Override
     @Transactional(readOnly = true)
     public PicklistPtResponse obtener(Long id) {
-        PicklistPt picklist = picklistRepository.findWithDetallesById(id)
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
-                        "Picklist no encontrado"));
+        PicklistPt picklist = cargarPicklistConLineasYAsignaciones(id);
         return toResponse(picklist);
     }
 
     @Override
     @Transactional(readOnly = true)
     public byte[] generarPdf(Long id) {
-        PicklistPt picklist = picklistRepository.findWithDetallesById(id)
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
-                        "Picklist no encontrado"));
+        PicklistPt picklist = cargarPicklistConLineasYAsignaciones(id);
         return buildPdf(picklist);
     }
 
@@ -146,9 +142,7 @@ public class PicklistPtServiceImpl implements PicklistPtService {
     @Override
     @Transactional
     public PicklistPtResponse ejecutar(Long id) {
-        PicklistPt picklist = picklistRepository.findWithDetallesById(id)
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
-                        "Picklist no encontrado"));
+        PicklistPt picklist = cargarPicklistConLineasYAsignaciones(id);
         if (picklist.getEstado() == PicklistPtEstado.EJECUTADO) {
             return toResponse(picklist);
         }
@@ -503,6 +497,16 @@ public class PicklistPtServiceImpl implements PicklistPtService {
             }
         }
         return prefix + String.format("%04d", siguiente);
+    }
+
+    private PicklistPt cargarPicklistConLineasYAsignaciones(Long id) {
+        PicklistPt picklist = picklistRepository.findByIdWithLineas(id)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Picklist no encontrado"));
+        picklistRepository.findByIdWithAsignaciones(id)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Picklist no encontrado"));
+        return picklist;
     }
 
     private PicklistPtResponse toResponse(PicklistPt picklist) {
