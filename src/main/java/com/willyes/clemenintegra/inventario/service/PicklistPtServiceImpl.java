@@ -48,7 +48,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class PicklistPtServiceImpl implements PicklistPtService {
 
-    private static final EnumSet<EstadoLote> ESTADOS_FEFO = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+    private static final EnumSet<EstadoLote> ESTADOS_FEFO = EnumSet.of(EstadoLote.LIBERADO);
 
     private final PicklistPtRepository picklistRepository;
     private final ProductoRepository productoRepository;
@@ -66,11 +66,12 @@ public class PicklistPtServiceImpl implements PicklistPtService {
         Integer almacenPtId = obtenerAlmacenPtRequerido();
         Integer tipoDetalleSalidaPt = obtenerTipoDetalleSalidaPt();
         String codigo = generarCodigoPicklist();
+        Integer minVidaUtilDias = resolverMinVidaUtilDias(request);
 
         PicklistPt picklist = PicklistPt.builder()
                 .codigo(codigo)
                 .clienteNombre(request.clienteNombre())
-                .minVidaUtilDias(request.minVidaUtilDias())
+                .minVidaUtilDias(minVidaUtilDias)
                 .estado(PicklistPtEstado.BORRADOR)
                 .almacenPtId(almacenPtId)
                 .tipoMovimientoDetalleId(tipoDetalleSalidaPt)
@@ -148,9 +149,13 @@ public class PicklistPtServiceImpl implements PicklistPtService {
         PicklistPt picklist = picklistRepository.findWithDetallesById(id)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Picklist no encontrado"));
-        if (picklist.getEstado() != PicklistPtEstado.CONFIRMADO) {
+        if (picklist.getEstado() == PicklistPtEstado.EJECUTADO) {
+            return toResponse(picklist);
+        }
+        if (picklist.getEstado() != PicklistPtEstado.CONFIRMADO
+                && picklist.getEstado() != PicklistPtEstado.GENERADO) {
             throw new CustomBusinessException(ApiErrorCode.PICKLIST_ESTADO_INVALIDO,
-                    "Solo se puede ejecutar un picklist en estado CONFIRMADO");
+                    "Solo se puede ejecutar un picklist en estado CONFIRMADO o GENERADO");
         }
 
         var usuario = usuarioService.obtenerUsuarioAutenticado();
@@ -204,6 +209,19 @@ public class PicklistPtServiceImpl implements PicklistPtService {
             throw new CustomBusinessException(ApiErrorCode.PICKLIST_LINEAS_REQUERIDAS,
                     "Debe incluir al menos una línea");
         }
+    }
+
+    private Integer resolverMinVidaUtilDias(PicklistPtCreateRequest request) {
+        if (request == null) {
+            return null;
+        }
+        if (request.minVidaUtilDias() != null) {
+            return request.minVidaUtilDias();
+        }
+        if (request.minVidaUtilSemanas() == null) {
+            return null;
+        }
+        return request.minVidaUtilSemanas() * 7;
     }
 
     private List<PicklistPtLinea> construirLineas(PicklistPt picklist, List<PicklistPtLineaRequest> lineas) {
@@ -324,6 +342,7 @@ public class PicklistPtServiceImpl implements PicklistPtService {
             throw new CustomBusinessException(ApiErrorCode.PICKLIST_LOTE_INVALIDO,
                     "El lote no pertenece al almacén PT");
         }
+        validarLoteLiberado(lote);
         validarMinVidaUtil(lote.getFechaVencimiento(), minVidaUtilDias, ahora);
         loteCalidadValidator.validarLoteUtilizable(lote);
         BigDecimal disponible = disponibleParaSalida(lote);
@@ -334,6 +353,9 @@ public class PicklistPtServiceImpl implements PicklistPtService {
     }
 
     private boolean esLoteElegibleAuto(LoteProducto lote, Integer minVidaUtilDias, LocalDateTime ahora) {
+        if (!esLoteLiberado(lote)) {
+            return false;
+        }
         if (!validarMinVidaUtilSuave(lote.getFechaVencimiento(), minVidaUtilDias, ahora)) {
             return false;
         }
@@ -343,6 +365,17 @@ public class PicklistPtServiceImpl implements PicklistPtService {
             return false;
         }
         return true;
+    }
+
+    private void validarLoteLiberado(LoteProducto lote) {
+        if (!esLoteLiberado(lote)) {
+            throw new CustomBusinessException(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO,
+                    "El lote no está liberado para salida PT");
+        }
+    }
+
+    private boolean esLoteLiberado(LoteProducto lote) {
+        return lote != null && lote.getEstado() == EstadoLote.LIBERADO;
     }
 
     private void validarMinVidaUtil(LocalDateTime fechaVencimiento,
@@ -398,6 +431,10 @@ public class PicklistPtServiceImpl implements PicklistPtService {
             if (almacenActual == null || !Objects.equals(almacenActual, picklist.getAlmacenPtId().longValue())) {
                 throw new CustomBusinessException(ApiErrorCode.PICKLIST_DESACTUALIZADO,
                         "El lote asignado ya no está en el almacén PT");
+            }
+            if (!esLoteLiberado(lote)) {
+                throw new CustomBusinessException(ApiErrorCode.PICKLIST_DESACTUALIZADO,
+                        "El lote asignado ya no está liberado");
             }
             try {
                 validarMinVidaUtil(lote.getFechaVencimiento(), minVidaUtilDias, ahora);
@@ -494,6 +531,8 @@ public class PicklistPtServiceImpl implements PicklistPtService {
                         asignacion.getLoteProducto() != null ? asignacion.getLoteProducto().getCodigoLote() : null,
                         asignacion.getCantidadAsignada(),
                         asignacion.getFechaVencimiento(),
+                        obtenerCodigoUbicacion(asignacion.getLoteProducto()),
+                        obtenerDescripcionUbicacion(asignacion.getLoteProducto()),
                         asignacion.getAlmacenId(),
                         asignacion.getOrden()
                 ))
@@ -555,9 +594,10 @@ public class PicklistPtServiceImpl implements PicklistPtService {
                 document.add(new Paragraph("Observaciones: " + picklist.getObservaciones()).setFontSize(9));
             }
 
-            float[] widths = {26f, 16f, 12f, 10f, 10f, 14f};
+            float[] widths = {22f, 14f, 10f, 10f, 8f, 12f, 12f, 12f};
             Table table = new Table(widths).useAllAvailableWidth();
-            String[] headers = {"Producto", "Lote", "Vencimiento", "Cant.", "UM", "Almacén"};
+            String[] headers = {"Producto", "Lote", "Vencimiento", "Cant.", "UM", "Almacén",
+                    "Ubicación", "Desc. ubicación"};
             for (String h : headers) {
                 table.addHeaderCell(new Cell()
                         .add(new Paragraph(h).setFontSize(9).setBold())
@@ -588,8 +628,10 @@ public class PicklistPtServiceImpl implements PicklistPtService {
                         && asignacion.getLoteProducto().getAlmacen() != null
                         ? asignacion.getLoteProducto().getAlmacen().getNombre()
                         : "-";
+                String ubicacion = valorSeguro(obtenerCodigoUbicacion(asignacion.getLoteProducto()));
+                String ubicacionDesc = valorSeguro(obtenerDescripcionUbicacion(asignacion.getLoteProducto()));
 
-                String[] valores = {producto, lote, venc, cantidad, unidad, almacen};
+                String[] valores = {producto, lote, venc, cantidad, unidad, almacen, ubicacion, ubicacionDesc};
                 for (int i = 0; i < valores.length; i++) {
                     Cell cell = new Cell()
                             .add(new Paragraph(valores[i]).setFontSize(9))
@@ -624,5 +666,29 @@ public class PicklistPtServiceImpl implements PicklistPtService {
         } catch (Exception e) {
             throw new RuntimeException("Error generando PDF", e);
         }
+    }
+
+    private String obtenerCodigoUbicacion(LoteProducto lote) {
+        if (lote == null) {
+            return null;
+        }
+        if (lote.getUbicacionFisica() != null && lote.getUbicacionFisica().getCodigo() != null) {
+            return lote.getUbicacionFisica().getCodigo();
+        }
+        return lote.getCodigoUbicacionInterna();
+    }
+
+    private String obtenerDescripcionUbicacion(LoteProducto lote) {
+        if (lote == null) {
+            return null;
+        }
+        if (lote.getUbicacionFisica() != null && lote.getUbicacionFisica().getDescripcion() != null) {
+            return lote.getUbicacionFisica().getDescripcion();
+        }
+        return lote.getDescripcionUbicacionInterna();
+    }
+
+    private String valorSeguro(String valor) {
+        return valor != null && !valor.isBlank() ? valor : "-";
     }
 }
