@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.PicklistPt;
 import com.willyes.clemenintegra.inventario.model.PicklistPtAsignacion;
+import com.willyes.clemenintegra.inventario.model.PicklistPtLinea;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.PicklistPtEstado;
@@ -230,12 +231,20 @@ class PicklistPtServiceImplTest {
                 .loteProducto(loteAsignado)
                 .cantidadAsignada(new BigDecimal("8"))
                 .build();
+        PicklistPtLinea linea = PicklistPtLinea.builder()
+                .id(5L)
+                .producto(producto)
+                .loteProducto(loteAsignado)
+                .cantidad(new BigDecimal("8"))
+                .modoAsignacion(PicklistPtModoAsignacion.MANUAL_LOTE)
+                .build();
         PicklistPt picklist = PicklistPt.builder()
                 .id(99L)
                 .estado(PicklistPtEstado.CONFIRMADO)
                 .almacenPtId(10)
                 .tipoMovimientoDetalleId(20)
                 .asignaciones(List.of(asignacion))
+                .lineas(List.of(linea))
                 .build();
 
         given(picklistRepository.findByIdWithLineas(99L)).willReturn(Optional.of(picklist));
