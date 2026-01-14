@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,9 +138,13 @@ public class ProductoController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<?> crear(@Valid @RequestBody ProductoRequestDTO dto) {
+    public ResponseEntity<?> crear(@Valid @RequestBody ProductoRequestDTO dto,
+                                   @AuthenticationPrincipal CustomUserDetails principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no autenticado");
+        }
         try {
-            ProductoResponseDTO creado = productoService.crearProducto(dto);
+            ProductoResponseDTO creado = productoService.crearProducto(dto, principal.getId());
             return ResponseEntity.status(201).body(creado);
         } catch (DataIntegrityViolationException e) {
             return ResponseEntity.status(409).body("SKU duplicado o restricción de integridad violada");
@@ -158,8 +164,13 @@ public class ProductoController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
-    public ResponseEntity<ProductoResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ProductoRequestDTO dto) {
-        ProductoResponseDTO actualizado = productoService.actualizarProducto(id, dto);
+    public ResponseEntity<ProductoResponseDTO> actualizar(@PathVariable Long id,
+                                                          @Valid @RequestBody ProductoRequestDTO dto,
+                                                          @AuthenticationPrincipal CustomUserDetails principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
+        }
+        ProductoResponseDTO actualizado = productoService.actualizarProducto(id, dto, principal.getId());
         return ResponseEntity.ok(actualizado);
     }
 

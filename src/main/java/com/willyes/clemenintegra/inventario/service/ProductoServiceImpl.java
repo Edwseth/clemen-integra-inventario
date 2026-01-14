@@ -13,8 +13,6 @@ import com.willyes.clemenintegra.calidad.repository.PlantillaAnalisisMicrobiolog
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
-import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
@@ -28,8 +26,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,24 +49,8 @@ public class ProductoServiceImpl implements ProductoService {
     private final LoteProductoRepository loteProductoRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final ProductoMapper productoMapper;
-    private final JwtTokenService jwtTokenService;
     private final StockQueryService stockQueryService;
     private final PlantillaAnalisisMicrobiologicoRepository plantillaAnalisisMicrobiologicoRepository;
-
-    private Long obtenerUsuarioIdDesdeToken() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null) {
-            throw new IllegalStateException("No hay autenticación en el contexto");
-        }
-
-        if (authentication.getCredentials() instanceof String token) {
-            Claims claims = jwtTokenService.extraerClaims(token);
-            return claims.get("usuarioId", Long.class);
-        }
-
-        throw new IllegalStateException("No se pudo extraer el token JWT");
-    }
 
     private boolean esProductoFabricable(com.willyes.clemenintegra.inventario.model.CategoriaProducto categoria, String sku) {
         if (categoria == null || categoria.getTipo() == null || sku == null) {
@@ -228,7 +208,7 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional
-    public ProductoResponseDTO crearProducto(ProductoRequestDTO dto) {
+    public ProductoResponseDTO crearProducto(ProductoRequestDTO dto, Long usuarioId) {
         validarDuplicados(dto.getSku(), dto.getNombre());
 
         var unidad = unidadMedidaRepository.findById(dto.getUnidadMedidaId())
@@ -236,8 +216,6 @@ public class ProductoServiceImpl implements ProductoService {
 
         var categoria = categoriaProductoRepository.findById(dto.getCategoriaProductoId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
-
-        Long usuarioId = obtenerUsuarioIdDesdeToken();
 
         var usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
@@ -270,7 +248,7 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional
-    public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto) {
+    public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO dto, Long usuarioId) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
@@ -283,7 +261,6 @@ public class ProductoServiceImpl implements ProductoService {
         var categoria = categoriaProductoRepository.findById(dto.getCategoriaProductoId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
 
-        Long usuarioId = obtenerUsuarioIdDesdeToken();
         var usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 

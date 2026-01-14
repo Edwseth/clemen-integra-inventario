@@ -15,9 +15,6 @@ import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
-import io.jsonwebtoken.impl.DefaultClaims;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,9 +33,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -52,8 +46,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,7 +61,6 @@ class ProductoServiceImplTest {
     @Mock private LoteProductoRepository loteProductoRepository;
     @Mock private MovimientoInventarioRepository movimientoInventarioRepository;
     @Mock private ProductoMapper productoMapper;
-    @Mock private JwtTokenService jwtTokenService;
     @Mock private StockQueryService stockQueryService;
 
     @InjectMocks
@@ -77,16 +68,7 @@ class ProductoServiceImplTest {
 
     @BeforeEach
     void setUpSecurity() {
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getCredentials()).thenReturn("token-mock");
-        SecurityContext context = mock(SecurityContext.class);
-        when(context.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(context);
-
-        DefaultClaims claims = new DefaultClaims(Map.of("usuarioId", 1L));
-        when(jwtTokenService.extraerClaims("token-mock")).thenReturn(claims);
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(new Usuario()));
-
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(new Usuario(1L)));
         when(productoMapper.toDto(any(Producto.class))).thenReturn(new ProductoResponseDTO());
         when(stockQueryService.obtenerStockDisponible(any(Long.class))).thenReturn(BigDecimal.ZERO);
         when(stockQueryService.obtenerStockDisponible(anyList())).thenReturn(Collections.emptyMap());
@@ -97,11 +79,6 @@ class ProductoServiceImplTest {
             producto.setId(10);
             return producto;
         });
-    }
-
-    @AfterEach
-    void clearSecurity() {
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -131,7 +108,7 @@ class ProductoServiceImplTest {
 
         ArgumentCaptor<Producto> captor = ArgumentCaptor.forClass(Producto.class);
 
-        service.crearProducto(dto);
+        service.crearProducto(dto, 1L);
 
         verify(productoRepository).save(captor.capture());
         assertThat(captor.getValue().getRendimientoUnidad())
@@ -164,7 +141,7 @@ class ProductoServiceImplTest {
                 .build();
 
         ArgumentCaptor<Producto> captor = ArgumentCaptor.forClass(Producto.class);
-        service.crearProducto(dto);
+        service.crearProducto(dto, 1L);
         verify(productoRepository).save(captor.capture());
 
         assertThat(captor.getValue().getRendimientoUnidad())
@@ -197,7 +174,7 @@ class ProductoServiceImplTest {
                 .rendimientoUnidad(null)
                 .build();
 
-        assertThatThrownBy(() -> service.crearProducto(dto))
+        assertThatThrownBy(() -> service.crearProducto(dto, 1L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("rendimiento por unidad es obligatorio");
     }
@@ -260,7 +237,7 @@ class ProductoServiceImplTest {
                 .build();
 
         ArgumentCaptor<Producto> captor = ArgumentCaptor.forClass(Producto.class);
-        service.crearProducto(dto);
+        service.crearProducto(dto, 1L);
 
         verify(productoRepository).save(captor.capture());
         Producto guardado = captor.getValue();
@@ -309,7 +286,7 @@ class ProductoServiceImplTest {
                 .build();
 
         ArgumentCaptor<Producto> captor = ArgumentCaptor.forClass(Producto.class);
-        service.actualizarProducto(10L, dto);
+        service.actualizarProducto(10L, dto, 1L);
 
         verify(productoRepository).save(captor.capture());
         Producto actualizado = captor.getValue();
