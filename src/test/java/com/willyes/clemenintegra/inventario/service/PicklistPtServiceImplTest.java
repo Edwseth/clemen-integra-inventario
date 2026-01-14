@@ -247,8 +247,8 @@ class PicklistPtServiceImplTest {
                 .lineas(List.of(linea))
                 .build();
 
-        given(picklistRepository.findByIdWithLineas(99L)).willReturn(Optional.of(picklist));
-        given(picklistRepository.findByIdWithAsignaciones(99L)).willReturn(Optional.of(picklist));
+        given(picklistRepository.findWithLineasById(99L)).willReturn(Optional.of(picklist));
+        given(picklistRepository.findWithAsignacionesById(99L)).willReturn(Optional.of(picklist));
         given(loteProductoRepository.findByIdForUpdate(4L)).willReturn(Optional.of(loteAsignado));
 
         assertThatThrownBy(() -> service.ejecutar(99L))

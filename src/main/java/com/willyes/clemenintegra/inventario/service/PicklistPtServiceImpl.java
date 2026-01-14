@@ -500,10 +500,10 @@ public class PicklistPtServiceImpl implements PicklistPtService {
     }
 
     private PicklistPt cargarPicklistConLineasYAsignaciones(Long id) {
-        PicklistPt picklist = picklistRepository.findByIdWithLineas(id)
+        PicklistPt picklist = picklistRepository.findWithLineasById(id)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Picklist no encontrado"));
-        picklistRepository.findByIdWithAsignaciones(id)
+        picklistRepository.findWithAsignacionesById(id)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Picklist no encontrado"));
         return picklist;
