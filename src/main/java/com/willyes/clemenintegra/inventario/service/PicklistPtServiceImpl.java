@@ -62,7 +62,7 @@ public class PicklistPtServiceImpl implements PicklistPtService {
     @Transactional
     public PicklistPtResponse crear(PicklistPtCreateRequest request) {
         validarSolicitud(request);
-        Usuario creador = usuarioService.obtenerUsuarioAutenticado();
+        var creador = usuarioService.obtenerUsuarioAutenticado();
         Integer almacenPtId = obtenerAlmacenPtRequerido();
         Integer tipoDetalleSalidaPt = obtenerTipoDetalleSalidaPt();
         String codigo = generarCodigoPicklist();
@@ -135,7 +135,7 @@ public class PicklistPtServiceImpl implements PicklistPtService {
             throw new CustomBusinessException(ApiErrorCode.PICKLIST_ESTADO_INVALIDO,
                     "Solo se puede confirmar un picklist en estado GENERADO");
         }
-        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        var usuario = usuarioService.obtenerUsuarioAutenticado();
         picklist.setEstado(PicklistPtEstado.CONFIRMADO);
         picklist.setConfirmadoPor(usuario);
         picklist.setFechaConfirmacion(LocalDateTime.now());
@@ -153,36 +153,12 @@ public class PicklistPtServiceImpl implements PicklistPtService {
                     "Solo se puede ejecutar un picklist en estado CONFIRMADO");
         }
 
-        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+        var usuario = usuarioService.obtenerUsuarioAutenticado();
+        Long usuarioId = usuario != null ? usuario.getId() : null;
         validarAsignacionesParaEjecucion(picklist);
 
         for (PicklistPtAsignacion asignacion : picklist.getAsignaciones()) {
-            MovimientoInventarioDTO movimiento = new MovimientoInventarioDTO(
-                    null,
-                    asignacion.getCantidadAsignada(),
-                    TipoMovimiento.SALIDA,
-                    ClasificacionMovimientoInventario.SALIDA_CLIENTE,
-                    picklist.getDocReferencia(),
-                    picklist.getClienteNombre(),
-                    asignacion.getProducto().getId(),
-                    asignacion.getLoteProducto().getId(),
-                    picklist.getAlmacenPtId(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    picklist.getTipoMovimientoDetalleId().longValue(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            );
+            MovimientoInventarioDTO movimiento = construirMovimientoSalidaPt(picklist, asignacion, usuarioId);
             String idempotencyKey = "PICKLIST_PT:%d:%d".formatted(picklist.getId(), asignacion.getId());
             movimientoInventarioService.registrarMovimiento(movimiento, idempotencyKey);
         }
@@ -436,6 +412,40 @@ public class PicklistPtServiceImpl implements PicklistPtService {
                         "Stock insuficiente al ejecutar el picklist");
             }
         }
+    }
+
+    private MovimientoInventarioDTO construirMovimientoSalidaPt(PicklistPt picklist,
+                                                                PicklistPtAsignacion asignacion,
+                                                                Long usuarioId) {
+        Long loteId = asignacion.getLoteProducto() != null ? asignacion.getLoteProducto().getId() : null;
+        String codigoLote = asignacion.getLoteProducto() != null ? asignacion.getLoteProducto().getCodigoLote() : null;
+        return new MovimientoInventarioDTO(
+                null,
+                asignacion.getCantidadAsignada(),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_CLIENTE,
+                picklist.getDocReferencia(),
+                picklist.getClienteNombre(),
+                asignacion.getProducto().getId(),
+                loteId,
+                picklist.getAlmacenPtId(),
+                null,
+                null,
+                null,
+                null,
+                picklist.getTipoMovimientoDetalleId().longValue(),
+                null,
+                usuarioId,
+                null,
+                null,
+                null,
+                codigoLote,
+                asignacion.getFechaVencimiento(),
+                null,
+                Boolean.FALSE,
+                null,
+                null
+        );
     }
 
     private String generarCodigoPicklist() {
