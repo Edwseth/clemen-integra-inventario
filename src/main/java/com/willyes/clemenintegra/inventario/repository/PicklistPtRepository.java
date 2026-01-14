@@ -14,9 +14,12 @@ import java.util.Optional;
 
 public interface PicklistPtRepository extends JpaRepository<PicklistPt, Long> {
 
-    @EntityGraph(attributePaths = {"lineas", "lineas.producto", "lineas.loteProducto",
-            "asignaciones", "asignaciones.producto", "asignaciones.loteProducto", "asignaciones.loteProducto.almacen"})
-    Optional<PicklistPt> findWithDetallesById(Long id);
+    @EntityGraph(attributePaths = {"lineas", "lineas.producto", "lineas.loteProducto"})
+    Optional<PicklistPt> findByIdWithLineas(Long id);
+
+    @EntityGraph(attributePaths = {"asignaciones", "asignaciones.producto", "asignaciones.producto.unidadMedida",
+            "asignaciones.loteProducto", "asignaciones.loteProducto.almacen", "asignaciones.loteProducto.ubicacionFisica"})
+    Optional<PicklistPt> findByIdWithAsignaciones(Long id);
 
     Optional<PicklistPt> findTopByCodigoStartingWithOrderByCodigoDesc(String prefix);
 
