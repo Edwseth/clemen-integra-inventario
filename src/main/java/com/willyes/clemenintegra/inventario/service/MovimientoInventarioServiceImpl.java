@@ -228,24 +228,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             almacenDestinoIdNormalizado = Math.toIntExact(destinoId);
         }
 
-        MovimientoInventario movimiento = mapper.toEntity(dto);
-        if (StringUtils.hasText(idempotencyKey)) {
-            movimiento.setIdempotencyKey(idempotencyKey);
-        }
-        LocalDateTime fechaIngreso = movimiento.getFechaIngreso();
-        if (fechaIngreso == null) {
-            fechaIngreso = ZonedDateTime.now(ZONA_BOGOTA).toLocalDateTime();
-            movimiento.setFechaIngreso(fechaIngreso);
-        }
-
         // >>> NUEVO: identifica si el cierre de OP está enviando una ENTRADA de PT
         final boolean esEntradaPt = (tipoMovimiento == TipoMovimiento.ENTRADA);
 
         if (esOpDesdeDto && !esEntradaPt && clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION) {
             tipoMovimiento = TipoMovimiento.TRANSFERENCIA;
             clasificacion = ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
-            movimiento.setTipoMovimiento(tipoMovimiento);
-            movimiento.setClasificacion(clasificacion);
             log.info("OP_NORMALIZED movimiento: tipo={}, clasificacion={}, opId={}, destino={}",
                     tipoMovimiento, clasificacion, dto.ordenProduccionId(), almacenDestinoIdNormalizado);
         }
@@ -279,11 +267,33 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Producto producto = productoRepository.findById(dto.productoId().longValue())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
 
-        Long resolvedTipoDetalleId = esOpDesdeDto
-                ? tipoMovimientoDetalleId
-                : resolveTipoMovimientoDetalleId(dto, producto);
-        TipoMovimientoDetalle tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(resolvedTipoDetalleId)
-                .orElseThrow(() -> new NoSuchElementException("Tipo de detalle de movimiento no encontrado"));
+        Long resolvedTipoDetalleId = dto.tipoMovimientoDetalleId();
+        TipoMovimientoDetalle tipoMovimientoDetalle;
+        if (resolvedTipoDetalleId != null) {
+            final Long tipoDetalleIdFinal = resolvedTipoDetalleId;
+            tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(tipoDetalleIdFinal)
+                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.CATALOGO_FALTANTE,
+                            "Tipo detalle no encontrado",
+                            Map.of("tipoMovimientoDetalleId", tipoDetalleIdFinal)));
+        } else {
+            resolvedTipoDetalleId = esOpDesdeDto
+                    ? tipoMovimientoDetalleId
+                    : resolveTipoMovimientoDetalleId(dto, producto);
+            tipoMovimientoDetalle = tipoMovimientoDetalleRepository.findById(resolvedTipoDetalleId)
+                    .orElseThrow(() -> new NoSuchElementException("Tipo de detalle de movimiento no encontrado"));
+        }
+
+        MovimientoInventario movimiento = mapper.toEntity(dto);
+        if (StringUtils.hasText(idempotencyKey)) {
+            movimiento.setIdempotencyKey(idempotencyKey);
+        }
+        movimiento.setTipoMovimiento(tipoMovimiento);
+        movimiento.setClasificacion(clasificacion);
+        LocalDateTime fechaIngreso = movimiento.getFechaIngreso();
+        if (fechaIngreso == null) {
+            fechaIngreso = ZonedDateTime.now(ZONA_BOGOTA).toLocalDateTime();
+            movimiento.setFechaIngreso(fechaIngreso);
+        }
         movimiento.setTipoMovimientoDetalle(tipoMovimientoDetalle);
 
         if (requiereSolicitudMovimientoId(tipoMovimientoDetalle) && dto.solicitudMovimientoId() == null) {
@@ -2762,7 +2772,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean vaABodegaPt = !loteLegacy
                 && dto.causaDevolucionPt() == CausaDevolucionPT.TROCADO
                 && dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
+        Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
         Long tipoDetalleEntradaId = catalogResolver.getTipoDetalleEntradaId();
+        if (!vaABodegaPt && tipoDetalleTransferenciaId != null) {
+            return tipoDetalleTransferenciaId;
+        }
         if (tipoDetalleEntradaId == null) {
             String destino = vaABodegaPt ? "BODEGA_PT" : "CUARENTENA";
             throw new CustomBusinessException(
