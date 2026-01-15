@@ -43,7 +43,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class MovimientoInventarioServiceDevolucionClienteTest {
@@ -51,6 +50,7 @@ class MovimientoInventarioServiceDevolucionClienteTest {
     private static final long ALMACEN_PT_ID = 2L;
     private static final long ALMACEN_CUARENTENA_ID = 7L;
     private static final long TIPO_DETALLE_ENTRADA_ID = 15L;
+    private static final long TIPO_DETALLE_TRANSFERENCIA_ID = 16L;
     private static final long TIPO_DETALLE_EXPLICITO_ID = 18L;
     private static final long MOTIVO_ENTRADA_PT_ID = 21L;
     private static final long MOTIVO_TRANSFERENCIA_CALIDAD_ID = 22L;
@@ -106,27 +106,9 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         TestingAuthenticationToken authentication = new TestingAuthenticationToken("tester", "secret");
         authentication.setAuthenticated(true);
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        lenient().when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(
                 Usuario.builder().id(1L).nombreCompleto("Tester").build()
         );
-
-        MotivoMovimiento motivoEntradaPt = new MotivoMovimiento();
-        motivoEntradaPt.setId(MOTIVO_ENTRADA_PT_ID);
-        motivoEntradaPt.setMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO);
-        MotivoMovimiento motivoTransferenciaCalidad = new MotivoMovimiento();
-        motivoTransferenciaCalidad.setId(MOTIVO_TRANSFERENCIA_CALIDAD_ID);
-        motivoTransferenciaCalidad.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
-
-        lenient().when(catalogResolver.getMotivoIdEntradaProductoTerminado()).thenReturn(MOTIVO_ENTRADA_PT_ID);
-        lenient().when(catalogResolver.getMotivoIdTransferenciaCalidad()).thenReturn(MOTIVO_TRANSFERENCIA_CALIDAD_ID);
-        lenient().when(motivoMovimientoRepository.findById(MOTIVO_ENTRADA_PT_ID))
-                .thenReturn(Optional.of(motivoEntradaPt));
-        lenient().when(motivoMovimientoRepository.findById(MOTIVO_TRANSFERENCIA_CALIDAD_ID))
-                .thenReturn(Optional.of(motivoTransferenciaCalidad));
-        lenient().when(catalogResolver.getAlmacenPtId()).thenReturn(ALMACEN_PT_ID);
-        lenient().when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(ALMACEN_CUARENTENA_ID);
-        lenient().when(catalogResolver.getTipoDetalleEntradaId()).thenReturn(TIPO_DETALLE_ENTRADA_ID);
-        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
     }
 
     @Test
@@ -134,8 +116,10 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         Producto producto = crearProducto(100);
         LoteProducto lote = crearLote(400L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
-                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID);
+                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID,
+                null);
 
+        stubCatalogosRecepcionDevolucion();
         configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_EXPLICITO_ID);
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -165,9 +149,10 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         Producto producto = crearProducto(200);
         LoteProducto lote = crearLote(500L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
-                CausaDevolucionPT.CORTA_FECHA, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID);
+                CausaDevolucionPT.CORTA_FECHA, CondicionProductoDevuelto.OPTIMO, false, null, null);
 
-        configurarMocksBasicos(producto, lote, ALMACEN_CUARENTENA_ID, TIPO_DETALLE_EXPLICITO_ID);
+        stubCatalogosRecepcionDevolucion();
+        configurarMocksBasicos(producto, lote, ALMACEN_CUARENTENA_ID, TIPO_DETALLE_TRANSFERENCIA_ID);
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
@@ -196,7 +181,8 @@ class MovimientoInventarioServiceDevolucionClienteTest {
     void shouldReject_whenNotLegacy_andMissingLoteProductoId() {
         Producto producto = crearProducto(300);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), null,
-                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID);
+                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID,
+                null);
 
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
 
@@ -213,8 +199,9 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         Producto producto = crearProducto(400);
         LoteProducto lote = crearLote(600L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
-                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, null);
+                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, null, null);
 
+        stubCatalogosRecepcionDevolucion();
         configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_ENTRADA_ID);
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -244,8 +231,10 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         Producto producto = crearProducto(410);
         LoteProducto lote = crearLote(610L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
-                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID);
+                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID,
+                null);
 
+        stubCatalogosRecepcionDevolucion();
         configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_EXPLICITO_ID);
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
@@ -274,10 +263,11 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         Producto producto = crearProducto(420);
         LoteProducto lote = crearLote(620L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
-                causaConAveria(), condicionNoOptima(), false,
-                TIPO_DETALLE_EXPLICITO_ID);
+                CausaDevolucionPT.AVERIADO_TRANSPORTE, CondicionProductoDevuelto.AVERIADO, false,
+                null, null);
 
-        configurarMocksBasicos(producto, lote, ALMACEN_CUARENTENA_ID, TIPO_DETALLE_EXPLICITO_ID);
+        stubCatalogosRecepcionDevolucion();
+        configurarMocksBasicos(producto, lote, ALMACEN_CUARENTENA_ID, TIPO_DETALLE_TRANSFERENCIA_ID);
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
         movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
@@ -298,6 +288,8 @@ class MovimientoInventarioServiceDevolucionClienteTest {
 
         assertThat(movimientoCaptor.getValue().getMotivoMovimiento().getId())
                 .isEqualTo(MOTIVO_TRANSFERENCIA_CALIDAD_ID);
+        assertThat(movimientoCaptor.getValue().getTipoMovimientoDetalle().getId())
+                .isEqualTo(TIPO_DETALLE_TRANSFERENCIA_ID);
     }
 
     @Test
@@ -323,8 +315,10 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         Producto producto = crearProducto(500);
         LoteProducto lote = crearLote(700L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
-                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID);
+                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID,
+                null);
 
+        stubCatalogosRecepcionDevolucion();
         configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_EXPLICITO_ID);
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -349,6 +343,45 @@ class MovimientoInventarioServiceDevolucionClienteTest {
                 .isEqualTo(TIPO_DETALLE_EXPLICITO_ID);
     }
 
+    @Test
+    void shouldFail_whenMotivoExplicitMissing() {
+        Producto producto = crearProducto(510);
+        LoteProducto lote = crearLote(710L, producto, 2, EstadoLote.LIBERADO);
+        MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
+                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID,
+                999L);
+
+        stubCatalogosRecepcionDevolucion();
+        configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_EXPLICITO_ID);
+        given(motivoMovimientoRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex -> {
+                    assertThat(ex.getCode()).isEqualTo(ApiErrorCode.CATALOGO_FALTANTE);
+                    assertThat((Map<String, Object>) ex.getDetails())
+                            .containsEntry("motivoMovimientoId", 999L);
+                });
+    }
+
+    @Test
+    void shouldFail_whenTipoDetalleExplicitMissing() {
+        Producto producto = crearProducto(520);
+        LoteProducto lote = crearLote(720L, producto, 2, EstadoLote.LIBERADO);
+        MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
+                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, 999L, null);
+
+        stubCatalogosRecepcionDevolucion();
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        given(tipoMovimientoDetalleRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex -> {
+                    assertThat(ex.getCode()).isEqualTo(ApiErrorCode.CATALOGO_FALTANTE);
+                    assertThat((Map<String, Object>) ex.getDetails())
+                            .containsEntry("tipoMovimientoDetalleId", 999L);
+                });
+    }
+
     private void configurarMocksBasicos(Producto producto, LoteProducto lote, long almacenDestinoId, long tipoDetalleId) {
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
@@ -367,7 +400,8 @@ class MovimientoInventarioServiceDevolucionClienteTest {
                                                  CausaDevolucionPT causa,
                                                  CondicionProductoDevuelto condicion,
                                                  boolean loteLegacy,
-                                                 Long tipoDetalleId) {
+                                                 Long tipoDetalleId,
+                                                 Long motivoMovimientoId) {
         return new MovimientoInventarioDTO(
                 null,
                 new BigDecimal("10"),
@@ -384,7 +418,7 @@ class MovimientoInventarioServiceDevolucionClienteTest {
                 null,
                 null,
                 null,
-                null,
+                motivoMovimientoId,
                 tipoDetalleId,
                 null,
                 null,
@@ -456,29 +490,24 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         return lote;
     }
 
-    private CausaDevolucionPT causaConAveria() {
-        CausaDevolucionPT[] valores = CausaDevolucionPT.values();
-        for (CausaDevolucionPT causa : valores) {
-            if (causa.name().contains("AVER")) {
-                return causa;
-            }
-        }
-        if (valores.length > 0) {
-            return valores[0];
-        }
-        throw new IllegalStateException("No hay causas de devolución configuradas.");
-    }
+    private void stubCatalogosRecepcionDevolucion() {
+        MotivoMovimiento motivoEntradaPt = new MotivoMovimiento();
+        motivoEntradaPt.setId(MOTIVO_ENTRADA_PT_ID);
+        motivoEntradaPt.setMotivo(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO);
+        MotivoMovimiento motivoTransferenciaCalidad = new MotivoMovimiento();
+        motivoTransferenciaCalidad.setId(MOTIVO_TRANSFERENCIA_CALIDAD_ID);
+        motivoTransferenciaCalidad.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
 
-    private CondicionProductoDevuelto condicionNoOptima() {
-        CondicionProductoDevuelto[] valores = CondicionProductoDevuelto.values();
-        for (CondicionProductoDevuelto condicion : valores) {
-            if (condicion != CondicionProductoDevuelto.OPTIMO) {
-                return condicion;
-            }
-        }
-        if (valores.length > 0) {
-            return valores[0];
-        }
-        throw new IllegalStateException("No hay condiciones de producto configuradas.");
+        given(catalogResolver.getMotivoIdEntradaProductoTerminado()).willReturn(MOTIVO_ENTRADA_PT_ID);
+        given(catalogResolver.getMotivoIdTransferenciaCalidad()).willReturn(MOTIVO_TRANSFERENCIA_CALIDAD_ID);
+        given(motivoMovimientoRepository.findById(MOTIVO_ENTRADA_PT_ID))
+                .willReturn(Optional.of(motivoEntradaPt));
+        given(motivoMovimientoRepository.findById(MOTIVO_TRANSFERENCIA_CALIDAD_ID))
+                .willReturn(Optional.of(motivoTransferenciaCalidad));
+        given(catalogResolver.getAlmacenPtId()).willReturn(ALMACEN_PT_ID);
+        given(catalogResolver.getAlmacenCuarentenaId()).willReturn(ALMACEN_CUARENTENA_ID);
+        given(catalogResolver.getTipoDetalleEntradaId()).willReturn(TIPO_DETALLE_ENTRADA_ID);
+        given(catalogResolver.getTipoDetalleTransferenciaId()).willReturn(TIPO_DETALLE_TRANSFERENCIA_ID);
+        given(catalogResolver.decimals(any())).willReturn(2);
     }
 }
