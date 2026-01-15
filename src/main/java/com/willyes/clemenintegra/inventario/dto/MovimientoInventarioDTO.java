@@ -69,11 +69,11 @@ public record MovimientoInventarioDTO(
 
 
 ) {
-    public MovimientoInventarioDTO(
+    public static MovimientoInventarioDTO ofRecepcionOC(
             Long id,
             BigDecimal cantidad,
             TipoMovimiento tipoMovimiento,
-            ClasificacionMovimientoInventario clasificacionMovimientoInventario,
+            ClasificacionMovimientoInventario clasificacion,
             String docReferencia,
             String destinoTexto,
             Integer productoId,
@@ -96,16 +96,16 @@ public record MovimientoInventarioDTO(
             List<AtencionDTO> atenciones,
             Long ubicacionDestinoId
     ) {
-        this(
+        return new MovimientoInventarioDTO(
                 id,
                 cantidad,
                 tipoMovimiento,
-                clasificacionMovimientoInventario,
+                clasificacion,
                 docReferencia,
                 destinoTexto,
-                null,
-                null,
-                null,
+                null, // clienteNombre
+                null, // causaDevolucionPt
+                null, // condicionProductoDevuelto
                 productoId,
                 loteProductoId,
                 almacenOrigenId,
@@ -124,8 +124,9 @@ public record MovimientoInventarioDTO(
                 estadoLote,
                 autoSplit,
                 atenciones,
-                null,
+                null, // loteLegacy
                 ubicacionDestinoId
         );
     }
+
 }
