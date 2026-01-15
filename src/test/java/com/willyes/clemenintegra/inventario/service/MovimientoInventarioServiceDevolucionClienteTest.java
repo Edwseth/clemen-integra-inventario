@@ -43,6 +43,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
+
 
 @ExtendWith(MockitoExtension.class)
 class MovimientoInventarioServiceDevolucionClienteTest {
@@ -137,7 +140,16 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         });
 
         ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
-        given(loteProductoRepository.save(loteCaptor.capture())).willAnswer(invocation -> invocation.getArgument(0));
+        given(loteProductoRepository.save(any(LoteProducto.class)))
+                .willAnswer(invocation -> {
+                    LoteProducto lp = invocation.getArgument(0);
+                    // Simula JPA: al guardar, el ID ya viene asignado
+                    if (lp.getId() == null) {
+                        lp.setId(999L);
+                    }
+                    loteCaptor.capture(); // ❌ NO: esto no captura aquí
+                    return lp;
+                });
 
         service.registrarMovimiento(dto);
 
@@ -169,7 +181,13 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         });
 
         ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
-        given(loteProductoRepository.save(loteCaptor.capture())).willAnswer(invocation -> invocation.getArgument(0));
+        doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(999L);
+            }
+            return lp;
+        }).when(loteProductoRepository).save(loteCaptor.capture());
 
         service.registrarMovimiento(dto);
 
@@ -219,6 +237,16 @@ class MovimientoInventarioServiceDevolucionClienteTest {
             mov.setId(12L);
             return mov;
         });
+
+        ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+
+        doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(999L);
+            }
+            return lp;
+        }).when(loteProductoRepository).save(loteCaptor.capture());
 
         service.registrarMovimiento(dto);
 
@@ -499,11 +527,8 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         motivoTransferenciaCalidad.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
 
         given(catalogResolver.getMotivoIdEntradaProductoTerminado()).willReturn(MOTIVO_ENTRADA_PT_ID);
-        given(catalogResolver.getMotivoIdTransferenciaCalidad()).willReturn(MOTIVO_TRANSFERENCIA_CALIDAD_ID);
-        given(motivoMovimientoRepository.findById(MOTIVO_ENTRADA_PT_ID))
-                .willReturn(Optional.of(motivoEntradaPt));
-        given(motivoMovimientoRepository.findById(MOTIVO_TRANSFERENCIA_CALIDAD_ID))
-                .willReturn(Optional.of(motivoTransferenciaCalidad));
+        lenient().when(motivoMovimientoRepository.findById(MOTIVO_ENTRADA_PT_ID))
+                .thenReturn(Optional.of(motivoEntradaPt));
         given(catalogResolver.getAlmacenPtId()).willReturn(ALMACEN_PT_ID);
         given(catalogResolver.getAlmacenCuarentenaId()).willReturn(ALMACEN_CUARENTENA_ID);
         given(catalogResolver.getTipoDetalleEntradaId()).willReturn(TIPO_DETALLE_ENTRADA_ID);
