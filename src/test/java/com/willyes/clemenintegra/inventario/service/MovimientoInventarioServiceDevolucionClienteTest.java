@@ -527,6 +527,10 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         lenient().when(catalogResolver.getMotivoIdEntradaProductoTerminado()).thenReturn(MOTIVO_ENTRADA_PT_ID);
         lenient().when(motivoMovimientoRepository.findById(MOTIVO_ENTRADA_PT_ID))
                 .thenReturn(Optional.of(motivoEntradaPt));
+        lenient().when(catalogResolver.getMotivoIdTransferenciaCalidad())
+                .thenReturn(MOTIVO_TRANSFERENCIA_CALIDAD_ID);
+        lenient().when(motivoMovimientoRepository.findById(MOTIVO_TRANSFERENCIA_CALIDAD_ID))
+                .thenReturn(Optional.of(motivoTransferenciaCalidad));
         lenient().when(catalogResolver.getAlmacenPtId()).thenReturn(ALMACEN_PT_ID);
         lenient().when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(ALMACEN_CUARENTENA_ID);
         lenient().when(catalogResolver.getTipoDetalleEntradaId()).thenReturn(TIPO_DETALLE_ENTRADA_ID);
