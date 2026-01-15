@@ -1862,7 +1862,7 @@ class OrdenProduccionServiceImplTest {
                 .fechaVencimiento(fechaVencimiento)
                 .build();
 
-        when(ordenProduccionRepository.findById(10L)).thenReturn(Optional.of(orden));
+        when(ordenProduccionRepository.findByIdWithProductoCategoria(10L)).thenReturn(Optional.of(orden));
         when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(10L, 1L))
                 .thenReturn(Optional.of(lote));
 
@@ -1885,7 +1885,7 @@ class OrdenProduccionServiceImplTest {
                 .estado(EstadoProduccion.CREADA)
                 .build();
 
-        when(ordenProduccionRepository.findById(20L)).thenReturn(Optional.of(orden));
+        when(ordenProduccionRepository.findByIdWithProductoCategoria(20L)).thenReturn(Optional.of(orden));
         when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(20L, 2L))
                 .thenReturn(Optional.empty());
 

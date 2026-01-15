@@ -64,41 +64,73 @@ class OrdenProduccionObtenerPorIdIntegrationTest extends IntegrationTestH2 {
     @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     void obtenerPorIdIncluyeCategoriaProducto() throws Exception {
-        Usuario usuario = usuarioRepository.save(Usuario.builder()
-                .nombreUsuario("responsable-op")
-                .clave("secret")
-                .nombreCompleto("Responsable OP")
-                .correo("responsable-op@example.com")
-                .rol(RolUsuario.ROL_JEFE_PRODUCCION)
-                .activo(true)
-                .bloqueado(false)
-                .build());
+        Usuario usuario = usuarioRepository.findByNombreUsuario("responsable-op")
+                .map(existing -> {
+                    existing.setClave("secret");
+                    existing.setNombreCompleto("Responsable OP");
+                    existing.setCorreo("responsable-op@example.com");
+                    existing.setRol(RolUsuario.ROL_JEFE_PRODUCCION);
+                    existing.setActivo(true);
+                    existing.setBloqueado(false);
+                    return usuarioRepository.save(existing);
+                })
+                .orElseGet(() -> usuarioRepository.save(Usuario.builder()
+                        .nombreUsuario("responsable-op")
+                        .clave("secret")
+                        .nombreCompleto("Responsable OP")
+                        .correo("responsable-op@example.com")
+                        .rol(RolUsuario.ROL_JEFE_PRODUCCION)
+                        .activo(true)
+                        .bloqueado(false)
+                        .build()));
 
-        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
-                .nombre("Unidad OP")
-                .simbolo("UOP")
-                .codigo("UOP")
-                .build());
+        UnidadMedida unidad = unidadMedidaRepository.findByNombreIgnoreCaseOrSimboloIgnoreCase("Unidad OP", "UOP")
+                .map(existing -> {
+                    existing.setSimbolo("UOP");
+                    existing.setCodigo("UOP");
+                    return unidadMedidaRepository.save(existing);
+                })
+                .orElseGet(() -> unidadMedidaRepository.save(UnidadMedida.builder()
+                        .nombre("Unidad OP")
+                        .simbolo("UOP")
+                        .codigo("UOP")
+                        .build()));
 
-        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
-                .nombre("Categoria OP")
-                .tipo(TipoCategoria.PRODUCTO_TERMINADO)
-                .build());
+        CategoriaProducto categoria = categoriaProductoRepository.findByNombre("Categoria OP")
+                .orElseGet(() -> categoriaProductoRepository.save(CategoriaProducto.builder()
+                        .nombre("Categoria OP")
+                        .tipo(TipoCategoria.PRODUCTO_TERMINADO)
+                        .build()));
 
-        Producto producto = productoRepository.save(Producto.builder()
-                .codigoSku("SKU-OP")
-                .nombre("Producto OP")
-                .descripcionProducto("Producto para orden")
-                .stockMinimo(BigDecimal.ZERO)
-                .unidadMedida(unidad)
-                .categoriaProducto(categoria)
-                .creadoPor(usuario)
-                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
-                .requiereAnalisisFisico(false)
-                .requiereAnalisisQuimico(false)
-                .requiereAnalisisMicrobiologico(false)
-                .activo(true)
-                .build());
+        Producto producto = productoRepository.findByCodigoSku("SKU-OP")
+                .map(existing -> {
+                    existing.setNombre("Producto OP");
+                    existing.setDescripcionProducto("Producto para orden");
+                    existing.setStockMinimo(BigDecimal.ZERO);
+                    existing.setUnidadMedida(unidad);
+                    existing.setCategoriaProducto(categoria);
+                    existing.setCreadoPor(usuario);
+                    existing.setTipoAnalisis(TipoAnalisisCalidad.NINGUNO);
+                    existing.setRequiereAnalisisFisico(false);
+                    existing.setRequiereAnalisisQuimico(false);
+                    existing.setRequiereAnalisisMicrobiologico(false);
+                    existing.setActivo(true);
+                    return productoRepository.save(existing);
+                })
+                .orElseGet(() -> productoRepository.save(Producto.builder()
+                        .codigoSku("SKU-OP")
+                        .nombre("Producto OP")
+                        .descripcionProducto("Producto para orden")
+                        .stockMinimo(BigDecimal.ZERO)
+                        .unidadMedida(unidad)
+                        .categoriaProducto(categoria)
+                        .creadoPor(usuario)
+                        .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                        .requiereAnalisisFisico(false)
+                        .requiereAnalisisQuimico(false)
+                        .requiereAnalisisMicrobiologico(false)
+                        .activo(true)
+                        .build()));
 
         OrdenProduccion orden = ordenProduccionRepository.save(OrdenProduccion.builder()
                 .codigoOrden("OP-GET-001")

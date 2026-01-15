@@ -147,7 +147,7 @@ class MrpControllerTest {
                 .nivelBom(1)
                 .build();
         corrida.getDetalles().add(detalle);
-        when(corridaMrpRepository.findWithDetallesById(99L)).thenReturn(Optional.of(corrida));
+        when(corridaMrpRepository.findWithGraphById(99L)).thenReturn(Optional.of(corrida));
 
         ResponseEntity<?> response = controller.obtener(99L);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -235,7 +235,7 @@ class MrpControllerTest {
 
         corrida.getDetalles().add(detalleAlto);
         corrida.getDetalles().add(detalleCritico);
-        when(corridaMrpRepository.findWithDetallesById(100L)).thenReturn(Optional.of(corrida));
+        when(corridaMrpRepository.findWithGraphById(100L)).thenReturn(Optional.of(corrida));
 
         ResponseEntity<?> response = controller.obtener(100L);
         CorridaMrpResponseDTO dto = (CorridaMrpResponseDTO) response.getBody();
