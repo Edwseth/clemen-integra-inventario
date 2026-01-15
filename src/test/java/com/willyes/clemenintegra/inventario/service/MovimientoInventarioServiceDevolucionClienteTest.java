@@ -112,6 +112,7 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(
                 Usuario.builder().id(1L).nombreCompleto("Tester").build()
         );
+        stubPersistenciaLoteDestino();
     }
 
     @Test
@@ -140,16 +141,13 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         });
 
         ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
-        given(loteProductoRepository.save(any(LoteProducto.class)))
-                .willAnswer(invocation -> {
-                    LoteProducto lp = invocation.getArgument(0);
-                    // Simula JPA: al guardar, el ID ya viene asignado
-                    if (lp.getId() == null) {
-                        lp.setId(999L);
-                    }
-                    loteCaptor.capture(); // ❌ NO: esto no captura aquí
-                    return lp;
-                });
+        doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(999L);
+            }
+            return lp;
+        }).when(loteProductoRepository).save(loteCaptor.capture());
 
         service.registrarMovimiento(dto);
 
@@ -526,13 +524,31 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         motivoTransferenciaCalidad.setId(MOTIVO_TRANSFERENCIA_CALIDAD_ID);
         motivoTransferenciaCalidad.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
 
-        given(catalogResolver.getMotivoIdEntradaProductoTerminado()).willReturn(MOTIVO_ENTRADA_PT_ID);
+        lenient().when(catalogResolver.getMotivoIdEntradaProductoTerminado()).thenReturn(MOTIVO_ENTRADA_PT_ID);
         lenient().when(motivoMovimientoRepository.findById(MOTIVO_ENTRADA_PT_ID))
                 .thenReturn(Optional.of(motivoEntradaPt));
-        given(catalogResolver.getAlmacenPtId()).willReturn(ALMACEN_PT_ID);
-        given(catalogResolver.getAlmacenCuarentenaId()).willReturn(ALMACEN_CUARENTENA_ID);
-        given(catalogResolver.getTipoDetalleEntradaId()).willReturn(TIPO_DETALLE_ENTRADA_ID);
-        given(catalogResolver.getTipoDetalleTransferenciaId()).willReturn(TIPO_DETALLE_TRANSFERENCIA_ID);
-        given(catalogResolver.decimals(any())).willReturn(2);
+        lenient().when(catalogResolver.getAlmacenPtId()).thenReturn(ALMACEN_PT_ID);
+        lenient().when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(ALMACEN_CUARENTENA_ID);
+        lenient().when(catalogResolver.getTipoDetalleEntradaId()).thenReturn(TIPO_DETALLE_ENTRADA_ID);
+        lenient().when(catalogResolver.getTipoDetalleTransferenciaId()).thenReturn(TIPO_DETALLE_TRANSFERENCIA_ID);
+        lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+    }
+
+    private void stubPersistenciaLoteDestino() {
+        lenient().doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(999L);
+            }
+            return lp;
+        }).when(loteProductoRepository).save(any(LoteProducto.class));
+
+        lenient().doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(999L);
+            }
+            return lp;
+        }).when(loteProductoRepository).saveAndFlush(any(LoteProducto.class));
     }
 }
