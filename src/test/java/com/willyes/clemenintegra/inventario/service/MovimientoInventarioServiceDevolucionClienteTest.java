@@ -262,7 +262,7 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         Producto producto = crearProducto(420);
         LoteProducto lote = crearLote(620L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
-                CausaDevolucionPT.AVERIADOS_TRANSPORTE, CondicionProductoDevuelto.EMPAQUE_AVERIADO, false,
+                causaConAveria(), condicionNoOptima(), false,
                 TIPO_DETALLE_EXPLICITO_ID);
 
         configurarMocksBasicos(producto, lote, ALMACEN_CUARENTENA_ID, TIPO_DETALLE_EXPLICITO_ID);
@@ -473,5 +473,31 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         lote.setStockLote(new BigDecimal("5"));
         lote.setStockReservado(BigDecimal.ZERO);
         return lote;
+    }
+
+    private CausaDevolucionPT causaConAveria() {
+        CausaDevolucionPT[] valores = CausaDevolucionPT.values();
+        for (CausaDevolucionPT causa : valores) {
+            if (causa.name().contains("AVER")) {
+                return causa;
+            }
+        }
+        if (valores.length > 0) {
+            return valores[0];
+        }
+        throw new IllegalStateException("No hay causas de devolución configuradas.");
+    }
+
+    private CondicionProductoDevuelto condicionNoOptima() {
+        CondicionProductoDevuelto[] valores = CondicionProductoDevuelto.values();
+        for (CondicionProductoDevuelto condicion : valores) {
+            if (condicion != CondicionProductoDevuelto.OPTIMO) {
+                return condicion;
+            }
+        }
+        if (valores.length > 0) {
+            return valores[0];
+        }
+        throw new IllegalStateException("No hay condiciones de producto configuradas.");
     }
 }
