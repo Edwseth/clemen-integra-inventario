@@ -457,6 +457,9 @@ public class PicklistPtServiceImpl implements PicklistPtService {
                 ClasificacionMovimientoInventario.SALIDA_CLIENTE,
                 picklist.getDocReferencia(),
                 picklist.getClienteNombre(),
+                null,
+                null,
+                null,
                 asignacion.getProducto().getId(),
                 loteId,
                 picklist.getAlmacenPtId(),
@@ -474,6 +477,7 @@ public class PicklistPtServiceImpl implements PicklistPtService {
                 asignacion.getFechaVencimiento(),
                 null,
                 Boolean.FALSE,
+                null,
                 null,
                 null
         );

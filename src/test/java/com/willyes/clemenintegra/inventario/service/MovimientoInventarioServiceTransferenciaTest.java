@@ -117,6 +117,9 @@ class MovimientoInventarioServiceTransferenciaTest {
                 ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
                 null,
                 null,
+                null,
+                null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 1,
@@ -134,6 +137,7 @@ class MovimientoInventarioServiceTransferenciaTest {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null,
                 null
         );
@@ -203,6 +207,9 @@ class MovimientoInventarioServiceTransferenciaTest {
                 ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
                 null,
                 null,
+                null,
+                null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 1,
@@ -220,6 +227,7 @@ class MovimientoInventarioServiceTransferenciaTest {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null,
                 ubicacion.getId()
         );
@@ -265,6 +273,9 @@ class MovimientoInventarioServiceTransferenciaTest {
                 ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
                 null,
                 null,
+                null,
+                null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 1,
@@ -282,6 +293,7 @@ class MovimientoInventarioServiceTransferenciaTest {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null,
                 null
         );
@@ -315,6 +327,9 @@ class MovimientoInventarioServiceTransferenciaTest {
                 ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
                 null,
                 null,
+                null,
+                null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 1,
@@ -332,6 +347,7 @@ class MovimientoInventarioServiceTransferenciaTest {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null,
                 null
         );
@@ -367,6 +383,9 @@ class MovimientoInventarioServiceTransferenciaTest {
                 ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
                 null,
                 null,
+                null,
+                null,
+                null,
                 producto.getId(),
                 lote.getId(),
                 1,
@@ -384,6 +403,7 @@ class MovimientoInventarioServiceTransferenciaTest {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null,
                 ubicacion.getId()
         );

@@ -118,6 +118,9 @@ class MovimientoInventarioServiceSalidaPtTest {
                 ClasificacionMovimientoInventario.SALIDA_CLIENTE,
                 "ORD-1",
                 "Cliente demo",
+                null,
+                null,
+                null,
                 producto.getId(),
                 null,
                 Math.toIntExact(ALMACEN_PT_ID),
@@ -135,6 +138,7 @@ class MovimientoInventarioServiceSalidaPtTest {
                 null, // fechaVencimiento
                 null, // estadoLote
                 true,
+                null,
                 null,
                 null
         );
@@ -173,6 +177,9 @@ class MovimientoInventarioServiceSalidaPtTest {
                 ClasificacionMovimientoInventario.SALIDA_CLIENTE,
                 "ORD-2",
                 "Cliente demo",
+                null,
+                null,
+                null,
                 producto.getId(),
                 null,
                 Math.toIntExact(ALMACEN_PT_ID),
@@ -190,6 +197,7 @@ class MovimientoInventarioServiceSalidaPtTest {
                 null, // fechaVencimiento
                 null, // estadoLote
                 true,
+                null,
                 null,
                 null
         );

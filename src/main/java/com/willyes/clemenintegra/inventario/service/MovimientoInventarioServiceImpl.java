@@ -9,7 +9,9 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
+import com.willyes.clemenintegra.inventario.model.enums.CausaDevolucionPT;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.CondicionProductoDevuelto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
@@ -250,6 +252,32 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         // 1. Cargar entidades principales
         Producto producto = productoRepository.findById(dto.productoId().longValue())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
+
+        boolean esRecepcionDevolucionCliente = tipoMovimiento == TipoMovimiento.RECEPCION
+                && clasificacion == ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE;
+        boolean loteLegacy = Boolean.TRUE.equals(dto.loteLegacy());
+
+        if (esRecepcionDevolucionCliente) {
+            validarRecepcionDevolucionCliente(dto);
+
+            if (!loteLegacy && dto.loteProductoId() == null) {
+                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_LOTE_REQUERIDO,
+                        "Debe especificar el lote para la devolución de cliente",
+                        Map.of("productoId", dto.productoId()));
+            }
+
+            Long almacenPtId = catalogResolver.getAlmacenPtId();
+            Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+            if (almacenPtId == null || almacenCuarentenaId == null) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CONFIG_FALTANTE");
+            }
+
+            boolean vaABodegaPt = !loteLegacy
+                    && dto.causaDevolucionPt() == CausaDevolucionPT.TROCADO
+                    && dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
+            Long destinoId = vaABodegaPt ? almacenPtId : almacenCuarentenaId;
+            almacenDestinoIdNormalizado = Math.toIntExact(destinoId);
+        }
 
         Long resolvedTipoDetalleId = esOpDesdeDto
                 ? tipoMovimientoDetalleId
@@ -707,7 +735,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 && !solicitud.getDetalles().isEmpty()
                 && !esContextoOrdenProduccion(dto, solicitud);
 
-        if (tipoMovimiento == TipoMovimiento.RECEPCION) {
+        if (esRecepcionDevolucionCliente) {
+            lotesProcesados = procesarRecepcionDevolucionCliente(dto, producto, cantidadSolicitada, almacenDestino, loteLegacy);
+        } else if (tipoMovimiento == TipoMovimiento.RECEPCION) {
             if (dto.ordenCompraId() == null) {
                 throw new IllegalArgumentException("Las recepciones sin Orden de Compra deben usar un lote existente");
             }
@@ -2367,6 +2397,103 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return List.of(new MovimientoLoteDetalle(loteOrigen, cantidad));
     }
 
+    private List<MovimientoLoteDetalle> procesarRecepcionDevolucionCliente(MovimientoInventarioDTO dto,
+                                                                           Producto producto,
+                                                                           BigDecimal cantidad,
+                                                                           Almacen almacenDestino,
+                                                                           boolean loteLegacy) {
+        if (almacenDestino == null) {
+            throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_DATOS_INCOMPLETOS,
+                    "Debe indicar un almacén destino para la devolución",
+                    Map.of("productoId", dto.productoId()));
+        }
+
+        LoteProducto loteDestino;
+        if (!loteLegacy) {
+            Long loteId = dto.loteProductoId();
+            LoteProducto loteOrigen = loteProductoRepository.findByIdForUpdate(loteId)
+                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_LOTE_REQUERIDO,
+                            "No se encontró el lote para la devolución",
+                            Map.of("loteId", loteId)));
+
+            if (loteOrigen.getProducto() == null || !Objects.equals(loteOrigen.getProducto().getId(), producto.getId())) {
+                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_COMBINACION_INVALIDA,
+                        "El lote no corresponde al producto de la devolución",
+                        Map.of("loteId", loteId, "productoId", producto.getId()));
+            }
+
+            String codigoLote = loteOrigen.getCodigoLote();
+            if (!StringUtils.hasText(codigoLote)) {
+                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_DATOS_INCOMPLETOS,
+                        "El lote no tiene código para registrar la devolución",
+                        Map.of("loteId", loteId));
+            }
+
+            // TODO: validar que el lote tenga al menos una SALIDA_CLIENTE previa.
+            loteDestino = ensureDestinoLote(producto, codigoLote, loteOrigen, almacenDestino);
+        } else {
+            String codigoLote = StringUtils.hasText(dto.codigoLote())
+                    ? dto.codigoLote().trim()
+                    : generarCodigoLoteLegacy(dto.docReferencia());
+            loteDestino = ensureDestinoLote(producto, codigoLote, null, almacenDestino);
+        }
+
+        if (catalogResolver.getAlmacenCuarentenaId() != null
+                && Objects.equals(almacenDestino.getId().longValue(), catalogResolver.getAlmacenCuarentenaId())) {
+            loteDestino.setEstado(EstadoLote.EN_CUARENTENA);
+        }
+
+        LoteProducto actualizado = acreditarRecepcionDevolucion(loteDestino, cantidad, producto);
+        return List.of(new MovimientoLoteDetalle(actualizado, cantidad));
+    }
+
+    private LoteProducto acreditarRecepcionDevolucion(LoteProducto loteDestino,
+                                                      BigDecimal cantidad,
+                                                      Producto producto) {
+        int escala = resolverEscalaProducto(producto);
+        BigDecimal stockActual = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO);
+        BigDecimal nuevoStock = stockActual.add(cantidad).setScale(escala, RoundingMode.HALF_UP);
+        loteDestino.setStockLote(nuevoStock);
+        if (loteDestino.getStockReservado() == null) {
+            loteDestino.setStockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
+        }
+        recalcularAgotadoSegunDisponibilidad(loteDestino);
+        return loteProductoRepository.save(loteDestino);
+    }
+
+    private String generarCodigoLoteLegacy(String docReferencia) {
+        String base = StringUtils.hasText(docReferencia) ? docReferencia.trim() : "LEGACY";
+        return "LEGACY-" + base;
+    }
+
+    private void validarRecepcionDevolucionCliente(MovimientoInventarioDTO dto) {
+        boolean faltanDatos = !StringUtils.hasText(dto.clienteNombre())
+                || !StringUtils.hasText(dto.docReferencia())
+                || dto.causaDevolucionPt() == null
+                || dto.condicionProductoDevuelto() == null
+                || dto.cantidad() == null
+                || dto.cantidad().compareTo(BigDecimal.ZERO) <= 0;
+
+        if (faltanDatos) {
+            Map<String, Object> detalles = new HashMap<>();
+            detalles.put("clienteNombre", dto.clienteNombre());
+            detalles.put("docReferencia", dto.docReferencia());
+            detalles.put("causaDevolucionPt", dto.causaDevolucionPt());
+            detalles.put("condicionProductoDevuelto", dto.condicionProductoDevuelto());
+            throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_DATOS_INCOMPLETOS,
+                    "Faltan datos obligatorios para registrar la devolución del cliente",
+                    detalles);
+        }
+
+        if (Boolean.TRUE.equals(dto.loteLegacy()) && !StringUtils.hasText(dto.destinoTexto())) {
+            Map<String, Object> detalles = new HashMap<>();
+            detalles.put("observaciones", dto.destinoTexto());
+            throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_LEGACY_REQUIERE_OBSERVACIONES,
+                    "La devolución legacy requiere observaciones adicionales",
+                    detalles);
+        }
+    }
+
     private MovimientoLoteDetalle ejecutarTransferenciaDesdeLote(LoteProducto loteOrigen,
                                                                  Almacen destino,
                                                                  Producto producto,
@@ -2710,6 +2837,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         copia.setTipoMovimiento(base.getTipoMovimiento());
         copia.setClasificacion(base.getClasificacion());
         copia.setDocReferencia(base.getDocReferencia());
+        copia.setCausaDevolucionPt(base.getCausaDevolucionPt());
+        copia.setCondicionProductoDevuelto(base.getCondicionProductoDevuelto());
+        copia.setClienteNombre(base.getClienteNombre());
+        copia.setLoteLegacy(base.isLoteLegacy());
         copia.setRegistradoPor(base.getRegistradoPor());
         copia.setProducto(base.getProducto());
         copia.setLote(lote);
@@ -3357,6 +3488,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         ClasificacionMovimientoInventario.SALIDA_PRODUCCION, // clasif
                         null,                               // docReferencia
                         null,                               // destinoTexto
+                        null,                               // clienteNombre
+                        null,                               // causaDevolucionPt
+                        null,                               // condicionProductoDevuelto
                         productoIdInt,                      // productoId (Integer)
                         lotePreBodega.getId(),              // loteProductoId (Long)
                         preBodegaId.intValue(),             // almacenOrigenId (Pre-Bodega)
@@ -3375,6 +3509,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         null,                               // estadoLote
                         null,                               // autoSplit
                         null,                               // atenciones
+                        null,                               // loteLegacy
                         null                                // ubicacionDestinoId
                 );
 

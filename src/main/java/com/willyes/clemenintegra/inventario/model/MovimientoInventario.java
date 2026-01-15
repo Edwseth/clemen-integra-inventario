@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.inventario.model;
 
+import com.willyes.clemenintegra.inventario.model.enums.CausaDevolucionPT;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.CondicionProductoDevuelto;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
@@ -41,6 +43,20 @@ public class MovimientoInventario {
 
     @Column(name = "doc_referencia", length = 45)
     private String docReferencia;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "causa_devolucion_pt", length = 30)
+    private CausaDevolucionPT causaDevolucionPt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "condicion_producto_devuelto", length = 20)
+    private CondicionProductoDevuelto condicionProductoDevuelto;
+
+    @Column(name = "cliente_nombre", length = 255)
+    private String clienteNombre;
+
+    @Column(name = "lote_legacy", nullable = false)
+    private boolean loteLegacy;
 
     @Column(name = "idempotency_key", length = 64, unique = true)
     private String idempotencyKey;
@@ -136,6 +152,14 @@ public class MovimientoInventario {
     public void setCantidad(BigDecimal cantidad) {this.cantidad = cantidad;}
     public String getDocReferencia() {return docReferencia;}
     public void setDocReferencia(String docReferencia) {this.docReferencia = docReferencia;}
+    public CausaDevolucionPT getCausaDevolucionPt() {return causaDevolucionPt;}
+    public void setCausaDevolucionPt(CausaDevolucionPT causaDevolucionPt) {this.causaDevolucionPt = causaDevolucionPt;}
+    public CondicionProductoDevuelto getCondicionProductoDevuelto() {return condicionProductoDevuelto;}
+    public void setCondicionProductoDevuelto(CondicionProductoDevuelto condicionProductoDevuelto) {this.condicionProductoDevuelto = condicionProductoDevuelto;}
+    public String getClienteNombre() {return clienteNombre;}
+    public void setClienteNombre(String clienteNombre) {this.clienteNombre = clienteNombre;}
+    public boolean isLoteLegacy() {return loteLegacy;}
+    public void setLoteLegacy(boolean loteLegacy) {this.loteLegacy = loteLegacy;}
     public Usuario getRegistradoPor() {return registradoPor;}
     public void setRegistradoPor(Usuario registradoPor) {this.registradoPor = registradoPor;}
     public Producto getProducto() {return producto;}
@@ -164,4 +188,3 @@ public class MovimientoInventario {
     public String getCodigoRecepcion() {return codigoRecepcion;}
     public void setCodigoRecepcion(String codigoRecepcion) {this.codigoRecepcion = codigoRecepcion;}
 }
-
