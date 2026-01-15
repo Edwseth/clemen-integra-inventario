@@ -680,9 +680,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         validarParametros(tipoMovimiento, almacenOrigen, almacenDestino);
 
+        Long motivoMovimientoId = dto.motivoMovimientoId();
+        if (motivoMovimientoId == null && esRecepcionDevolucionCliente) {
+            motivoMovimientoId = resolverMotivoDevolucionCliente(almacenDestino);
+        }
+
         MotivoMovimiento motivoMovimiento = null;
-        if (dto.motivoMovimientoId() != null) {
-            motivoMovimiento = motivoMovimientoRepository.findById(dto.motivoMovimientoId())
+        if (motivoMovimientoId != null) {
+            motivoMovimiento = motivoMovimientoRepository.findById(motivoMovimientoId)
                     .orElseThrow(() -> new NoSuchElementException("Motivo no encontrado"));
         }
         motivoMovimiento = resolverMotivoMovimientoPorClasificacion(clasificacion, motivoMovimiento);
@@ -2838,6 +2843,42 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             "No se encontró MotivoMovimiento configurado para SALIDA_CLIENTE"));
         }
         return null;
+    }
+
+    private Long resolverMotivoDevolucionCliente(Almacen almacenDestino) {
+        if (almacenDestino == null) {
+            throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_DATOS_INCOMPLETOS,
+                    "Debe indicar un almacén destino para la devolución",
+                    Map.of());
+        }
+
+        Long destinoId = almacenDestino.getId() != null ? almacenDestino.getId().longValue() : null;
+        Long almacenPtId = catalogResolver.getAlmacenPtId();
+        Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+
+        if (destinoId != null && Objects.equals(destinoId, almacenPtId)) {
+            Long motivoId = catalogResolver.getMotivoIdEntradaProductoTerminado();
+            if (motivoId == null) {
+                throw new CustomBusinessException(ApiErrorCode.CATALOGO_FALTANTE,
+                        "No se encontró el motivo de entrada para producto terminado",
+                        Map.of("almacenDestinoId", destinoId));
+            }
+            return motivoId;
+        }
+
+        if (destinoId != null && Objects.equals(destinoId, almacenCuarentenaId)) {
+            Long motivoId = catalogResolver.getMotivoIdTransferenciaCalidad();
+            if (motivoId == null) {
+                throw new CustomBusinessException(ApiErrorCode.CATALOGO_FALTANTE,
+                        "No se encontró el motivo de transferencia a calidad",
+                        Map.of("almacenDestinoId", destinoId));
+            }
+            return motivoId;
+        }
+
+        throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_COMBINACION_INVALIDA,
+                "El almacén destino no es válido para la devolución de cliente",
+                Map.of("almacenDestinoId", destinoId));
     }
 
     private Long ensureAlmacenPtId() {
