@@ -692,10 +692,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         MotivoMovimiento motivoMovimiento = null;
         if (motivoMovimientoId != null) {
+            final Long motivoMovimientoIdFinal = motivoMovimientoId;
             motivoMovimiento = motivoMovimientoRepository.findById(motivoMovimientoId)
                     .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.CATALOGO_FALTANTE,
                             "Motivo no encontrado",
-                            Map.of("motivoMovimientoId", motivoMovimientoId)));
+                            Map.of("motivoMovimientoId", motivoMovimientoIdFinal)));
         }
         motivoMovimiento = resolverMotivoMovimientoPorClasificacion(clasificacion, motivoMovimiento);
 
