@@ -11,10 +11,12 @@ import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepos
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
+import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
+import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
+import com.willyes.clemenintegra.shared.security.SecurityConfig;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import org.junit.jupiter.api.DisplayName;
@@ -23,11 +25,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.TestPropertySource;
@@ -51,7 +55,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductoController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
+@Import({SecurityConfig.class, UsuarioInactivoFilter.class, RequestTimingFilter.class, RequestIdFilter.class})
 @TestPropertySource(properties = {"DB_SECURPASS=dummy", "DB_SECURNAME=dummy"})
 class ProductoControllerSmokeTest {
 
@@ -80,12 +85,10 @@ class ProductoControllerSmokeTest {
     private UsuarioRepository usuarioRepository;
 
     @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    @MockBean
-    private UsuarioInactivoFilter usuarioInactivoFilter;
+    private UserDetailsService userDetailsService;
 
     @Test
+    @WithMockUser(username = "tester", roles = {"SUPER_ADMIN"})
     @DisplayName("POST /api/productos devuelve 201 y datos mínimos al crear un producto")
     void crearProducto_deberiaRetornar201() throws Exception {
         ProductoRequestDTO request = ProductoRequestDTO.builder()
@@ -107,8 +110,8 @@ class ProductoControllerSmokeTest {
 
         Usuario usuario = Usuario.builder()
                 .id(1L)
-                .rol(RolUsuario.ROL_JEFE_ALMACENES)
-                .nombreUsuario("almacen")
+                .rol(RolUsuario.ROL_SUPER_ADMIN)
+                .nombreUsuario("tester")
                 .clave("secret")
                 .activo(true)
                 .bloqueado(false)
@@ -119,7 +122,8 @@ class ProductoControllerSmokeTest {
         mockMvc.perform(post("/api/productos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
-                        .with(SecurityMockMvcRequestPostProcessors.user(new CustomUserDetails(usuario))))
+                        .with(SecurityMockMvcRequestPostProcessors.user(new CustomUserDetails(usuario)))
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(100))
@@ -148,7 +152,8 @@ class ProductoControllerSmokeTest {
         mockMvc.perform(post("/api/productos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload))
-                        .with(SecurityMockMvcRequestPostProcessors.user(new CustomUserDetails(usuario))))
+                        .with(SecurityMockMvcRequestPostProcessors.user(new CustomUserDetails(usuario)))
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code").value("SOLICITUD_INVALIDA"))
