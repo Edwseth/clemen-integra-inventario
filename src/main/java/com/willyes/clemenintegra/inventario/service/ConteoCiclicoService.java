@@ -60,8 +60,9 @@ public class ConteoCiclicoService {
         return conteos.map(mapper::toResumen);
     }
 
+    @Transactional(readOnly = true)
     public ConteoCiclicoResponseDTO obtenerPorId(Long conteoId) {
-        ConteoCiclico conteo = conteoRepository.findByIdWithDetalles(conteoId)
+        ConteoCiclico conteo = conteoRepository.findByIdWithUsuario(conteoId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Conteo no encontrado"));
         return mapper.toResponseCompleto(conteo);

@@ -151,6 +151,7 @@ class ConteoCiclicoControllerIntegrationTest extends IntegrationTestMySqlContain
         mockMvc.perform(get("/api/inventario/conteos/{id}", conteo.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.creadoPorNombre").value("Usuario Contador"))
                 .andExpect(jsonPath("$.detalles[0].productoId").value(producto.getId()));
     }
 }
