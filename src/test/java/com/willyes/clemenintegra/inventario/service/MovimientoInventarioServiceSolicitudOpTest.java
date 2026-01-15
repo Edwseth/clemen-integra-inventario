@@ -173,20 +173,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         atencion.setAlmacenOrigenId(10);
         atencion.setAlmacenDestinoId(20);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("1000"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
                 "DOC-1",
-                null,
                 producto.getId(),
                 lote.getId(),
                 10,
                 20,
-                null,
-                null,
-                null,
                 50L,
                 solicitud.getId(),
                 usuario.getId(),
@@ -194,11 +189,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 lote.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                List.of(atencion),
-                null
+                List.of(atencion)
         );
 
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
@@ -334,20 +325,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("500"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
                 "DOC-FALLBACK",
-                null,
                 producto.getId(),
                 lote.getId(),
                 30,
                 40,
-                null,
-                null,
-                null,
                 66L,
                 null,
                 usuario.getId(),
@@ -355,11 +341,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 lote.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                List.of(atencion),
-                null
+                List.of(atencion)
         );
 
         prepararEscenarioComun(dto, producto, solicitud, detalle, lote, loteDestino, movimientoEntidad, usuario);
@@ -437,20 +419,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("3600"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-OP",
-                null,
                 producto.getId(),
                 lote.getId(),
                 1,
                 6,
-                null,
-                null,
-                null,
                 99L,
                 solicitud.getId(),
                 usuario.getId(),
@@ -458,11 +435,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 etapaProduccion.getId(),
                 null,
                 lote.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                List.of(),
-                null
+                List.of()
         );
 
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
@@ -568,20 +541,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("3600"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-OP",
-                null,
                 producto.getId(),
                 lote.getId(),
                 1,
                 6,
-                null,
-                null,
-                null,
                 99L,
                 solicitud.getId(),
                 usuario.getId(),
@@ -589,11 +557,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 lote.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                List.of(),
-                null
+                List.of()
         );
 
         given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
@@ -726,20 +690,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         atencion.setAlmacenOrigenId(10);
         atencion.setAlmacenDestinoId(20);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("500"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
                 "DOC-55",
-                null,
                 producto.getId(),
                 loteOrigen.getId(),
                 10,
                 20,
-                null,
-                null,
-                null,
                 70L,
                 solicitud.getId(),
                 usuario.getId(),
@@ -747,11 +706,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 loteOrigen.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                List.of(atencion),
-                null
+                List.of(atencion)
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -829,20 +784,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         atencion.setAlmacenOrigenId(10);
         atencion.setAlmacenDestinoId(20);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("100"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
                 "DOC-56",
-                null,
                 producto.getId(),
                 loteOrigen.getId(),
                 10,
                 20,
-                null,
-                null,
-                null,
                 71L,
                 solicitud.getId(),
                 usuario.getId(),
@@ -850,11 +800,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 loteOrigen.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                List.of(atencion),
-                null
+                List.of(atencion)
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -894,20 +840,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         atencion.setAlmacenOrigenId(10);
         atencion.setAlmacenDestinoId(20);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("30000"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
                 "DOC-SIN-SOL",
-                null,
                 producto.getId(),
                 loteOrigen.getId(),
                 10,
                 20,
-                null,
-                null,
-                null,
                 66L,
                 null,
                 99L,
@@ -915,11 +856,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 loteOrigen.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                List.of(atencion),
-                null
+                List.of(atencion)
         );
 
         Usuario usuario = Usuario.builder()
@@ -963,20 +900,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         Producto producto = productoSemiElaborado();
         LoteProducto lote = loteEnEstado(producto, EstadoLote.EN_CUARENTENA, BigDecimal.ZERO, 50);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("25"),
                 TipoMovimiento.ENTRADA,
                 ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO,
                 "DOC-PT",
-                null,
                 producto.getId(),
                 lote.getId(),
                 null,
                 lote.getAlmacen().getId(),
-                null,
-                null,
-                null,
                 1L,
                 null,
                 null,
@@ -984,11 +916,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
-                null,
-                null,
-                Boolean.FALSE,
-                List.<AtencionDTO>of(),
-                null
+                List.of()
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -1040,19 +968,14 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 .ordenProduccion(OrdenProduccion.builder().id(30L).build())
                 .build();
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("2"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-SAL",
-                null,
                 producto.getId(),
                 lote.getId(),
                 lote.getAlmacen().getId(),
-                null,
-                null,
-                null,
                 null,
                 2L,
                 null,
@@ -1061,11 +984,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
-                null,
-                null,
-                Boolean.FALSE,
-                List.<AtencionDTO>of(),
-                null
+                List.of()
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -1123,19 +1042,14 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lote.setStockReservado(BigDecimal.ZERO);
         lote.setEstado(EstadoLote.DISPONIBLE);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("5"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-SAL",
-                null,
                 producto.getId(),
                 lote.getId(),
                 lote.getAlmacen().getId(),
-                null,
-                null,
-                null,
                 null,
                 2L,
                 null,
@@ -1144,11 +1058,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
-                null,
-                null,
-                Boolean.FALSE,
-                List.<AtencionDTO>of(),
-                null
+                List.of()
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -1222,19 +1132,14 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lote.setStockReservado(BigDecimal.ZERO);
         lote.setEstado(EstadoLote.DISPONIBLE);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("1"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-SAL",
-                null,
                 producto.getId(),
                 lote.getId(),
                 lote.getAlmacen().getId(),
-                null,
-                null,
-                null,
                 null,
                 2L,
                 null,
@@ -1243,11 +1148,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
-                null,
-                null,
-                Boolean.FALSE,
-                List.<AtencionDTO>of(),
-                null
+                List.of()
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -1304,20 +1205,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lote.setStockReservado(BigDecimal.ZERO);
         lote.setEstado(EstadoLote.DISPONIBLE);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("3"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-SAL",
-                null,
                 producto.getId(),
                 lote.getId(),
                 origen.getId(),
                 destino.getId(),
-                null,
-                null,
-                null,
                 2L,
                 null,
                 null,
@@ -1325,11 +1221,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
-                null,
-                null,
-                Boolean.FALSE,
-                List.<AtencionDTO>of(),
-                null
+                List.of()
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -1421,20 +1313,15 @@ class MovimientoInventarioServiceSolicitudOpTest {
         solicitud.setAlmacenOrigen(origen);
         solicitud.setAlmacenDestino(destino);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("3"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-SAL",
-                null,
                 producto.getId(),
                 lote.getId(),
                 origen.getId(),
                 destino.getId(),
-                null,
-                null,
-                null,
                 2L,
                 solicitud.getId(),
                 usuario.getId(),
@@ -1442,11 +1329,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
-                null,
-                null,
-                Boolean.FALSE,
-                List.<AtencionDTO>of(),
-                null
+                List.of()
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -1518,19 +1401,14 @@ class MovimientoInventarioServiceSolicitudOpTest {
         lote.setStockReservado(BigDecimal.ZERO);
         lote.setEstado(EstadoLote.DISPONIBLE);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("1"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-SAL",
-                null,
                 producto.getId(),
                 lote.getId(),
                 lote.getAlmacen().getId(),
-                null,
-                null,
-                null,
                 null,
                 2L,
                 null,
@@ -1539,11 +1417,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 null,
-                null,
-                null,
-                Boolean.FALSE,
-                List.<AtencionDTO>of(),
-                null
+                List.of()
         );
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
@@ -1584,6 +1458,101 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 .isEqualTo(ApiErrorCode.OP_SIN_ETAPA_ACTIVA);
 
         verify(movimientoInventarioRepository, never()).save(any(MovimientoInventario.class));
+    }
+
+    private MovimientoInventarioDTO crearMovimientoInventario(BigDecimal cantidad,
+                                                              TipoMovimiento tipoMovimiento,
+                                                              ClasificacionMovimientoInventario clasificacion,
+                                                              String docReferencia,
+                                                              Integer productoId,
+                                                              Long loteProductoId,
+                                                              Integer almacenOrigenId,
+                                                              Integer almacenDestinoId,
+                                                              Long tipoMovimientoDetalleId,
+                                                              Long solicitudMovimientoId,
+                                                              Long usuarioId,
+                                                              Long ordenProduccionId,
+                                                              Long ordenProduccionEtapaId,
+                                                              Long ordenCompraDetalleId,
+                                                              String codigoLote,
+                                                              List<AtencionDTO> atenciones) {
+        return crearMovimientoInventario(
+                cantidad,
+                tipoMovimiento,
+                clasificacion,
+                docReferencia,
+                productoId,
+                loteProductoId,
+                almacenOrigenId,
+                almacenDestinoId,
+                tipoMovimientoDetalleId,
+                solicitudMovimientoId,
+                usuarioId,
+                ordenProduccionId,
+                ordenProduccionEtapaId,
+                ordenCompraDetalleId,
+                codigoLote,
+                atenciones,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+    private MovimientoInventarioDTO crearMovimientoInventario(BigDecimal cantidad,
+                                                              TipoMovimiento tipoMovimiento,
+                                                              ClasificacionMovimientoInventario clasificacion,
+                                                              String docReferencia,
+                                                              Integer productoId,
+                                                              Long loteProductoId,
+                                                              Integer almacenOrigenId,
+                                                              Integer almacenDestinoId,
+                                                              Long tipoMovimientoDetalleId,
+                                                              Long solicitudMovimientoId,
+                                                              Long usuarioId,
+                                                              Long ordenProduccionId,
+                                                              Long ordenProduccionEtapaId,
+                                                              Long ordenCompraDetalleId,
+                                                              String codigoLote,
+                                                              List<AtencionDTO> atenciones,
+                                                              String clienteNombre,
+                                                              CausaDevolucionPT causaDevolucionPt,
+                                                              CondicionProductoDevuelto condicionProductoDevuelto,
+                                                              Boolean loteLegacy,
+                                                              Long ubicacionDestinoId) {
+        return new MovimientoInventarioDTO(
+                null,
+                cantidad,
+                tipoMovimiento,
+                clasificacion,
+                docReferencia,
+                null,
+                clienteNombre,
+                causaDevolucionPt,
+                condicionProductoDevuelto,
+                productoId,
+                loteProductoId,
+                almacenOrigenId,
+                almacenDestinoId,
+                null,
+                null,
+                null,
+                tipoMovimientoDetalleId,
+                solicitudMovimientoId,
+                usuarioId,
+                ordenProduccionId,
+                ordenProduccionEtapaId,
+                ordenCompraDetalleId,
+                codigoLote,
+                null,
+                null,
+                Boolean.FALSE,
+                atenciones,
+                loteLegacy,
+                ubicacionDestinoId
+        );
     }
 
     private void prepararEscenarioComun(MovimientoInventarioDTO dto,
