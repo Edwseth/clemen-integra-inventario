@@ -196,6 +196,38 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     "ENTRADA_PT_REQUIERE_ORDEN_PRODUCCION_ID");
         }
 
+        boolean esOpDesdeDto = dto.ordenProduccionId() != null;
+        TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
+        ClasificacionMovimientoInventario clasificacion = dto.clasificacionMovimientoInventario();
+        Long tipoMovimientoDetalleId = dto.tipoMovimientoDetalleId();
+        Integer almacenDestinoIdNormalizado = dto.almacenDestinoId();
+
+        boolean esRecepcionDevolucionCliente = tipoMovimiento == TipoMovimiento.RECEPCION
+                && clasificacion == ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE;
+        boolean loteLegacy = Boolean.TRUE.equals(dto.loteLegacy());
+
+        if (esRecepcionDevolucionCliente) {
+            validarRecepcionDevolucionCliente(dto);
+
+            if (!loteLegacy && dto.loteProductoId() == null) {
+                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_LOTE_REQUERIDO,
+                        "Debe especificar el lote para la devolución de cliente",
+                        Map.of("productoId", dto.productoId()));
+            }
+
+            Long almacenPtId = catalogResolver.getAlmacenPtId();
+            Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+            if (almacenPtId == null || almacenCuarentenaId == null) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CONFIG_FALTANTE");
+            }
+
+            boolean vaABodegaPt = !loteLegacy
+                    && dto.causaDevolucionPt() == CausaDevolucionPT.TROCADO
+                    && dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
+            Long destinoId = vaABodegaPt ? almacenPtId : almacenCuarentenaId;
+            almacenDestinoIdNormalizado = Math.toIntExact(destinoId);
+        }
+
         MovimientoInventario movimiento = mapper.toEntity(dto);
         if (StringUtils.hasText(idempotencyKey)) {
             movimiento.setIdempotencyKey(idempotencyKey);
@@ -205,12 +237,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             fechaIngreso = ZonedDateTime.now(ZONA_BOGOTA).toLocalDateTime();
             movimiento.setFechaIngreso(fechaIngreso);
         }
-
-        boolean esOpDesdeDto = dto.ordenProduccionId() != null;
-        TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
-        ClasificacionMovimientoInventario clasificacion = dto.clasificacionMovimientoInventario();
-        Long tipoMovimientoDetalleId = dto.tipoMovimientoDetalleId();
-        Integer almacenDestinoIdNormalizado = dto.almacenDestinoId();
 
         // >>> NUEVO: identifica si el cierre de OP está enviando una ENTRADA de PT
         final boolean esEntradaPt = (tipoMovimiento == TipoMovimiento.ENTRADA);
@@ -252,32 +278,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         // 1. Cargar entidades principales
         Producto producto = productoRepository.findById(dto.productoId().longValue())
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado"));
-
-        boolean esRecepcionDevolucionCliente = tipoMovimiento == TipoMovimiento.RECEPCION
-                && clasificacion == ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE;
-        boolean loteLegacy = Boolean.TRUE.equals(dto.loteLegacy());
-
-        if (esRecepcionDevolucionCliente) {
-            validarRecepcionDevolucionCliente(dto);
-
-            if (!loteLegacy && dto.loteProductoId() == null) {
-                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_LOTE_REQUERIDO,
-                        "Debe especificar el lote para la devolución de cliente",
-                        Map.of("productoId", dto.productoId()));
-            }
-
-            Long almacenPtId = catalogResolver.getAlmacenPtId();
-            Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
-            if (almacenPtId == null || almacenCuarentenaId == null) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CONFIG_FALTANTE");
-            }
-
-            boolean vaABodegaPt = !loteLegacy
-                    && dto.causaDevolucionPt() == CausaDevolucionPT.TROCADO
-                    && dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
-            Long destinoId = vaABodegaPt ? almacenPtId : almacenCuarentenaId;
-            almacenDestinoIdNormalizado = Math.toIntExact(destinoId);
-        }
 
         Long resolvedTipoDetalleId = esOpDesdeDto
                 ? tipoMovimientoDetalleId
@@ -684,11 +684,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (motivoMovimientoId == null && esRecepcionDevolucionCliente) {
             motivoMovimientoId = resolverMotivoDevolucionCliente(almacenDestino);
         }
+        if (motivoMovimientoId == null && esRecepcionDevolucionCliente) {
+            throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_DATOS_INCOMPLETOS,
+                    "Debe indicar un motivo para registrar la devolución",
+                    Map.of("productoId", dto.productoId()));
+        }
 
         MotivoMovimiento motivoMovimiento = null;
         if (motivoMovimientoId != null) {
             motivoMovimiento = motivoMovimientoRepository.findById(motivoMovimientoId)
-                    .orElseThrow(() -> new NoSuchElementException("Motivo no encontrado"));
+                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.CATALOGO_FALTANTE,
+                            "Motivo no encontrado",
+                            Map.of("motivoMovimientoId", motivoMovimientoId)));
         }
         motivoMovimiento = resolverMotivoMovimientoPorClasificacion(clasificacion, motivoMovimiento);
 
