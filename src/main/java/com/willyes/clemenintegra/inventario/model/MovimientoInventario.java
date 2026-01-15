@@ -9,6 +9,8 @@ import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,10 +47,12 @@ public class MovimientoInventario {
     private String docReferencia;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "causa_devolucion_pt", length = 30)
     private CausaDevolucionPT causaDevolucionPt;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "condicion_producto_devuelto", length = 20)
     private CondicionProductoDevuelto condicionProductoDevuelto;
 

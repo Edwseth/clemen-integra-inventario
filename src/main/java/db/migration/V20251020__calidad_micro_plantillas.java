@@ -96,10 +96,24 @@ public class V20251020__calidad_micro_plantillas extends BaseJavaMigration {
                         """);
             }
 
-            st.execute("""
+            // 1) Agregar columna plantilla_micro_id solo si NO existe
+            if (!columnExists(conn, "productos", "plantilla_micro_id")) {
+                st.execute("""
                     ALTER TABLE productos
-                    ADD COLUMN IF NOT EXISTS plantilla_micro_id BIGINT NULL;
+                    ADD COLUMN plantilla_micro_id BIGINT NULL
                     """);
+            }
+
+            // 2) Crear FK solo si NO existe (o mantener try/catch)
+            try {
+                st.execute("""
+                    ALTER TABLE productos
+                    ADD CONSTRAINT fk_productos_plantilla_micro FOREIGN KEY (plantilla_micro_id)
+                        REFERENCES plantillas_analisis_micro (id)
+                    """);
+            } catch (Exception ignored) {
+                // Si ya existe la FK (o el motor la reporta distinta), continuar
+            }
 
             try {
                 st.execute("""
@@ -120,4 +134,36 @@ public class V20251020__calidad_micro_plantillas extends BaseJavaMigration {
                 .toLowerCase()
                 .contains("h2");
     }
+
+    private boolean columnExists(java.sql.Connection conn, String table, String column) throws Exception {
+        String dbName = conn.getCatalog(); // MySQL: schema actual
+        // Para H2, catalog puede ser null; usamos metadata por ResultSet
+        String sql = """
+        SELECT COUNT(*) 
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ? AND COLUMN_NAME = ?
+        """;
+
+        // En MySQL, también filtra por TABLE_SCHEMA para evitar falsos positivos si hay múltiples schemas
+        boolean isMySql = conn.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql");
+        if (isMySql) {
+            sql = """
+            SELECT COUNT(*)
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
+            """;
+        }
+
+        try (var ps = conn.prepareStatement(sql)) {
+            int idx = 1;
+            if (isMySql) ps.setString(idx++, dbName);
+            ps.setString(idx++, table);
+            ps.setString(idx++, column);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1) > 0;
+            }
+        }
+    }
+
 }
