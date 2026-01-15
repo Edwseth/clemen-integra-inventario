@@ -2,7 +2,9 @@ package com.willyes.clemenintegra.inventario.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.willyes.clemenintegra.inventario.model.enums.CausaDevolucionPT;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.CondicionProductoDevuelto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.shared.json.LenientLocalDateTimeDeserializer;
@@ -22,6 +24,9 @@ public record MovimientoInventarioDTO(
         ClasificacionMovimientoInventario clasificacionMovimientoInventario,
         String docReferencia,
         String destinoTexto,
+        String clienteNombre,
+        CausaDevolucionPT causaDevolucionPt,
+        CondicionProductoDevuelto condicionProductoDevuelto,
 
         @NotNull(message = "El producto es obligatorio")
         Integer productoId,
@@ -58,8 +63,69 @@ public record MovimientoInventarioDTO(
         @JsonProperty("atenciones")
         List<AtencionDTO> atenciones,
 
+        Boolean loteLegacy,
+
         Long ubicacionDestinoId
 
 
 ) {
+    public MovimientoInventarioDTO(
+            Long id,
+            BigDecimal cantidad,
+            TipoMovimiento tipoMovimiento,
+            ClasificacionMovimientoInventario clasificacionMovimientoInventario,
+            String docReferencia,
+            String destinoTexto,
+            Integer productoId,
+            Long loteProductoId,
+            Integer almacenOrigenId,
+            Integer almacenDestinoId,
+            Integer proveedorId,
+            Integer ordenCompraId,
+            Long motivoMovimientoId,
+            Long tipoMovimientoDetalleId,
+            Long solicitudMovimientoId,
+            Long usuarioId,
+            Long ordenProduccionId,
+            Long ordenProduccionEtapaId,
+            Long ordenCompraDetalleId,
+            String codigoLote,
+            LocalDateTime fechaVencimiento,
+            EstadoLote estadoLote,
+            Boolean autoSplit,
+            List<AtencionDTO> atenciones,
+            Long ubicacionDestinoId
+    ) {
+        this(
+                id,
+                cantidad,
+                tipoMovimiento,
+                clasificacionMovimientoInventario,
+                docReferencia,
+                destinoTexto,
+                null,
+                null,
+                null,
+                productoId,
+                loteProductoId,
+                almacenOrigenId,
+                almacenDestinoId,
+                proveedorId,
+                ordenCompraId,
+                motivoMovimientoId,
+                tipoMovimientoDetalleId,
+                solicitudMovimientoId,
+                usuarioId,
+                ordenProduccionId,
+                ordenProduccionEtapaId,
+                ordenCompraDetalleId,
+                codigoLote,
+                fechaVencimiento,
+                estadoLote,
+                autoSplit,
+                atenciones,
+                null,
+                ubicacionDestinoId
+        );
+    }
 }

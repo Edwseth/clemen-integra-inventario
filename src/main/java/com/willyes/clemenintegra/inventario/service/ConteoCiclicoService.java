@@ -423,6 +423,9 @@ public class ConteoCiclicoService {
                 clasificacion,
                 "CONTEO-" + conteo.getId(),
                 null,
+                null,
+                null,
+                null,
                 detalle.getProducto().getId(),
                 lote.getId(),
                 clasificacion == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO ? conteo.getAlmacen().getId() : null,
@@ -440,6 +443,7 @@ public class ConteoCiclicoService {
                 null,
                 null,
                 Boolean.FALSE,
+                null,
                 null,
                 clasificacion == ClasificacionMovimientoInventario.AJUSTE_POSITIVO
                         && detalle.getUbicacionFisica() != null ? detalle.getUbicacionFisica().getId() : null

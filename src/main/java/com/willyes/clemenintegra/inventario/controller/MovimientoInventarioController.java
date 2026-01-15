@@ -400,6 +400,9 @@ public class MovimientoInventarioController {
                 dto.clasificacionMovimientoInventario(),
                 docReferencia,
                 destinoTexto,
+                dto.clienteNombre(),
+                dto.causaDevolucionPt(),
+                dto.condicionProductoDevuelto(),
                 dto.productoId(),
                 dto.loteProductoId(),
                 dto.almacenOrigenId(),
@@ -418,6 +421,7 @@ public class MovimientoInventarioController {
                 dto.estadoLote(),
                 dto.autoSplit(),
                 dto.atenciones(),
+                dto.loteLegacy(),
                 dto.ubicacionDestinoId()
         );
     }
