@@ -2722,6 +2722,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (dto.tipoMovimientoDetalleId() != null) {
             return dto.tipoMovimientoDetalleId();
         }
+        if (dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE) {
+            return resolveTipoDetalleRecepcionDevolucionCliente(dto);
+        }
         if (dto.tipoMovimiento() != TipoMovimiento.SALIDA) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "TIPO_MOVIMIENTO_DETALLE_ID_REQUERIDO");
@@ -2739,6 +2742,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return salidaId;
         }
         return salidaPtId;
+    }
+
+    private Long resolveTipoDetalleRecepcionDevolucionCliente(MovimientoInventarioDTO dto) {
+        boolean loteLegacy = Boolean.TRUE.equals(dto.loteLegacy());
+        boolean vaABodegaPt = !loteLegacy
+                && dto.causaDevolucionPt() == CausaDevolucionPT.TROCADO
+                && dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
+        Long tipoDetalleEntradaId = catalogResolver.getTipoDetalleEntradaId();
+        if (tipoDetalleEntradaId == null) {
+            String destino = vaABodegaPt ? "BODEGA_PT" : "CUARENTENA";
+            throw new CustomBusinessException(
+                    ApiErrorCode.CATALOGO_TIPO_DETALLE_ENTRADA_FALTANTE,
+                    "No se encontró el tipo detalle de entrada para la devolución de cliente",
+                    Map.of("destino", destino));
+        }
+        return tipoDetalleEntradaId;
     }
 
     private boolean puedeAutocompletarSalidaPt(MovimientoInventarioDTO dto, Producto producto) {
