@@ -20,16 +20,18 @@ public class ConteoCiclicoMapper {
         if (conteo == null) {
             return null;
         }
+        Usuario creadoPor = conteo.getCreadoPor();
+        Usuario aplicadoPor = conteo.getAplicadoPor();
         return ConteoCiclicoResumenResponseDTO.builder()
                 .id(conteo.getId())
                 .almacenId(conteo.getAlmacen() != null ? conteo.getAlmacen().getId() : null)
                 .estado(conteo.getEstado())
                 .fechaCreacion(conteo.getFechaCreacion())
                 .aplicadoEn(conteo.getAplicadoEn())
-                .creadoPorId(conteo.getCreadoPor() != null ? conteo.getCreadoPor().getId() : null)
-                .creadoPorNombre(resolveUsuarioNombre(conteo.getCreadoPor()))
-                .aplicadoPorId(conteo.getAplicadoPor() != null ? conteo.getAplicadoPor().getId() : null)
-                .aplicadoPorNombre(resolveUsuarioNombre(conteo.getAplicadoPor()))
+                .creadoPorId(resolveUsuarioId(creadoPor))
+                .creadoPorNombre(resolveUsuarioNombre(creadoPor))
+                .aplicadoPorId(resolveUsuarioId(aplicadoPor))
+                .aplicadoPorNombre(resolveUsuarioNombre(aplicadoPor))
                 .build();
     }
 
@@ -37,16 +39,18 @@ public class ConteoCiclicoMapper {
         if (conteo == null) {
             return null;
         }
+        Usuario creadoPor = conteo.getCreadoPor();
+        Usuario aplicadoPor = conteo.getAplicadoPor();
         return ConteoCiclicoResponseDTO.builder()
                 .id(conteo.getId())
                 .almacenId(conteo.getAlmacen() != null ? conteo.getAlmacen().getId() : null)
                 .estado(conteo.getEstado())
                 .fechaCreacion(conteo.getFechaCreacion())
                 .aplicadoEn(conteo.getAplicadoEn())
-                .creadoPorId(conteo.getCreadoPor() != null ? conteo.getCreadoPor().getId() : null)
-                .creadoPorNombre(resolveUsuarioNombre(conteo.getCreadoPor()))
-                .aplicadoPorId(conteo.getAplicadoPor() != null ? conteo.getAplicadoPor().getId() : null)
-                .aplicadoPorNombre(resolveUsuarioNombre(conteo.getAplicadoPor()))
+                .creadoPorId(resolveUsuarioId(creadoPor))
+                .creadoPorNombre(resolveUsuarioNombre(creadoPor))
+                .aplicadoPorId(resolveUsuarioId(aplicadoPor))
+                .aplicadoPorNombre(resolveUsuarioNombre(aplicadoPor))
                 .detalles(toDetalles(conteo.getDetalles()))
                 .build();
     }
@@ -87,5 +91,9 @@ public class ConteoCiclicoMapper {
             return usuario.getNombreUsuario();
         }
         return null;
+    }
+
+    private Long resolveUsuarioId(Usuario usuario) {
+        return usuario != null ? usuario.getId() : null;
     }
 }
