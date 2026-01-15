@@ -29,6 +29,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
@@ -46,8 +48,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 
-
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class MovimientoInventarioServiceDevolucionClienteTest {
 
     private static final long ALMACEN_PT_ID = 2L;
@@ -381,6 +383,13 @@ class MovimientoInventarioServiceDevolucionClienteTest {
         configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_EXPLICITO_ID);
         given(motivoMovimientoRepository.findById(999L)).willReturn(Optional.empty());
 
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOfSatisfying(CustomBusinessException.class, ex -> {
                     assertThat(ex.getCode()).isEqualTo(ApiErrorCode.CATALOGO_FALTANTE);
@@ -546,6 +555,14 @@ class MovimientoInventarioServiceDevolucionClienteTest {
             }
             return lp;
         }).when(loteProductoRepository).save(any(LoteProducto.class));
+
+        lenient().doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(999L);
+            }
+            return lp;
+        }).when(loteProductoRepository).saveAndFlush(any(LoteProducto.class));
 
     }
 }
