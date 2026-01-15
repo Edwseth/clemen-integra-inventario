@@ -543,12 +543,5 @@ class MovimientoInventarioServiceDevolucionClienteTest {
             return lp;
         }).when(loteProductoRepository).save(any(LoteProducto.class));
 
-        lenient().doAnswer(invocation -> {
-            LoteProducto lp = invocation.getArgument(0);
-            if (lp.getId() == null) {
-                lp.setId(999L);
-            }
-            return lp;
-        }).when(loteProductoRepository).saveAndFlush(any(LoteProducto.class));
     }
 }
