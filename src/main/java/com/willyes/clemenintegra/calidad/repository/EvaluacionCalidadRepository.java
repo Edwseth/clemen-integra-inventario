@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Optional;
 import java.time.LocalDateTime;
 
 public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCalidad, Long> {
@@ -69,6 +70,7 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
             "WHERE l.id = :loteId")
     java.util.List<EvaluacionCalidad> findByLoteProductoIdWithAdjuntos(@Param("loteId") Long loteId);
 
+    @Override
     @EntityGraph(attributePaths = {"loteProducto", "loteProducto.producto", "usuarioEvaluador", "archivosAdjuntos"})
-    java.util.Optional<EvaluacionCalidad> findByIdConRelaciones(Long id);
+    Optional<EvaluacionCalidad> findById(Long id);
 }
