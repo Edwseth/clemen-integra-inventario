@@ -20,6 +20,18 @@ public class ConsolidadoPorLoteDTO {
     private final DisciplinaConsolidadoDTO fisico;
     private final DisciplinaConsolidadoDTO quimicoMicrobiologico;
     private final DisciplinaConsolidadoDTO microbiologico;
+    private final boolean requiereAnalisisFisico;
+    private final boolean requiereAnalisisQuimico;
+    private final boolean requiereAnalisisMicrobiologico;
+    private final Boolean fisicoConforme;
+    private final Boolean quimicoConforme;
+    private final Boolean microConforme;
+    private final String estadoFisico;
+    private final String estadoQuimico;
+    private final String estadoMicro;
+    private final Long evaluacionFisicaId;
+    private final Long evaluacionQuimicoMicroId;
+    private final Long evaluacionMicroId;
     private final boolean liberable;
     private final boolean faltanEvaluaciones;
 
