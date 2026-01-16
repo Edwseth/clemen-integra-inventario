@@ -21,6 +21,7 @@ import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
@@ -330,8 +331,13 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     private ConsolidadoPorLoteDTO construirConsolidadoPorLote(LoteProducto lote,
                                                               java.util.List<EvaluacionCalidad> evaluaciones,
                                                               java.util.Set<Long> evaluacionesConResultadosMicro) {
+        Producto producto = lote.getProducto();
+        boolean requiereFisico = AnalisisCalidadHelper.requiereFisico(producto);
+        boolean requiereQuimico = AnalisisCalidadHelper.requiereQuimico(producto);
+        boolean requiereMicro = AnalisisCalidadHelper.requiereMicro(producto);
+
         AnalisisCalidadHelper.EstadoDisciplinasCalidad estadoDisciplinas = AnalisisCalidadHelper.calcularEstadoDisciplinas(
-                lote.getProducto(),
+                producto,
                 evaluaciones,
                 evaluacionesConResultadosMicro::contains);
 
@@ -343,6 +349,12 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         boolean fisicoCompleto = estadoDisciplinas.fisico().estado() == com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO;
         boolean quimicoCompleto = estadoDisciplinas.quimicoMicrobiologico().estado() == com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO;
         boolean microCompleto = estadoDisciplinas.microbiologico().estado() == com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO;
+
+        EvaluacionCalidad evaluacionFisico = obtenerUltimaEvaluacion(evaluaciones, TipoEvaluacion.FISICO);
+        EvaluacionCalidad evaluacionQuimicoMicro = obtenerUltimaEvaluacion(evaluaciones, TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
+        boolean tieneResultadosMicro = evaluacionQuimicoMicro != null
+                && evaluacionQuimicoMicro.getId() != null
+                && evaluacionesConResultadosMicro.contains(evaluacionQuimicoMicro.getId());
 
         com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad estadoEvaluacion =
                 AnalisisCalidadHelper.calcularEstadoEvaluacion(
@@ -364,6 +376,20 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .fisico(mapDisciplinaListado(estadoDisciplinas.fisico()))
                 .quimicoMicrobiologico(mapDisciplinaListado(estadoDisciplinas.quimicoMicrobiologico()))
                 .microbiologico(mapDisciplinaListado(estadoDisciplinas.microbiologico()))
+                .requiereAnalisisFisico(requiereFisico)
+                .requiereAnalisisQuimico(requiereQuimico)
+                .requiereAnalisisMicrobiologico(requiereMicro)
+                .fisicoConforme(mapConforme(estadoDisciplinas.fisico().estado(), evaluacionFisico))
+                .quimicoConforme(mapConforme(estadoDisciplinas.quimicoMicrobiologico().estado(), evaluacionQuimicoMicro))
+                .microConforme(mapConformeMicro(estadoDisciplinas.microbiologico().estado(), evaluacionQuimicoMicro, tieneResultadosMicro))
+                .estadoFisico(estadoDisciplinas.fisico().estado() != null ? estadoDisciplinas.fisico().estado().name() : null)
+                .estadoQuimico(estadoDisciplinas.quimicoMicrobiologico().estado() != null
+                        ? estadoDisciplinas.quimicoMicrobiologico().estado().name()
+                        : null)
+                .estadoMicro(estadoDisciplinas.microbiologico().estado() != null ? estadoDisciplinas.microbiologico().estado().name() : null)
+                .evaluacionFisicaId(mapEvaluacionId(estadoDisciplinas.fisico().estado(), evaluacionFisico))
+                .evaluacionQuimicoMicroId(mapEvaluacionId(estadoDisciplinas.quimicoMicrobiologico().estado(), evaluacionQuimicoMicro))
+                .evaluacionMicroId(mapEvaluacionMicroId(estadoDisciplinas.microbiologico().estado(), evaluacionQuimicoMicro, tieneResultadosMicro))
                 .liberable(estadoEvaluacion == com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO)
                 .faltanEvaluaciones(validacion != null && !validacion.esValido())
                 .build();
@@ -386,6 +412,59 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .fechaUltimaEvaluacion(estado.fechaUltimaEvaluacion())
                 .evaluador(estado.evaluador())
                 .build();
+    }
+
+    private EvaluacionCalidad obtenerUltimaEvaluacion(java.util.List<EvaluacionCalidad> evaluaciones, TipoEvaluacion tipo) {
+        java.util.List<EvaluacionCalidad> evaluacionesSeguras = evaluaciones == null ? java.util.List.of() : evaluaciones;
+        return evaluacionesSeguras.stream()
+                .filter(e -> e.getTipoEvaluacion() == tipo)
+                .max(java.util.Comparator.comparing(EvaluacionCalidad::getFechaEvaluacion,
+                        java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo)))
+                .orElse(null);
+    }
+
+    private Long mapEvaluacionId(com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado estado,
+                                 EvaluacionCalidad evaluacion) {
+        if (estado != com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO) {
+            return null;
+        }
+        return evaluacion != null ? evaluacion.getId() : null;
+    }
+
+    private Long mapEvaluacionMicroId(com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado estado,
+                                      EvaluacionCalidad evaluacion,
+                                      boolean tieneResultadosMicro) {
+        if (estado != com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO || !tieneResultadosMicro) {
+            return null;
+        }
+        return evaluacion != null ? evaluacion.getId() : null;
+    }
+
+    private Boolean mapConforme(com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado estado,
+                                EvaluacionCalidad evaluacion) {
+        if (estado != com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO) {
+            return null;
+        }
+        return mapResultado(evaluacion != null ? evaluacion.getResultado() : null);
+    }
+
+    private Boolean mapConformeMicro(com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado estado,
+                                     EvaluacionCalidad evaluacion,
+                                     boolean tieneResultadosMicro) {
+        if (estado != com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO || !tieneResultadosMicro) {
+            return null;
+        }
+        return mapResultado(evaluacion != null ? evaluacion.getResultado() : null);
+    }
+
+    private Boolean mapResultado(com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion resultado) {
+        if (resultado == null) {
+            return null;
+        }
+        return switch (resultado) {
+            case CONFORME, CONDICIONADO -> true;
+            case NO_CONFORME -> false;
+        };
     }
 
     public void eliminar(Long id) {

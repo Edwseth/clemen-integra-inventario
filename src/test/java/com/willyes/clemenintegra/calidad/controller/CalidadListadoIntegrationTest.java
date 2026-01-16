@@ -46,6 +46,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -184,6 +186,63 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
                 .andExpect(jsonPath("$.content[0].fisico.estado").value("EVALUADO"))
                 .andExpect(jsonPath("$.content[0].quimicoMicrobiologico.requerido").value(false))
                 .andExpect(jsonPath("$.content[0].microbiologico.requerido").value(false));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void listarEvaluacionesConsolidadasIncluyeEstadosPorDisciplina() throws Exception {
+        Producto productoAmbos = productoRepository.save(Producto.builder()
+                .codigoSku("SKU-CAL-AMBOS")
+                .nombre("Producto Calidad Ambos")
+                .descripcionProducto("Producto calidad ambos")
+                .stockMinimo(BigDecimal.ZERO)
+                .unidadMedida(unidadMedidaRepository.findAll().get(0))
+                .categoriaProducto(categoriaProductoRepository.findAll().get(0))
+                .creadoPor(usuario)
+                .tipoAnalisis(TipoAnalisisCalidad.AMBOS)
+                .requiereAnalisisFisico(false)
+                .requiereAnalisisQuimico(false)
+                .requiereAnalisisMicrobiologico(false)
+                .activo(true)
+                .build());
+
+        Almacen almacen = almacenRepository.findAll().get(0);
+        LoteProducto loteAmbos = loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote("LP-CAL-AMBOS")
+                .fechaFabricacion(LocalDateTime.now())
+                .stockLote(BigDecimal.TEN)
+                .estado(EstadoLote.EN_CUARENTENA)
+                .producto(productoAmbos)
+                .almacen(almacen)
+                .usuarioLiberador(usuario)
+                .build());
+
+        evaluacionCalidadRepository.save(EvaluacionCalidad.builder()
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .fechaEvaluacion(LocalDateTime.now())
+                .observaciones("OK")
+                .loteProducto(loteAmbos)
+                .usuarioEvaluador(usuario)
+                .build());
+
+        LocalDate hoy = LocalDate.now();
+        mockMvc.perform(get("/api/calidad/evaluaciones/consolidadas")
+                        .param("fechaInicio", hoy.minusDays(1).toString())
+                        .param("fechaFin", hoy.plusDays(1).toString())
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-CAL-AMBOS')].requiereAnalisisFisico")
+                        .value(hasItem(true)))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-CAL-AMBOS')].requiereAnalisisMicrobiologico")
+                        .value(hasItem(true)))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-CAL-AMBOS')].estadoFisico")
+                        .value(hasItem("EVALUADO")))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-CAL-AMBOS')].evaluacionFisicaId")
+                        .value(hasItem(notNullValue())))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-CAL-AMBOS')].estadoMicro")
+                        .value(hasItem("PENDIENTE")));
     }
 
     @Test
