@@ -49,9 +49,9 @@ public class AuditoriaLoteServiceImpl implements AuditoriaLoteService {
         LoteProducto lote = loteProductoRepository.findById(loteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
 
-        boolean requiereFisico = lote.getProducto() != null && lote.getProducto().isRequiereAnalisisFisico();
-        boolean requiereQuimico = lote.getProducto() != null && lote.getProducto().isRequiereAnalisisQuimico();
-        boolean requiereMicro = lote.getProducto() != null && lote.getProducto().isRequiereAnalisisMicrobiologico();
+        boolean requiereFisico = AnalisisCalidadHelper.requiereFisico(lote.getProducto());
+        boolean requiereQuimico = AnalisisCalidadHelper.requiereQuimico(lote.getProducto());
+        boolean requiereMicro = AnalisisCalidadHelper.requiereMicro(lote.getProducto());
         TipoAnalisisCalidad tipoAnalisis = TipoAnalisisCalidad.fromFlags(requiereFisico, requiereQuimico, requiereMicro);
 
         EstadoCalidadLoteResponseDTO estadoCalidad = loteProductoService.obtenerEstadoCalidad(loteId);

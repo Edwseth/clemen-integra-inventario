@@ -2,7 +2,7 @@ package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
-import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO;
+import com.willyes.clemenintegra.calidad.dto.ConsolidadoPorLoteDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +18,7 @@ public interface EvaluacionCalidadService {
     EvaluacionCalidadResponseDTO obtenerPorId(Long id);
     com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO obtenerDetalle(Long id);
     java.util.List<EvaluacionCalidadResponseDTO> listarPorLote(Long loteId);
-    Page<EvaluacionConsolidadaListadoDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio,
+    Page<ConsolidadoPorLoteDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio,
                                                                           LocalDate fechaFin,
                                                                           Pageable pageable);
     void eliminar(Long id);

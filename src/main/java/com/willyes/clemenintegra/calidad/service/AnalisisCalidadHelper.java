@@ -25,15 +25,42 @@ public final class AnalisisCalidadHelper {
     }
 
     public static boolean requiereFisico(Producto producto) {
-        return producto != null && producto.isRequiereAnalisisFisico();
+        if (producto == null) {
+            return false;
+        }
+        if (tieneBanderasCalidad(producto)) {
+            return producto.isRequiereAnalisisFisico();
+        }
+        return producto.getTipoAnalisisCalidad() == com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.FISICO
+                || producto.getTipoAnalisisCalidad() == com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.AMBOS;
     }
 
     public static boolean requiereQuimico(Producto producto) {
-        return producto != null && producto.isRequiereAnalisisQuimico();
+        if (producto == null) {
+            return false;
+        }
+        if (tieneBanderasCalidad(producto)) {
+            return producto.isRequiereAnalisisQuimico();
+        }
+        return producto.getTipoAnalisisCalidad() == com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO
+                || producto.getTipoAnalisisCalidad() == com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.AMBOS;
     }
 
     public static boolean requiereMicro(Producto producto) {
-        return producto != null && producto.isRequiereAnalisisMicrobiologico();
+        if (producto == null) {
+            return false;
+        }
+        if (tieneBanderasCalidad(producto)) {
+            return producto.isRequiereAnalisisMicrobiologico();
+        }
+        return producto.getTipoAnalisisCalidad() == com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO
+                || producto.getTipoAnalisisCalidad() == com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad.AMBOS;
+    }
+
+    private static boolean tieneBanderasCalidad(Producto producto) {
+        return producto != null && (producto.isRequiereAnalisisFisico()
+                || producto.isRequiereAnalisisQuimico()
+                || producto.isRequiereAnalisisMicrobiologico());
     }
 
     public static ResultadoValidacionDisciplinas validarDisciplinasCompletas(

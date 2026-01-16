@@ -169,7 +169,7 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
-    void listarEvaluacionesConsolidadasIncluyeCantidadAdjuntos() throws Exception {
+    void listarEvaluacionesConsolidadasIncluyeRequeridos() throws Exception {
         LocalDate hoy = LocalDate.now();
         mockMvc.perform(get("/api/calidad/evaluaciones/consolidadas")
                         .param("fechaInicio", hoy.minusDays(1).toString())
@@ -179,9 +179,11 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].codigoLote").value("LP-CAL-1"))
                 .andExpect(jsonPath("$.content[0].loteId").value(loteProducto.getId()))
-                .andExpect(jsonPath("$.content[0].estadoEvaluacion").value("EVALUADO"))
-                .andExpect(jsonPath("$.content[0].cantidadAdjuntos").value(1))
-                .andExpect(jsonPath("$.content[0].tieneAdjuntos").value(true));
+                .andExpect(jsonPath("$.content[0].tipoAnalisisCalidad").value("FISICO"))
+                .andExpect(jsonPath("$.content[0].fisico.requerido").value(true))
+                .andExpect(jsonPath("$.content[0].fisico.estado").value("EVALUADO"))
+                .andExpect(jsonPath("$.content[0].quimicoMicrobiologico.requerido").value(false))
+                .andExpect(jsonPath("$.content[0].microbiologico.requerido").value(false));
     }
 
     @Test

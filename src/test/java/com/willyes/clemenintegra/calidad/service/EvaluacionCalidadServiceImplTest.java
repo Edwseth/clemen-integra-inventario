@@ -1,7 +1,7 @@
 package com.willyes.clemenintegra.calidad.service;
 
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
-import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO;
+import com.willyes.clemenintegra.calidad.dto.ConsolidadoPorLoteDTO;
 import com.willyes.clemenintegra.calidad.mapper.EvaluacionCalidadMapper;
 import com.willyes.clemenintegra.calidad.model.ArchivoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
@@ -14,6 +14,7 @@ import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
@@ -182,6 +183,9 @@ class EvaluacionCalidadServiceImplTest {
     @Test
     void consolidaFqmConDisciplinasConformes() {
         lote.getProducto().setRequiereAnalisisFisico(true);
+        lote.getProducto().setRequiereAnalisisQuimico(true);
+        lote.getProducto().setRequiereAnalisisMicrobiologico(true);
+        lote.getProducto().setTipoAnalisisCalidad(TipoAnalisisCalidad.AMBOS);
 
         EvaluacionCalidad evalFisico = EvaluacionCalidad.builder()
                 .id(70L)
@@ -214,33 +218,27 @@ class EvaluacionCalidadServiceImplTest {
                                 .build()))
                 .build();
 
-        EvaluacionConsolidadaListadoDTO consolidado = new EvaluacionConsolidadaListadoDTO(
-                71L,
-                lote.getId(),
-                evalFisico.getFechaEvaluacion(),
-                "LOT-10",
-                "Producto Q",
-                ResultadoEvaluacion.CONFORME,
-                TipoEvaluacion.QUIMICO_MICROBIOLOGICO,
-                evaluador.getNombreCompleto(),
-                com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO,
-                EstadoLote.EN_CUARENTENA,
-                2L);
-
-        when(repository.findConsolidadoListado(any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of(consolidado)));
+        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(lote)));
+        when(repository.findByLoteProductoIdInWithRelacion(List.of(lote.getId())))
+                .thenReturn(List.of(evalFisico, evalQuimicoMicro));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(List.of(71L)))
+                .thenReturn(List.of(ResultadoAnalisisMicrobiologico.builder()
+                        .id(1L)
+                        .evaluacion(evalQuimicoMicro)
+                        .build()));
 
         var consolidados = service.obtenerEvaluacionesConsolidadas(evalFisico.getFechaEvaluacion().toLocalDate(),
                 evalFisico.getFechaEvaluacion().toLocalDate(), PageRequest.of(0, 10));
 
         assertThat(consolidados).hasSize(1);
-        var dto = consolidados.getContent().get(0);
+        ConsolidadoPorLoteDTO dto = consolidados.getContent().get(0);
         assertThat(dto.getLoteId()).isEqualTo(lote.getId());
-        assertThat(dto.getCodigoLote()).isEqualTo("LOT-10");
-        assertThat(dto.getNombreProducto()).isEqualTo("Producto Q");
-        assertThat(dto.getTipoEvaluacion()).isEqualTo(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
-        assertThat(dto.getCantidadAdjuntos()).isEqualTo(2L);
-        assertThat(dto.isTieneAdjuntos()).isTrue();
+        assertThat(dto.getFisico().isRequerido()).isTrue();
+        assertThat(dto.getQuimicoMicrobiologico().isRequerido()).isTrue();
+        assertThat(dto.getMicrobiologico().isRequerido()).isTrue();
+        assertThat(dto.getMicrobiologico().getEstado()).isEqualTo("EVALUADO");
+        assertThat(dto.isLiberable()).isTrue();
     }
 
     @Test
@@ -248,6 +246,7 @@ class EvaluacionCalidadServiceImplTest {
         Producto productoSoloMicro = new Producto();
         productoSoloMicro.setId(2);
         productoSoloMicro.setRequiereAnalisisMicrobiologico(true);
+        productoSoloMicro.setTipoAnalisisCalidad(TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO);
         LoteProducto loteSoloMicro = new LoteProducto();
         loteSoloMicro.setId(30L);
         loteSoloMicro.setProducto(productoSoloMicro);
@@ -262,29 +261,20 @@ class EvaluacionCalidadServiceImplTest {
                 .fechaEvaluacion(LocalDateTime.now())
                 .build();
 
-        EvaluacionConsolidadaListadoDTO consolidado = new EvaluacionConsolidadaListadoDTO(
-                80L,
-                loteSoloMicro.getId(),
-                evalMicro.getFechaEvaluacion(),
-                "LOT-30",
-                "Producto Micro",
-                ResultadoEvaluacion.CONFORME,
-                TipoEvaluacion.QUIMICO_MICROBIOLOGICO,
-                evaluador.getNombreCompleto(),
-                com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO,
-                EstadoLote.EN_CUARENTENA,
-                0L);
-        when(repository.findConsolidadoListado(any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of(consolidado)));
+        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(loteSoloMicro)));
+        when(repository.findByLoteProductoIdInWithRelacion(List.of(loteSoloMicro.getId())))
+                .thenReturn(List.of(evalMicro));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(List.of(80L)))
+                .thenReturn(List.of());
 
         var consolidados = service.obtenerEvaluacionesConsolidadas(evalMicro.getFechaEvaluacion().toLocalDate(),
                 evalMicro.getFechaEvaluacion().toLocalDate(), PageRequest.of(0, 10));
 
         assertThat(consolidados).hasSize(1);
-        var dto = consolidados.getContent().get(0);
+        ConsolidadoPorLoteDTO dto = consolidados.getContent().get(0);
         assertThat(dto.getLoteId()).isEqualTo(loteSoloMicro.getId());
-        assertThat(dto.getCodigoLote()).isEqualTo("LOT-30");
-        assertThat(dto.isTieneAdjuntos()).isFalse();
+        assertThat(dto.getMicrobiologico().getEstado()).isEqualTo("PENDIENTE");
     }
 
     @Test
@@ -292,6 +282,7 @@ class EvaluacionCalidadServiceImplTest {
         Producto productoSinMicro = new Producto();
         productoSinMicro.setId(3);
         productoSinMicro.setRequiereAnalisisMicrobiologico(false);
+        productoSinMicro.setTipoAnalisisCalidad(TipoAnalisisCalidad.FISICO);
         LoteProducto loteSinMicro = new LoteProducto();
         loteSinMicro.setId(40L);
         loteSinMicro.setProducto(productoSinMicro);
@@ -306,29 +297,20 @@ class EvaluacionCalidadServiceImplTest {
                 .fechaEvaluacion(LocalDateTime.now())
                 .build();
 
-        EvaluacionConsolidadaListadoDTO consolidado = new EvaluacionConsolidadaListadoDTO(
-                90L,
-                loteSinMicro.getId(),
-                evalFisico.getFechaEvaluacion(),
-                "LOT-40",
-                "Producto F",
-                ResultadoEvaluacion.CONFORME,
-                TipoEvaluacion.FISICO,
-                evaluador.getNombreCompleto(),
-                com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO,
-                EstadoLote.EN_CUARENTENA,
-                1L);
-        when(repository.findConsolidadoListado(any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of(consolidado)));
+        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(loteSinMicro)));
+        when(repository.findByLoteProductoIdInWithRelacion(List.of(loteSinMicro.getId())))
+                .thenReturn(List.of(evalFisico));
+        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(List.of()))
+                .thenReturn(List.of());
 
         var consolidados = service.obtenerEvaluacionesConsolidadas(evalFisico.getFechaEvaluacion().toLocalDate(),
                 evalFisico.getFechaEvaluacion().toLocalDate(), PageRequest.of(0, 10));
 
         assertThat(consolidados).hasSize(1);
-        var dto = consolidados.getContent().get(0);
+        ConsolidadoPorLoteDTO dto = consolidados.getContent().get(0);
         assertThat(dto.getLoteId()).isEqualTo(loteSinMicro.getId());
-        assertThat(dto.getCodigoLote()).isEqualTo("LOT-40");
-        assertThat(dto.isTieneAdjuntos()).isTrue();
+        assertThat(dto.getMicrobiologico().isRequerido()).isFalse();
     }
 
     @Test

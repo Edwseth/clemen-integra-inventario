@@ -3,7 +3,6 @@ package com.willyes.clemenintegra.calidad.repository;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
-import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -38,30 +37,16 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
             @Param("inicio") LocalDateTime inicio,
             @Param("fin") LocalDateTime fin);
 
-    @Query(value = "SELECT new com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO(" +
-            "e.id, l.id, e.fechaEvaluacion, l.codigoLote, p.nombre, e.resultado, e.tipoEvaluacion, " +
-            "u.nombreCompleto, " +
-            "com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO, " +
-            "l.estado, COUNT(a)) " +
-            "FROM EvaluacionCalidad e " +
-            "JOIN e.loteProducto l " +
-            "JOIN l.producto p " +
-            "JOIN e.usuarioEvaluador u " +
-            "LEFT JOIN e.archivosAdjuntos a " +
-            "WHERE e.fechaEvaluacion BETWEEN :inicio AND :fin " +
-            "GROUP BY e.id, l.id, e.fechaEvaluacion, l.codigoLote, p.nombre, e.resultado, e.tipoEvaluacion, u.nombreCompleto, l.estado",
-            countQuery = "SELECT COUNT(e.id) FROM EvaluacionCalidad e " +
-                    "WHERE e.fechaEvaluacion BETWEEN :inicio AND :fin")
-    Page<EvaluacionConsolidadaListadoDTO> findConsolidadoListado(
-            @Param("inicio") LocalDateTime inicio,
-            @Param("fin") LocalDateTime fin,
-            Pageable pageable);
+    @EntityGraph(attributePaths = {"loteProducto", "loteProducto.producto", "usuarioEvaluador", "archivosAdjuntos"})
+    java.util.List<EvaluacionCalidad> findByLoteProductoIdIn(java.util.List<Long> loteIds);
 
     boolean existsByLoteProductoIdAndTipoEvaluacion(Long loteId, TipoEvaluacion tipo);
 
     java.util.List<EvaluacionCalidad> findByLoteProductoId(Long loteId);
 
-    java.util.List<EvaluacionCalidad> findByLoteProductoIdIn(java.util.List<Long> loteIds);
+    @EntityGraph(attributePaths = {"loteProducto", "loteProducto.producto", "usuarioEvaluador", "archivosAdjuntos"})
+    @Query("SELECT e FROM EvaluacionCalidad e WHERE e.loteProducto.id IN :loteIds")
+    java.util.List<EvaluacionCalidad> findByLoteProductoIdInWithRelacion(@Param("loteIds") java.util.List<Long> loteIds);
 
     @Query("SELECT DISTINCT e FROM EvaluacionCalidad e " +
             "LEFT JOIN FETCH e.archivosAdjuntos " +
