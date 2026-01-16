@@ -4,7 +4,7 @@ import com.willyes.clemenintegra.calidad.dto.ArchivoEvaluacionDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
-import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO;
+import com.willyes.clemenintegra.calidad.dto.ConsolidadoPorLoteDTO;
 import com.willyes.clemenintegra.calidad.dto.CondicionUsoCreateDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCondicionDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
@@ -55,6 +55,7 @@ import java.time.LocalTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -270,15 +271,121 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     }
 
     @Override
-    public Page<EvaluacionConsolidadaListadoDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio,
-                                                                                 LocalDate fechaFin,
-                                                                                 Pageable pageable) {
+    public Page<ConsolidadoPorLoteDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio,
+                                                                       LocalDate fechaFin,
+                                                                       Pageable pageable) {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(LocalTime.MAX);
         Pageable effective = pageable.getSort().isSorted() ? pageable
                 : org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
-                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaEvaluacion"));
-        return repository.findConsolidadoListado(inicio, fin, effective);
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaFabricacion"));
+
+        java.util.List<com.willyes.clemenintegra.inventario.model.enums.EstadoLote> estados = java.util.List.of(
+                com.willyes.clemenintegra.inventario.model.enums.EstadoLote.EN_CUARENTENA,
+                com.willyes.clemenintegra.inventario.model.enums.EstadoLote.RETENIDO,
+                com.willyes.clemenintegra.inventario.model.enums.EstadoLote.LIBERADO
+        );
+
+        org.springframework.data.domain.Page<LoteProducto> lotes = loteRepository.findConsolidadoCalidad(inicio, fin, estados, effective);
+        if (lotes.isEmpty()) {
+            return org.springframework.data.domain.Page.empty(effective);
+        }
+
+        java.util.List<Long> loteIds = lotes.getContent().stream()
+                .map(LoteProducto::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        java.util.List<EvaluacionCalidad> evaluaciones = loteIds.isEmpty()
+                ? java.util.List.of()
+                : repository.findByLoteProductoIdInWithRelacion(loteIds);
+
+        java.util.Map<Long, java.util.List<EvaluacionCalidad>> evaluacionesPorLote = evaluaciones.stream()
+                .filter(e -> e.getLoteProducto() != null && e.getLoteProducto().getId() != null)
+                .collect(Collectors.groupingBy(e -> e.getLoteProducto().getId()));
+
+        java.util.List<Long> evaluacionMicroIds = evaluaciones.stream()
+                .filter(e -> e.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .map(EvaluacionCalidad::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        java.util.Set<Long> evaluacionesConResultadosMicro = evaluacionMicroIds.isEmpty()
+                ? java.util.Set.of()
+                : resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(evaluacionMicroIds)
+                .stream()
+                .map(r -> r.getEvaluacion() != null ? r.getEvaluacion().getId() : null)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        java.util.List<ConsolidadoPorLoteDTO> content = lotes.getContent().stream()
+                .map(lote -> construirConsolidadoPorLote(lote,
+                        evaluacionesPorLote.getOrDefault(lote.getId(), java.util.List.of()),
+                        evaluacionesConResultadosMicro))
+                .toList();
+
+        return new org.springframework.data.domain.PageImpl<>(content, effective, lotes.getTotalElements());
+    }
+
+    private ConsolidadoPorLoteDTO construirConsolidadoPorLote(LoteProducto lote,
+                                                              java.util.List<EvaluacionCalidad> evaluaciones,
+                                                              java.util.Set<Long> evaluacionesConResultadosMicro) {
+        AnalisisCalidadHelper.EstadoDisciplinasCalidad estadoDisciplinas = AnalisisCalidadHelper.calcularEstadoDisciplinas(
+                lote.getProducto(),
+                evaluaciones,
+                evaluacionesConResultadosMicro::contains);
+
+        AnalisisCalidadHelper.ResultadoValidacionDisciplinas validacion = AnalisisCalidadHelper.validarDisciplinasCompletas(
+                lote,
+                evaluaciones,
+                evaluacionesConResultadosMicro::contains);
+
+        boolean fisicoCompleto = estadoDisciplinas.fisico().estado() == com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO;
+        boolean quimicoCompleto = estadoDisciplinas.quimicoMicrobiologico().estado() == com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO;
+        boolean microCompleto = estadoDisciplinas.microbiologico().estado() == com.willyes.clemenintegra.calidad.model.enums.DisciplinaEstado.EVALUADO;
+
+        com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad estadoEvaluacion =
+                AnalisisCalidadHelper.calcularEstadoEvaluacion(
+                        estadoDisciplinas.fisico().requerido(),
+                        fisicoCompleto,
+                        estadoDisciplinas.quimicoMicrobiologico().requerido(),
+                        quimicoCompleto,
+                        estadoDisciplinas.microbiologico().requerido(),
+                        microCompleto);
+
+        return ConsolidadoPorLoteDTO.builder()
+                .loteId(lote.getId())
+                .codigoLote(lote.getCodigoLote())
+                .nombreProducto(lote.getProducto() != null ? lote.getProducto().getNombre() : null)
+                .tipoAnalisisCalidad(lote.getProducto() != null && lote.getProducto().getTipoAnalisisCalidad() != null
+                        ? lote.getProducto().getTipoAnalisisCalidad().name()
+                        : null)
+                .estadoLote(lote.getEstado())
+                .fisico(mapDisciplinaListado(estadoDisciplinas.fisico()))
+                .quimicoMicrobiologico(mapDisciplinaListado(estadoDisciplinas.quimicoMicrobiologico()))
+                .microbiologico(mapDisciplinaListado(estadoDisciplinas.microbiologico()))
+                .liberable(estadoEvaluacion == com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO)
+                .faltanEvaluaciones(validacion != null && !validacion.esValido())
+                .build();
+    }
+
+    private ConsolidadoPorLoteDTO.DisciplinaConsolidadoDTO mapDisciplinaListado(AnalisisCalidadHelper.DisciplinaCalidadEstado estado) {
+        if (estado == null) {
+            return ConsolidadoPorLoteDTO.DisciplinaConsolidadoDTO.builder()
+                    .requerido(false)
+                    .estado(null)
+                    .resultado(null)
+                    .fechaUltimaEvaluacion(null)
+                    .evaluador(null)
+                    .build();
+        }
+        return ConsolidadoPorLoteDTO.DisciplinaConsolidadoDTO.builder()
+                .requerido(estado.requerido())
+                .estado(estado.estado() != null ? estado.estado().name() : null)
+                .resultado(estado.resultado())
+                .fechaUltimaEvaluacion(estado.fechaUltimaEvaluacion())
+                .evaluador(estado.evaluador())
+                .build();
     }
 
     public void eliminar(Long id) {

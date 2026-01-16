@@ -143,6 +143,19 @@ WHERE lp.codigoLote = :codigoLote
     @EntityGraph(attributePaths = {"producto", "almacen"})
     List<LoteProducto> findByOrdenProduccionId(Long ordenProduccionId);
 
+    @EntityGraph(attributePaths = {"producto"})
+    @Query("""
+       SELECT lp
+         FROM LoteProducto lp
+        WHERE lp.fechaFabricacion BETWEEN :inicio AND :fin
+          AND lp.estado IN :estados
+    """)
+    org.springframework.data.domain.Page<LoteProducto> findConsolidadoCalidad(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("estados") Collection<EstadoLote> estados,
+            org.springframework.data.domain.Pageable pageable);
+
     @EntityGraph(attributePaths = {
             "almacen",
             "producto",

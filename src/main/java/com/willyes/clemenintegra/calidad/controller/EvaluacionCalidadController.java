@@ -3,7 +3,7 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
-import com.willyes.clemenintegra.calidad.dto.EvaluacionConsolidadaListadoDTO;
+import com.willyes.clemenintegra.calidad.dto.ConsolidadoPorLoteDTO;
 import com.willyes.clemenintegra.calidad.dto.PlantillaAnalisisMicroDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
@@ -46,7 +46,7 @@ public class EvaluacionCalidadController {
 
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping("/consolidadas")
-    public ResponseEntity<Page<EvaluacionConsolidadaListadoDTO>> getEvaluacionesConsolidadas(
+    public ResponseEntity<Page<ConsolidadoPorLoteDTO>> getEvaluacionesConsolidadas(
             @RequestParam("fechaInicio") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam("fechaFin") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @PageableDefault(size = 10) Pageable pageable) {

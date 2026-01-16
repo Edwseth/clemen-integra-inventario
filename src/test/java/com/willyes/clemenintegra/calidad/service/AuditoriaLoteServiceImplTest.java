@@ -23,6 +23,7 @@ import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
+import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
@@ -251,6 +252,39 @@ class AuditoriaLoteServiceImplTest {
         assertThat(dto.getCalidad().getQuimicoMicrobiologico().getEstado()).isEqualTo("EVALUADO");
         assertThat(dto.getCalidad().getMicrobiologico().isRequerido()).isTrue();
         assertThat(dto.getCalidad().getMicrobiologico().getEstado()).isEqualTo("PENDIENTE");
+    }
+
+    @Test
+    void auditoriaAmbosMarcaQuimicoMicroRequerido() {
+        Producto producto = new Producto();
+        producto.setNombre("Producto Ambos");
+        producto.setRequiereAnalisisFisico(false);
+        producto.setRequiereAnalisisQuimico(false);
+        producto.setRequiereAnalisisMicrobiologico(false);
+        producto.setTipoAnalisisCalidad(TipoAnalisisCalidad.AMBOS);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(5L)
+                .codigoLote("L-AMBOS-01")
+                .estado(EstadoLote.EN_CUARENTENA)
+                .producto(producto)
+                .build();
+
+        when(loteProductoRepository.findById(5L)).thenReturn(Optional.of(lote));
+        when(loteProductoService.obtenerEstadoCalidad(5L))
+                .thenReturn(EstadoCalidadLoteResponseDTO.builder().estadoLote("EN_CUARENTENA").build());
+        when(noConformidadRepository.findByLote_Id(5L)).thenReturn(List.of());
+        when(retencionLoteService.obtenerRetencionesPorLote(5L)).thenReturn(List.of());
+        when(condicionUsoService.getActivasByLote(5L)).thenReturn(List.of());
+        when(movimientoInventarioRepository.findByLote_IdOrderByFechaIngresoDesc(5L)).thenReturn(List.of());
+        when(evaluacionCalidadRepository.findByLoteProductoIdWithAdjuntos(5L)).thenReturn(List.of());
+
+        AuditoriaLoteResponseDTO dto = service.obtenerAuditoriaDeLote(5L);
+
+        assertThat(dto.getTipoAnalisisCalidad()).isEqualTo("AMBOS");
+        assertThat(dto.getCalidad().getFisico().isRequerido()).isTrue();
+        assertThat(dto.getCalidad().getQuimicoMicrobiologico().isRequerido()).isTrue();
+        assertThat(dto.getCalidad().getMicrobiologico().isRequerido()).isTrue();
     }
 
     @Test
