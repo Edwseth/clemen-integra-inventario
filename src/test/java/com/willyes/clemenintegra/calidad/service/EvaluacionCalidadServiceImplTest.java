@@ -301,8 +301,6 @@ class EvaluacionCalidadServiceImplTest {
                 .thenReturn(new PageImpl<>(List.of(loteSinMicro)));
         when(repository.findByLoteProductoIdInWithRelacion(List.of(loteSinMicro.getId())))
                 .thenReturn(List.of(evalFisico));
-        when(resultadoAnalisisMicrobiologicoRepository.findByEvaluacionIdIn(List.of()))
-                .thenReturn(List.of());
 
         var consolidados = service.obtenerEvaluacionesConsolidadas(evalFisico.getFechaEvaluacion().toLocalDate(),
                 evalFisico.getFechaEvaluacion().toLocalDate(), PageRequest.of(0, 10));
