@@ -69,6 +69,6 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
             "WHERE l.id = :loteId")
     java.util.List<EvaluacionCalidad> findByLoteProductoIdWithAdjuntos(@Param("loteId") Long loteId);
 
-    @EntityGraph(attributePaths = {"loteProducto", "loteProducto.producto", "loteProducto.almacen", "usuarioEvaluador", "archivosAdjuntos"})
+    @EntityGraph(attributePaths = {"loteProducto", "loteProducto.producto", "usuarioEvaluador", "archivosAdjuntos"})
     java.util.Optional<EvaluacionCalidad> findByIdConRelaciones(Long id);
 }

@@ -534,6 +534,6 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     private EvaluacionCalidad obtenerEvaluacionConRelaciones(Long id) {
         return repository.findByIdConRelaciones(id)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
-                        "Evaluación no encontrada"));
+                        "Evaluación no encontrada con ID: " + id));
     }
 }
