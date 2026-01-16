@@ -2,6 +2,8 @@ package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.PlantillaAnalisisMicroDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
+import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
+import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
 import com.willyes.clemenintegra.calidad.service.ResultadoAnalisisMicroService;
@@ -31,10 +33,13 @@ import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(EvaluacionCalidadController.class)
@@ -152,5 +157,53 @@ class EvaluacionCalidadControllerSecurityTest {
                         .with(SecurityMockMvcRequestPostProcessors.user("micro")
                                 .authorities(() -> "ROL_MICROBIOLOGO")))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void permiteAnalistaRegistrarEvaluacion() throws Exception {
+        EvaluacionCalidadResponseDTO response = EvaluacionCalidadResponseDTO.builder()
+                .id(1L)
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .nombreLote("LOTE-01")
+                .nombreProducto("Producto X")
+                .nombreEvaluador("Analista Calidad")
+                .build();
+        when(evaluacionCalidadService.crear(any(), anyList())).thenReturn(response);
+
+        mockMvc.perform(multipart("/api/calidad/evaluaciones")
+                        .param("tipoEvaluacion", "FISICO")
+                        .param("observaciones", "OK")
+                        .param("loteProductoId", "10")
+                        .with(SecurityMockMvcRequestPostProcessors.user("analista")
+                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.nombreLote").value("LOTE-01"))
+                .andExpect(jsonPath("$.nombreProducto").value("Producto X"))
+                .andExpect(jsonPath("$.nombreEvaluador").value("Analista Calidad"));
+    }
+
+    @Test
+    void permiteMicrobiologoRegistrarEvaluacion() throws Exception {
+        EvaluacionCalidadResponseDTO response = EvaluacionCalidadResponseDTO.builder()
+                .id(2L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .nombreLote("LOTE-02")
+                .nombreProducto("Producto Y")
+                .nombreEvaluador("Microbiologo")
+                .build();
+        when(evaluacionCalidadService.crear(any(), anyList())).thenReturn(response);
+
+        mockMvc.perform(multipart("/api/calidad/evaluaciones")
+                        .param("tipoEvaluacion", "QUIMICO_MICROBIOLOGICO")
+                        .param("observaciones", "OK")
+                        .param("loteProductoId", "20")
+                        .with(SecurityMockMvcRequestPostProcessors.user("micro")
+                                .authorities(() -> "ROL_MICROBIOLOGO")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(2L))
+                .andExpect(jsonPath("$.nombreLote").value("LOTE-02"))
+                .andExpect(jsonPath("$.nombreProducto").value("Producto Y"))
+                .andExpect(jsonPath("$.nombreEvaluador").value("Microbiologo"));
     }
 }
