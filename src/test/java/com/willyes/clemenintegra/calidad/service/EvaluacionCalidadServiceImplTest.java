@@ -41,6 +41,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -120,12 +121,23 @@ class EvaluacionCalidadServiceImplTest {
             eval.setId(50L);
             return eval;
         });
+        EvaluacionCalidad evaluacionCompleta = EvaluacionCalidad.builder()
+                .id(50L)
+                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .observaciones("OK")
+                .loteProducto(lote)
+                .usuarioEvaluador(evaluador)
+                .fechaEvaluacion(LocalDateTime.now())
+                .build();
+        when(repository.findById(50L)).thenReturn(Optional.of(evaluacionCompleta));
 
         var respuesta = service.crear(dto, null);
 
         assertThat(respuesta.getId()).isEqualTo(50L);
         assertThat(respuesta.getTipoEvaluacion()).isEqualTo(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
         assertThat(respuesta.getResultado()).isEqualTo(ResultadoEvaluacion.CONFORME);
+        verify(repository).findById(50L);
     }
 
     @Test
@@ -147,6 +159,7 @@ class EvaluacionCalidadServiceImplTest {
         when(repository.findFirstByLoteProductoIdAndTipoEvaluacion(10L, TipoEvaluacion.QUIMICO_MICROBIOLOGICO))
                 .thenReturn(Optional.of(existente));
         when(repository.save(any(EvaluacionCalidad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repository.findById(60L)).thenReturn(Optional.of(existente));
 
         EvaluacionCalidadRequestDTO dto = EvaluacionCalidadRequestDTO.builder()
                 .loteProductoId(10L)
@@ -163,6 +176,7 @@ class EvaluacionCalidadServiceImplTest {
         assertThat(existente.getArchivosAdjuntos())
                 .extracting(ArchivoEvaluacion::getNombreVisible)
                 .contains("Químico");
+        verify(repository).findById(60L);
     }
 
     @Test

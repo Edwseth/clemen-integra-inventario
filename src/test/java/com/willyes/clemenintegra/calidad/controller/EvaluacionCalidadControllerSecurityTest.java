@@ -168,7 +168,7 @@ class EvaluacionCalidadControllerSecurityTest {
                 .nombreProducto("Producto X")
                 .nombreEvaluador("Analista Calidad")
                 .build();
-        when(evaluacionCalidadService.crear(any(), anyList())).thenReturn(response);
+        when(evaluacionCalidadService.crear(any(), any())).thenReturn(response);
 
         mockMvc.perform(multipart("/api/calidad/evaluaciones")
                         .param("tipoEvaluacion", "FISICO")
@@ -192,7 +192,7 @@ class EvaluacionCalidadControllerSecurityTest {
                 .nombreProducto("Producto Y")
                 .nombreEvaluador("Microbiologo")
                 .build();
-        when(evaluacionCalidadService.crear(any(), anyList())).thenReturn(response);
+        when(evaluacionCalidadService.crear(any(), any())).thenReturn(response);
 
         mockMvc.perform(multipart("/api/calidad/evaluaciones")
                         .param("tipoEvaluacion", "QUIMICO_MICROBIOLOGICO")
