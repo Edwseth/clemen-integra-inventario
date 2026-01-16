@@ -40,6 +40,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -90,6 +91,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
         return page.map(mapper::toResponseDTO);
     }
 
+    @Transactional
     public EvaluacionCalidadResponseDTO crear(EvaluacionCalidadRequestDTO dto, java.util.List<MultipartFile> archivos) {
         Usuario user = usuarioService.obtenerUsuarioAutenticado();
 
@@ -157,9 +159,11 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         verificarAlmacenPostOperacion(lote.getId(), cuarentenaId, operacion, user);
 
-        return mapper.toResponseDTO(entidad);
+        EvaluacionCalidad evaluacion = obtenerEvaluacionConRelaciones(entidad.getId());
+        return mapper.toResponseDTO(evaluacion);
     }
 
+    @Transactional
     public EvaluacionCalidadResponseDTO actualizar(Long id, EvaluacionCalidadRequestDTO dto) {
         EvaluacionCalidad existing = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Evaluación no encontrada con ID: " + id));
@@ -217,7 +221,8 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         verificarAlmacenPostOperacion(lote.getId(), cuarentenaId, operacion, user);
 
-        return mapper.toResponseDTO(existing);
+        EvaluacionCalidad evaluacion = obtenerEvaluacionConRelaciones(existing.getId());
+        return mapper.toResponseDTO(evaluacion);
     }
 
     public EvaluacionCalidadResponseDTO obtenerPorId(Long id) {
@@ -524,5 +529,11 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                     dto.getObservaciones(), usuario);
             retencionLoteService.asegurarRetencionNoConformidad(lote, "NC pendiente", noConformidad, usuario);
         }
+    }
+
+    private EvaluacionCalidad obtenerEvaluacionConRelaciones(Long id) {
+        return repository.findByIdConRelaciones(id)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Evaluación no encontrada"));
     }
 }
