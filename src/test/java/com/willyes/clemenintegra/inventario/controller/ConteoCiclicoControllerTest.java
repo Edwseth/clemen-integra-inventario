@@ -133,6 +133,13 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    void listarLotesParaConteoSinProductoIdDevuelve400() throws Exception {
+        mockMvc.perform(get("/api/inventario/conteos/8/lotes"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_CONTADOR")
     void obtenerPorIdNoEncontradoDevuelve404() throws Exception {
         when(conteoCiclicoService.obtenerPorId(99L))

@@ -40,7 +40,7 @@ import java.util.Optional;
 public class ConteoCiclicoService {
 
     private static final EnumSet<EstadoLote> LOTES_OPERABLES = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
-    private static final EnumSet<EstadoLote> LOTES_VISIBLES_EN_CONTEO = EnumSet.allOf(EstadoLote.class);
+    private static final EnumSet<EstadoLote> LOTES_CONTABLES = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
 
     private final ConteoCiclicoRepository conteoRepository;
     private final ConteoCiclicoDetalleRepository detalleRepository;
@@ -110,7 +110,7 @@ public class ConteoCiclicoService {
                 almacenId,
                 ubicacion != null ? ubicacion.getId() : null,
                 filtroTexto,
-                LOTES_VISIBLES_EN_CONTEO);
+                LOTES_CONTABLES);
 
         log.debug("[ConteoCiclico] lotes encontrados antes de mapear: {}", lotes.size());
         lotes.stream()
