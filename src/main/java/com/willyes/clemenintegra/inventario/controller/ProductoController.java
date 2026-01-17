@@ -48,9 +48,10 @@ public class ProductoController {
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "term", required = false) String term,
             @RequestParam(name = "activo", required = false) Boolean activo,
+            @RequestParam(name = "almacenId", required = false) Long almacenId,
             @PageableDefault(size = 10, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
         String criterio = (term != null && !term.isBlank()) ? term : q;
-        Page<ProductoOptionDTO> page = productoService.buscarOpciones(criterio, activo, pageable);
+        Page<ProductoOptionDTO> page = productoService.buscarOpciones(criterio, activo, almacenId, pageable);
         return ResponseEntity.ok(page);
     }
 

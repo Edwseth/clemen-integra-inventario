@@ -44,6 +44,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -378,7 +379,7 @@ class ProductoServiceImplTest {
         when(productoRepository.buscarPorTexto(anyString(), any(Boolean.class), any(Pageable.class)))
                 .thenReturn(page);
 
-        Page<ProductoOptionDTO> resultado = service.buscarOpciones("  RVC ", true, pageable);
+        Page<ProductoOptionDTO> resultado = service.buscarOpciones("  RVC ", true, null, pageable);
 
         assertThat(resultado.getTotalElements()).isEqualTo(1);
         ArgumentCaptor<String> termCaptor = ArgumentCaptor.forClass(String.class);
@@ -395,10 +396,29 @@ class ProductoServiceImplTest {
         when(productoRepository.buscarPorTexto(null, null, pageable))
                 .thenReturn(Page.empty(pageable));
 
-        Page<ProductoOptionDTO> resultado = service.buscarOpciones(null, null, pageable);
+        Page<ProductoOptionDTO> resultado = service.buscarOpciones(null, null, null, pageable);
 
         assertThat(resultado).isEmpty();
         verify(productoRepository).buscarPorTexto(null, null, pageable);
+    }
+
+    @Test
+    @DisplayName("buscarOpciones con almacenId usa búsqueda por lotes de almacén")
+    void buscarOpciones_conAlmacenIdUsaBusquedaParaConteo() {
+        Pageable pageable = PageRequest.of(0, 5, Sort.by("nombre"));
+        Producto producto = new Producto();
+        Page<Producto> page = new PageImpl<>(List.of(producto), pageable, 1);
+        when(productoRepository.buscarParaConteo(anyString(), anyLong(), any(Pageable.class)))
+                .thenReturn(page);
+
+        Page<ProductoOptionDTO> resultado = service.buscarOpciones("  Lote ", null, 4L, pageable);
+
+        assertThat(resultado.getTotalElements()).isEqualTo(1);
+        ArgumentCaptor<String> termCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Long> almacenCaptor = ArgumentCaptor.forClass(Long.class);
+        verify(productoRepository).buscarParaConteo(termCaptor.capture(), almacenCaptor.capture(), any(Pageable.class));
+        assertThat(termCaptor.getValue()).isEqualTo("Lote");
+        assertThat(almacenCaptor.getValue()).isEqualTo(4L);
     }
 
     private static Stream<Arguments> banderasCalidad() {
