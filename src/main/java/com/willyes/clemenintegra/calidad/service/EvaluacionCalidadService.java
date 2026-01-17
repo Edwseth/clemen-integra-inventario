@@ -20,8 +20,9 @@ public interface EvaluacionCalidadService {
     com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadDetalleDTO obtenerDetalle(Long id);
     java.util.List<EvaluacionCalidadResponseDTO> listarPorLote(Long loteId);
     Page<ConsolidadoPorLoteDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio,
-                                                                          LocalDate fechaFin,
-                                                                          Pageable pageable);
+                                                                LocalDate fechaFin,
+                                                                EstadoLote estadoLote,
+                                                                Pageable pageable);
     void eliminar(Long id);
 
     byte[] generarReporteEvaluacionesExcel(LocalDate fechaInicio, LocalDate fechaFin, EstadoLote estado);

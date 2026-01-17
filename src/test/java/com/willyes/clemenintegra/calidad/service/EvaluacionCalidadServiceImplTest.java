@@ -218,7 +218,7 @@ class EvaluacionCalidadServiceImplTest {
                                 .build()))
                 .build();
 
-        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any()))
+        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(lote)));
         when(repository.findByLoteProductoIdInWithRelacion(List.of(lote.getId())))
                 .thenReturn(List.of(evalFisico, evalQuimicoMicro));
@@ -229,7 +229,7 @@ class EvaluacionCalidadServiceImplTest {
                         .build()));
 
         var consolidados = service.obtenerEvaluacionesConsolidadas(evalFisico.getFechaEvaluacion().toLocalDate(),
-                evalFisico.getFechaEvaluacion().toLocalDate(), PageRequest.of(0, 10));
+                evalFisico.getFechaEvaluacion().toLocalDate(), null, PageRequest.of(0, 10));
 
         assertThat(consolidados).hasSize(1);
         ConsolidadoPorLoteDTO dto = consolidados.getContent().get(0);
@@ -261,7 +261,7 @@ class EvaluacionCalidadServiceImplTest {
                 .fechaEvaluacion(LocalDateTime.now())
                 .build();
 
-        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any()))
+        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(loteSoloMicro)));
         when(repository.findByLoteProductoIdInWithRelacion(List.of(loteSoloMicro.getId())))
                 .thenReturn(List.of(evalMicro));
@@ -269,7 +269,7 @@ class EvaluacionCalidadServiceImplTest {
                 .thenReturn(List.of());
 
         var consolidados = service.obtenerEvaluacionesConsolidadas(evalMicro.getFechaEvaluacion().toLocalDate(),
-                evalMicro.getFechaEvaluacion().toLocalDate(), PageRequest.of(0, 10));
+                evalMicro.getFechaEvaluacion().toLocalDate(), null, PageRequest.of(0, 10));
 
         assertThat(consolidados).hasSize(1);
         ConsolidadoPorLoteDTO dto = consolidados.getContent().get(0);
@@ -297,13 +297,13 @@ class EvaluacionCalidadServiceImplTest {
                 .fechaEvaluacion(LocalDateTime.now())
                 .build();
 
-        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any()))
+        when(loteRepository.findConsolidadoCalidad(any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(loteSinMicro)));
         when(repository.findByLoteProductoIdInWithRelacion(List.of(loteSinMicro.getId())))
                 .thenReturn(List.of(evalFisico));
 
         var consolidados = service.obtenerEvaluacionesConsolidadas(evalFisico.getFechaEvaluacion().toLocalDate(),
-                evalFisico.getFechaEvaluacion().toLocalDate(), PageRequest.of(0, 10));
+                evalFisico.getFechaEvaluacion().toLocalDate(), null, PageRequest.of(0, 10));
 
         assertThat(consolidados).hasSize(1);
         ConsolidadoPorLoteDTO dto = consolidados.getContent().get(0);

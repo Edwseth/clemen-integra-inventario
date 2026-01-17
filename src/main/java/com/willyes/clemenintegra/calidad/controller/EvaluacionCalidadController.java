@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.calidad.dto.PlantillaAnalisisMicroDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.ResultadoAnalisisMicroResponseDTO;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.calidad.service.ResultadoAnalisisMicroService;
 import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
@@ -49,8 +50,11 @@ public class EvaluacionCalidadController {
     public ResponseEntity<Page<ConsolidadoPorLoteDTO>> getEvaluacionesConsolidadas(
             @RequestParam("fechaInicio") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam("fechaFin") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) EstadoLote estadoLote,
+            @RequestParam(required = false, name = "estado") EstadoLote estadoAlias,
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(service.obtenerEvaluacionesConsolidadas(fechaInicio, fechaFin, pageable));
+        EstadoLote filtro = estadoLote != null ? estadoLote : estadoAlias;
+        return ResponseEntity.ok(service.obtenerEvaluacionesConsolidadas(fechaInicio, fechaFin, filtro, pageable));
     }
 
     @GetMapping

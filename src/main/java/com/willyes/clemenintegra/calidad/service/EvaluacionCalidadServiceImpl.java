@@ -275,6 +275,7 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     @Override
     public Page<ConsolidadoPorLoteDTO> obtenerEvaluacionesConsolidadas(LocalDate fechaInicio,
                                                                        LocalDate fechaFin,
+                                                                       EstadoLote estadoLote,
                                                                        Pageable pageable) {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(LocalTime.MAX);
@@ -288,7 +289,12 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 com.willyes.clemenintegra.inventario.model.enums.EstadoLote.LIBERADO
         );
 
-        org.springframework.data.domain.Page<LoteProducto> lotes = loteRepository.findConsolidadoCalidad(inicio, fin, estados, effective);
+        org.springframework.data.domain.Page<LoteProducto> lotes = loteRepository.findConsolidadoCalidad(
+                inicio,
+                fin,
+                estados,
+                estadoLote,
+                effective);
         if (lotes.isEmpty()) {
             return org.springframework.data.domain.Page.empty(effective);
         }

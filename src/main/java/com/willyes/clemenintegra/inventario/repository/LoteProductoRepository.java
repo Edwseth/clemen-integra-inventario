@@ -149,11 +149,13 @@ WHERE lp.codigoLote = :codigoLote
          FROM LoteProducto lp
         WHERE lp.fechaFabricacion BETWEEN :inicio AND :fin
           AND lp.estado IN :estados
+          AND (:estadoLote IS NULL OR lp.estado = :estadoLote)
     """)
     org.springframework.data.domain.Page<LoteProducto> findConsolidadoCalidad(
             @Param("inicio") LocalDateTime inicio,
             @Param("fin") LocalDateTime fin,
             @Param("estados") Collection<EstadoLote> estados,
+            @Param("estadoLote") EstadoLote estadoLote,
             org.springframework.data.domain.Pageable pageable);
 
     @EntityGraph(attributePaths = {
