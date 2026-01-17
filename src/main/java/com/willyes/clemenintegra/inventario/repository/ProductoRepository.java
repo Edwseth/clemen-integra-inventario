@@ -57,6 +57,20 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     """)
     Page<Producto> buscarPorTexto(@Param("q") String q, @Param("activo") Boolean activo, Pageable pageable);
 
+    @Query("""
+    select distinct p
+    from Producto p
+    join LoteProducto l on l.producto = p
+    where l.almacen.id = :almacenId
+      and (
+            :q is null or :q = ''
+         or lower(p.nombre) like lower(concat('%', :q, '%'))
+         or lower(p.codigoSku) like lower(concat('%', :q, '%'))
+         or lower(concat(p.nombre, ' (', p.codigoSku, ')')) like lower(concat('%', :q, '%'))
+      )
+    """)
+    Page<Producto> buscarParaConteo(@Param("q") String q, @Param("almacenId") Long almacenId, Pageable pageable);
+
     /**
      * Busca insumos (MP, ME, suministros y semielaborados) por nombre.
      */

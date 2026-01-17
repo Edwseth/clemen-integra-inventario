@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -197,7 +198,8 @@ class ProductoControllerSmokeTest {
                 .build();
         Pageable pageable = PageRequest.of(0, 10);
         Page<ProductoOptionDTO> page = new PageImpl<>(List.of(option), pageable, 1);
-        when(productoService.buscarOpciones(anyString(), any(Boolean.class), any(Pageable.class))).thenReturn(page);
+        when(productoService.buscarOpciones(anyString(), any(Boolean.class), any(), any(Pageable.class)))
+                .thenReturn(page);
 
         mockMvc.perform(get("/api/productos/buscar")
                         .param("term", "RVC")
@@ -210,7 +212,35 @@ class ProductoControllerSmokeTest {
                 .andExpect(jsonPath("$.content[0].sku").value("RVC001"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(productoService).buscarOpciones(eq("RVC"), eq(true), any(Pageable.class));
+        verify(productoService).buscarOpciones(eq("RVC"), eq(true), eq(null), any(Pageable.class));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @DisplayName("GET /api/productos/buscar envía almacenId al servicio cuando se proporciona")
+    void buscarProductos_conAlmacenId() throws Exception {
+        ProductoOptionDTO option = ProductoOptionDTO.builder()
+                .id(7L)
+                .nombre("Producto Bodega")
+                .sku("BOD001")
+                .build();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<ProductoOptionDTO> page = new PageImpl<>(List.of(option), pageable, 1);
+        when(productoService.buscarOpciones(anyString(), any(), anyLong(), any(Pageable.class)))
+                .thenReturn(page);
+
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("q", "BOD")
+                        .param("almacenId", "8")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content[0].id").value(7))
+                .andExpect(jsonPath("$.content[0].sku").value("BOD001"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        verify(productoService).buscarOpciones(eq("BOD"), eq(null), eq(8L), any(Pageable.class));
     }
 
     @Test
