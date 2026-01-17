@@ -399,7 +399,7 @@ class ConteoCiclicoServiceTest {
     }
 
     @Test
-    void listarLotesIncluyeEstadosNoOperables() {
+    void listarLotesParaConteoUsaEstadosContables() {
         ConteoCiclico conteo = ConteoCiclico.builder()
                 .id(2L)
                 .almacen(new Almacen(7))
@@ -407,19 +407,19 @@ class ConteoCiclicoServiceTest {
         Producto producto = new Producto();
         producto.setId(3);
 
-        LoteProducto loteRetenido = LoteProducto.builder()
+        LoteProducto loteDisponible = LoteProducto.builder()
                 .id(15L)
                 .producto(producto)
                 .almacen(conteo.getAlmacen())
-                .codigoLote("RET-001")
-                .estado(EstadoLote.RETENIDO)
+                .codigoLote("DIS-001")
+                .estado(EstadoLote.DISPONIBLE)
                 .stockLote(BigDecimal.ZERO)
                 .build();
 
         when(conteoCiclicoRepository.findById(2L)).thenReturn(Optional.of(conteo));
         when(productoRepository.findById(3L)).thenReturn(Optional.of(producto));
         when(loteProductoRepository.buscarParaConteo(eq(3L), eq(7), isNull(), isNull(), anyCollection()))
-                .thenReturn(List.of(loteRetenido));
+                .thenReturn(List.of(loteDisponible));
 
         ArgumentCaptor<Collection<EstadoLote>> estadosCaptor = ArgumentCaptor.forClass(Collection.class);
 
@@ -430,7 +430,8 @@ class ConteoCiclicoServiceTest {
         assertThat(respuesta.getFirst().getId()).isEqualTo(15L);
 
         verify(loteProductoRepository).buscarParaConteo(eq(3L), eq(7), isNull(), isNull(), estadosCaptor.capture());
-        assertThat(estadosCaptor.getValue()).containsExactlyInAnyOrder(EstadoLote.values());
+        assertThat(estadosCaptor.getValue())
+                .containsExactlyInAnyOrder(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
     }
 
     @Test
