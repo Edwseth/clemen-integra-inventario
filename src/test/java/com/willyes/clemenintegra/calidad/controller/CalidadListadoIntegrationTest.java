@@ -247,6 +247,40 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void listarEvaluacionesConsolidadasFiltraPorEstadoLote() throws Exception {
+        loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote("LP-CAL-LIB")
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .stockLote(BigDecimal.TEN)
+                .estado(EstadoLote.LIBERADO)
+                .producto(loteProducto.getProducto())
+                .almacen(loteProducto.getAlmacen())
+                .usuarioLiberador(usuario)
+                .build());
+
+        LocalDate hoy = LocalDate.now();
+        mockMvc.perform(get("/api/calidad/evaluaciones/consolidadas")
+                        .param("fechaInicio", hoy.minusDays(2).toString())
+                        .param("fechaFin", hoy.plusDays(1).toString())
+                        .param("estadoLote", "EN_CUARENTENA")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.estadoLote == 'LIBERADO')]").isEmpty())
+                .andExpect(jsonPath("$.content[?(@.estadoLote == 'EN_CUARENTENA')]").isNotEmpty());
+
+        mockMvc.perform(get("/api/calidad/evaluaciones/consolidadas")
+                        .param("fechaInicio", hoy.minusDays(2).toString())
+                        .param("fechaFin", hoy.plusDays(1).toString())
+                        .param("estado", "EN_CUARENTENA")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.estadoLote == 'LIBERADO')]").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
     void listarNoConformidadesIncluyeNombreUsuario() throws Exception {
         mockMvc.perform(get("/api/calidad/no-conformidades")
                         .param("page", "0")
