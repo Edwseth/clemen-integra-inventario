@@ -22,6 +22,7 @@ import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
@@ -616,24 +617,12 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
     }
 
     @Override
-    public byte[] generarReporteEvaluacionesExcel(LocalDate fechaInicio, LocalDate fechaFin, ResultadoEvaluacion resultado) {
+    @Transactional(readOnly = true)
+    public byte[] generarReporteEvaluacionesExcel(LocalDate fechaInicio, LocalDate fechaFin, EstadoLote estado) {
         LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
         LocalDateTime fin = fechaFin != null ? fechaFin.atTime(LocalTime.MAX) : null;
 
-        java.util.List<EvaluacionCalidad> evaluaciones = repository.findAllWithRelations();
-
-        java.util.stream.Stream<EvaluacionCalidad> stream = evaluaciones.stream();
-        if (inicio != null) {
-            stream = stream.filter(e -> e.getFechaEvaluacion() != null && !e.getFechaEvaluacion().isBefore(inicio));
-        }
-        if (fin != null) {
-            stream = stream.filter(e -> e.getFechaEvaluacion() != null && !e.getFechaEvaluacion().isAfter(fin));
-        }
-        if (resultado != null) {
-            stream = stream.filter(e -> e.getResultado() == resultado);
-        }
-
-        java.util.List<EvaluacionCalidad> filtradas = stream.toList();
+        java.util.List<EvaluacionCalidad> filtradas = repository.findAllForExcel(inicio, fin, estado);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Evaluaciones Calidad");
