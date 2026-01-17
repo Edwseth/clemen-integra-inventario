@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.service;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadRequestDTO;
 import com.willyes.clemenintegra.calidad.dto.EvaluacionCalidadResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.ConsolidadoPorLoteDTO;
+import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
