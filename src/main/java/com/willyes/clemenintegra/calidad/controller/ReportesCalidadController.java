@@ -1,7 +1,7 @@
 package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.AuditoriaLoteResponseDTO;
-import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLoteService;
 import com.willyes.clemenintegra.calidad.service.CarpetaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
@@ -52,8 +52,8 @@ public class ReportesCalidadController {
     // Reporte: Excel consolidado de evaluaciones de calidad.
     public ResponseEntity<byte[]> exportarEvaluacionesExcel(@RequestParam(required = false) LocalDate fechaInicio,
                                                             @RequestParam(required = false) LocalDate fechaFin,
-                                                            @RequestParam(required = false) ResultadoEvaluacion resultado) {
-        byte[] excel = evaluacionCalidadService.generarReporteEvaluacionesExcel(fechaInicio, fechaFin, resultado);
+                                                            @RequestParam(required = false) EstadoLote estado) {
+        byte[] excel = evaluacionCalidadService.generarReporteEvaluacionesExcel(fechaInicio, fechaFin, estado);
         String nombreArchivo = "reporte-evaluaciones-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")) + ".xlsx";
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))

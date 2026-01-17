@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.repository;
 import com.willyes.clemenintegra.calidad.model.EvaluacionCalidad;
 import com.willyes.clemenintegra.calidad.model.enums.ResultadoEvaluacion;
 import com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -27,6 +28,19 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
     @EntityGraph(attributePaths = {"loteProducto.producto", "usuarioEvaluador"})
     @Query("SELECT e FROM EvaluacionCalidad e")
     java.util.List<EvaluacionCalidad> findAllWithRelations();
+
+    @Query("SELECT DISTINCT e FROM EvaluacionCalidad e " +
+            "LEFT JOIN FETCH e.archivosAdjuntos " +
+            "JOIN FETCH e.usuarioEvaluador " +
+            "JOIN FETCH e.loteProducto l " +
+            "JOIN FETCH l.producto p " +
+            "WHERE (:inicio IS NULL OR e.fechaEvaluacion >= :inicio) " +
+            "AND (:fin IS NULL OR e.fechaEvaluacion <= :fin) " +
+            "AND (:estado IS NULL OR l.estado = :estado)")
+    java.util.List<EvaluacionCalidad> findAllForExcel(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("estado") EstadoLote estado);
 
     @Query("SELECT e FROM EvaluacionCalidad e " +
             "JOIN FETCH e.loteProducto l " +

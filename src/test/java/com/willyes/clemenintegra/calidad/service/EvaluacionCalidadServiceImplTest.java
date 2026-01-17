@@ -400,7 +400,7 @@ class EvaluacionCalidadServiceImplTest {
         eval.setUsuarioEvaluador(evaluador);
         eval.setArchivosAdjuntos(List.of(ArchivoEvaluacion.builder().nombreArchivo("a.pdf").build()));
 
-        when(repository.findAllWithRelations()).thenReturn(List.of(eval));
+        when(repository.findAllForExcel(any(), any(), any())).thenReturn(List.of(eval));
         when(noConformidadService.obtenerActivaPorLoteYEvaluacion(any(), any())).thenReturn(Optional.empty());
 
         byte[] excel = service.generarReporteEvaluacionesExcel(null, null, null);
