@@ -16,6 +16,7 @@ import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -65,11 +66,12 @@ class OrdenProduccionListadoIntegrationTest extends IntegrationTestH2 {
     @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     void listarOrdenesPaginadas_precargaRelaciones() throws Exception {
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
         Usuario usuario = usuarioRepository.save(Usuario.builder()
-                .nombreUsuario("responsable-op")
+                .nombreUsuario("responsable-op-" + uniqueSuffix)
                 .clave("secret")
                 .nombreCompleto("Responsable OP")
-                .correo("responsable-op@example.com")
+                .correo("resp-op-" + uniqueSuffix + "@ex.com")
                 .rol(RolUsuario.ROL_JEFE_PRODUCCION)
                 .activo(true)
                 .bloqueado(false)

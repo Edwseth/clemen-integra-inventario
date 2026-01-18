@@ -465,6 +465,45 @@ class ConteoCiclicoServiceTest {
     }
 
     @Test
+    void listarLotesParaConteoIncluyeCodigoDeUbicacion() {
+        Almacen almacen = new Almacen(4);
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(14L)
+                .almacen(almacen)
+                .build();
+        Producto producto = new Producto();
+        producto.setId(11);
+
+        UbicacionFisica ubicacion = UbicacionFisica.builder()
+                .id(22L)
+                .almacen(almacen)
+                .codigo("U-22")
+                .build();
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(105L)
+                .producto(producto)
+                .almacen(almacen)
+                .ubicacionFisica(ubicacion)
+                .codigoLote("L-105")
+                .estado(EstadoLote.DISPONIBLE)
+                .stockLote(BigDecimal.ONE)
+                .build();
+
+        when(conteoCiclicoRepository.findById(14L)).thenReturn(Optional.of(conteo));
+        when(productoRepository.findById(11L)).thenReturn(Optional.of(producto));
+        when(loteProductoRepository.buscarParaConteo(eq(11L), eq(4), isNull(), isNull(), anyCollection()))
+                .thenReturn(List.of(lote));
+
+        List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
+                .listarLotesParaConteo(14L, 11L, null, null);
+
+        assertThat(respuesta).hasSize(1);
+        assertThat(respuesta.getFirst().getUbicacionFisicaId()).isEqualTo(22L);
+        assertThat(respuesta.getFirst().getUbicacionCodigo()).isEqualTo("U-22");
+    }
+
+    @Test
     void listarLotesParaConteoConTextoAplicaFiltro() {
         ConteoCiclico conteo = ConteoCiclico.builder()
                 .id(13L)

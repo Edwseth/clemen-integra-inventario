@@ -267,7 +267,7 @@ WHERE lp.codigoLote = :codigoLote
     @Query("""
         select lp
         from LoteProducto lp
-        left join lp.ubicacionFisica uf
+        left join fetch lp.ubicacionFisica uf
         where lp.producto.id = :productoId
           and lp.almacen.id = :almacenId
           and lp.estado in :estados
