@@ -312,7 +312,7 @@ class ProductoServiceImplTest {
     @DisplayName("Debe buscar insumos en categorías permitidas y mapear término recortado")
     void buscarInsumosAutocomplete_conTermino_invocaRepositorioConFiltros() {
         Pageable pageable = PageRequest.of(0, 10);
-        InsumoAutocompleteDTO dto = new InsumoAutocompleteDTO(1L, "MP-1", "MP", "Unidad");
+        InsumoAutocompleteDTO dto = new InsumoAutocompleteDTO(1, "MP-1", "MP", "Unidad");
         Page<InsumoAutocompleteDTO> page = new PageImpl<>(List.of(dto), pageable, 1);
         when(productoRepository.buscarInsumosAutocomplete(anyList(), anyString(), any(Pageable.class)))
                 .thenReturn(page);
