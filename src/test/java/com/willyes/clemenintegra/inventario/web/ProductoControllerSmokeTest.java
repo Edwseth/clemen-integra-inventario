@@ -248,7 +248,7 @@ class ProductoControllerSmokeTest {
     @WithMockUser(authorities = "ROL_SUPER_ADMIN")
     @DisplayName("GET /api/productos/insumos/autocomplete devuelve 200 y unidad de medida en DTO")
     void buscarInsumosAutocomplete_deberiaRetornarUnidadMedida() throws Exception {
-        InsumoAutocompleteDTO response = new InsumoAutocompleteDTO(15L, "MP-015", "Insumo 15", "Unidad");
+        InsumoAutocompleteDTO response = new InsumoAutocompleteDTO(15, "MP-015", "Insumo 15", "Unidad");
         Pageable pageable = PageRequest.of(0, 10);
         Page<InsumoAutocompleteDTO> page = new PageImpl<>(List.of(response), pageable, 1);
 

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InsumoAutocompleteDTO {
-    private Long id;
+    private Integer id;
     private String sku;
     private String nombre;
     private String unidad;
