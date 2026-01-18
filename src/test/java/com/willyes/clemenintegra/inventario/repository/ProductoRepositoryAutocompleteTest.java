@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
+import com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
@@ -9,7 +10,6 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import org.hibernate.Hibernate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -88,18 +88,18 @@ class ProductoRepositoryAutocompleteTest {
     }
 
     @Test
-    @DisplayName("buscarInsumosAutocomplete carga unidad de medida con JOIN FETCH")
+    @DisplayName("buscarInsumosAutocomplete retorna campos mínimos para el autocomplete")
     void buscarInsumosAutocomplete_cargaUnidadMedida() {
-        Page<Producto> page = productoRepository.buscarInsumosAutocomplete(
+        Page<InsumoAutocompleteDTO> page = productoRepository.buscarInsumosAutocomplete(
                 List.of(TipoCategoria.MATERIA_PRIMA),
                 "MP",
                 PageRequest.of(0, 5)
         );
 
         assertThat(page.getContent()).hasSize(1);
-        Producto resultado = page.getContent().get(0);
+        InsumoAutocompleteDTO resultado = page.getContent().get(0);
         assertThat(resultado.getId()).isEqualTo(producto.getId());
-        assertThat(Hibernate.isInitialized(resultado.getUnidadMedida())).isTrue();
-        assertThat(resultado.getUnidadMedida().getNombre()).isNotBlank();
+        assertThat(resultado.getSku()).isEqualTo("MP-001");
+        assertThat(resultado.getUnidad()).isEqualTo("Unidad");
     }
 }

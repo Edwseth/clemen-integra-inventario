@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.repository;
 
+import com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
@@ -121,10 +122,14 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     List<StockDisponibleProjection> calcularStockDisponiblePorProductoEnAlmacenes(List<Long> ids, List<Long> almacenes);
 
     @Query(value = """
-    SELECT DISTINCT p
+    SELECT new com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO(
+        p.id,
+        p.codigoSku,
+        p.nombre,
+        um.nombre
+    )
     FROM Producto p
-    JOIN FETCH p.unidadMedida um
-    JOIN FETCH p.categoriaProducto cp
+    JOIN p.unidadMedida um
     WHERE p.categoriaProducto.tipo IN :tipos
       AND p.activo = true
       AND (
@@ -141,7 +146,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
         OR UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:term), '%')
       )
     """)
-    Page<Producto> buscarInsumosAutocomplete(
+    Page<InsumoAutocompleteDTO> buscarInsumosAutocomplete(
             @Param("tipos") Collection<TipoCategoria> tipos,
             @Param("term") String term,
             Pageable pageable

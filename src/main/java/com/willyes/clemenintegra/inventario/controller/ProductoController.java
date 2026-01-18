@@ -122,13 +122,12 @@ public class ProductoController {
 
     @GetMapping("/insumos/autocomplete")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
-    public ResponseEntity<Page<ProductoResponseDTO>> buscarInsumosAutocomplete(
+    public ResponseEntity<Page<InsumoAutocompleteDTO>> buscarInsumosAutocomplete(
             @RequestParam("term") String term,
             Pageable pageable
     ) {
-        Page<Producto> page = productoService.buscarInsumosAutocomplete(term, pageable);
-        Page<ProductoResponseDTO> dtoPage = page.map(productoMapper::toDto);
-        return ResponseEntity.ok(dtoPage);
+        Page<InsumoAutocompleteDTO> page = productoService.buscarInsumosAutocomplete(term, pageable);
+        return ResponseEntity.ok(page);
     }
 
     @GetMapping("/terminados")
