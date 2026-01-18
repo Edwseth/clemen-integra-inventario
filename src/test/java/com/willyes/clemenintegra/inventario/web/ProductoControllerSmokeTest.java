@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.ProductoMapper;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
@@ -241,6 +242,36 @@ class ProductoControllerSmokeTest {
                 .andExpect(jsonPath("$.totalElements").value(1));
 
         verify(productoService).buscarOpciones(eq("BOD"), eq(null), eq(8L), any(Pageable.class));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("GET /api/productos/insumos/autocomplete devuelve 200 y unidad de medida en DTO")
+    void buscarInsumosAutocomplete_deberiaRetornarUnidadMedida() throws Exception {
+        Producto producto = new Producto();
+        ProductoResponseDTO response = ProductoResponseDTO.builder()
+                .id(15L)
+                .sku("MP-015")
+                .nombre("Insumo 15")
+                .unidadMedida(new UnidadMedidaResponseDTO(3L, "Unidad", "U"))
+                .build();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Producto> page = new PageImpl<>(List.of(producto), pageable, 1);
+
+        when(productoService.buscarInsumosAutocomplete(anyString(), any(Pageable.class))).thenReturn(page);
+        when(productoMapper.toDto(any(Producto.class))).thenReturn(response);
+
+        mockMvc.perform(get("/api/productos/insumos/autocomplete")
+                        .param("term", "MP")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content[0].id").value(15))
+                .andExpect(jsonPath("$.content[0].unidadMedida.nombre").value("Unidad"))
+                .andExpect(jsonPath("$.content[0].unidadMedida.simbolo").value("U"));
+
+        verify(productoService).buscarInsumosAutocomplete(eq("MP"), any(Pageable.class));
     }
 
     @Test

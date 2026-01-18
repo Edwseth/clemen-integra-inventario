@@ -120,8 +120,18 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
             """, nativeQuery = true)
     List<StockDisponibleProjection> calcularStockDisponiblePorProductoEnAlmacenes(List<Long> ids, List<Long> almacenes);
 
-    @Query("""
+    @Query(value = """
     SELECT p
+    FROM Producto p
+    JOIN FETCH p.unidadMedida um
+    WHERE p.categoriaProducto.tipo IN :tipos
+      AND p.activo = true
+      AND (
+           UPPER(p.nombre) LIKE CONCAT('%', UPPER(:term), '%')
+        OR UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:term), '%')
+      )
+    """, countQuery = """
+    SELECT COUNT(p)
     FROM Producto p
     WHERE p.categoriaProducto.tipo IN :tipos
       AND p.activo = true
