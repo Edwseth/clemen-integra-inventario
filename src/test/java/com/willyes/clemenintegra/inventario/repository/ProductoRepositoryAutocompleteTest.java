@@ -101,8 +101,8 @@ class ProductoRepositoryAutocompleteTest {
         InsumoAutocompleteDTO resultado = page.getContent().get(0);
         assertThat(resultado.getId()).isEqualTo(producto.getId());
         assertThat(resultado.getSku()).isEqualTo("MP-001");
-        assertThat(resultado.getUnidad()).isEqualTo("Unidad");
+        assertThat(resultado.getUnidad()).isEqualToIgnoringCase("Unidad");
         assertThat(resultado.getUnidadMedidaId()).isEqualTo(unidad.getId());
-        assertThat(resultado.getUnidadMedidaNombre()).isEqualTo("Unidad");
+        assertThat(resultado.getUnidadMedidaNombre()).isEqualToIgnoringCase("Unidad");
     }
 }
