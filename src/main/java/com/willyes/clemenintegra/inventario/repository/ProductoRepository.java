@@ -121,9 +121,10 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     List<StockDisponibleProjection> calcularStockDisponiblePorProductoEnAlmacenes(List<Long> ids, List<Long> almacenes);
 
     @Query(value = """
-    SELECT p
+    SELECT DISTINCT p
     FROM Producto p
     JOIN FETCH p.unidadMedida um
+    JOIN FETCH p.categoriaProducto cp
     WHERE p.categoriaProducto.tipo IN :tipos
       AND p.activo = true
       AND (
