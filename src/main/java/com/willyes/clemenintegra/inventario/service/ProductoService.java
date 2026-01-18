@@ -43,7 +43,7 @@ public interface ProductoService {
 
     List<ProductoResponseDTO> findProductosFabricables();
 
-    Page<Producto> buscarInsumosAutocomplete(String term, Pageable pageable);
+    Page<InsumoAutocompleteDTO> buscarInsumosAutocomplete(String term, Pageable pageable);
 
     Page<Producto> buscarProductosFabricablesAutocomplete(String term, Pageable pageable);
 }

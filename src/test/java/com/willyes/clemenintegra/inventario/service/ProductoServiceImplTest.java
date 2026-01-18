@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoOptionDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
@@ -301,7 +302,7 @@ class ProductoServiceImplTest {
     void buscarInsumosAutocomplete_sinTermino_devuelveVacio() {
         Pageable pageable = PageRequest.of(0, 5);
 
-        Page<Producto> resultado = service.buscarInsumosAutocomplete("   ", pageable);
+        Page<InsumoAutocompleteDTO> resultado = service.buscarInsumosAutocomplete("   ", pageable);
 
         assertThat(resultado).isEmpty();
         verify(productoRepository, never()).buscarInsumosAutocomplete(anyList(), anyString(), any(Pageable.class));
@@ -311,14 +312,14 @@ class ProductoServiceImplTest {
     @DisplayName("Debe buscar insumos en categorías permitidas y mapear término recortado")
     void buscarInsumosAutocomplete_conTermino_invocaRepositorioConFiltros() {
         Pageable pageable = PageRequest.of(0, 10);
-        Producto producto = new Producto();
-        Page<Producto> page = new PageImpl<>(List.of(producto), pageable, 1);
+        InsumoAutocompleteDTO dto = new InsumoAutocompleteDTO(1L, "MP-1", "MP", "Unidad");
+        Page<InsumoAutocompleteDTO> page = new PageImpl<>(List.of(dto), pageable, 1);
         when(productoRepository.buscarInsumosAutocomplete(anyList(), anyString(), any(Pageable.class)))
                 .thenReturn(page);
 
-        Page<Producto> resultado = service.buscarInsumosAutocomplete("  mp ", pageable);
+        Page<InsumoAutocompleteDTO> resultado = service.buscarInsumosAutocomplete("  mp ", pageable);
 
-        assertThat(resultado.getContent()).containsExactly(producto);
+        assertThat(resultado.getContent()).containsExactly(dto);
 
         ArgumentCaptor<List<TipoCategoria>> tiposCaptor = ArgumentCaptor.forClass(List.class);
         ArgumentCaptor<String> termCaptor = ArgumentCaptor.forClass(String.class);
