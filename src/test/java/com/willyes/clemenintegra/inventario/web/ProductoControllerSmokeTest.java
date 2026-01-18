@@ -248,7 +248,7 @@ class ProductoControllerSmokeTest {
     @WithMockUser(authorities = "ROL_SUPER_ADMIN")
     @DisplayName("GET /api/productos/insumos/autocomplete devuelve 200 y unidad de medida en DTO")
     void buscarInsumosAutocomplete_deberiaRetornarUnidadMedida() throws Exception {
-        InsumoAutocompleteDTO response = new InsumoAutocompleteDTO(15, "MP-015", "Insumo 15", "Unidad");
+        InsumoAutocompleteDTO response = new InsumoAutocompleteDTO(15, "MP-015", "Insumo 15", "Unidad", 3L, "Unidad");
         Pageable pageable = PageRequest.of(0, 10);
         Page<InsumoAutocompleteDTO> page = new PageImpl<>(List.of(response), pageable, 1);
 
@@ -261,7 +261,9 @@ class ProductoControllerSmokeTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content[0].id").value(15))
-                .andExpect(jsonPath("$.content[0].unidad").value("Unidad"));
+                .andExpect(jsonPath("$.content[0].unidad").value("Unidad"))
+                .andExpect(jsonPath("$.content[0].unidadMedidaId").value(3))
+                .andExpect(jsonPath("$.content[0].unidadMedidaNombre").value("Unidad"));
 
         verify(productoService).buscarInsumosAutocomplete(eq("MP"), any(Pageable.class));
     }

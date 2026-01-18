@@ -47,6 +47,7 @@ class ProductoRepositoryAutocompleteTest {
     private UsuarioRepository usuarioRepository;
 
     private Producto producto;
+    private UnidadMedida unidad;
 
     @BeforeEach
     void setUp() {
@@ -60,7 +61,7 @@ class ProductoRepositoryAutocompleteTest {
                 .bloqueado(false)
                 .build());
 
-        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
+        unidad = unidadMedidaRepository.save(UnidadMedida.builder()
                 .nombre("Unidad")
                 .simbolo("U")
                 .codigo("U1")
@@ -101,5 +102,7 @@ class ProductoRepositoryAutocompleteTest {
         assertThat(resultado.getId()).isEqualTo(producto.getId());
         assertThat(resultado.getSku()).isEqualTo("MP-001");
         assertThat(resultado.getUnidad()).isEqualTo("Unidad");
+        assertThat(resultado.getUnidadMedidaId()).isEqualTo(unidad.getId());
+        assertThat(resultado.getUnidadMedidaNombre()).isEqualTo("Unidad");
     }
 }

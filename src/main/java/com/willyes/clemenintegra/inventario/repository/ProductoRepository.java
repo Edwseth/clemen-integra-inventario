@@ -126,6 +126,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
         p.id,
         p.codigoSku,
         p.nombre,
+        um.nombre,
+        um.id,
         um.nombre
     )
     FROM Producto p
