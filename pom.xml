@@ -19,7 +19,7 @@
 
   <properties>
     <java.version>21</java.version>
-    <lombok.version>1.18.36</lombok.version>
+    <lombok.version>1.18.40</lombok.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <testcontainers.version>1.19.7</testcontainers.version>
@@ -270,7 +270,9 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.1.2</version>
         <configuration>
+          <argLine>-Dnet.bytebuddy.experimental=true</argLine>
           <properties>
             <excludeTags>${junit.excludeTags}</excludeTags>
           </properties>

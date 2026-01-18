@@ -68,6 +68,7 @@ public class ConteoCiclicoService {
         return mapper.toResponseCompleto(conteo);
     }
 
+    @Transactional(readOnly = true)
     public List<ConteoCiclicoLoteResponseDTO> listarLotesParaConteo(Long conteoId,
                                                                    Long productoId,
                                                                    Long ubicacionFisicaId,
