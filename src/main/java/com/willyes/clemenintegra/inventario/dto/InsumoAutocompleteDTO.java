@@ -12,4 +12,6 @@ public class InsumoAutocompleteDTO {
     private String sku;
     private String nombre;
     private String unidad;
+    private Long unidadMedidaId;
+    private String unidadMedidaNombre;
 }
