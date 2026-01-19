@@ -165,7 +165,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
         OR UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:term), '%')
       )
     """)
-    @EntityGraph(attributePaths = {"unidadMedida"})
+    @EntityGraph(attributePaths = {"unidadMedida", "categoriaProducto"})
     Page<Producto> buscarFabricablesAutocomplete(
             @Param("tipos") Collection<TipoCategoria> tipos,
             @Param("term") String term,
