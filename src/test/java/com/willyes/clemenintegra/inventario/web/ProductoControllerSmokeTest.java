@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.ProductoMapper;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
@@ -186,6 +187,37 @@ class ProductoControllerSmokeTest {
                 .andExpect(jsonPath("$.content[0].sku").value("SKU-010"))
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.totalPages").value(1));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/productos/buscar-fabricables devuelve 200")
+    void buscarFabricables_deberiaRetornar200() throws Exception {
+        Producto producto = Producto.builder()
+                .id(1)
+                .codigoSku("SKU-FAB")
+                .nombre("Producto Fabricable")
+                .build();
+        Pageable pageable = PageRequest.of(0, 15);
+        Page<Producto> page = new PageImpl<>(List.of(producto), pageable, 1);
+        ProductoResponseDTO responseDTO = ProductoResponseDTO.builder()
+                .id(1L)
+                .sku("SKU-FAB")
+                .nombre("Producto Fabricable")
+                .build();
+
+        when(productoService.buscarProductosFabricablesAutocomplete(eq("re"), any(Pageable.class)))
+                .thenReturn(page);
+        when(productoMapper.toDto(any(Producto.class))).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/api/productos/buscar-fabricables")
+                        .param("term", "re")
+                        .param("page", "0")
+                        .param("size", "15"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].sku").value("SKU-FAB"));
     }
 
     @Test
