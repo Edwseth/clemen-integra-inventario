@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -164,6 +165,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
         OR UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:term), '%')
       )
     """)
+    @EntityGraph(attributePaths = {"unidadMedida"})
     Page<Producto> buscarFabricablesAutocomplete(
             @Param("tipos") Collection<TipoCategoria> tipos,
             @Param("term") String term,
