@@ -56,6 +56,7 @@ public interface BomMapper {
     @Mapping(target = "formulaNombre", source = "formula.producto", qualifiedByName = "mapProductoNombre")
     @Mapping(target = "formulaVersion", source = "formula.version")
     @Mapping(target = "formulaEstado", source = "formula.estado", qualifiedByName = "mapEstadoFormula")
+    @Mapping(target = "insumoId", source = "insumo", qualifiedByName = "mapProductoId")
     @Mapping(target = "insumoNombre", source = "insumo", qualifiedByName = "mapProductoNombre")
     @Mapping(target = "unidadMedidaId", source = "unidadMedida", qualifiedByName = "mapUnidadId")
     @Mapping(target = "unidad", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
