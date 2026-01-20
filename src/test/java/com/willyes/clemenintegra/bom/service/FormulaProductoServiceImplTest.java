@@ -4,7 +4,7 @@ import com.willyes.clemenintegra.bom.dto.DetalleFormulaProduccionDTO;
 import com.willyes.clemenintegra.bom.dto.DetalleFormulaResponse;
 import com.willyes.clemenintegra.bom.dto.FormulaActivaProduccionDTO;
 import com.willyes.clemenintegra.bom.dto.FormulaProductoResponse;
-import com.willyes.clemenintegra.bom.dto.FormulaProductoResumenDTO;
+import com.willyes.clemenintegra.bom.dto.FormulaProductoSelectorDTO;
 import com.willyes.clemenintegra.bom.dto.LoteResumenDTO;
 import com.willyes.clemenintegra.bom.mapper.BomMapper;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
@@ -31,10 +31,12 @@ import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -175,106 +177,75 @@ class FormulaProductoServiceImplTest {
     @Test
     @DisplayName("listarResumen devuelve los campos necesarios sin detalles ni documentos")
     void listarResumenDevuelveCamposClaves() {
-        Producto producto = new Producto();
-        producto.setId(1);
-        producto.setCodigoSku("PR-001");
-        producto.setNombre("Producto Test");
+        FormulaProductoSelectorDTO selector = new FormulaProductoSelectorDTO(
+                10L,
+                "v1",
+                EstadoFormula.BORRADOR,
+                1L,
+                "PR-001",
+                "Producto Test");
 
-        Usuario responsable = new Usuario();
-        responsable.setNombreCompleto("Responsable Calidad");
+        when(formulaRepository.findAllForSelector(isNull(), isNull(), any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(selector)));
 
-        FormulaProducto formula = new FormulaProducto();
-        formula.setId(10L);
-        formula.setProducto(producto);
-        formula.setVersion("v1");
-        formula.setEstado(EstadoFormula.BORRADOR);
-        formula.setActivo(true);
-        formula.setFechaActualizacion(LocalDateTime.of(2024, 1, 15, 10, 30));
-        formula.setActualizadoPor(responsable);
+        Page<FormulaProductoSelectorDTO> resultado = service.listarResumen(null, null, PageRequest.of(0, 10));
 
-        when(formulaRepository.findAllForResumen(null, null)).thenReturn(List.of(formula));
-
-        List<FormulaProductoResumenDTO> resultado = service.listarResumen(null, null);
-
-        assertThat(resultado).hasSize(1);
-        FormulaProductoResumenDTO dto = resultado.get(0);
-        assertThat(dto.id).isEqualTo(10L);
+        assertThat(resultado.getContent()).hasSize(1);
+        FormulaProductoSelectorDTO dto = resultado.getContent().get(0);
+        assertThat(dto.formulaId).isEqualTo(10L);
         assertThat(dto.productoId).isEqualTo(1L);
-        assertThat(dto.codigoProducto).isEqualTo("PR-001");
-        assertThat(dto.nombreProducto).isEqualTo("Producto Test");
+        assertThat(dto.productoSku).isEqualTo("PR-001");
+        assertThat(dto.productoNombre).isEqualTo("Producto Test");
         assertThat(dto.version).isEqualTo("v1");
         assertThat(dto.estado).isEqualTo("BORRADOR");
-        assertThat(dto.activo).isTrue();
-        assertThat(dto.fechaActualizacion).isEqualTo(LocalDateTime.of(2024, 1, 15, 10, 30));
-        assertThat(dto.usuarioResponsable).isEqualTo("Responsable Calidad");
-
-        assertThat(Arrays.stream(FormulaProductoResumenDTO.class.getDeclaredFields())
-                .map(java.lang.reflect.Field::getName))
-                .doesNotContain("detalles", "documentos");
     }
 
     @Test
     @DisplayName("listarResumen filtra por estado cuando se proporciona")
     void listarResumenFiltraPorEstado() {
-        Producto producto = new Producto();
-        producto.setId(2);
-        producto.setCodigoSku("PR-002");
-        producto.setNombre("Producto Borrador");
+        FormulaProductoSelectorDTO selector = new FormulaProductoSelectorDTO(
+                20L,
+                "v3",
+                EstadoFormula.BORRADOR,
+                2L,
+                "PR-002",
+                "Producto Borrador");
 
-        Usuario responsable = new Usuario();
-        responsable.setNombreCompleto("Responsable Borrador");
+        when(formulaRepository.findAllForSelector(eq(EstadoFormula.BORRADOR), isNull(), any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(selector)));
 
-        FormulaProducto formula = new FormulaProducto();
-        formula.setId(20L);
-        formula.setProducto(producto);
-        formula.setVersion("v3");
-        formula.setEstado(EstadoFormula.BORRADOR);
-        formula.setActivo(false);
-        formula.setFechaActualizacion(LocalDateTime.of(2024, 2, 20, 9, 15));
-        formula.setActualizadoPor(responsable);
+        Page<FormulaProductoSelectorDTO> resultado = service.listarResumen(EstadoFormula.BORRADOR, null, PageRequest.of(0, 5));
 
-        when(formulaRepository.findAllForResumen(EstadoFormula.BORRADOR, null)).thenReturn(List.of(formula));
-
-        List<FormulaProductoResumenDTO> resultado = service.listarResumen(EstadoFormula.BORRADOR, null);
-
-        assertThat(resultado).hasSize(1);
-        FormulaProductoResumenDTO dto = resultado.get(0);
+        assertThat(resultado.getContent()).hasSize(1);
+        FormulaProductoSelectorDTO dto = resultado.getContent().get(0);
         assertThat(dto.estado).isEqualTo(EstadoFormula.BORRADOR.name());
-        assertThat(dto.codigoProducto).isEqualTo("PR-002");
-        verify(formulaRepository).findAllForResumen(EstadoFormula.BORRADOR, null);
+        assertThat(dto.productoSku).isEqualTo("PR-002");
+        verify(formulaRepository).findAllForSelector(eq(EstadoFormula.BORRADOR), isNull(), any(PageRequest.class));
     }
 
     @Test
     @DisplayName("listarResumen normaliza el filtro de producto antes de consultar el repositorio")
     void listarResumenFiltraPorTextoProducto() {
-        Producto producto = new Producto();
-        producto.setId(3);
-        producto.setCodigoSku("PT-0311");
-        producto.setNombre("CVC-COMPRIMIDO VITAMINA C 500 MG");
+        FormulaProductoSelectorDTO selector = new FormulaProductoSelectorDTO(
+                30L,
+                "v5",
+                EstadoFormula.APROBADA,
+                3L,
+                "PT-0311",
+                "CVC-COMPRIMIDO VITAMINA C 500 MG");
 
-        Usuario responsable = new Usuario();
-        responsable.setNombreCompleto("Responsable Texto");
+        when(formulaRepository.findAllForSelector(any(), any(), any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(selector)));
 
-        FormulaProducto formula = new FormulaProducto();
-        formula.setId(30L);
-        formula.setProducto(producto);
-        formula.setVersion("v5");
-        formula.setEstado(EstadoFormula.APROBADA);
-        formula.setActivo(true);
-        formula.setFechaActualizacion(LocalDateTime.of(2024, 3, 10, 8, 45));
-        formula.setActualizadoPor(responsable);
+        Page<FormulaProductoSelectorDTO> resultado = service.listarResumen(null, "  vitamina c   ", PageRequest.of(0, 10));
 
-        when(formulaRepository.findAllForResumen(any(), any())).thenReturn(List.of(formula));
-
-        List<FormulaProductoResumenDTO> resultado = service.listarResumen(null, "  vitamina c   ");
-
-        assertThat(resultado).hasSize(1);
-        FormulaProductoResumenDTO dto = resultado.get(0);
-        assertThat(dto.codigoProducto).isEqualTo("PT-0311");
-        assertThat(dto.nombreProducto).contains("VITAMINA C");
+        assertThat(resultado.getContent()).hasSize(1);
+        FormulaProductoSelectorDTO dto = resultado.getContent().get(0);
+        assertThat(dto.productoSku).isEqualTo("PT-0311");
+        assertThat(dto.productoNombre).contains("VITAMINA C");
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(formulaRepository).findAllForResumen(isNull(), captor.capture());
+        verify(formulaRepository).findAllForSelector(isNull(), captor.capture(), any(PageRequest.class));
         assertThat(captor.getValue()).isEqualTo("vitamina c");
     }
 
@@ -581,4 +552,3 @@ class FormulaProductoServiceImplTest {
                 .hasFieldOrPropertyWithValue("code", ApiErrorCode.RECURSO_NO_ENCONTRADO);
     }
 }
-
