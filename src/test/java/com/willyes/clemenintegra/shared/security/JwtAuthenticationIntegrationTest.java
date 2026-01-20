@@ -1,70 +1,97 @@
 package com.willyes.clemenintegra.shared.security;
 
-import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
-import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
-import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
-import org.junit.jupiter.api.BeforeEach;
+import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
+import com.willyes.clemenintegra.shared.security.exception.SesionExpiradaAuthenticationException;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.mail.javamail.JavaMailSender;
-
-import java.time.LocalDateTime;
-import com.willyes.clemenintegra.support.IntegrationTestMySqlContainer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-class JwtAuthenticationIntegrationTest extends IntegrationTestMySqlContainer {
+@WebMvcTest(controllers = JwtAuthenticationIntegrationTest.ProtectedController.class)
+@Import({JwtAuthenticationIntegrationTest.TestSecurityConfig.class, JwtAuthenticationIntegrationTest.ProtectedController.class})
+class JwtAuthenticationIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private JwtTokenService jwtTokenService;
-
-    @MockBean
-    private InventoryCatalogResolver inventoryCatalogResolver;
-
-    @MockBean
-    private JavaMailSender javaMailSender;
-
-    @BeforeEach
-    void setUp() {
-        usuarioRepository.deleteAll();
+    @Test
+    void responde401ConSesionExpiradaCuandoTokenEsInactivo() throws Exception {
+        mockMvc.perform(get("/api/test")
+                        .header("Authorization", "Bearer inactive-token")
+                        .header(RequestIdFilter.HEADER_NAME, "req-123"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("SESION_EXPIRADA"))
+                .andExpect(jsonPath("$.message")
+                        .value("Tu sesión expiró por inactividad. Inicia sesión nuevamente."))
+                .andExpect(jsonPath("$.requestId").value("req-123"));
     }
 
-    @Test
-    void requestProtegidaConTokenValidoDevuelveOk() throws Exception {
-        Usuario usuario = Usuario.builder()
-                .nombreUsuario("jefealmacen")
-                .clave("encoded") // no se usa en el flujo JWT
-                .nombreCompleto("Jefe Almacen")
-                .correo("jefe@example.com")
-                .rol(RolUsuario.ROL_JEFE_ALMACENES)
-                .activo(true)
-                .bloqueado(false)
-                .sessionVersion(1L)
-                .ultimaActividad(LocalDateTime.now())
-                .build();
+    @RestController
+    static class ProtectedController {
+        @GetMapping("/api/test")
+        public String test() {
+            return "ok";
+        }
+    }
 
-        usuario = usuarioRepository.saveAndFlush(usuario);
-        String token = jwtTokenService.generarToken(usuario);
+    @Configuration
+    static class TestSecurityConfig {
 
-        mockMvc.perform(get("/api/unidades")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
+        @Bean
+        SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                JwtAuthenticationFilter jwtAuthenticationFilter,
+                                                RequestIdFilter requestIdFilter,
+                                                ApiAuthenticationEntryPoint entryPoint) throws Exception {
+            http
+                    .csrf(csrf -> csrf.disable())
+                    .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                    .authorizeHttpRequests(auth -> auth
+                            .requestMatchers("/api/test").authenticated()
+                            .anyRequest().permitAll()
+                    )
+                    .exceptionHandling(ex -> ex.authenticationEntryPoint(entryPoint));
+
+            http.addFilterBefore(requestIdFilter, UsernamePasswordAuthenticationFilter.class);
+            http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            return http.build();
+        }
+
+        @Bean
+        JwtAuthenticationFilter jwtAuthenticationFilter(ObjectProvider<AuthenticationManager> authenticationManagerProvider,
+                                                        ApiAuthenticationEntryPoint entryPoint) {
+            return new JwtAuthenticationFilter(authenticationManagerProvider, entryPoint);
+        }
+
+        @Bean
+        ApiAuthenticationEntryPoint apiAuthenticationEntryPoint(com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+            return new ApiAuthenticationEntryPoint(objectMapper);
+        }
+
+        @Bean
+        AuthenticationManager authenticationManager() {
+            return authentication -> {
+                throw new SesionExpiradaAuthenticationException("La sesión ha expirado por inactividad.");
+            };
+        }
+
+        @Bean
+        RequestIdFilter requestIdFilter() {
+            return new RequestIdFilter();
+        }
     }
 }

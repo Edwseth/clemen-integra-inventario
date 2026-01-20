@@ -18,4 +18,5 @@ public class ErrorResponseDTO {
     private String code;
     private String message;
     private Object details;
+    private String requestId;
 }

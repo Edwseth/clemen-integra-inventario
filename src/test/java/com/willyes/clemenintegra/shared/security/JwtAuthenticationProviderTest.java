@@ -3,8 +3,8 @@ package com.willyes.clemenintegra.shared.security;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
-import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
+import com.willyes.clemenintegra.shared.security.exception.SesionExpiradaAuthenticationException;
+import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaAuthenticationException;
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
 import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
 import io.jsonwebtoken.Claims;
@@ -61,7 +61,7 @@ class JwtAuthenticationProviderTest {
         when(jwtTokenService.getSessionVersion(claims)).thenReturn(1L);
         when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
 
-        assertThrows(SesionInvalidadaException.class,
+        assertThrows(SesionInvalidadaAuthenticationException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
         verify(usuarioRepository, never()).saveAndFlush(any());
     }
@@ -89,7 +89,7 @@ class JwtAuthenticationProviderTest {
         when(jwtTokenService.getSessionVersion(claims)).thenReturn(1L);
         when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
 
-        assertThrows(SesionInactivaException.class,
+        assertThrows(SesionExpiradaAuthenticationException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
         verify(usuarioRepository, never()).saveAndFlush(any());
     }
@@ -210,7 +210,7 @@ class JwtAuthenticationProviderTest {
         when(jwtTokenService.getSessionVersion(claims)).thenReturn(0L);
         when(usuarioRepository.findByNombreUsuario("user")).thenReturn(java.util.Optional.of(usuario));
 
-        assertThrows(SesionInvalidadaException.class,
+        assertThrows(SesionInvalidadaAuthenticationException.class,
                 () -> provider.authenticate(new JwtAuthenticationToken("token")));
         verify(usuarioRepository, never()).saveAndFlush(any());
     }

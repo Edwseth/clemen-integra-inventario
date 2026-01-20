@@ -4,6 +4,8 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
 import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
+import com.willyes.clemenintegra.shared.security.exception.SesionExpiradaAuthenticationException;
+import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaAuthenticationException;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
 import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
@@ -57,7 +59,11 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
             return authenticated;
         } catch (ExpiredJwtException e) {
             log.warn("Token expirado para solicitud de {}", requestUsername(token));
-            throw new BadCredentialsException("Token expirado", e);
+            throw new SesionExpiradaAuthenticationException("Token expirado", e);
+        } catch (SesionInactivaException e) {
+            throw new SesionExpiradaAuthenticationException(e.getMessage(), e);
+        } catch (SesionInvalidadaException e) {
+            throw new SesionInvalidadaAuthenticationException(e.getMessage(), e);
         } catch (SignatureException e) {
             log.warn("Firma de token inválida");
             throw new BadCredentialsException("Firma del token inválida", e);
