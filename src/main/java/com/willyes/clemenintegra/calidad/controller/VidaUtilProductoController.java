@@ -33,8 +33,10 @@ public class VidaUtilProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<VidaUtilProductoDTO>> listar(
             @RequestParam(required = false) String filtro,
-            @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(vidaUtilProductoService.listarProductosTerminados(filtro, pageable));
+            @RequestParam(name = "search", required = false) String search,
+            @PageableDefault(size = 10, sort = "codigoSku") Pageable pageable) {
+        String criterio = (search != null && !search.isBlank()) ? search : filtro;
+        return ResponseEntity.ok(vidaUtilProductoService.listarProductosTerminados(criterio, pageable));
     }
 
     @PostMapping("/producto-terminado/{productoId}")
