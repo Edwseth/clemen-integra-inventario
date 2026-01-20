@@ -1,7 +1,5 @@
 package com.willyes.clemenintegra.shared.security;
 
-import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
-import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -13,6 +11,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -27,6 +26,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final ObjectProvider<AuthenticationManager> authenticationManagerProvider;
+    private final AuthenticationEntryPoint authenticationEntryPoint;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
     private final List<String> publicMatchers = List.of(
             "/api/auth/**",
@@ -75,9 +75,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 JwtAuthenticationToken authenticationRequest = new JwtAuthenticationToken(token);
                 Authentication authentication = authenticationManager.authenticate(authenticationRequest);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-            } catch (SesionInvalidadaException | SesionInactivaException | AuthenticationException ex) {
+            } catch (AuthenticationException ex) {
                 SecurityContextHolder.clearContext();
-                throw ex;
+                authenticationEntryPoint.commence(request, response, ex);
+                return;
             }
         } else {
             log.debug("JwtAuthenticationFilter: sin token, continúa como anónimo para URI {}", uri);

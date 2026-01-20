@@ -162,7 +162,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SesionInactivaException.class)
     public ResponseEntity<ErrorResponseDTO> handleSesionInactiva(SesionInactivaException ex,
                                                                  HttpServletRequest request) {
-        return buildResponse(ApiErrorCode.SESION_INACTIVA, ex.getMessage(), null);
+        return buildResponse(ApiErrorCode.SESION_EXPIRADA,
+                "Tu sesión expiró por inactividad. Inicia sesión nuevamente.",
+                null);
     }
 
     @ExceptionHandler(SesionInvalidadaException.class)
@@ -230,6 +232,7 @@ public class GlobalExceptionHandler {
                 .code(effective.getCode())
                 .message(message)
                 .details(details)
+                .requestId(MDC.get("requestId"))
                 .build();
         return ResponseEntity.status(effective.getHttpStatus()).body(body);
     }
@@ -239,6 +242,7 @@ public class GlobalExceptionHandler {
                 .code(code != null ? code : status.name())
                 .message(message)
                 .details(details)
+                .requestId(MDC.get("requestId"))
                 .build();
         return ResponseEntity.status(status).body(body);
     }

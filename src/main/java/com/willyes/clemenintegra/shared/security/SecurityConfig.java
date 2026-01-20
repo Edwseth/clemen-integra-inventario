@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.shared.security.model.UsuarioPrincipal;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -27,7 +28,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,6 +41,8 @@ public class SecurityConfig {
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final RequestTimingFilter requestTimingFilter;
     private final RequestIdFilter requestIdFilter;
+    private final ObjectProvider<ApiAuthenticationEntryPoint> apiAuthenticationEntryPointProvider;
+    private final ObjectProvider<ObjectMapper> objectMapperProvider;
     private final ObjectProvider<JwtAuthenticationProvider> jwtAuthenticationProviderProvider;
 
     // Orígenes permitidos por perfil (lista separada por comas)
@@ -314,13 +316,7 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/**").authenticated();
                     auth.anyRequest().authenticated();
                 })
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(
-                                (request, response, authEx) -> {
-                                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                                    response.setContentType("application/json");
-                                    response.getWriter().write("{\"error\":\"No autorizado\"}");
-                                }
-                ));
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(resolveAuthenticationEntryPoint()));
 
         http.addFilterBefore(requestIdFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -346,6 +342,11 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoderFallback() {
         log.warn("SecurityConfig: registrando PasswordEncoder delegating por no existir uno definido en el contexto");
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    private ApiAuthenticationEntryPoint resolveAuthenticationEntryPoint() {
+        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
+        return apiAuthenticationEntryPointProvider.getIfAvailable(() -> new ApiAuthenticationEntryPoint(objectMapper));
     }
 
     @Bean
