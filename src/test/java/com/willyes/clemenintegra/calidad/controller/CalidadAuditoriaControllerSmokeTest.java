@@ -14,6 +14,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.web.AuthenticationEntryPoint;
 
 import java.nio.charset.StandardCharsets;
 
@@ -45,6 +46,9 @@ class CalidadAuditoriaControllerSmokeTest {
 
     @MockBean
     private JwtAuthenticationProvider jwtAuthenticationProvider;
+
+    @MockBean
+    private AuthenticationEntryPoint authenticationEntryPoint;
 
     @Test
     void descargaPdfAuditoria_respondePdfConNombre() throws Exception {

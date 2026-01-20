@@ -33,6 +33,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.TestPropertySource;
@@ -85,6 +86,9 @@ class ProductoControllerSmokeTest {
 
     @MockBean
     private UserDetailsService userDetailsService;
+
+    @MockBean
+    private AuthenticationEntryPoint authenticationEntryPoint;
 
     @Test
     @WithMockUser(username = "tester", roles = {"SUPER_ADMIN"})
