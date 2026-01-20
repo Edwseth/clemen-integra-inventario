@@ -168,6 +168,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
            UPPER(p.nombre) LIKE CONCAT('%', UPPER(:term), '%')
         OR UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:term), '%')
       )
+    ORDER BY p.codigoSku ASC
     """, countQuery = """
     SELECT COUNT(p)
     FROM Producto p
