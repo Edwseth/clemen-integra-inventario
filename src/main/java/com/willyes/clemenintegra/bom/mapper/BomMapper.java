@@ -52,6 +52,10 @@ public interface BomMapper {
     //@Mapping(target = "cantidadNecesaria", expression = "java(java.math.BigDecimal.valueOf(dto.cantidadNecesaria))")
     DetalleFormula toEntity(DetalleFormulaRequest dto, FormulaProducto formula, Producto insumo, UnidadMedida unidad);
 
+    @Mapping(target = "formulaId", source = "formula.id")
+    @Mapping(target = "formulaNombre", source = "formula.producto", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "formulaVersion", source = "formula.version")
+    @Mapping(target = "formulaEstado", source = "formula.estado", qualifiedByName = "mapEstadoFormula")
     @Mapping(target = "insumoNombre", source = "insumo", qualifiedByName = "mapProductoNombre")
     @Mapping(target = "unidad", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
     @Mapping(target = "unidadSimbolo", source = "unidadMedida", qualifiedByName = "mapUnidadSimbolo")
