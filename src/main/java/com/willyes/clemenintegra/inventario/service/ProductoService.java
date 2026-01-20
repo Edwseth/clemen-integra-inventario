@@ -45,5 +45,5 @@ public interface ProductoService {
 
     Page<InsumoAutocompleteDTO> buscarInsumosAutocomplete(String term, Pageable pageable);
 
-    Page<Producto> buscarProductosFabricablesAutocomplete(String term, Pageable pageable);
+    Page<ProductoAutocompleteDTO> buscarProductosFabricablesAutocomplete(String term, Pageable pageable);
 }

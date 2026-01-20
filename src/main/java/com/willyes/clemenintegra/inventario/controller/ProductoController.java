@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.dto.*;
-import com.willyes.clemenintegra.inventario.mapper.ProductoMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
@@ -39,7 +38,6 @@ public class ProductoController {
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final UnidadMedidaRepository unidadMedidaRepository;
     private final UsuarioRepository usuarioRepository;
-    private final ProductoMapper productoMapper;
 
     @GetMapping("/buscar")
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
@@ -77,13 +75,12 @@ public class ProductoController {
 
     @GetMapping("/buscar-fabricables")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public ResponseEntity<Page<ProductoResponseDTO>> buscarProductosFabricablesAutocomplete(
+    public ResponseEntity<Page<ProductoAutocompleteDTO>> buscarProductosFabricablesAutocomplete(
             @RequestParam("term") String term,
             Pageable pageable
     ) {
-        Page<Producto> page = productoService.buscarProductosFabricablesAutocomplete(term, pageable);
-        Page<ProductoResponseDTO> dtoPage = page.map(productoMapper::toDto);
-        return ResponseEntity.ok(dtoPage);
+        Page<ProductoAutocompleteDTO> page = productoService.buscarProductosFabricablesAutocomplete(term, pageable);
+        return ResponseEntity.ok(page);
     }
 
     @GetMapping("/categoria/{nombre}")

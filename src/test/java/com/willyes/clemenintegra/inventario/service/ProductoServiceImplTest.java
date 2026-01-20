@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO;
+import com.willyes.clemenintegra.inventario.dto.ProductoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoOptionDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
@@ -340,7 +341,7 @@ class ProductoServiceImplTest {
     void buscarProductosFabricablesAutocomplete_sinTermino_devuelveVacio() {
         Pageable pageable = PageRequest.of(0, 5);
 
-        Page<Producto> resultado = service.buscarProductosFabricablesAutocomplete("   ", pageable);
+        Page<ProductoAutocompleteDTO> resultado = service.buscarProductosFabricablesAutocomplete("   ", pageable);
 
         assertThat(resultado).isEmpty();
         verify(productoRepository, never()).buscarFabricablesAutocomplete(anyList(), anyString(), any(Pageable.class));
@@ -350,14 +351,14 @@ class ProductoServiceImplTest {
     @DisplayName("Debe buscar fabricables en PT y PS y normalizar el término")
     void buscarProductosFabricablesAutocomplete_conTermino_invocaRepositorioConFiltros() {
         Pageable pageable = PageRequest.of(0, 10);
-        Producto producto = new Producto();
-        Page<Producto> page = new PageImpl<>(List.of(producto), pageable, 1);
+        ProductoAutocompleteDTO dto = new ProductoAutocompleteDTO(1, "PS-1", "Producto Semi");
+        Page<ProductoAutocompleteDTO> page = new PageImpl<>(List.of(dto), pageable, 1);
         when(productoRepository.buscarFabricablesAutocomplete(anyList(), anyString(), any(Pageable.class)))
                 .thenReturn(page);
 
-        Page<Producto> resultado = service.buscarProductosFabricablesAutocomplete("  ps ", pageable);
+        Page<ProductoAutocompleteDTO> resultado = service.buscarProductosFabricablesAutocomplete("  ps ", pageable);
 
-        assertThat(resultado.getContent()).containsExactly(producto);
+        assertThat(resultado.getContent()).containsExactly(dto);
 
         ArgumentCaptor<List<TipoCategoria>> tiposCaptor = ArgumentCaptor.forClass(List.class);
         ArgumentCaptor<String> termCaptor = ArgumentCaptor.forClass(String.class);
