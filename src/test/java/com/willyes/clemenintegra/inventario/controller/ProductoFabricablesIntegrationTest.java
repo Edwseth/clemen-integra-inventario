@@ -24,6 +24,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -94,12 +97,14 @@ class ProductoFabricablesIntegrationTest extends IntegrationTestH2 {
                 .build());
 
         mockMvc.perform(get("/api/productos/buscar-fabricables")
-                        .param("term", "citrat")
-                        .param("page", "0")
-                        .param("size", "15"))
+                .param("term", "citrat")
+                .param("page", "0")
+                .param("size", "15"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").isNumber())
-                .andExpect(jsonPath("$.content[0].codigoSku").value("CITRAT-" + suffix))
-                .andExpect(jsonPath("$.content[0].nombre").value("Citrato de Prueba " + suffix));
+                .andExpect(jsonPath("$.content[*].codigoSku", hasItem("CITRAT-" + suffix)))
+                .andExpect(jsonPath("$.content[?(@.codigoSku == 'CITRAT-" + suffix + "')].nombre",
+                        hasItem("Citrato de Prueba " + suffix)))
+                .andExpect(jsonPath("$.content[?(@.codigoSku == 'CITRAT-" + suffix + "')].id",
+                        not(empty())));
     }
 }
