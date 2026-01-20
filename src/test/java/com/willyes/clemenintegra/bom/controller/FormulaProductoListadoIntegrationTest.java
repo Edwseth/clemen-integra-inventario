@@ -141,6 +141,7 @@ class FormulaProductoListadoIntegrationTest extends IntegrationTestMySqlContaine
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].productoId", hasItems(productoUno.getId(), productoDos.getId())))
                 .andExpect(jsonPath("$.content[*].productoSku", hasItems("SKU-SEL-1", "SKU-SEL-2")))
                 .andExpect(jsonPath("$.content[*].productoNombre", hasItems("Producto Selector Uno", "Producto Selector Dos")));
     }
