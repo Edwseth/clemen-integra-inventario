@@ -23,4 +23,18 @@ public class FormulaProductoSelectorDTO {
         this.productoSku = productoSku;
         this.productoNombre = productoNombre;
     }
+
+    public FormulaProductoSelectorDTO(Long formulaId,
+                                      String version,
+                                      EstadoFormula estado,
+                                      Integer productoId,
+                                      String productoSku,
+                                      String productoNombre) {
+        this(formulaId,
+                version,
+                estado,
+                productoId != null ? productoId.longValue() : null,
+                productoSku,
+                productoNombre);
+    }
 }
