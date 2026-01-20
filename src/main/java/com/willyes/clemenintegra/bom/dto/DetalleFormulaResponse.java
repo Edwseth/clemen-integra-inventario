@@ -2,6 +2,10 @@ package com.willyes.clemenintegra.bom.dto;
 
 public class DetalleFormulaResponse {
     public Long id;
+    public Long formulaId;
+    public String formulaNombre;
+    public String formulaVersion;
+    public String formulaEstado;
     public String insumoNombre;
     public java.math.BigDecimal cantidadNecesaria;
     public java.math.BigDecimal cantidadTotalNecesaria;
