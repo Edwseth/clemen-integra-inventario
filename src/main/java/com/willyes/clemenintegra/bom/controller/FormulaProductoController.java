@@ -11,6 +11,9 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -44,10 +47,11 @@ public class FormulaProductoController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
-    public List<FormulaProductoResumenDTO> listarTodas(
+    public Page<FormulaProductoSelectorDTO> listarTodas(
             @RequestParam(required = false) EstadoFormula estado,
-            @RequestParam(required = false) String producto) {
-        return formulaService.listarResumen(estado, producto);
+            @RequestParam(required = false) String producto,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return formulaService.listarResumen(estado, producto, pageable);
     }
 
     @GetMapping("/{id}")

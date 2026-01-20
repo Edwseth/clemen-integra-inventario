@@ -2,7 +2,10 @@ package com.willyes.clemenintegra.bom.repository;
 
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
+import com.willyes.clemenintegra.bom.dto.FormulaProductoSelectorDTO;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -65,6 +68,18 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
             "or lower(p.nombre) like lower(concat('%', :producto, '%'))) " +
             "order by coalesce(f.fechaActualizacion, f.fechaCreacion) desc, f.id desc")
     List<FormulaProducto> findAllForResumen(@Param("estado") EstadoFormula estado, @Param("producto") String producto);
+
+    @Query("select new com.willyes.clemenintegra.bom.dto.FormulaProductoSelectorDTO(" +
+            "f.id, f.version, f.estado, p.id, p.codigoSku, p.nombre) " +
+            "from FormulaProducto f " +
+            "join f.producto p " +
+            "where (:estado is null or f.estado = :estado) " +
+            "and (:producto is null or lower(p.codigoSku) like lower(concat('%', :producto, '%')) " +
+            "or lower(p.nombre) like lower(concat('%', :producto, '%'))) " +
+            "order by coalesce(f.fechaActualizacion, f.fechaCreacion) desc, f.id desc")
+    Page<FormulaProductoSelectorDTO> findAllForSelector(@Param("estado") EstadoFormula estado,
+                                                       @Param("producto") String producto,
+                                                       Pageable pageable);
 
     @Modifying(clearAutomatically = true)
     @Query("update FormulaProducto f set f.activo = false where f.producto = :producto and f.id <> :id")

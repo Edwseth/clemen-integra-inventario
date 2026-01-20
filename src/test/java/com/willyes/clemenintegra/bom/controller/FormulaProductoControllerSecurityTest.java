@@ -5,7 +5,7 @@ import com.willyes.clemenintegra.bom.dto.CambiarEstadoFormulaRequest;
 import com.willyes.clemenintegra.bom.dto.DocumentoFormulaDescargaDTO;
 import com.willyes.clemenintegra.bom.dto.DocumentoFormulaResponseDTO;
 import com.willyes.clemenintegra.bom.dto.FormulaActivaProduccionDTO;
-import com.willyes.clemenintegra.bom.dto.FormulaProductoResumenDTO;
+import com.willyes.clemenintegra.bom.dto.FormulaProductoSelectorDTO;
 import com.willyes.clemenintegra.bom.mapper.BomMapper;
 import com.willyes.clemenintegra.bom.model.FormulaProducto;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
@@ -35,6 +35,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.data.domain.PageImpl;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -103,15 +104,13 @@ class FormulaProductoControllerSecurityTest {
             return null;
         }).when(usuarioInactivoFilter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
 
-        FormulaProductoResumenDTO resumenDTO = new FormulaProductoResumenDTO();
-        resumenDTO.id = 1L;
-        resumenDTO.productoId = 10L;
-        resumenDTO.codigoProducto = "P-001";
-        resumenDTO.nombreProducto = "Producto Test";
-        resumenDTO.version = "v1";
-        resumenDTO.estado = EstadoFormula.BORRADOR.name();
-        resumenDTO.activo = false;
-        resumenDTO.usuarioResponsable = "tester";
+        FormulaProductoSelectorDTO resumenDTO = new FormulaProductoSelectorDTO(
+                1L,
+                "v1",
+                EstadoFormula.BORRADOR,
+                10L,
+                "P-001",
+                "Producto Test");
 
         FormulaActivaProduccionDTO formulaActiva = new FormulaActivaProduccionDTO();
         formulaActiva.formulaId = 2L;
@@ -134,7 +133,7 @@ class FormulaProductoControllerSecurityTest {
         FormulaProducto formula = new FormulaProducto();
         formula.setId(3L);
 
-        when(formulaProductoService.listarResumen(any(), any())).thenReturn(List.of(resumenDTO));
+        when(formulaProductoService.listarResumen(any(), any(), any())).thenReturn(new PageImpl<>(List.of(resumenDTO)));
         when(formulaProductoService.obtenerFormulaActivaProduccion(anyLong())).thenReturn(formulaActiva);
         when(formulaProductoService.clonarFormula(anyLong(), anyLong())).thenReturn(formula);
         when(formulaProductoService.cambiarEstado(anyLong(), any(EstadoFormula.class), anyLong())).thenReturn(formula);

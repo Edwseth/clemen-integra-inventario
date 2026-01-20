@@ -15,6 +15,8 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -43,15 +45,13 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FormulaProductoResumenDTO> listarResumen(EstadoFormula estado, String producto) {
+    public Page<FormulaProductoSelectorDTO> listarResumen(EstadoFormula estado, String producto, Pageable pageable) {
         String filtroProducto = producto != null ? producto.trim() : null;
         if (filtroProducto != null && filtroProducto.isEmpty()) {
             filtroProducto = null;
         }
 
-        return formulaRepository.findAllForResumen(estado, filtroProducto).stream()
-                .map(bomMapper::toResumenDTO)
-                .collect(Collectors.toList());
+        return formulaRepository.findAllForSelector(estado, filtroProducto, pageable);
     }
 
     public List<FormulaProducto> listarTodas() {
