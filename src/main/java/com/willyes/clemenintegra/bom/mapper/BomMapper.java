@@ -57,6 +57,7 @@ public interface BomMapper {
     @Mapping(target = "formulaVersion", source = "formula.version")
     @Mapping(target = "formulaEstado", source = "formula.estado", qualifiedByName = "mapEstadoFormula")
     @Mapping(target = "insumoNombre", source = "insumo", qualifiedByName = "mapProductoNombre")
+    @Mapping(target = "unidadMedidaId", source = "unidadMedida", qualifiedByName = "mapUnidadId")
     @Mapping(target = "unidad", source = "unidadMedida", qualifiedByName = "mapUnidadNombre")
     @Mapping(target = "unidadSimbolo", source = "unidadMedida", qualifiedByName = "mapUnidadSimbolo")
     DetalleFormulaResponse toResponseDTO(DetalleFormula detalle);
