@@ -137,7 +137,6 @@ class FormulaProductoControllerSecurityTest {
         when(formulaProductoService.obtenerFormulaActivaProduccion(anyLong())).thenReturn(formulaActiva);
         when(formulaProductoService.clonarFormula(anyLong(), anyLong())).thenReturn(formula);
         when(formulaProductoService.cambiarEstado(anyLong(), any(EstadoFormula.class), anyLong())).thenReturn(formula);
-        when(bomMapper.toResumenDTO(any(FormulaProducto.class))).thenReturn(resumenDTO);
         when(documentoFormulaService.listarDocumentos(anyLong())).thenReturn(List.of(documentoResponse));
         when(documentoFormulaService.guardarDocumento(anyLong(), any(), any(), any()))
                 .thenReturn(documentoResponse);
