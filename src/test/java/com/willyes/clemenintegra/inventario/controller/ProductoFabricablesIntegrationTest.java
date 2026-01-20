@@ -13,7 +13,6 @@ import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.support.IntegrationTestH2;
 import java.math.BigDecimal;
-import java.util.Locale;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +56,7 @@ class ProductoFabricablesIntegrationTest extends IntegrationTestH2 {
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
-    void buscarFabricables_devuelveRelacionesPrecargadas() throws Exception {
+    void buscarFabricables_devuelveDatosBasicos() throws Exception {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         Usuario usuario = usuarioRepository.save(Usuario.builder()
                 .nombreUsuario("tester-fab-" + suffix)
@@ -94,15 +93,13 @@ class ProductoFabricablesIntegrationTest extends IntegrationTestH2 {
                 .creadoPor(usuario)
                 .build());
 
-        String expectedUnidad = ("Unidad Fabricable " + suffix).toUpperCase(Locale.ROOT);
-
         mockMvc.perform(get("/api/productos/buscar-fabricables")
                         .param("term", "citrat")
                         .param("page", "0")
                         .param("size", "15"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].sku").value("CITRAT-" + suffix))
-                .andExpect(jsonPath("$.content[0].categoria").value("Categoria Fabricable " + suffix))
-                .andExpect(jsonPath("$.content[0].unidadMedida.nombre").value(expectedUnidad));
+                .andExpect(jsonPath("$.content[0].id").isNumber())
+                .andExpect(jsonPath("$.content[0].codigoSku").value("CITRAT-" + suffix))
+                .andExpect(jsonPath("$.content[0].nombre").value("Citrato de Prueba " + suffix));
     }
 }

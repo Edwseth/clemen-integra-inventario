@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO;
+import com.willyes.clemenintegra.inventario.dto.ProductoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
@@ -8,7 +9,6 @@ import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -155,8 +155,21 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
             Pageable pageable
     );
 
-    @Query("""
-    SELECT p
+    @Query(value = """
+    SELECT new com.willyes.clemenintegra.inventario.dto.ProductoAutocompleteDTO(
+        p.id,
+        p.codigoSku,
+        p.nombre
+    )
+    FROM Producto p
+    WHERE p.categoriaProducto.tipo IN :tipos
+      AND p.activo = true
+      AND (
+           UPPER(p.nombre) LIKE CONCAT('%', UPPER(:term), '%')
+        OR UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:term), '%')
+      )
+    """, countQuery = """
+    SELECT COUNT(p)
     FROM Producto p
     WHERE p.categoriaProducto.tipo IN :tipos
       AND p.activo = true
@@ -165,8 +178,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
         OR UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:term), '%')
       )
     """)
-    @EntityGraph(attributePaths = {"unidadMedida", "categoriaProducto"})
-    Page<Producto> buscarFabricablesAutocomplete(
+    Page<ProductoAutocompleteDTO> buscarFabricablesAutocomplete(
             @Param("tipos") Collection<TipoCategoria> tipos,
             @Param("term") String term,
             Pageable pageable

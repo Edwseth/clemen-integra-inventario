@@ -601,7 +601,7 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Producto> buscarProductosFabricablesAutocomplete(String term, Pageable pageable) {
+    public Page<ProductoAutocompleteDTO> buscarProductosFabricablesAutocomplete(String term, Pageable pageable) {
         if (term == null || term.trim().isEmpty()) {
             return Page.empty(pageable);
         }
