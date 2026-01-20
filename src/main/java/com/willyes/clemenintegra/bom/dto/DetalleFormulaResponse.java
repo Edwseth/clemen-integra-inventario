@@ -6,6 +6,7 @@ public class DetalleFormulaResponse {
     public String formulaNombre;
     public String formulaVersion;
     public String formulaEstado;
+    public Long insumoId;
     public String insumoNombre;
     public java.math.BigDecimal cantidadNecesaria;
     public java.math.BigDecimal cantidadTotalNecesaria;
