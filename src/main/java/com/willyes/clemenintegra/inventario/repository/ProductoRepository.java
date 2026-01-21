@@ -46,6 +46,13 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
 
     boolean existsByNombreAndIdNot(String nombre, Long id);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+            "plantillaAnalisisMicrobiologico",
+            "unidadMedida",
+            "categoriaProducto"
+    })
+    Optional<Producto> findById(Long id);
+
     @Query("""
     select p
     from Producto p
