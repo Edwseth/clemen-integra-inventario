@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaExcep
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -156,6 +157,15 @@ public class GlobalExceptionHandler {
                                                                HttpServletRequest request) {
         return buildResponse(ApiErrorCode.ROL_INSUFICIENTE,
                 "Acceso denegado. Contacte a un administrador para solicitar el rol adecuado.",
+                null);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseDTO> handleDataIntegrityViolation(DataIntegrityViolationException ex,
+                                                                         HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT,
+                "CONFLICTO_INTEGRIDAD",
+                "Conflicto de integridad en la operación solicitada.",
                 null);
     }
 
