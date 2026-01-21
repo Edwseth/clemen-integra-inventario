@@ -3,7 +3,6 @@ package com.willyes.clemenintegra.produccion.service;
 import com.willyes.clemenintegra.produccion.dto.EtapaPlantillaReordenRequest;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
-import com.willyes.clemenintegra.produccion.service.ChecklistEtapaTemplateService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,24 +20,6 @@ public class EtapaPlantillaServiceImpl implements EtapaPlantillaService {
     private final EtapaPlantillaRepository repository;
     private final ChecklistEtapaTemplateService checklistTemplateService;
 
-    private void validarUnicidad(Integer productoId, String nombre, Integer secuencia, Long id) {
-        if (id == null) {
-            if (repository.existsByProductoIdAndSecuencia(productoId, secuencia)) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Secuencia ya usada");
-            }
-            if (repository.existsByProductoIdAndNombreIgnoreCase(productoId, nombre)) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Nombre ya usado");
-            }
-        } else {
-            if (repository.existsByProductoIdAndSecuenciaAndIdNot(productoId, secuencia, id)) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Secuencia ya usada");
-            }
-            if (repository.existsByProductoIdAndNombreIgnoreCaseAndIdNot(productoId, nombre, id)) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Nombre ya usado");
-            }
-        }
-    }
-
     @Override
     public List<EtapaPlantilla> listarPorProducto(Integer productoId) {
         return repository.findByProductoIdOrderBySecuenciaAsc(productoId);
@@ -51,8 +32,6 @@ public class EtapaPlantillaServiceImpl implements EtapaPlantillaService {
 
     @Override
     public EtapaPlantilla crear(EtapaPlantilla etapa) {
-        Integer productoId = etapa.getProducto().getId();
-        validarUnicidad(productoId, etapa.getNombre(), etapa.getSecuencia(), null);
         EtapaPlantilla guardada = repository.save(etapa);
         checklistTemplateService.crearPlaceholderPorDefectoSiNoExiste(guardada);
         return guardada;
@@ -62,8 +41,6 @@ public class EtapaPlantillaServiceImpl implements EtapaPlantillaService {
     public EtapaPlantilla actualizar(Long id, EtapaPlantilla etapa) {
         EtapaPlantilla existente = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Etapa no encontrada"));
-        Integer productoId = existente.getProducto().getId();
-        validarUnicidad(productoId, etapa.getNombre(), etapa.getSecuencia(), id);
         existente.setNombre(etapa.getNombre());
         existente.setSecuencia(etapa.getSecuencia());
         existente.setActivo(etapa.getActivo());
