@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.shared.model;
 
+import com.willyes.clemenintegra.shared.model.enums.NivelAccesoAdmin;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -44,6 +45,11 @@ public class Usuario {
     @Column(name = "rol", nullable = false, length = 50)
     private RolUsuario rol;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "nivel_acceso_admin", nullable = false, length = 20)
+    @Builder.Default
+    private NivelAccesoAdmin nivelAccesoAdmin = NivelAccesoAdmin.FULL;
+
     @Column(name = "activo", nullable = false)
     private boolean activo;
 
@@ -65,6 +71,10 @@ public class Usuario {
 
     public Usuario(Long id) {
         this.id = id;
+    }
+
+    public NivelAccesoAdmin getNivelAccesoAdmin() {
+        return nivelAccesoAdmin != null ? nivelAccesoAdmin : NivelAccesoAdmin.FULL;
     }
 
     @Override

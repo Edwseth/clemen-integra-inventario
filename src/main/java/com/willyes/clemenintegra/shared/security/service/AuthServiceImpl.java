@@ -95,6 +95,11 @@ public class AuthServiceImpl implements AuthService {
         usuarioRepository.saveAndFlush(usuario);
 
         String token = jwtTokenService.generarToken(usuario);
-        return new AuthResponseDTO(token, usuario.getNombreUsuario(), usuario.getRol().name());
+        return new AuthResponseDTO(
+                token,
+                usuario.getNombreUsuario(),
+                usuario.getRol().name(),
+                usuario.getNivelAccesoAdmin().name()
+        );
     }
 }
