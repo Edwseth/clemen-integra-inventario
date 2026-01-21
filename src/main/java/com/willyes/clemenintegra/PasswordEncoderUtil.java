@@ -9,7 +9,7 @@ public class PasswordEncoderUtil {
 
     public static void main(String[] args) {
         // Cambia esta línea con la contraseña que quieres codificar
-        String rawPassword = "Arrux3023";
+        String rawPassword = "YP202";
 
         PasswordEncoder encoder = new BCryptPasswordEncoder();
         String encodedPassword = encoder.encode(rawPassword);
@@ -17,5 +17,10 @@ public class PasswordEncoderUtil {
         log.info("Contraseña original: {}", rawPassword);
         log.info("Contraseña codificada: {}", encodedPassword);
     }
+
+
+
+
+
 }
 

@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -46,6 +48,7 @@ public class Usuario {
     private RolUsuario rol;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "nivel_acceso_admin", nullable = false, length = 20)
     @Builder.Default
     private NivelAccesoAdmin nivelAccesoAdmin = NivelAccesoAdmin.FULL;
