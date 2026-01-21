@@ -41,6 +41,7 @@ public class SecurityConfig {
     private final UsuarioInactivoFilter usuarioInactivoFilter;
     private final RequestTimingFilter requestTimingFilter;
     private final RequestIdFilter requestIdFilter;
+    private final SuperAdminSoloLecturaWriteBlockFilter superAdminSoloLecturaWriteBlockFilter;
     private final ObjectProvider<ApiAuthenticationEntryPoint> apiAuthenticationEntryPointProvider;
     private final ObjectProvider<ObjectMapper> objectMapperProvider;
     private final ObjectProvider<JwtAuthenticationProvider> jwtAuthenticationProviderProvider;
@@ -326,6 +327,7 @@ public class SecurityConfig {
             if (jwtAuthenticationFilter != null) {
                 log.debug("SecurityConfig: Registrando JwtAuthenticationFilter y JwtAuthenticationProvider en la cadena de filtros");
                 http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                        .addFilterAfter(superAdminSoloLecturaWriteBlockFilter, JwtAuthenticationFilter.class)
                         .addFilterAfter(usuarioInactivoFilter, JwtAuthenticationFilter.class)
                         .addFilterAfter(requestTimingFilter, JwtAuthenticationFilter.class);
             } else {
