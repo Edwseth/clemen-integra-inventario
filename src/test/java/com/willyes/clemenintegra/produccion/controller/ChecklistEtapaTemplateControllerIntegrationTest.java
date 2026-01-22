@@ -37,6 +37,7 @@ import java.time.LocalDateTime;
 import com.willyes.clemenintegra.support.IntegrationTestMySqlContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -208,6 +209,10 @@ class ChecklistEtapaTemplateControllerIntegrationTest extends IntegrationTestMyS
         ChecklistEtapaTemplate eliminado = checklistEtapaTemplateRepository.findById(existente.getId()).orElseThrow();
         assertThat(eliminado.getActivo()).isFalse();
         assertThat(eliminado.getUpdatedAt()).isNotNull();
+
+        mockMvc.perform(get("/api/produccion/plantillas-etapas/{id}/checklist", etapaDestino.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
 import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
 import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
@@ -125,6 +126,14 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> handleEntityNotFound(EntityNotFoundException ex,
+                                                                 HttpServletRequest request) {
+        return buildResponse(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                ex.getMessage() != null ? ex.getMessage() : "Recurso no encontrado",
+                null);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

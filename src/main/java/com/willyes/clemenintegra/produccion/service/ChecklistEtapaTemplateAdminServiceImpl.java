@@ -7,11 +7,13 @@ import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaTemplateRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,7 +27,7 @@ public class ChecklistEtapaTemplateAdminServiceImpl implements ChecklistEtapaTem
     @Override
     public List<ChecklistEtapaTemplateResponse> listar(Long etapaPlantillaId) {
         EtapaPlantilla etapa = obtenerEtapa(etapaPlantillaId);
-        return repository.findByEtapaPlantillaIdOrderByOrdenAsc(etapa.getId()).stream()
+        return repository.findByEtapaPlantillaIdAndActivoTrueOrderByOrdenAsc(etapa.getId()).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -60,6 +62,7 @@ public class ChecklistEtapaTemplateAdminServiceImpl implements ChecklistEtapaTem
     }
 
     @Override
+    @Transactional
     public void eliminar(Long id) {
         ChecklistEtapaTemplate existente = obtenerTemplate(id);
         existente.setActivo(false);
@@ -101,7 +104,7 @@ public class ChecklistEtapaTemplateAdminServiceImpl implements ChecklistEtapaTem
                         .build())
                 .toList();
         repository.saveAll(copias);
-        return repository.findByEtapaPlantillaIdOrderByOrdenAsc(destino.getId()).stream()
+        return repository.findByEtapaPlantillaIdAndActivoTrueOrderByOrdenAsc(destino.getId()).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -139,6 +142,6 @@ public class ChecklistEtapaTemplateAdminServiceImpl implements ChecklistEtapaTem
 
     private ChecklistEtapaTemplate obtenerTemplate(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Checklist template no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Checklist template no encontrado"));
     }
 }
