@@ -115,19 +115,24 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Usuario no encontrado para actualizar la fórmula"));
 
+        LocalDateTime fechaActualizacion = LocalDateTime.now();
+
         if (nuevoEstado == EstadoFormula.APROBADA) {
             if (formula.getProducto() == null) {
                 throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                         "La fórmula aprobada debe contar con un producto asociado");
             }
-            formulaRepository.desactivarOtrasFormulasDelProducto(formula.getProducto(), formula.getId());
+            formulaRepository.desactivarOtrasFormulasDelProducto(formula.getProducto(),
+                    formula.getId(),
+                    usuario,
+                    fechaActualizacion);
             formula.setActivo(true);
         } else {
             formula.setActivo(false);
         }
 
         formula.setEstado(nuevoEstado);
-        formula.setFechaActualizacion(LocalDateTime.now());
+        formula.setFechaActualizacion(fechaActualizacion);
         formula.setActualizadoPor(usuario);
 
         return formulaRepository.save(formula);

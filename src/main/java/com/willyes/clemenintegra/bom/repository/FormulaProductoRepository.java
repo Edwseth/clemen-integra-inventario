@@ -70,9 +70,12 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
     List<FormulaProducto> findAllForResumen(@Param("estado") EstadoFormula estado, @Param("producto") String producto);
 
     @Query("select new com.willyes.clemenintegra.bom.dto.FormulaProductoSelectorDTO(" +
-            "f.id, f.version, f.estado, p.id, p.codigoSku, p.nombre) " +
+            "f.id, f.version, f.estado, p.id, p.codigoSku, p.nombre, f.activo, " +
+            "f.fechaActualizacion, ap.nombreCompleto, f.fechaCreacion, cp.nombreCompleto) " +
             "from FormulaProducto f " +
             "join f.producto p " +
+            "left join f.actualizadoPor ap " +
+            "left join f.creadoPor cp " +
             "where (:estado is null or f.estado = :estado) " +
             "and (:producto is null or lower(p.codigoSku) like lower(concat('%', :producto, '%')) " +
             "or lower(p.nombre) like lower(concat('%', :producto, '%'))) " +
@@ -82,6 +85,11 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
                                                        Pageable pageable);
 
     @Modifying(clearAutomatically = true)
-    @Query("update FormulaProducto f set f.activo = false where f.producto = :producto and f.id <> :id")
-    void desactivarOtrasFormulasDelProducto(@Param("producto") Producto producto, @Param("id") Long id);
+    @Query("update FormulaProducto f " +
+            "set f.activo = false, f.fechaActualizacion = :fechaActualizacion, f.actualizadoPor = :usuario " +
+            "where f.producto = :producto and f.id <> :id")
+    void desactivarOtrasFormulasDelProducto(@Param("producto") Producto producto,
+                                            @Param("id") Long id,
+                                            @Param("usuario") com.willyes.clemenintegra.shared.model.Usuario usuario,
+                                            @Param("fechaActualizacion") java.time.LocalDateTime fechaActualizacion);
 }
