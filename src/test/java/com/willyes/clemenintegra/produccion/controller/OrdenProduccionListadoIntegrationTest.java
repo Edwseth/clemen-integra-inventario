@@ -78,19 +78,20 @@ class OrdenProduccionListadoIntegrationTest extends IntegrationTestH2 {
                 .build());
 
         UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
-                .nombre("Unidad OP")
-                .simbolo("UOP")
-                .codigo("UOP")
+                .nombre("Unidad OP " + uniqueSuffix)
+                .simbolo(("UO" + uniqueSuffix).substring(0, 5))
+                .codigo(("U" + uniqueSuffix).substring(0, 4))
                 .build());
 
         CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
-                .nombre("Categoria OP")
+                .nombre("Categoria OP " + uniqueSuffix)
                 .tipo(TipoCategoria.PRODUCTO_TERMINADO)
                 .build());
 
+        String nombreProducto = "Producto OP " + uniqueSuffix;
         Producto producto = productoRepository.save(Producto.builder()
-                .codigoSku("SKU-OP")
-                .nombre("Producto OP")
+                .codigoSku("SKU-" + uniqueSuffix)
+                .nombre(nombreProducto)
                 .descripcionProducto("Producto para orden")
                 .stockMinimo(BigDecimal.ZERO)
                 .unidadMedida(unidad)
@@ -119,7 +120,7 @@ class OrdenProduccionListadoIntegrationTest extends IntegrationTestH2 {
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].nombreProducto").value("Producto OP"))
+                .andExpect(jsonPath("$.content[0].nombreProducto").value(nombreProducto))
                 .andExpect(jsonPath("$.content[0].nombreResponsable").value("Responsable OP"));
     }
 }

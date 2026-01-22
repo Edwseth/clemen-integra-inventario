@@ -59,15 +59,16 @@ class VidaUtilProductoControllerIntegrationTest extends IntegrationTestH2 {
 
     private CategoriaProducto categoriaPt;
     private CategoriaProducto categoriaPs;
+    private String skuPt;
+    private String skuPs;
+    private String nombreBase;
 
     @BeforeEach
     void setUp() {
-        productoRepository.deleteAll();
-        categoriaProductoRepository.deleteAll();
-        unidadMedidaRepository.deleteAll();
-        usuarioRepository.deleteAll();
-
         String suffix = UUID.randomUUID().toString().substring(0, 8);
+        skuPt = "PT" + suffix;
+        skuPs = "PS" + suffix;
+        nombreBase = "Citrato " + suffix;
         Usuario usuario = usuarioRepository.save(Usuario.builder()
                 .nombreUsuario("tester-vida-util-" + suffix)
                 .clave("secret")
@@ -80,8 +81,8 @@ class VidaUtilProductoControllerIntegrationTest extends IntegrationTestH2 {
 
         UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
                 .nombre("Unidad Vida Util " + suffix)
-                .simbolo("UV")
-                .codigo("UV1")
+                .simbolo(("UV" + suffix).substring(0, 5))
+                .codigo(("U" + suffix).substring(0, 4))
                 .build());
 
         categoriaPt = categoriaProductoRepository.save(CategoriaProducto.builder()
@@ -99,33 +100,33 @@ class VidaUtilProductoControllerIntegrationTest extends IntegrationTestH2 {
                 .tipo(TipoCategoria.MATERIA_PRIMA)
                 .build());
 
-        productoRepository.save(crearProducto("PT0001", "Producto Citrato", usuario, unidad, categoriaPt));
-        productoRepository.save(crearProducto("PS0002", "Citrato Semielaborado", usuario, unidad, categoriaPs));
-        productoRepository.save(crearProducto("MP0001", "Citrato Materia Prima", usuario, unidad, categoriaMp));
-        productoRepository.save(crearProducto("PT0003", "Otro Producto", usuario, unidad, categoriaPt));
+        productoRepository.save(crearProducto(skuPt, nombreBase + " Producto", usuario, unidad, categoriaPt));
+        productoRepository.save(crearProducto(skuPs, nombreBase + " Semielaborado", usuario, unidad, categoriaPs));
+        productoRepository.save(crearProducto("MP" + suffix, "Materia Prima " + suffix, usuario, unidad, categoriaMp));
+        productoRepository.save(crearProducto("PTX" + suffix, "Otro Producto " + suffix, usuario, unidad, categoriaPt));
     }
 
     @Test
     void buscarPorSkuAplicaFiltroCaseInsensitive() throws Exception {
         mockMvc.perform(get("/api/calidad/vida-util/productos-terminados")
-                        .param("search", "PT0001")
+                        .param("search", skuPt.toLowerCase())
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].codigoSku").value("PT0001"));
+                .andExpect(jsonPath("$.content[0].codigoSku").value(skuPt));
     }
 
     @Test
     void buscarPorNombreAplicaFiltroContiene() throws Exception {
         mockMvc.perform(get("/api/calidad/vida-util/productos-terminados")
-                        .param("search", "citrat")
+                        .param("search", nombreBase.toLowerCase())
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(2))
                 .andExpect(jsonPath("$.content[*].codigoSku",
-                        Matchers.containsInAnyOrder("PT0001", "PS0002")));
+                        Matchers.containsInAnyOrder(skuPt, skuPs)));
     }
 
     @Test
