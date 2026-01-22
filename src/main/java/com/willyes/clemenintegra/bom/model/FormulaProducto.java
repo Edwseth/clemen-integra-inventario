@@ -22,6 +22,12 @@ public class FormulaProducto {
 
     private String version;
 
+    @Column(name = "version_major")
+    private Integer versionMajor;
+
+    @Column(name = "version_minor")
+    private Integer versionMinor;
+
     @Enumerated(EnumType.STRING)
     private EstadoFormula estado;
 
@@ -52,8 +58,17 @@ public class FormulaProducto {
     public void setId(Long id) {this.id = id;}
     public Producto getProducto() {return producto;}
     public void setProducto(Producto producto) {this.producto = producto;}
-    public String getVersion() {return version;}
+    public String getVersion() {
+        if (versionMajor != null && versionMinor != null) {
+            return String.format("V%d.%d", versionMajor, versionMinor);
+        }
+        return version;
+    }
     public void setVersion(String version) {this.version = version;}
+    public Integer getVersionMajor() {return versionMajor;}
+    public void setVersionMajor(Integer versionMajor) {this.versionMajor = versionMajor;}
+    public Integer getVersionMinor() {return versionMinor;}
+    public void setVersionMinor(Integer versionMinor) {this.versionMinor = versionMinor;}
     public EstadoFormula getEstado() {return estado;}
     public void setEstado(EstadoFormula estado) {this.estado = estado;}
     public LocalDateTime getFechaCreacion() {return fechaCreacion;}
@@ -73,4 +88,3 @@ public class FormulaProducto {
     public Usuario getActualizadoPor() {return actualizadoPor;}
     public void setActualizadoPor(Usuario actualizadoPor) {this.actualizadoPor = actualizadoPor;}
 }
-

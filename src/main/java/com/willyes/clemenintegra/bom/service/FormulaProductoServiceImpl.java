@@ -27,7 +27,6 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -36,6 +35,8 @@ import java.util.stream.Collectors;
 public class FormulaProductoServiceImpl implements FormulaProductoService {
 
     private static final Logger log = LoggerFactory.getLogger(FormulaProductoServiceImpl.class);
+    private static final int MAX_VERSION_MINOR = 9;
+    private static final Pattern VERSION_PATTERN = Pattern.compile("^V?(\\d+)(?:\\.(\\d+))?$", Pattern.CASE_INSENSITIVE);
 
     private final FormulaProductoRepository formulaRepository;
     private final BomMapper bomMapper;
@@ -82,6 +83,7 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
         if (formula.getEstado() == EstadoFormula.APROBADA) {
             formula.setActivo(true);
         }
+        normalizarVersion(formula);
         return formulaRepository.save(formula);
     }
 
@@ -155,20 +157,18 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                         "Usuario no encontrado para clonar la fórmula"));
 
         Long productoId = origen.getProducto().getId().longValue();
-        List<FormulaProducto> formulasProducto = formulaRepository.findAllByProductoId(productoId);
-
-        int nuevaVersionNumerica = formulasProducto.stream()
-                .map(FormulaProducto::getVersion)
-                .map(this::parseNumeroVersion)
-                .max(Integer::compareTo)
-                .orElse(0) + 1;
-
-        String nuevaVersion = construirValorVersion(origen.getVersion(), nuevaVersionNumerica);
+        VersionParts ultimaVersion = formulaRepository.findTopByProductoIdOrderByVersionMajorDescVersionMinorDesc(productoId)
+                .map(this::resolverVersionParts)
+                .orElse(null);
+        VersionParts siguienteVersion = calcularSiguienteVersion(ultimaVersion);
+        String nuevaVersion = formatearVersion(siguienteVersion);
         LocalDateTime ahora = LocalDateTime.now();
 
         FormulaProducto clon = new FormulaProducto();
         clon.setProducto(origen.getProducto());
         clon.setVersion(nuevaVersion);
+        clon.setVersionMajor(siguienteVersion.major());
+        clon.setVersionMinor(siguienteVersion.minor());
         clon.setEstado(EstadoFormula.BORRADOR);
         clon.setActivo(false);
         clon.setObservacion(origen.getObservacion());
@@ -209,35 +209,76 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
         return formulaRepository.save(clon);
     }
 
-    private int parseNumeroVersion(String version) {
+    static VersionParts calcularSiguienteVersion(VersionParts versionActual) {
+        if (versionActual == null) {
+            return new VersionParts(1, 0);
+        }
+        if (versionActual.minor() < MAX_VERSION_MINOR) {
+            return new VersionParts(versionActual.major(), versionActual.minor() + 1);
+        }
+        return new VersionParts(versionActual.major() + 1, 0);
+    }
+
+    static String formatearVersion(VersionParts version) {
+        if (version == null) {
+            return null;
+        }
+        return String.format("V%d.%d", version.major(), version.minor());
+    }
+
+    static VersionParts parsearVersion(String version) {
         if (version == null || version.isBlank()) {
-            return 0;
+            return null;
         }
-        String digitos = version.replaceAll("[^0-9]", "");
-        if (digitos.isEmpty()) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "La versión registrada no contiene componentes numéricos");
-        }
-        try {
-            return Integer.parseInt(digitos);
-        } catch (NumberFormatException ex) {
+        var matcher = VERSION_PATTERN.matcher(version.trim());
+        if (!matcher.matches()) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                     "Formato de versión inválido para la fórmula");
         }
+        int major = Integer.parseInt(matcher.group(1));
+        int minor = matcher.group(2) != null ? Integer.parseInt(matcher.group(2)) : 0;
+        return new VersionParts(major, minor);
     }
 
-    private String construirValorVersion(String versionBase, int numeroVersion) {
-        if (versionBase == null || versionBase.isBlank()) {
-            return String.valueOf(numeroVersion);
+    private VersionParts resolverVersionParts(FormulaProducto formula) {
+        if (formula == null) {
+            return null;
         }
-        Pattern patron = Pattern.compile("^(\\D*)(\\d+)(.*)$");
-        Matcher matcher = patron.matcher(versionBase);
-        if (matcher.matches()) {
-            String prefijo = matcher.group(1);
-            String sufijo = matcher.group(3);
-            return prefijo + numeroVersion + (sufijo != null ? sufijo : "");
+        if (formula.getVersionMajor() != null && formula.getVersionMinor() != null) {
+            return new VersionParts(formula.getVersionMajor(), formula.getVersionMinor());
         }
-        return String.valueOf(numeroVersion);
+        return parsearVersion(formula.getVersion());
+    }
+
+    private void normalizarVersion(FormulaProducto formula) {
+        if (formula == null) {
+            return;
+        }
+        VersionParts parts = resolverVersionParts(formula);
+        if (parts == null) {
+            return;
+        }
+        formula.setVersionMajor(parts.major());
+        formula.setVersionMinor(parts.minor());
+        formula.setVersion(formatearVersion(parts));
+    }
+
+    static class VersionParts {
+        private final int major;
+        private final int minor;
+
+        VersionParts(int major, int minor) {
+            this.major = major;
+            this.minor = minor;
+        }
+
+        int major() {
+            return major;
+        }
+
+        int minor() {
+            return minor;
+        }
     }
 
     private FormulaProductoDetalleDTO mapDetalleFormula(FormulaProducto formula, List<DocumentoFormula> documentos) {
