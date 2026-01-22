@@ -10,7 +10,7 @@ public class FormulaProductoSelectorDTO {
     public Long productoId;
     public String productoSku;
     public String productoNombre;
-    public boolean activo;
+    public Boolean activo;
     public LocalDateTime fechaActualizacion;
     public String actualizadoPorNombre;
     public LocalDateTime fechaCreacion;
@@ -21,22 +21,8 @@ public class FormulaProductoSelectorDTO {
                                       EstadoFormula estado,
                                       Long productoId,
                                       String productoSku,
-                                      String productoNombre) {
-        this.formulaId = formulaId;
-        this.version = version;
-        this.estado = estado != null ? estado.name() : null;
-        this.productoId = productoId;
-        this.productoSku = productoSku;
-        this.productoNombre = productoNombre;
-    }
-
-    public FormulaProductoSelectorDTO(Long formulaId,
-                                      String version,
-                                      EstadoFormula estado,
-                                      Long productoId,
-                                      String productoSku,
                                       String productoNombre,
-                                      boolean activo,
+                                      Boolean activo,
                                       LocalDateTime fechaActualizacion,
                                       String actualizadoPorNombre,
                                       LocalDateTime fechaCreacion,
@@ -47,7 +33,7 @@ public class FormulaProductoSelectorDTO {
         this.productoId = productoId;
         this.productoSku = productoSku;
         this.productoNombre = productoNombre;
-        this.activo = activo;
+        this.activo = activo != null ? activo : Boolean.FALSE;
         this.fechaActualizacion = fechaActualizacion;
         this.actualizadoPorNombre = actualizadoPorNombre;
         this.fechaCreacion = fechaCreacion;
@@ -57,14 +43,46 @@ public class FormulaProductoSelectorDTO {
     public FormulaProductoSelectorDTO(Long formulaId,
                                       String version,
                                       EstadoFormula estado,
-                                      Integer productoId,
+                                      Long productoId,
                                       String productoSku,
                                       String productoNombre) {
         this(formulaId,
                 version,
                 estado,
+                productoId,
+                productoSku,
+                productoNombre,
+                Boolean.FALSE,
+                null,
+                null,
+                null,
+                null);
+    }
+
+    public FormulaProductoSelectorDTO(Long formulaId,
+                                      String version,
+                                      EstadoFormula estado,
+                                      Integer productoId,
+                                      String productoSku,
+                                      String productoNombre,
+                                      Boolean activo,
+                                      LocalDateTime fechaActualizacion,
+                                      String actualizadoPorNombre,
+                                      LocalDateTime fechaCreacion,
+                                      String creadoPorNombre) {
+        this(formulaId,
+                version,
+                estado,
                 productoId != null ? productoId.longValue() : null,
                 productoSku,
-                productoNombre);
+                productoNombre,
+                activo,
+                fechaActualizacion,
+                actualizadoPorNombre,
+                fechaCreacion,
+                creadoPorNombre);
     }
+
+
+
 }
