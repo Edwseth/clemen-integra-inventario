@@ -506,17 +506,14 @@ class FormulaProductoServiceImplTest {
         FormulaProducto origen = new FormulaProducto();
         origen.setId(7L);
         origen.setProducto(producto);
-        origen.setVersion("v3");
+        origen.setVersionMajor(1);
+        origen.setVersionMinor(9);
+        origen.setVersion("V1.9");
         origen.setObservacion("Observación previa");
         origen.setDetalles(List.of(detalleOriginal));
         origen.setDocumentos(List.of(documentoOriginal));
         detalleOriginal.setFormula(origen);
         documentoOriginal.setFormula(origen);
-
-        FormulaProducto versionAnterior = new FormulaProducto();
-        versionAnterior.setId(4L);
-        versionAnterior.setProducto(producto);
-        versionAnterior.setVersion("v2");
 
         Usuario usuario = new Usuario();
         usuario.setId(3L);
@@ -524,7 +521,8 @@ class FormulaProductoServiceImplTest {
 
         when(formulaRepository.findById(7L)).thenReturn(Optional.of(origen));
         when(usuarioRepository.findById(3L)).thenReturn(Optional.of(usuario));
-        when(formulaRepository.findAllByProductoId(5L)).thenReturn(List.of(versionAnterior, origen));
+        when(formulaRepository.findTopByProductoIdOrderByVersionMajorDescVersionMinorDesc(5L))
+                .thenReturn(Optional.of(origen));
         when(formulaRepository.save(any(FormulaProducto.class))).thenAnswer(invocation -> {
             FormulaProducto guardado = invocation.getArgument(0);
             guardado.setId(11L);
@@ -535,7 +533,9 @@ class FormulaProductoServiceImplTest {
 
         assertThat(clon.getId()).isEqualTo(11L);
         assertThat(clon.getProducto()).isEqualTo(producto);
-        assertThat(clon.getVersion()).isEqualTo("v4");
+        assertThat(clon.getVersion()).isEqualTo("V2.0");
+        assertThat(clon.getVersionMajor()).isEqualTo(2);
+        assertThat(clon.getVersionMinor()).isEqualTo(0);
         assertThat(clon.getEstado()).isEqualTo(EstadoFormula.BORRADOR);
         assertThat(clon.isActivo()).isFalse();
         assertThat(clon.getCreadoPor()).isEqualTo(usuario);
@@ -560,6 +560,25 @@ class FormulaProductoServiceImplTest {
         assertThat(documentoClonado.getTipoDocumento()).isEqualTo(TipoDocumento.PROCEDIMIENTO);
         assertThat(documentoClonado.getNombreArchivo()).isEqualTo("doc.pdf");
         assertThat(documentoClonado.getRutaArchivo()).isEqualTo("/files/doc.pdf");
+    }
+
+    @Test
+    @DisplayName("versionado calcula y formatea la siguiente versión con rollover")
+    void versionadoCalculaSiguienteVersion() {
+        FormulaProductoServiceImpl.VersionParts actual = FormulaProductoServiceImpl.parsearVersion("V3.9");
+        FormulaProductoServiceImpl.VersionParts siguiente = FormulaProductoServiceImpl.calcularSiguienteVersion(actual);
+
+        assertThat(FormulaProductoServiceImpl.formatearVersion(siguiente)).isEqualTo("V4.0");
+        assertThat(siguiente.major()).isEqualTo(4);
+        assertThat(siguiente.minor()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("versionado formatea versión cuando solo existe el string")
+    void versionadoFormateaVersion() {
+        FormulaProductoServiceImpl.VersionParts version = FormulaProductoServiceImpl.parsearVersion("V11.2");
+
+        assertThat(FormulaProductoServiceImpl.formatearVersion(version)).isEqualTo("V11.2");
     }
 
     @Test

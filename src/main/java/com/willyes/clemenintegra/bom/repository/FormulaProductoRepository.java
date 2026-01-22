@@ -56,8 +56,9 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
     @Query("select f from FormulaProducto f where f.id = :id")
     Optional<FormulaProducto> findByIdWithDocumentos(@Param("id") Long id);
 
-
     List<FormulaProducto> findAllByProductoId(Long productoId);
+
+    Optional<FormulaProducto> findTopByProductoIdOrderByVersionMajorDescVersionMinorDesc(Long productoId);
 
     @Query("select f from FormulaProducto f " +
             "join fetch f.producto p " +
@@ -70,7 +71,11 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
     List<FormulaProducto> findAllForResumen(@Param("estado") EstadoFormula estado, @Param("producto") String producto);
 
     @Query("select new com.willyes.clemenintegra.bom.dto.FormulaProductoSelectorDTO(" +
-            "f.id, f.version, f.estado, p.id, p.codigoSku, p.nombre, f.activo, " +
+            "f.id, " +
+            "case when f.versionMajor is not null and f.versionMinor is not null " +
+            "then concat(concat('V', f.versionMajor), concat('.', f.versionMinor)) " +
+            "else f.version end, " +
+            "f.estado, p.id, p.codigoSku, p.nombre, f.activo, " +
             "f.fechaActualizacion, ap.nombreCompleto, f.fechaCreacion, cp.nombreCompleto) " +
             "from FormulaProducto f " +
             "join f.producto p " +
