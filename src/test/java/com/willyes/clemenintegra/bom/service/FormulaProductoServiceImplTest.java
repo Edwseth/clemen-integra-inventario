@@ -94,7 +94,7 @@ class FormulaProductoServiceImplTest {
         assertThat(resultado.isActivo()).isFalse();
         assertThat(resultado.getActualizadoPor()).isEqualTo(usuario);
         assertThat(resultado.getFechaActualizacion()).isNotNull();
-        verify(formulaRepository, never()).desactivarOtrasFormulasDelProducto(any(), any());
+        verify(formulaRepository, never()).desactivarOtrasFormulasDelProducto(any(), any(), any(), any());
         verify(formulaRepository).save(formula);
     }
 
@@ -121,7 +121,7 @@ class FormulaProductoServiceImplTest {
 
         assertThat(resultado.getEstado()).isEqualTo(EstadoFormula.APROBADA);
         assertThat(resultado.isActivo()).isTrue();
-        verify(formulaRepository).desactivarOtrasFormulasDelProducto(producto, 3L);
+        verify(formulaRepository).desactivarOtrasFormulasDelProducto(eq(producto), eq(3L), eq(usuario), any());
         verify(formulaRepository).save(formula);
     }
 
@@ -145,7 +145,7 @@ class FormulaProductoServiceImplTest {
 
         assertThat(resultado.getEstado()).isEqualTo(EstadoFormula.RECHAZADA);
         assertThat(resultado.isActivo()).isFalse();
-        verify(formulaRepository, never()).desactivarOtrasFormulasDelProducto(any(), any());
+        verify(formulaRepository, never()).desactivarOtrasFormulasDelProducto(any(), any(), any(), any());
     }
 
     @Test
@@ -183,7 +183,12 @@ class FormulaProductoServiceImplTest {
                 EstadoFormula.BORRADOR,
                 1L,
                 "PR-001",
-                "Producto Test");
+                "Producto Test",
+                true,
+                LocalDateTime.of(2024, 1, 10, 8, 30),
+                "Usuario Responsable",
+                LocalDateTime.of(2024, 1, 9, 8, 30),
+                "Usuario Creador");
 
         when(formulaRepository.findAllForSelector(isNull(), isNull(), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(selector)));
@@ -198,6 +203,11 @@ class FormulaProductoServiceImplTest {
         assertThat(dto.productoNombre).isEqualTo("Producto Test");
         assertThat(dto.version).isEqualTo("v1");
         assertThat(dto.estado).isEqualTo("BORRADOR");
+        assertThat(dto.activo).isTrue();
+        assertThat(dto.fechaActualizacion).isNotNull();
+        assertThat(dto.actualizadoPorNombre).isEqualTo("Usuario Responsable");
+        assertThat(dto.fechaCreacion).isNotNull();
+        assertThat(dto.creadoPorNombre).isEqualTo("Usuario Creador");
     }
 
     @Test
@@ -209,7 +219,12 @@ class FormulaProductoServiceImplTest {
                 EstadoFormula.BORRADOR,
                 2L,
                 "PR-002",
-                "Producto Borrador");
+                "Producto Borrador",
+                false,
+                null,
+                null,
+                LocalDateTime.of(2024, 1, 12, 10, 0),
+                "Usuario Creador");
 
         when(formulaRepository.findAllForSelector(eq(EstadoFormula.BORRADOR), isNull(), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(selector)));
@@ -232,7 +247,12 @@ class FormulaProductoServiceImplTest {
                 EstadoFormula.APROBADA,
                 3L,
                 "PT-0311",
-                "CVC-COMPRIMIDO VITAMINA C 500 MG");
+                "CVC-COMPRIMIDO VITAMINA C 500 MG",
+                true,
+                LocalDateTime.of(2024, 1, 15, 10, 0),
+                "Usuario Responsable",
+                LocalDateTime.of(2024, 1, 14, 10, 0),
+                "Usuario Creador");
 
         when(formulaRepository.findAllForSelector(any(), any(), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(selector)));

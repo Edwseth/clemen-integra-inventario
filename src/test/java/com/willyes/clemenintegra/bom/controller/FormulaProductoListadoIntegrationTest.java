@@ -30,6 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -117,13 +118,17 @@ class FormulaProductoListadoIntegrationTest extends IntegrationTestMySqlContaine
                 .activo(true)
                 .build());
 
+        LocalDateTime actualizacion = LocalDateTime.now().minusHours(2);
+
         FormulaProducto formulaUno = FormulaProducto.builder()
                 .producto(productoUno)
                 .version("V1")
                 .estado(EstadoFormula.BORRADOR)
                 .fechaCreacion(LocalDateTime.now().minusDays(1))
+                .fechaActualizacion(actualizacion)
                 .activo(true)
                 .creadoPor(usuario)
+                .actualizadoPor(usuario)
                 .build();
 
         FormulaProducto formulaDos = FormulaProducto.builder()
@@ -143,6 +148,11 @@ class FormulaProductoListadoIntegrationTest extends IntegrationTestMySqlContaine
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[*].productoId", hasItems(productoUno.getId(), productoDos.getId())))
                 .andExpect(jsonPath("$.content[*].productoSku", hasItems("SKU-SEL-1", "SKU-SEL-2")))
-                .andExpect(jsonPath("$.content[*].productoNombre", hasItems("Producto Selector Uno", "Producto Selector Dos")));
+                .andExpect(jsonPath("$.content[*].productoNombre", hasItems("Producto Selector Uno", "Producto Selector Dos")))
+                .andExpect(jsonPath("$.content[*].activo", hasItems(true)))
+                .andExpect(jsonPath("$.content[*].fechaActualizacion", hasItems(notNullValue())))
+                .andExpect(jsonPath("$.content[*].actualizadoPorNombre", hasItems("Usuario BOM Listado")))
+                .andExpect(jsonPath("$.content[*].fechaCreacion", hasItems(notNullValue())))
+                .andExpect(jsonPath("$.content[*].creadoPorNombre", hasItems("Usuario BOM Listado")));
     }
 }
