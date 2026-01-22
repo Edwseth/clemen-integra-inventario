@@ -88,7 +88,7 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
 
     @Override
     public PlanProduccionSemanal confirmar(Long id) {
-        PlanProduccionSemanal plan = planProduccionSemanalRepository.findById(id)
+        PlanProduccionSemanal plan = planProduccionSemanalRepository.findWithDetallesById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Plan semanal no encontrado"));
         if (plan.getEstado() != EstadoPlanProduccion.BORRADOR) {
             throw new IllegalStateException("Solo los planes en BORRADOR pueden confirmarse");
