@@ -98,7 +98,7 @@ class PlanProduccionServiceImplTest {
                 .estado(EstadoPlanProduccion.BORRADOR)
                 .build();
 
-        when(planProduccionSemanalRepository.findById(20L)).thenReturn(Optional.of(existente));
+        when(planProduccionSemanalRepository.findWithDetallesById(20L)).thenReturn(Optional.of(existente));
         when(planProduccionSemanalRepository.save(any(PlanProduccionSemanal.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -131,7 +131,7 @@ class PlanProduccionServiceImplTest {
                 .estado(EstadoPlanProduccion.CONFIRMADO)
                 .build();
 
-        when(planProduccionSemanalRepository.findById(40L)).thenReturn(Optional.of(existente));
+        when(planProduccionSemanalRepository.findWithDetallesById(40L)).thenReturn(Optional.of(existente));
 
         assertThrows(IllegalStateException.class, () -> service.confirmar(40L));
     }
