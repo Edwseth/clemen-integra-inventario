@@ -26,7 +26,8 @@ public class IndicadoresProduccionController {
     private final ReporteIndicadoresProduccionService reporteIndicadoresProduccionService;
 
     @GetMapping("/indicadores")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS'," +
+            "'ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<IndicadoresProduccionResponseDTO> obtenerIndicadores(
             @RequestParam LocalDate fechaInicio,
             @RequestParam LocalDate fechaFin,
@@ -35,7 +36,8 @@ public class IndicadoresProduccionController {
     }
 
     @GetMapping("/ordenes/alertas")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION'," +
+            "'ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<AlertaOrdenProduccionDTO>> obtenerAlertas(
             @RequestParam(required = false) LocalDate fechaReferencia,
             @RequestParam(required = false, defaultValue = "3") Integer diasVentana) {
@@ -43,7 +45,8 @@ public class IndicadoresProduccionController {
     }
 
     @GetMapping(value = "/indicadores/export/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS'," +
+            "'ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarIndicadoresExcel(
             @RequestParam LocalDate fechaInicio,
             @RequestParam LocalDate fechaFin,

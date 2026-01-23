@@ -11,6 +11,6 @@ public enum RolUsuario {
     ROL_LIDER_ALIMENTOS,
     ROL_CONTADOR,
     ROL_COMPRADOR,
+    ROL_PLANEADOR,
     ROL_SUPER_ADMIN
 }
-

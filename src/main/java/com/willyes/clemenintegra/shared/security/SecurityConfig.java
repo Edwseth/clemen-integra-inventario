@@ -129,6 +129,7 @@ public class SecurityConfig {
                             "/api/produccion/ordenes/alertas/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                             RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
@@ -150,6 +151,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                             RolUsuario.ROL_MICROBIOLOGO.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -163,6 +165,22 @@ public class SecurityConfig {
                             RolUsuario.ROL_COMPRADOR.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/alertas/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -183,11 +201,19 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
                     // 2) Resto de operaciones de planeación (crear/editar/eliminar):
                     auth.requestMatchers("/api/planeacion/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/mrp/**").hasAnyAuthority(
+                            RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -222,6 +248,17 @@ public class SecurityConfig {
                     ).hasAnyAuthority(
                             RolUsuario.ROL_MICROBIOLOGO.name(),
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/calidad/alertas/**",
+                            "/api/calidad/vida-util/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -262,6 +299,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                             RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -269,6 +307,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                             RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -290,10 +329,22 @@ public class SecurityConfig {
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
                     auth.requestMatchers("/actuator/metrics/**").hasAnyAuthority(
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/inventarios/solicitudes/**",
+                            "/api/inventario/solicitudes/**"
+                    ).hasAnyAuthority(
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 

@@ -195,6 +195,7 @@ public class OrdenCompraController {
     }
 
     @PutMapping("/{id}/estado")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<HistorialEstadoOrdenResponse> cambiarEstado(
             @PathVariable Long id,
             @RequestBody CambioEstadoOrdenRequest request,
