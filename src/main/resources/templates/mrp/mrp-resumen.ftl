@@ -30,6 +30,7 @@
         <th>Requerimiento bruto</th>
         <th>Inventario disponible</th>
         <th>Requerimiento neto</th>
+        <th>Unidad</th>
         <th>Tipo sugerencia</th>
     </tr>
     </thead>

@@ -111,6 +111,7 @@ public class MrpController {
     private CorridaMrpResponseDTO.DetalleCorridaMrpDTO toDetalleDto(DetalleCorridaMrp detalle) {
         Producto insumo = detalle.getProducto();
         SugerenciaAbastecimiento sugerencia = detalle.getSugerencia();
+        var unidadMedida = insumo != null ? insumo.getUnidadMedida() : null;
         return CorridaMrpResponseDTO.DetalleCorridaMrpDTO.builder()
                 .id(detalle.getId())
                 .productoId(insumo != null && insumo.getId() != null ? insumo.getId().longValue() : null)
@@ -119,6 +120,8 @@ public class MrpController {
                 .codigoInsumo(insumo != null ? insumo.getCodigoSku() : null)
                 .nombreInsumo(insumo != null ? insumo.getNombre() : null)
                 .categoriaInsumo(insumo != null && insumo.getCategoriaProducto() != null ? insumo.getCategoriaProducto().getNombre() : null)
+                .unidadMedidaCodigo(unidadMedida != null ? unidadMedida.getCodigo() : null)
+                .unidadMedidaNombre(unidadMedida != null ? unidadMedida.getNombre() : null)
                 .requerimientoBruto(detalle.getRequerimientoBruto())
                 .inventarioDisponible(detalle.getInventarioDisponible())
                 .recepcionesProgramadas(detalle.getRecepcionesProgramadas())
