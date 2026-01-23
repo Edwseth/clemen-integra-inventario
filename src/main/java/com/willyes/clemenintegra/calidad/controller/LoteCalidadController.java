@@ -38,7 +38,7 @@ public class LoteCalidadController {
     }
 
     @GetMapping("/{loteId}/estado-calidad")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_PLANEADOR')")
     public ResponseEntity<EstadoCalidadLoteResponseDTO> obtenerEstadoCalidad(@PathVariable Long loteId) {
         return ResponseEntity.ok(service.obtenerEstadoCalidad(loteId));
     }

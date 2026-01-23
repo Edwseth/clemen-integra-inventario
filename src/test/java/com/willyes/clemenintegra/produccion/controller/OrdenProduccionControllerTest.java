@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.produccion.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
+import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
@@ -152,6 +153,18 @@ class OrdenProduccionControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
         verify(ordenProduccionService).listarMovimientosPorEtapa(10L, 20L, null);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("GET /api/produccion/ordenes/{ordenId}/insumos permite ROL_PLANEADOR")
+    void listarInsumos_planeador_respondeOk() throws Exception {
+        when(ordenProduccionService.listarInsumos(10L)).thenReturn(List.of(new InsumoOPDTO()));
+
+        mockMvc.perform(get("/api/produccion/ordenes/{ordenId}/insumos", 10L))
+                .andExpect(status().isOk());
+
+        verify(ordenProduccionService).listarInsumos(10L);
     }
 
     @Test

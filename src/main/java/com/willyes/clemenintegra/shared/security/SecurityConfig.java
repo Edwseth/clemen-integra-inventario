@@ -121,6 +121,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -262,6 +263,16 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/calidad/auditoria-lote/*",
+                            "/api/calidad/lotes/*/estado-calidad").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers("/api/calidad/**",
                             "/api/calidad/evaluaciones/archivo/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
@@ -285,6 +296,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -307,6 +319,13 @@ public class SecurityConfig {
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                             RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/bom/formulas/producto/*/formula-activa").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
