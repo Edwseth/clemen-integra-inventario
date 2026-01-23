@@ -37,7 +37,7 @@ public class SolicitudPorOrdenController {
     private final SolicitudMovimientoService service;
 
     @GetMapping({"/por-orden", "/ordenes"})
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     @Operation(summary = "Listar solicitudes agrupadas por orden de producción")
     public ResponseEntity<Page<SolicitudesPorOrdenDTO>> listarPorOrden(
             @Parameter(description = "Estado de las solicitudes. Si se omite, se usa PENDIENTE por defecto")
@@ -79,13 +79,13 @@ public class SolicitudPorOrdenController {
     }
 
     @GetMapping("/orden/{ordenId}")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudesPorOrdenDTO> obtenerPorOrden(@PathVariable Long ordenId) {
         return ResponseEntity.ok(service.obtenerPorOrden(ordenId));
     }
 
     @GetMapping("/orden/{ordenId}/picklist")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> generarPicklist(@PathVariable Long ordenId,
                                                   @RequestParam(defaultValue = "false") boolean incluirAprobadas) {
         PicklistDTO dto = service.generarPicklist(ordenId, incluirAprobadas);
