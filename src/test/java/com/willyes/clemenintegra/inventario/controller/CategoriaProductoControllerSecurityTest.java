@@ -97,6 +97,18 @@ class CategoriaProductoControllerSecurityTest {
     }
 
     @Test
+    void permiteAccesoConRolPlaneador() throws Exception {
+        when(categoriaProductoService.listarTodas()).thenReturn(Collections.singletonList(CategoriaProductoResponseDTO.builder().build()));
+
+        mockMvc.perform(get("/api/categorias")
+                        .with(SecurityMockMvcRequestPostProcessors.user("planeador")
+                                .authorities(() -> "ROL_PLANEADOR")))
+                .andExpect(status().isOk());
+
+        verify(categoriaProductoService).listarTodas();
+    }
+
+    @Test
     void rechazaRolNoAutorizado() throws Exception {
         mockMvc.perform(get("/api/categorias")
                         .with(SecurityMockMvcRequestPostProcessors.user("analista")

@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/calidad")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
 public class CalidadAuditoriaController {
 
     private final AuditoriaLoteService auditoriaLoteService;
@@ -27,12 +26,14 @@ public class CalidadAuditoriaController {
     private final ReporteInvimaBpmPdfService reporteInvimaBpmPdfService;
 
     @GetMapping("/auditoria-lote/{loteId}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<AuditoriaLoteResponseDTO> obtenerAuditoriaLote(@PathVariable Long loteId) {
         return ResponseEntity.ok(auditoriaLoteService.obtenerAuditoriaDeLote(loteId));
     }
 
     @GetMapping(path = "/auditoria-lote/{loteId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     // Reporte: PDF de auditoría/carpeta de lote usado en inspecciones de Calidad.
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> descargarPdfAuditoria(@PathVariable Long loteId) {
         AuditoriaLoteResponseDTO auditoria = auditoriaLoteService.obtenerAuditoriaDeLote(loteId);
         byte[] pdf = auditoriaLotePdfService.generarPdf(auditoria);
@@ -45,6 +46,7 @@ public class CalidadAuditoriaController {
 
     @GetMapping(path = "/reportes/lotes/{loteId}/carpeta", produces = MediaType.APPLICATION_PDF_VALUE)
     // Reporte: PDF de carpeta de lote (expediente de calidad).
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> descargarCarpetaLote(@PathVariable Long loteId) {
         byte[] pdf = carpetaLotePdfService.generarCarpeta(loteId);
         String nombreArchivo = "carpeta-lote-" + loteId + ".pdf";
@@ -56,6 +58,7 @@ public class CalidadAuditoriaController {
 
     @GetMapping(path = "/reportes/invima-bpm/lote/{loteId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     // Reporte: PDF INVIMA/BPM v1 para auditoría/regulador.
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> descargarReporteInvimaBpm(@PathVariable Long loteId) {
         byte[] pdf = reporteInvimaBpmPdfService.generarPdf(loteId);
         String nombreArchivo = "invima-bpm-" + loteId + ".pdf";

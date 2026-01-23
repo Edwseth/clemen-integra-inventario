@@ -244,6 +244,14 @@ class FormulaProductoControllerSecurityTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("ROL_PLANEADOR puede consultar formula activa de producto")
+    void planeadorPuedeConsultarFormulaActivaProducto() throws Exception {
+        mockMvc.perform(get("/api/bom/formulas/producto/{productoId}/formula-activa", 10L))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_SUPER_ADMIN")
     @DisplayName("ROL_SUPER_ADMIN puede realizar todas las operaciones BOM")
     void superAdminAccesoCompleto() throws Exception {

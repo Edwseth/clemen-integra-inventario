@@ -188,7 +188,7 @@ public class FormulaProductoController {
     }
 
     @GetMapping("/producto/{productoId}/formula-activa")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<FormulaActivaProduccionDTO> obtenerFormulaActivaProduccion(@PathVariable Long productoId) {
         return ResponseEntity.ok(formulaService.obtenerFormulaActivaProduccion(productoId));
     }
