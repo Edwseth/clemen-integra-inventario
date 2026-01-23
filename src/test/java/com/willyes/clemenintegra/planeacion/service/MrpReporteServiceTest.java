@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.planeacion.service;
 
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
@@ -53,11 +54,18 @@ class MrpReporteServiceTest {
                 .nombre("Materia Prima")
                 .build();
 
+        UnidadMedida unidadMedida = UnidadMedida.builder()
+                .id(10L)
+                .codigo("KG")
+                .nombre("Kilogramo")
+                .build();
+
         Producto producto = Producto.builder()
                 .id(1)
                 .codigoSku("MAT-001")
                 .nombre("Ácido cítrico")
                 .categoriaProducto(categoria)
+                .unidadMedida(unidadMedida)
                 .build();
 
         DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
@@ -107,10 +115,12 @@ class MrpReporteServiceTest {
             Row dataRow = sheet.getRow(header.getRowNum() + 1);
 
             assertNotNull(dataRow);
+            assertEquals("Unidad", header.getCell(6).getStringCellValue());
             assertEquals("MAT-001", dataRow.getCell(0).getStringCellValue());
             assertEquals("Ácido cítrico", dataRow.getCell(1).getStringCellValue());
             assertEquals("Materia Prima", dataRow.getCell(2).getStringCellValue());
-            assertEquals("OC", dataRow.getCell(6).getStringCellValue());
+            assertEquals("KG", dataRow.getCell(6).getStringCellValue());
+            assertEquals("OC", dataRow.getCell(7).getStringCellValue());
         }
     }
 
@@ -132,6 +142,7 @@ class MrpReporteServiceTest {
             assertTrue(flattened.contains("mat-001"));
             assertTrue(flattened.contains("acidocitrico"));
             assertTrue(flattened.contains("materiaprima"));
+            assertTrue(flattened.contains("kg"));
             assertTrue(flattened.contains("oc"));
         }
     }

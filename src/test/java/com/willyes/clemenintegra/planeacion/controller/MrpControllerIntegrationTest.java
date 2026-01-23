@@ -181,6 +181,7 @@ class MrpControllerIntegrationTest extends IntegrationTestMySqlContainer {
                         .content("{\"planSemanalId\":" + plan.getId() + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.detalles[0].productoNombre").value(insumo.getNombre()))
+                .andExpect(jsonPath("$.detalles[0].unidadMedidaCodigo").value("KG"))
                 .andExpect(jsonPath("$.detalles[0].categoriaInsumo").value("MP"))
                 .andExpect(jsonPath("$.sugerencias[0].productoNombre").value(insumo.getNombre()));
     }

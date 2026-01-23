@@ -3,11 +3,14 @@ package com.willyes.clemenintegra.planeacion.service;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.SugerenciaAbastecimiento;
 import com.willyes.clemenintegra.planeacion.model.enums.TipoSugerenciaAbastecimiento;
 import com.willyes.clemenintegra.planeacion.repository.CorridaMrpRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -70,7 +73,7 @@ public class MrpReporteService {
             Row encabezado = sheet.createRow(rowIdx++);
             String[] columnas = new String[]{
                     "Código insumo", "Nombre", "Categoría", "Requerimiento bruto",
-                    "Inventario disponible", "Requerimiento neto", "Tipo sugerencia"
+                    "Inventario disponible", "Requerimiento neto", "Unidad", "Tipo sugerencia"
             };
             for (int i = 0; i < columnas.length; i++) {
                 encabezado.createCell(i).setCellValue(columnas[i]);
@@ -80,6 +83,7 @@ public class MrpReporteService {
                 Row fila = sheet.createRow(rowIdx++);
                 Producto producto = detalle.getProducto();
                 CategoriaProducto categoria = producto != null ? producto.getCategoriaProducto() : null;
+                UnidadMedida unidadMedida = producto != null ? producto.getUnidadMedida() : null;
                 SugerenciaAbastecimiento sugerencia = detalle.getSugerencia();
 
                 int col = 0;
@@ -89,6 +93,7 @@ public class MrpReporteService {
                 setNumeric(fila.createCell(col++), detalle.getRequerimientoBruto());
                 setNumeric(fila.createCell(col++), detalle.getInventarioDisponible());
                 setNumeric(fila.createCell(col++), detalle.getRequerimientoNeto());
+                fila.createCell(col++).setCellValue(unidadMedida != null ? nz(unidadMedida.getCodigo()) : "");
                 fila.createCell(col).setCellValue(formatearTipoSugerencia(sugerencia));
             }
 
@@ -120,8 +125,10 @@ public class MrpReporteService {
     }
 
     private CorridaMrp cargarCorrida(Long corridaId) {
-        return corridaMrpRepository.findWithDetallesById(corridaId)
+        CorridaMrp corrida = corridaMrpRepository.findWithDetallesById(corridaId)
                 .orElseThrow(() -> new NoSuchElementException("Corrida MRP no encontrada"));
+        validarUnidadesMedida(corrida);
+        return corrida;
     }
 
     private String componerHtml(CorridaMrp corrida) {
@@ -136,6 +143,7 @@ public class MrpReporteService {
         for (DetalleCorridaMrp detalle : Optional.ofNullable(corrida.getDetalles()).orElse(List.of())) {
             Producto producto = detalle.getProducto();
             CategoriaProducto categoria = producto != null ? producto.getCategoriaProducto() : null;
+            UnidadMedida unidadMedida = producto != null ? producto.getUnidadMedida() : null;
             SugerenciaAbastecimiento sugerencia = detalle.getSugerencia();
 
             filas.append("<tr>")
@@ -145,6 +153,7 @@ public class MrpReporteService {
                     .append("<td class='right'>").append(formNum(detalle.getRequerimientoBruto())).append("</td>")
                     .append("<td class='right'>").append(formNum(detalle.getInventarioDisponible())).append("</td>")
                     .append("<td class='right'>").append(formNum(detalle.getRequerimientoNeto())).append("</td>")
+                    .append("<td>").append(esc(unidadMedida != null ? unidadMedida.getCodigo() : "")).append("</td>")
                     .append("<td>").append(esc(formatearTipoSugerencia(sugerencia))).append("</td>")
                     .append("</tr>");
         }
@@ -171,6 +180,22 @@ public class MrpReporteService {
             return "NINGUNA";
         }
         return sugerencia.getTipo() == TipoSugerenciaAbastecimiento.FABRICAR ? "OP" : "OC";
+    }
+
+    private void validarUnidadesMedida(CorridaMrp corrida) {
+        if (corrida == null || corrida.getDetalles() == null) {
+            return;
+        }
+        for (DetalleCorridaMrp detalle : corrida.getDetalles()) {
+            Producto producto = detalle.getProducto();
+            if (producto == null || producto.getUnidadMedida() == null) {
+                String codigo = producto != null && producto.getCodigoSku() != null
+                        ? producto.getCodigoSku()
+                        : producto != null && producto.getId() != null ? producto.getId().toString() : "desconocido";
+                throw new CustomBusinessException(ApiErrorCode.PRODUCTO_SIN_UNIDAD_MEDIDA,
+                        "El producto " + codigo + " no tiene unidad de medida configurada");
+            }
+        }
     }
 
     private String loadTemplate(String classpathLocation) {

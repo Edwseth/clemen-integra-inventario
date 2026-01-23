@@ -22,6 +22,8 @@ import com.willyes.clemenintegra.planeacion.model.enums.TipoSugerenciaAbastecimi
 import com.willyes.clemenintegra.planeacion.model.enums.TipoCambioMrp;
 import com.willyes.clemenintegra.planeacion.repository.CorridaMrpRepository;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -156,6 +158,7 @@ public class MrpServiceImpl implements MrpService {
 
         for (Map.Entry<Producto, BigDecimal> entry : requerimientosBrutos.entrySet()) {
             Producto producto = entry.getKey();
+            validarUnidadMedida(producto);
             BigDecimal bruto = entry.getValue() != null ? entry.getValue() : BigDecimal.ZERO;
             BigDecimal inventario = obtenerInventarioDisponible(producto);
             BigDecimal recepciones = obtenerRecepcionesProgramadas(producto, horizonteInicio, horizonteFin);
@@ -206,7 +209,20 @@ public class MrpServiceImpl implements MrpService {
         if (corrida == null || corrida.getDetalles() == null) {
             return;
         }
-        corrida.getDetalles().forEach(this::prepararSugerencia);
+        corrida.getDetalles().forEach(detalle -> {
+            validarUnidadMedida(detalle.getProducto());
+            prepararSugerencia(detalle);
+        });
+    }
+
+    private void validarUnidadMedida(Producto producto) {
+        if (producto == null || producto.getUnidadMedida() == null) {
+            String codigo = producto != null && producto.getCodigoSku() != null
+                    ? producto.getCodigoSku()
+                    : producto != null && producto.getId() != null ? producto.getId().toString() : "desconocido";
+            throw new CustomBusinessException(ApiErrorCode.PRODUCTO_SIN_UNIDAD_MEDIDA,
+                    "El producto " + codigo + " no tiene unidad de medida configurada");
+        }
     }
 
     private SugerenciaAbastecimiento prepararSugerencia(DetalleCorridaMrp detalle) {

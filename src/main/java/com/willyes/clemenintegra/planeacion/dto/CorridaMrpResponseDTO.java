@@ -41,6 +41,8 @@ public class CorridaMrpResponseDTO {
          * El frontend puede usar este valor directamente para filtros.
          */
         private String categoriaInsumo;
+        private String unidadMedidaCodigo;
+        private String unidadMedidaNombre;
         private BigDecimal requerimientoBruto;
         private BigDecimal inventarioDisponible;
         private BigDecimal recepcionesProgramadas;

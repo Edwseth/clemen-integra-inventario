@@ -19,10 +19,12 @@ public interface CorridaMrpRepository extends JpaRepository<CorridaMrp, Long> {
             "planProduccionSemanal",
             "detalles",
             "detalles.producto",
+            "detalles.producto.unidadMedida",
             "detalles.producto.categoriaProducto",
             "detalles.sugerencia",
             "detalles.sugerencia.detalleCorrida",
             "detalles.sugerencia.detalleCorrida.producto",
+            "detalles.sugerencia.detalleCorrida.producto.unidadMedida",
             "detalles.sugerencia.detalleCorrida.producto.categoriaProducto"
     })
     Optional<CorridaMrp> findWithDetallesById(Long id);
@@ -31,10 +33,12 @@ public interface CorridaMrpRepository extends JpaRepository<CorridaMrp, Long> {
             "planProduccionSemanal",
             "detalles",
             "detalles.producto",
+            "detalles.producto.unidadMedida",
             "detalles.producto.categoriaProducto",
             "detalles.sugerencia",
             "detalles.sugerencia.detalleCorrida",
             "detalles.sugerencia.detalleCorrida.producto",
+            "detalles.sugerencia.detalleCorrida.producto.unidadMedida",
             "detalles.sugerencia.detalleCorrida.producto.categoriaProducto"
     })
     @Query("select c from CorridaMrp c where c.id = :id")
