@@ -1,0 +1,16 @@
+-- Extiende el ENUM de usuarios.rol para incluir ROL_PLANEADOR
+ALTER TABLE usuarios
+    MODIFY COLUMN rol ENUM(
+        'ROL_MICROBIOLOGO',
+        'ROL_JEFE_CALIDAD',
+        'ROL_ANALISTA_CALIDAD',
+        'ROL_JEFE_ALMACENES',
+        'ROL_ALMACENISTA',
+        'ROL_JEFE_PRODUCCION',
+        'ROL_LIDER_HOMEOPATICOS',
+        'ROL_LIDER_ALIMENTOS',
+        'ROL_CONTADOR',
+        'ROL_COMPRADOR',
+        'ROL_PLANEADOR',
+        'ROL_SUPER_ADMIN'
+    ) NOT NULL;

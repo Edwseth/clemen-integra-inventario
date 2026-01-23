@@ -33,6 +33,7 @@ public class KardexController {
             "'ROL_LIDER_ALIMENTOS'," +
             "'ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD'," +
+            "'ROL_PLANEADOR'," +
             "'ROL_SUPER_ADMIN'" +
             ")")
     public ResponseEntity<List<KardexItemDTO>> obtenerKardex(

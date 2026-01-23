@@ -41,7 +41,7 @@ public class ProductoController {
 
     @GetMapping("/buscar")
     @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
-            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD')")
+            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
     public ResponseEntity<Page<ProductoOptionDTO>> buscarProductos(
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "term", required = false) String term,
@@ -54,7 +54,7 @@ public class ProductoController {
     }
 
     @GetMapping("/buscar-insumos")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public ResponseEntity<Page<ProductoResumenDTO>> buscarInsumos(
             @RequestParam(name = "term") String term,
             @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -64,7 +64,7 @@ public class ProductoController {
     }
 
     @GetMapping("/buscar-pt")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public ResponseEntity<Page<ProductoResumenDTO>> buscarProductosTerminados(
             @RequestParam(name = "term") String term,
             @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -74,7 +74,7 @@ public class ProductoController {
     }
 
     @GetMapping("/buscar-fabricables")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public ResponseEntity<Page<ProductoAutocompleteDTO>> buscarProductosFabricablesAutocomplete(
             @RequestParam("term") String term,
             Pageable pageable
@@ -84,6 +84,8 @@ public class ProductoController {
     }
 
     @GetMapping("/categoria/{nombre}")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
+            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
     public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
             @PathVariable String nombre) {
         List<ProductoResponseDTO> productos = productoService.buscarPorCategoria(nombre);
@@ -94,20 +96,20 @@ public class ProductoController {
     }
 
     @GetMapping("/fabricables")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public ResponseEntity<List<ProductoResponseDTO>> getProductosFabricables() {
         List<ProductoResponseDTO> productos = productoService.findProductosFabricables();
         return ResponseEntity.ok(productos);
     }
 
     @GetMapping("/producto-terminado")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public List<ProductoResponseDTO> getProductosTerminados() {
         return productoService.findByCategoriaTipo("PRODUCTO_TERMINADO");
     }
 
     @GetMapping("/insumos")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public List<ProductoResponseDTO> getProductosInsumo() {
         return productoService.findByCategoriaTipoIn(List.of(
                 "MATERIA_PRIMA",
@@ -118,7 +120,7 @@ public class ProductoController {
     }
 
     @GetMapping("/insumos/autocomplete")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public ResponseEntity<Page<InsumoAutocompleteDTO>> buscarInsumosAutocomplete(
             @RequestParam("term") String term,
             Pageable pageable
@@ -154,6 +156,8 @@ public class ProductoController {
     }
 
     @GetMapping("/{id:[0-9]+}")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
+            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
     public ResponseEntity<ProductoResponseDTO> obtenerPorId(@PathVariable Long id) {
         ProductoResponseDTO producto = productoService.obtenerPorId(id);
         return ResponseEntity.ok(producto);
@@ -194,6 +198,7 @@ public class ProductoController {
     // PROD-INACTIVAR END
 
     @PutMapping("/{id}/unidad-medida")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<?> cambiarUnidadMedida(
             @PathVariable Long id,
             @RequestBody @Valid UnidadMedidaRequestDTO dto) {
@@ -225,6 +230,8 @@ public class ProductoController {
     }
 
     @GetMapping("/con-lotes")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
+            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
     public ResponseEntity<List<ProductoConEstadoLoteDTO>> productosConLotesPorEstado(
             @RequestParam String estado) {
         try {
@@ -236,6 +243,8 @@ public class ProductoController {
     }
 
     @GetMapping("/agrupado-por-lotes")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
+            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
     public ResponseEntity<List<ProductoConLotesDTO>> productosAgrupadosPorLotesEnEstado(
             @RequestParam String estado) {
         try {
@@ -247,7 +256,8 @@ public class ProductoController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_JEFE_PRODUCCION')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD'," +
+            " 'ROL_JEFE_PRODUCCION','ROL_PLANEADOR')")
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerTodos(
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) String sku,

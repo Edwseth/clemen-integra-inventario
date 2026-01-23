@@ -34,12 +34,14 @@ public class SolicitudMovimientoController {
     private final UsuarioService usuarioService;
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> crear(@RequestBody SolicitudMovimientoRequestDTO dto) {
         return new ResponseEntity<>(service.registrarSolicitud(dto), HttpStatus.CREATED);
     }
 
     @GetMapping
     // endpoint que lista las solicitudes de movimiento con paginación
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<SolicitudMovimientoListadoDTO>> listar(
             @PageableDefault(size = 10, sort = "fechaSolicitud", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(required = false) EstadoSolicitudMovimiento estado,
@@ -80,7 +82,7 @@ public class SolicitudMovimientoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerSolicitud(id));
     }

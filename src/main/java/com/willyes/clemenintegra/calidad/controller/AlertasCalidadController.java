@@ -18,7 +18,8 @@ public class AlertasCalidadController {
     private final AlertasCalidadService alertasCalidadService;
 
     @GetMapping("/resumen")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
+            "'ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<ResumenAlertasCalidadDTO> obtenerResumen(@RequestParam(defaultValue = "30") int diasUmbral) {
         return ResponseEntity.ok(alertasCalidadService.obtenerAlertas(diasUmbral));
     }

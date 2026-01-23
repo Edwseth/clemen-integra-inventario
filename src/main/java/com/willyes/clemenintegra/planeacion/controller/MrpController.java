@@ -35,7 +35,7 @@ public class MrpController {
     private final MrpReporteService mrpReporteService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<CorridaMrpResponseDTO> ejecutar(@RequestBody CorridaMrpRequest request) {
         Optional<PlanProduccionSemanal> plan = planProduccionService.buscarPorId(request.getPlanSemanalId());
         if (plan.isEmpty()) {
@@ -46,7 +46,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<?> obtener(@PathVariable Long id) {
         try {
             CorridaMrp corrida = mrpService.obtenerCorrida(id);
@@ -57,7 +57,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}/excel")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<?> exportarExcel(@PathVariable Long id) {
         try {
             byte[] excel = mrpReporteService.generarExcelCorrida(id);

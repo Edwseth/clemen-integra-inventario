@@ -44,14 +44,16 @@ public class LoteProductoController {
     }
 
     @GetMapping("/estado/{estado}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_CALIDAD'," +
+            " 'ROL_PLANEADOR', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<List<LoteProductoResponseDTO>> listarPorEstado(@PathVariable String estado) {
         List<LoteProductoResponseDTO> lotes = service.obtenerLotesPorEstado(estado);
         return ResponseEntity.ok(lotes);
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN'," +
+            " 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
     public ResponseEntity<Page<LoteProductoResponseDTO>> listar(
             @RequestParam(required = false) String producto,
             @RequestParam(required = false) String estado,
