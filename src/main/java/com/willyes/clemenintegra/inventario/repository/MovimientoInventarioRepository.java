@@ -276,7 +276,10 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
 
     @EntityGraph(attributePaths = {
             "producto",
+            "producto.unidadMedida",
             "lote",
+            "lote.producto",
+            "lote.producto.unidadMedida",
             "almacenOrigen",
             "almacenDestino",
             "registradoPor",

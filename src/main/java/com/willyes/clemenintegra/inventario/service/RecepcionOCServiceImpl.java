@@ -69,6 +69,24 @@ public class RecepcionOCServiceImpl implements RecepcionOCService {
         return recepcionOCMapper.toResponse(recepcion, movimientos);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<RecepcionOCResponseDTO> listarRecepcionesPorOrden(Long ordenCompraId) {
+        List<RecepcionOC> recepciones = recepcionOCRepository
+                .findAllByOrdenCompra_IdOrderByFechaRecepcionAsc(ordenCompraId);
+
+        return recepciones.stream()
+                .map(recepcion -> {
+                    List<MovimientoInventarioResponseDTO> movimientos = movimientoInventarioRepository
+                            .findAllByRecepcionOcIdOrderByFechaIngresoAsc(recepcion.getId())
+                            .stream()
+                            .map(movimientoInventarioMapper::safeToResponseDTO)
+                            .toList();
+                    return recepcionOCMapper.toResponse(recepcion, movimientos);
+                })
+                .toList();
+    }
+
     private RecepcionOC crearCabecera(Integer ordenCompraId,
                                       Integer almacenDestinoId,
                                       Integer proveedorId,

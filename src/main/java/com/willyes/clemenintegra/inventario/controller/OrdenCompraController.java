@@ -9,10 +9,7 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
 import com.willyes.clemenintegra.inventario.service.HistorialEstadoOrdenService;
-import com.willyes.clemenintegra.inventario.mapper.RecepcionOCMapper;
-import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
-import com.willyes.clemenintegra.inventario.dto.RecepcionOCResponseDTO;
-import com.willyes.clemenintegra.inventario.repository.RecepcionOCRepository;
+import com.willyes.clemenintegra.inventario.service.RecepcionOCService;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -52,10 +49,7 @@ public class OrdenCompraController {
     private final ProductoRepository productoRepository;
     private final OrdenCompraService ordenCompraService;
     private final HistorialEstadoOrdenService historialEstadoOrdenService;
-    private final RecepcionOCRepository recepcionOCRepository;
-    private final MovimientoInventarioRepository movimientoInventarioRepository;
-    private final MovimientoInventarioMapper movimientoInventarioMapper;
-    private final RecepcionOCMapper recepcionOCMapper;
+    private final RecepcionOCService recepcionOCService;
     private final OrdenCompraPdfService ordenCompraPdfService;
     private final OrdenCompraMapper mapper;
 
@@ -273,15 +267,7 @@ public class OrdenCompraController {
 
     @GetMapping("/{id}/recepciones")
     public ResponseEntity<List<RecepcionOCResponseDTO>> recepcionesPorOrden(@PathVariable Long id) {
-        List<RecepcionOCResponseDTO> recepciones = recepcionOCRepository
-                .findAllByOrdenCompra_IdOrderByFechaRecepcionAsc(id)
-                .stream()
-                .map(r -> recepcionOCMapper.toResponse(r,
-                        movimientoInventarioRepository.findAllByRecepcionOcIdOrderByFechaIngresoAsc(r.getId())
-                                .stream()
-                                .map(movimientoInventarioMapper::safeToResponseDTO)
-                                .toList()))
-                .toList();
+        List<RecepcionOCResponseDTO> recepciones = recepcionOCService.listarRecepcionesPorOrden(id);
         return ResponseEntity.ok(recepciones);
     }
 
