@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.planeacion.controller;
 
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.planeacion.dto.CorridaMrpResponseDTO;
 import com.willyes.clemenintegra.planeacion.model.CorridaMrp;
 import com.willyes.clemenintegra.planeacion.model.DetalleCorridaMrp;
@@ -31,6 +32,13 @@ import static org.mockito.Mockito.when;
 
 class MrpControllerTest {
 
+    private static final UnidadMedida UNIDAD_MEDIDA_BASE = UnidadMedida.builder()
+            .id(1L)
+            .codigo("UND")
+            .nombre("UNIDAD")
+            .simbolo("UND")
+            .build();
+
     @Test
     void toDtoShouldCalculateCriticidadPerRules() {
         MrpController controller = new MrpController(
@@ -49,6 +57,7 @@ class MrpControllerTest {
                 .codigoSku("SKU-1")
                 .nombre("Insumo 1")
                 .categoriaProducto(categoria)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
 
         DetalleCorridaMrp criticidadBaja = DetalleCorridaMrp.builder()
@@ -128,6 +137,7 @@ class MrpControllerTest {
                 .nombre("Producto Semielaborado")
                 .categoriaProducto(categoria)
                 .leadTimeCompraDias(7)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
 
         CorridaMrp corrida = CorridaMrp.builder()
@@ -203,6 +213,7 @@ class MrpControllerTest {
                 .nombre("Producto Alto")
                 .categoriaProducto(categoria)
                 .leadTimeCompraDias(7)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         DetalleCorridaMrp detalleAlto = DetalleCorridaMrp.builder()
                 .id(101L)
@@ -221,6 +232,7 @@ class MrpControllerTest {
                 .nombre("Producto Critico")
                 .categoriaProducto(categoria)
                 .leadTimeCompraDias(21)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         DetalleCorridaMrp detalleCritico = DetalleCorridaMrp.builder()
                 .id(102L)
