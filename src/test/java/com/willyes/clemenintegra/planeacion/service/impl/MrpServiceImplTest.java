@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
@@ -49,6 +50,13 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MrpServiceImplTest {
 
+    private static final UnidadMedida UNIDAD_MEDIDA_BASE = UnidadMedida.builder()
+            .id(1L)
+            .codigo("UND")
+            .nombre("UNIDAD")
+            .simbolo("UND")
+            .build();
+
     @Mock
     private FormulaProductoRepository formulaProductoRepository;
 
@@ -85,7 +93,7 @@ class MrpServiceImplTest {
 
     @Test
     void calculaRequerimientoNetoEnCeroCuandoInventarioCubreBruto() {
-        Producto producto = Producto.builder().id(1).build();
+        Producto producto = Producto.builder().id(1).unidadMedida(UNIDAD_MEDIDA_BASE).build();
         Map<Producto, BigDecimal> requerimientos = Map.of(producto, BigDecimal.TEN);
 
         mockInventarioDisponible(BigDecimal.valueOf(15));
@@ -100,7 +108,7 @@ class MrpServiceImplTest {
 
     @Test
     void calculaRequerimientoNetoPositivoCuandoInventarioInsuficiente() {
-        Producto producto = Producto.builder().id(2).build();
+        Producto producto = Producto.builder().id(2).unidadMedida(UNIDAD_MEDIDA_BASE).build();
         Map<Producto, BigDecimal> requerimientos = Map.of(producto, BigDecimal.TEN);
 
         mockInventarioDisponible(BigDecimal.valueOf(2));
@@ -114,7 +122,7 @@ class MrpServiceImplTest {
 
     @Test
     void descuentaRecepcionesProgramadasDelNeto() {
-        Producto producto = Producto.builder().id(3).build();
+        Producto producto = Producto.builder().id(3).unidadMedida(UNIDAD_MEDIDA_BASE).build();
         Map<Producto, BigDecimal> requerimientos = Map.of(producto, BigDecimal.TEN);
 
         mockInventarioDisponible(BigDecimal.ONE);
@@ -132,14 +140,17 @@ class MrpServiceImplTest {
         Producto productoTerminado = Producto.builder()
                 .id(10)
                 .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.PRODUCTO_TERMINADO).build())
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         Producto semiElaborado = Producto.builder()
                 .id(20)
                 .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO).build())
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         Producto insumoFinal = Producto.builder()
                 .id(30)
                 .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
 
         PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
@@ -211,6 +222,7 @@ class MrpServiceImplTest {
                 .id(30)
                 .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
                 .leadTimeCompraDias(7)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         CorridaMrp corrida = CorridaMrp.builder()
                 .horizonteInicio(LocalDate.of(2024, 1, 1))
@@ -243,6 +255,7 @@ class MrpServiceImplTest {
                 .id(40)
                 .categoriaProducto(CategoriaProducto.builder().tipo(TipoCategoria.MATERIA_PRIMA).build())
                 .leadTimeCompraDias(21)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         CorridaMrp corrida = CorridaMrp.builder()
                 .horizonteInicio(LocalDate.of(2024, 1, 1))
@@ -278,10 +291,10 @@ class MrpServiceImplTest {
                 .semanaFin(LocalDate.of(2024, 1, 7))
                 .build();
 
-        Producto insumoNuevo = Producto.builder().id(1).build();
-        Producto insumoAumenta = Producto.builder().id(2).build();
-        Producto insumoReduce = Producto.builder().id(3).build();
-        Producto insumoIgual = Producto.builder().id(4).build();
+        Producto insumoNuevo = Producto.builder().id(1).unidadMedida(UNIDAD_MEDIDA_BASE).build();
+        Producto insumoAumenta = Producto.builder().id(2).unidadMedida(UNIDAD_MEDIDA_BASE).build();
+        Producto insumoReduce = Producto.builder().id(3).unidadMedida(UNIDAD_MEDIDA_BASE).build();
+        Producto insumoIgual = Producto.builder().id(4).unidadMedida(UNIDAD_MEDIDA_BASE).build();
 
         DetalleCorridaMrp detalleAnteriorAumenta = DetalleCorridaMrp.builder()
                 .producto(insumoAumenta)
@@ -341,6 +354,7 @@ class MrpServiceImplTest {
         Producto producto = Producto.builder()
                 .id(1)
                 .leadTimeCompraDias(14)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
                 .corrida(corrida)
@@ -373,6 +387,7 @@ class MrpServiceImplTest {
         Producto producto = Producto.builder()
                 .id(2)
                 .leadTimeCompraDias(7)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
                 .corrida(corrida)
@@ -405,6 +420,7 @@ class MrpServiceImplTest {
         Producto producto = Producto.builder()
                 .id(105)
                 .leadTimeCompraDias(7)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
                 .corrida(corrida)
@@ -437,6 +453,7 @@ class MrpServiceImplTest {
         Producto producto = Producto.builder()
                 .id(83)
                 .leadTimeCompraDias(14)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         Map<Producto, BigDecimal> requerimientos = Map.of(producto, BigDecimal.valueOf(1000));
 
@@ -465,6 +482,7 @@ class MrpServiceImplTest {
         Producto producto = Producto.builder()
                 .id(99)
                 .leadTimeCompraDias(7)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
                 .corrida(corrida)
@@ -491,6 +509,7 @@ class MrpServiceImplTest {
         Producto producto = Producto.builder()
                 .id(3)
                 .leadTimeCompraDias(7)
+                .unidadMedida(UNIDAD_MEDIDA_BASE)
                 .build();
         DetalleCorridaMrp detalle = DetalleCorridaMrp.builder()
                 .corrida(corrida)

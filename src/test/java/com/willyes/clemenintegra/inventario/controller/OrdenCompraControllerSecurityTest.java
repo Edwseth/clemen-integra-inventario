@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.inventario.mapper.RecepcionOCMapper;
 import com.willyes.clemenintegra.inventario.service.HistorialEstadoOrdenService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
+import com.willyes.clemenintegra.inventario.service.RecepcionOCService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -60,6 +61,8 @@ class OrdenCompraControllerSecurityTest {
     private OrdenCompraService ordenCompraService;
     @MockBean
     private HistorialEstadoOrdenService historialEstadoOrdenService;
+    @MockBean
+    private RecepcionOCService recepcionOCService;
     @MockBean
     private RecepcionOCRepository recepcionOCRepository;
     @MockBean
