@@ -1,10 +1,12 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
@@ -16,6 +18,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import jakarta.persistence.EntityManager;
@@ -41,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.doThrow;
@@ -70,6 +74,8 @@ class MovimientoInventarioServiceTransferenciaTest {
     private MovimientoInventarioRepository movimientoInventarioRepository;
     @Mock
     private MovimientoInventarioMapper mapper;
+    @Mock
+    private BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
     @Mock
     private UsuarioService usuarioService;
     @Mock
@@ -423,6 +429,146 @@ class MovimientoInventarioServiceTransferenciaTest {
                 .isInstanceOfSatisfying(CustomBusinessException.class, ex -> {
                     assertThat(ex.getCode()).isEqualTo(ApiErrorCode.UBICACION_NO_PERTENECE_ALMACEN);
                 });
+    }
+
+    @Test
+    void registrarMovimiento_registraBitacoraParaMotivoCritico() {
+        Producto producto = crearProducto(21, 2);
+        LoteProducto lote = crearLote(50L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("4000"), BigDecimal.ZERO, false);
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("1000"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                "DOC-123",
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                6,
+                null,
+                null,
+                1L,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                Boolean.FALSE,
+                null
+        );
+
+        configurarMocksBasicos(producto, lote);
+        given(usuarioService.obtenerUsuarioAutenticado())
+                .willReturn(Usuario.builder().id(1L).nombreCompleto("Tester").build());
+        given(movimientoInventarioRepository.findByIdempotencyKey("idem-1"))
+                .willReturn(Optional.empty());
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(1L);
+        motivo.setMotivo(ClasificacionMovimientoInventario.AJUSTE_NEGATIVO);
+        given(motivoMovimientoRepository.findById(1L)).willReturn(Optional.of(motivo));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        movimientoEntidad.setDocReferencia(dto.docReferencia());
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(300L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(300L).build());
+
+        service.registrarMovimiento(dto, "idem-1");
+
+        ArgumentCaptor<BitacoraCambiosInventarioDTO> bitacoraCaptor =
+                ArgumentCaptor.forClass(BitacoraCambiosInventarioDTO.class);
+        verify(bitacoraCambiosInventarioService).crear(bitacoraCaptor.capture());
+        assertThat(bitacoraCaptor.getValue().getValorNuevo()).isNotNull();
+        assertThat(bitacoraCaptor.getValue().getValorNuevo().length()).isLessThanOrEqualTo(255);
+    }
+
+    @Test
+    void registrarMovimiento_noRegistraBitacoraParaMotivoNoCritico() {
+        Producto producto = crearProducto(22, 2);
+        LoteProducto lote = crearLote(51L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("4000"), BigDecimal.ZERO, false);
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("1000"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                "DOC-456",
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                6,
+                null,
+                null,
+                11L,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                Boolean.FALSE,
+                null
+        );
+
+        configurarMocksBasicos(producto, lote);
+        given(usuarioService.obtenerUsuarioAutenticado())
+                .willReturn(Usuario.builder().id(2L).nombreCompleto("Tester").build());
+        given(movimientoInventarioRepository.findByIdempotencyKey("idem-2"))
+                .willReturn(Optional.empty());
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(11L);
+        motivo.setMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        given(motivoMovimientoRepository.findById(11L)).willReturn(Optional.of(motivo));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        movimientoEntidad.setDocReferencia(dto.docReferencia());
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(301L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(301L).build());
+
+        service.registrarMovimiento(dto, "idem-2");
+
+        verify(bitacoraCambiosInventarioService, never()).crear(any());
     }
 
     private void configurarMocksBasicos(Producto producto, LoteProducto lote) {
