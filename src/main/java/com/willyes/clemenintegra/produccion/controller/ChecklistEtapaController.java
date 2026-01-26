@@ -20,20 +20,23 @@ public class ChecklistEtapaController {
     private final ChecklistEtapaService checklistEtapaService;
 
     @GetMapping("/{etapaId}/checklist")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<ChecklistEtapaDTO> obtener(@PathVariable Long etapaId) {
         return ResponseEntity.ok(checklistEtapaService.obtenerPorEtapa(etapaId));
     }
 
     @PutMapping("/{etapaId}/checklist")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<ChecklistEtapaDTO> actualizar(@PathVariable Long etapaId,
                                                         @RequestBody List<ChecklistItemDTO> items) {
         return ResponseEntity.ok(checklistEtapaService.actualizar(etapaId, items));
     }
 
     @GetMapping(value = "/orden/{ordenId}/checklist/export", produces = "text/csv")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportar(@PathVariable Long ordenId) {
         byte[] csv = checklistEtapaService.exportCsvPorOrden(ordenId);
         return ResponseEntity.ok()

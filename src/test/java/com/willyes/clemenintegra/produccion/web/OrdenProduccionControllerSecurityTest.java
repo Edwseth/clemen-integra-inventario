@@ -2,6 +2,9 @@ package com.willyes.clemenintegra.produccion.web;
 
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.produccion.controller.OrdenProduccionController;
+import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.produccion.service.ReporteOrdenProduccionService;
@@ -121,6 +124,87 @@ class OrdenProduccionControllerSecurityTest {
     @DisplayName("POST /api/produccion/ordenes/{id}/cierres es rechazado para jefe de calidad")
     void registrarCierre_conRolJefeCalidad_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/ordenes/{id}/cierres", 5L)
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("GET /api/produccion/ordenes permite listar con rol planeador")
+    void listarOrdenes_conRolPlaneador_devuelve200() throws Exception {
+        when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
+
+        mockMvc.perform(get("/api/produccion/ordenes"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("GET /api/produccion/ordenes/{id} permite ver detalle con rol planeador")
+    void obtenerOrden_conRolPlaneador_devuelve404SiNoExiste() throws Exception {
+        when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/produccion/ordenes/{id}", 1L))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("POST /api/produccion/ordenes permite crear con rol planeador")
+    void crearOrden_conRolPlaneador_devuelve201() throws Exception {
+        when(ordenProduccionService.crearOrden(any()))
+                .thenReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).build());
+
+        mockMvc.perform(post("/api/produccion/ordenes")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("PUT /api/produccion/ordenes/{id} permite actualizar con rol planeador")
+    void actualizarOrden_conRolPlaneador_devuelve404SiNoExiste() throws Exception {
+        when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/produccion/ordenes/{id}", 1L)
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("POST /api/produccion/ordenes/{id}/cancelar permite workflow con rol planeador")
+    void cancelarOrden_conRolPlaneador_devuelve200() throws Exception {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(1L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        when(ordenProduccionService.cancelarOrden(any(), any())).thenReturn(orden);
+
+        mockMvc.perform(post("/api/produccion/ordenes/{id}/cancelar", 1L)
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @DisplayName("POST /api/produccion/ordenes rechaza rol no autorizado")
+    void crearOrden_conRolAlmacenista_devuelve403() throws Exception {
+        mockMvc.perform(post("/api/produccion/ordenes")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @DisplayName("POST /api/produccion/ordenes/{id}/cancelar rechaza rol no autorizado")
+    void cancelarOrden_conRolAlmacenista_devuelve403() throws Exception {
+        mockMvc.perform(post("/api/produccion/ordenes/{id}/cancelar", 1L)
                         .contentType("application/json")
                         .content("{}"))
                 .andExpect(status().isForbidden());
