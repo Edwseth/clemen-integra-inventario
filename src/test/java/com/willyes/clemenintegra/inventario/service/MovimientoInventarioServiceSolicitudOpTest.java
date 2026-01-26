@@ -68,6 +68,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
     @Mock
     private MovimientoInventarioMapper mapper;
     @Mock
+    private BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
+    @Mock
     private UsuarioService usuarioService;
     @Mock
     private SolicitudMovimientoRepository solicitudMovimientoRepository;

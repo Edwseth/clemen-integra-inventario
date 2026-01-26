@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioFiltroDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO;
+import com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.CausaDevolucionPT;
@@ -103,6 +104,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             RolUsuario.ROL_ALMACENISTA,
             RolUsuario.ROL_SUPER_ADMIN
     );
+    private static final Set<Long> MOTIVOS_MOVIMIENTO_CRITICOS = Set.of(
+            1L,
+            2L,
+            4L,
+            5L,
+            9L,
+            14L,
+            15L,
+            16L
+    );
+    private static final int MAX_BITACORA_VALOR_NUEVO = 255;
+    private static final int MAX_BITACORA_OBSERVACION = 500;
 
     static final record MovimientoLoteDetalle(LoteProducto lote, BigDecimal cantidad) { }
 
@@ -142,6 +155,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     private final MovimientoInventarioRepository repository;
     private final MovimientoInventarioMapper mapper;
+    private final BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
     private final UsuarioService usuarioService;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
     private final SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
@@ -906,6 +920,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         MovimientoInventario guardado = repository.save(movimiento);
+        registrarBitacoraMovimientoCritico(guardado, usuario, idempotencyKey);
 
         if (solicitud != null) {
             if (detalleRespuesta == null || detalleRespuesta.isEmpty()) {
@@ -953,6 +968,108 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             respuesta.setDetallesSolicitud(detalles);
         }
         return respuesta;
+    }
+
+    private void registrarBitacoraMovimientoCritico(MovimientoInventario movimiento,
+                                                    Usuario usuario,
+                                                    String idempotencyKey) {
+        if (movimiento == null) {
+            return;
+        }
+        MotivoMovimiento motivoMovimiento = movimiento.getMotivoMovimiento();
+        Long motivoId = motivoMovimiento != null ? motivoMovimiento.getId() : null;
+        if (motivoId == null || !MOTIVOS_MOVIMIENTO_CRITICOS.contains(motivoId)) {
+            return;
+        }
+        if (usuario == null || usuario.getId() == null) {
+            log.warn("BITACORA_MOVIMIENTO_OMITIDA: usuario no disponible para movimientoId={}",
+                    movimiento.getId());
+            return;
+        }
+        String valorNuevo = buildResumenMovimiento(movimiento, motivoId);
+        String observacion = buildObservacionMovimiento(movimiento.getDocReferencia(), idempotencyKey);
+        try {
+            bitacoraCambiosInventarioService.crear(BitacoraCambiosInventarioDTO.builder()
+                    .tablaAfectada("movimientos_inventario")
+                    .registroId(movimiento.getId() != null ? movimiento.getId() : 0L)
+                    .campoModificado("movimiento")
+                    .valorAnt("N/A")
+                    .valorNuevo(valorNuevo)
+                    .accion("MOVIMIENTO_CRITICO_REGISTRADO")
+                    .observacion(observacion)
+                    .fechaCambio(LocalDateTime.now())
+                    .usuarioId(usuario.getId())
+                    .usuarioNombre(resolveNombreUsuario(usuario))
+                    .build());
+        } catch (Exception ex) {
+            log.warn("BITACORA_MOVIMIENTO_ERROR: movimientoId={} motivoId={} msg={}",
+                    movimiento.getId(), motivoId, ex.getMessage(), ex);
+        }
+    }
+
+    private String buildResumenMovimiento(MovimientoInventario movimiento, Long motivoId) {
+        String cantidad = movimiento.getCantidad() != null ? movimiento.getCantidad().toPlainString() : "N/A";
+        String loteId = movimiento.getLote() != null && movimiento.getLote().getId() != null
+                ? movimiento.getLote().getId().toString()
+                : "N/A";
+        String almacenOrigenId = movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenOrigen().getId() != null
+                ? movimiento.getAlmacenOrigen().getId().toString()
+                : "N/A";
+        String almacenDestinoId = movimiento.getAlmacenDestino() != null && movimiento.getAlmacenDestino().getId() != null
+                ? movimiento.getAlmacenDestino().getId().toString()
+                : "N/A";
+        String tipoDetId = movimiento.getTipoMovimientoDetalle() != null
+                && movimiento.getTipoMovimientoDetalle().getId() != null
+                ? movimiento.getTipoMovimientoDetalle().getId().toString()
+                : "N/A";
+        String motivoValue = motivoId != null ? motivoId.toString() : "N/A";
+        String resumen = String.format(
+                "cant=%s, loteId=%s, orig=%s, dest=%s, tipoDetId=%s, motivoId=%s",
+                cantidad,
+                loteId,
+                almacenOrigenId,
+                almacenDestinoId,
+                tipoDetId,
+                motivoValue
+        );
+        return truncate(resumen, MAX_BITACORA_VALOR_NUEVO);
+    }
+
+    private String buildObservacionMovimiento(String docReferencia, String idempotencyKey) {
+        String docRef = safeTexto(docReferencia);
+        String idempotencia = safeTexto(idempotencyKey);
+        String observacion = docRef + " | " + idempotencia;
+        return truncate(observacion, MAX_BITACORA_OBSERVACION);
+    }
+
+    private String safeTexto(String value) {
+        if (StringUtils.hasText(value)) {
+            return value.trim();
+        }
+        return "N/A";
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return "N/A";
+        }
+        if (value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
+    }
+
+    private String resolveNombreUsuario(Usuario usuario) {
+        if (usuario == null) {
+            return "N/A";
+        }
+        if (StringUtils.hasText(usuario.getNombreCompleto())) {
+            return usuario.getNombreCompleto().trim();
+        }
+        if (StringUtils.hasText(usuario.getNombreUsuario())) {
+            return usuario.getNombreUsuario().trim();
+        }
+        return "N/A";
     }
 
     private boolean esContextoOrdenProduccion(MovimientoInventarioDTO dto, SolicitudMovimiento solicitud) {
