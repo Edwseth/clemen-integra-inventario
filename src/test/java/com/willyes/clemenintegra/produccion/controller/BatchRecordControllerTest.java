@@ -112,6 +112,21 @@ class BatchRecordControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("GET /api/produccion/batch-record/{id} permite consulta a planeador")
+    void obtenerBatchRecordRolPlaneador() throws Exception {
+        BatchRecordDTO dto = new BatchRecordDTO();
+        dto.op = new BatchRecordDTO.OpDTO();
+        dto.op.codigoOrden = "OP-3";
+        when(batchRecordService.buildByOrdenProduccion(3L)).thenReturn(dto);
+
+        mockMvc.perform(get("/api/produccion/batch-record/{id}", 3L)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.op.codigoOrden").value("OP-3"));
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     @DisplayName("GET /api/produccion/batch-record/{id} devuelve 404 cuando no existe")
     void obtenerBatchRecordNoExiste() throws Exception {
@@ -192,6 +207,16 @@ class BatchRecordControllerTest {
     @DisplayName("POST /api/produccion/batch-record/{id}/controles-proceso es rechazado para jefe de calidad")
     void guardarControlesProceso_conRolCalidad_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/batch-record/{id}/controles-proceso", 3L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("POST /api/produccion/batch-record/{id}/controles-proceso rechaza rol planeador")
+    void guardarControlesProceso_conRolPlaneador_devuelve403() throws Exception {
+        mockMvc.perform(post("/api/produccion/batch-record/{id}/controles-proceso", 4L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[]"))
                 .andExpect(status().isForbidden());

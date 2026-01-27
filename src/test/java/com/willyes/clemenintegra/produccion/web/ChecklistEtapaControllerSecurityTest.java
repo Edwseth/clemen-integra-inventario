@@ -30,6 +30,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ChecklistEtapaController.class)
@@ -83,15 +84,37 @@ class ChecklistEtapaControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"ROL_PLANEADOR", "PROD_ETAPA_CHECKLIST_WRITE"})
-    @DisplayName("Actualizar checklist permite permiso de escritura")
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("Checklist etapa permite lectura para planeador")
+    void obtenerChecklist_conRolPlaneador() throws Exception {
+        when(checklistEtapaService.obtenerPorEtapa(anyLong())).thenReturn(ChecklistEtapaDTO.builder().etapaId(2L).build());
+
+        mockMvc.perform(get("/api/produccion/etapas/{id}/checklist", 2L))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("Actualizar checklist permite rol de producción")
     void actualizarChecklist_conPermisoEscritura() throws Exception {
         when(checklistEtapaService.actualizar(anyLong(), org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(ChecklistEtapaDTO.builder().etapaId(1L).build());
 
         mockMvc.perform(put("/api/produccion/etapas/{id}/checklist", 1L)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[]"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("Actualizar checklist rechaza rol planeador")
+    void actualizarChecklist_conRolPlaneador_devuelve403() throws Exception {
+        mockMvc.perform(put("/api/produccion/etapas/{id}/checklist", 1L)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isForbidden());
     }
 }

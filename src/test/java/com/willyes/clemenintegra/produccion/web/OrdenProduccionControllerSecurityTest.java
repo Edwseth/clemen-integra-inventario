@@ -3,8 +3,6 @@ package com.willyes.clemenintegra.produccion.web;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.produccion.controller.OrdenProduccionController;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
-import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
-import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.produccion.service.ReporteOrdenProduccionService;
@@ -35,7 +33,6 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -165,27 +162,23 @@ class OrdenProduccionControllerSecurityTest {
 
     @Test
     @WithMockUser(authorities = "ROL_PLANEADOR")
-    @DisplayName("PUT /api/produccion/ordenes/{id} permite actualizar con rol planeador")
+    @DisplayName("PUT /api/produccion/ordenes/{id} rechaza actualizar con rol planeador")
     void actualizarOrden_conRolPlaneador_devuelve404SiNoExiste() throws Exception {
-        when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.empty());
-
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .put("/api/produccion/ordenes/{id}", 1L)
                         .contentType("application/json")
                         .content("{}"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(authorities = "ROL_PLANEADOR")
-    @DisplayName("POST /api/produccion/ordenes/{id}/cancelar permite workflow con rol planeador")
+    @DisplayName("POST /api/produccion/ordenes/{id}/cancelar rechaza workflow con rol planeador")
     void cancelarOrden_conRolPlaneador_devuelve204() throws Exception {
-        doNothing().when(ordenProduccionService).cancelarOrden(any(), any());
-
         mockMvc.perform(post("/api/produccion/ordenes/{id}/cancelar", 1L)
                         .contentType("application/json")
                         .content("{}"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -199,19 +192,42 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"ROL_PLANEADOR", "PROD_ETAPA_START"})
-    @DisplayName("PATCH /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar permite iniciar etapa")
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("PATCH /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar rechaza rol planeador")
     void iniciarEtapa_conPermisoPlaneador_devuelve200() throws Exception {
-        OrdenProduccion orden = new OrdenProduccion();
-        orden.setId(1L);
-        orden.setEstado(EstadoProduccion.CREADA);
-
-        when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.of(orden));
-        when(ordenProduccionService.iniciarEtapa(1L, 2L)).thenReturn(new com.willyes.clemenintegra.produccion.model.EtapaProduccion());
-
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .patch("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar", 1L, 2L))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("PATCH /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar rechaza rol planeador")
+    void finalizarEtapa_conRolPlaneador_devuelve403() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar", 1L, 2L))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist rechaza rol planeador")
+    void actualizarChecklistPorEtapa_conRolPlaneador_devuelve403() throws Exception {
+        mockMvc.perform(post("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist", 1L, 2L)
+                        .contentType("application/json")
+                        .content("[]"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("PUT /api/produccion/ordenes/{id}/finalizar rechaza finalizar con rol planeador")
+    void finalizarOrden_conRolPlaneador_devuelve403() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/produccion/ordenes/{id}/finalizar", 1L)
+                        .contentType("application/json")
+                        .content("{\"cantidadProducida\":1}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
