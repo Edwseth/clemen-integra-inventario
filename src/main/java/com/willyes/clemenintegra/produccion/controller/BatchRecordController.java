@@ -50,14 +50,14 @@ public class BatchRecordController {
     private final ReporteBatchRecordService reporteBatchRecordService;
 
     @GetMapping("/produccion/batch-record/{ordenProduccionId}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<BatchRecordDTO> obtener(@PathVariable Long ordenProduccionId) {
         return ResponseEntity.ok(batchRecordService.buildByOrdenProduccion(ordenProduccionId));
     }
 
     @PostMapping("/produccion/batch-record/{ordenProduccionId}/controles-proceso")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ControlProcesoDTO>> guardarControlesProceso(
@@ -88,7 +88,7 @@ public class BatchRecordController {
     }
 
     @PostMapping("/produccion/batch-record/{ordenProduccionId}/controles-empaque")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ControlEmpaqueDTO>> guardarControlesEmpaque(
@@ -118,7 +118,7 @@ public class BatchRecordController {
     }
 
     @PostMapping("/produccion/batch-record/{ordenProduccionId}/observaciones")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ObservacionProcesoDTO>> guardarObservaciones(
@@ -145,7 +145,7 @@ public class BatchRecordController {
     }
 
     @GetMapping(value = "/produccion/batch-record/{ordenProduccionId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_EXPORT','ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarPdf(@PathVariable Long ordenProduccionId) {
         try {
             BatchRecordDTO batchRecordDTO = batchRecordService.buildByOrdenProduccion(ordenProduccionId);
@@ -164,7 +164,7 @@ public class BatchRecordController {
         }
     }
 
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     @PostMapping("/produccion/calidad/batch-record/{ordenProduccionId}/decision")
     public ResponseEntity<Void> decidirBatchRecord(
             @PathVariable Long ordenProduccionId,
