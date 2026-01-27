@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -12,6 +13,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 // Activa TestcontainersExtension para los tests que necesitan Docker (vía @Testcontainers).
 @Testcontainers
 @DockerTest
+@TestPropertySource(properties = {
+        "spring.flyway.locations=classpath:db/migration/inventario",
+        "spring.jpa.hibernate.ddl-auto=none"
+})
 public abstract class IntegrationTestMySqlContainer {
 
     // El contenedor se inicializa de forma perezosa para evitar fallos sin Docker.
