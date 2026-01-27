@@ -58,7 +58,7 @@ public class BatchRecordController {
 
     @PostMapping("/produccion/batch-record/{ordenProduccionId}/controles-proceso")
     @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ControlProcesoDTO>> guardarControlesProceso(
             @PathVariable Long ordenProduccionId,
@@ -89,7 +89,7 @@ public class BatchRecordController {
 
     @PostMapping("/produccion/batch-record/{ordenProduccionId}/controles-empaque")
     @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ControlEmpaqueDTO>> guardarControlesEmpaque(
             @PathVariable Long ordenProduccionId,
@@ -119,7 +119,7 @@ public class BatchRecordController {
 
     @PostMapping("/produccion/batch-record/{ordenProduccionId}/observaciones")
     @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<List<BatchRecordDTO.ObservacionProcesoDTO>> guardarObservaciones(
             @PathVariable Long ordenProduccionId,

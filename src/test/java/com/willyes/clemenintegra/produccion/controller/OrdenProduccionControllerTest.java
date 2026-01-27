@@ -170,7 +170,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     @DisplayName("POST /api/produccion/ordenes/{id}/cancelar retorna 204 para cancelación exitosa")
     void cancelarOrden_respondeNoContent() throws Exception {
         CancelarOrdenRequestDTO request = new CancelarOrdenRequestDTO();

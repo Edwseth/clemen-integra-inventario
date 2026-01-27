@@ -28,7 +28,7 @@ public class ChecklistEtapaController {
 
     @PutMapping("/{etapaId}/checklist")
     @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<ChecklistEtapaDTO> actualizar(@PathVariable Long etapaId,
                                                         @RequestBody List<ChecklistItemDTO> items) {
         return ResponseEntity.ok(checklistEtapaService.actualizar(etapaId, items));

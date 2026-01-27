@@ -121,7 +121,7 @@ public class OrdenProduccionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<ResultadoValidacionOrdenDTO> actualizar(@PathVariable Long id, @RequestBody OrdenProduccionRequestDTO request) {
         return service.buscarPorId(id)
                 .map(existente -> {
@@ -138,7 +138,7 @@ public class OrdenProduccionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
@@ -146,7 +146,7 @@ public class OrdenProduccionController {
 
     @PutMapping("/{id}/finalizar")
     @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> finalizar(@PathVariable Long id,
                                                                @RequestBody FinalizarOrdenRequestDTO request) {
         OrdenProduccion orden = service.finalizar(id, request.getCantidadProducida());
@@ -155,7 +155,7 @@ public class OrdenProduccionController {
 
     @PostMapping("/{id}/cancelar")
     @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_CANCEL','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> cancelar(@PathVariable Long id,
                                          @RequestBody(required = false) CancelarOrdenRequestDTO request) {
         service.cancelarOrden(id, request != null ? request.getMotivo() : null);
@@ -164,7 +164,7 @@ public class OrdenProduccionController {
 
     @PostMapping("/{id}/cierres")
     @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> registrarCierre(@PathVariable Long id,
                                                                      @Valid @RequestBody CierreProduccionRequestDTO request) {
         log.debug("Registrar cierre recibido: ordenId={}, payload={}", id, request);
@@ -188,7 +188,7 @@ public class OrdenProduccionController {
     }
 
     @PostMapping("/{id}/etapas/clonar")
-    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CLONE','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CLONE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> clonarEtapas(@PathVariable Long id) {
         service.clonarEtapas(id);
         return ResponseEntity.noContent().build();
@@ -196,7 +196,7 @@ public class OrdenProduccionController {
 
     @RequestMapping(value = "/{ordenId}/etapas/{etapaId}/iniciar", method = {RequestMethod.PATCH, RequestMethod.POST})
     @PreAuthorize("hasAnyAuthority('PROD_ETAPA_START','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> iniciarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         service.iniciarEtapa(ordenId, etapaId);
         return service.buscarPorId(ordenId)
@@ -208,7 +208,7 @@ public class OrdenProduccionController {
     // Compatibilidad POST agregada porque el frontend usa POST
     @RequestMapping(value = "/{ordenId}/etapas/{etapaId}/finalizar", method = {RequestMethod.PATCH, RequestMethod.POST})
     @PreAuthorize("hasAnyAuthority('PROD_ETAPA_FINISH','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<EtapaProduccionResponse> finalizarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
         return ResponseEntity.ok(ProduccionMapper.toResponse(service.finalizarEtapa(ordenId, etapaId, usuario.getId())));
@@ -259,7 +259,7 @@ public class OrdenProduccionController {
 
     @PostMapping("/{ordenId}/etapas/{etapaId}/checklist")
     @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<ChecklistEtapaDTO> actualizarChecklistPorEtapa(@PathVariable Long ordenId,
                                                                          @PathVariable Long etapaId,
                                                                          @RequestBody List<ChecklistItemDTO> items) {
@@ -268,7 +268,7 @@ public class OrdenProduccionController {
 
     @PostMapping("/{ordenId}/etapas/{etapaId}/checklist/{itemId}/completar")
     @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<ChecklistItemDTO> completarChecklistItem(@PathVariable Long ordenId,
                                                                    @PathVariable Long etapaId,
                                                                    @PathVariable Long itemId,
@@ -279,7 +279,7 @@ public class OrdenProduccionController {
 
     @PostMapping("/{ordenId}/etapas/{etapaId}/checklist/{itemId}/no-aplica")
     @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+            "'ROL_SUPER_ADMIN')")
     public ResponseEntity<ChecklistItemDTO> marcarNoAplicaChecklistItem(@PathVariable Long ordenId,
                                                                         @PathVariable Long etapaId,
                                                                         @PathVariable Long itemId,
@@ -289,7 +289,7 @@ public class OrdenProduccionController {
     }
 
     @PostMapping("/{ordenId}/etapas/{etapaId}/checklist/{itemId}/reabrir")
-    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<ChecklistItemDTO> reabrirChecklistItem(@PathVariable Long ordenId,
                                                                  @PathVariable Long etapaId,
                                                                  @PathVariable Long itemId) {
@@ -305,7 +305,7 @@ public class OrdenProduccionController {
     }
 
     @PostMapping("/{ordenId}/backfill-salida")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION')")
     public ResponseEntity<Map<String, Object>> backfillSalidaProduccion(@PathVariable Long ordenId) {
 
         // Obtener el usuario autenticado usando el mismo patrón del resto del backend

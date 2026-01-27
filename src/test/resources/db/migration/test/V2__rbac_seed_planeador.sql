@@ -4,12 +4,32 @@ VALUES ('ROL_PLANEADOR', 'Planeador', TRUE);
 
 MERGE INTO permisos (codigo, modulo, accion, descripcion, activo)
 KEY (codigo)
-VALUES ('PROD_OP_CREATE', 'PRODUCCION', 'CREATE', 'Crear orden de producción', TRUE);
+VALUES ('PROD_OP_CREATE', 'PRODUCCION', 'CREATE', 'Crear orden de producción', TRUE),
+       ('PROD_OP_READ', 'PRODUCCION', 'READ', 'Leer orden de producción', TRUE),
+       ('PROD_ETAPA_CHECKLIST_READ', 'PRODUCCION', 'READ', 'Leer checklist de etapa', TRUE),
+       ('PROD_BATCH_RECORD_READ', 'PRODUCCION', 'READ', 'Leer batch record', TRUE),
+       ('PROD_OP_EXPORT', 'PRODUCCION', 'EXPORT', 'Exportar orden de producción', TRUE),
+       ('PROD_BATCH_RECORD_EXPORT', 'PRODUCCION', 'EXPORT', 'Exportar batch record', TRUE),
+       ('PROD_REPORTS_READ', 'PRODUCCION', 'READ', 'Leer reportes de producción', TRUE),
+       ('PROD_INDICADORES_READ', 'PRODUCCION', 'READ', 'Leer indicadores de producción', TRUE),
+       ('PROD_INDICADORES_EXPORT', 'PRODUCCION', 'EXPORT', 'Exportar indicadores de producción', TRUE),
+       ('PROD_ALERTAS_READ', 'PRODUCCION', 'READ', 'Leer alertas de producción', TRUE);
 
 INSERT INTO roles_permisos (rol_id, permiso_id)
 SELECT r.id, p.id
 FROM roles r
-JOIN permisos p ON p.codigo = 'PROD_OP_CREATE'
+JOIN permisos p ON p.codigo in (
+    'PROD_OP_CREATE',
+    'PROD_OP_READ',
+    'PROD_ETAPA_CHECKLIST_READ',
+    'PROD_BATCH_RECORD_READ',
+    'PROD_OP_EXPORT',
+    'PROD_BATCH_RECORD_EXPORT',
+    'PROD_REPORTS_READ',
+    'PROD_INDICADORES_READ',
+    'PROD_INDICADORES_EXPORT',
+    'PROD_ALERTAS_READ'
+)
 WHERE r.codigo = 'ROL_PLANEADOR'
   AND NOT EXISTS (
       SELECT 1

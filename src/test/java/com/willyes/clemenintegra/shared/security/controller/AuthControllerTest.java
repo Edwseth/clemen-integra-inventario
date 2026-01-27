@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.shared.security.controller;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -76,6 +78,16 @@ class AuthControllerTest extends IntegrationTestH2 {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rol").value("ROL_PLANEADOR"))
                 .andExpect(jsonPath("$.permisos").isArray())
-                .andExpect(jsonPath("$.permisos").value(org.hamcrest.Matchers.hasItem("PROD_OP_CREATE")));
+                .andExpect(jsonPath("$.permisos").value(hasItem("PROD_OP_CREATE")))
+                .andExpect(jsonPath("$.permisos").value(hasItem("PROD_OP_READ")))
+                .andExpect(jsonPath("$.permisos").value(hasItem("PROD_ETAPA_CHECKLIST_READ")))
+                .andExpect(jsonPath("$.permisos").value(hasItem("PROD_BATCH_RECORD_READ")))
+                .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_OP_EDIT"))))
+                .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_ETAPA_START"))))
+                .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_ETAPA_FINISH"))))
+                .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_ETAPA_CHECKLIST_WRITE"))))
+                .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_BATCH_RECORD_WRITE"))))
+                .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_OP_WORKFLOW_CANCEL"))))
+                .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_OP_WORKFLOW_FINALIZE"))));
     }
 }
