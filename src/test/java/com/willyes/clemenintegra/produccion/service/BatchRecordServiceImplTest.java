@@ -37,6 +37,7 @@ import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemReposit
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -663,6 +664,9 @@ class BatchRecordServiceImplTest {
     }
 
     private Authentication buildAuth(Usuario usuario) {
+        if (usuario.getRol() == null) {
+            usuario.setRol(RolUsuario.ROL_JEFE_CALIDAD);
+        }
         TestingAuthenticationToken token = new TestingAuthenticationToken(new CustomUserDetails(usuario), null,
                 "ROL_JEFE_CALIDAD");
         token.setAuthenticated(true);

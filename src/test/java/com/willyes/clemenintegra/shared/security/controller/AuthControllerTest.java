@@ -10,20 +10,24 @@ import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import com.willyes.clemenintegra.shared.security.service.UsuarioAuthoritiesService;
+import com.willyes.clemenintegra.support.IntegrationTestH2;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class AuthControllerTest {
+class AuthControllerTest extends IntegrationTestH2 {
 
     @Autowired
     private MockMvc mockMvc;
@@ -33,6 +37,12 @@ class AuthControllerTest {
 
     @Autowired
     private UsuarioAuthoritiesService usuarioAuthoritiesService;
+
+    @MockBean
+    private InventoryCatalogResolver inventoryCatalogResolver;
+
+    @MockBean
+    private JavaMailSender javaMailSender;
 
     private Usuario usuarioPlaneador;
 
