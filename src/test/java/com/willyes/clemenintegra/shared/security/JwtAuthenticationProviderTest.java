@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.shared.security.exception.SesionExpiradaAuthent
 import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaAuthenticationException;
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
 import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
+import com.willyes.clemenintegra.shared.security.service.UsuarioAuthoritiesService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.impl.DefaultClaims;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -31,13 +33,18 @@ class JwtAuthenticationProviderTest {
     private JwtTokenService jwtTokenService;
     @Mock
     private UsuarioRepository usuarioRepository;
+    @Mock
+    private UsuarioAuthoritiesService usuarioAuthoritiesService;
 
     private JwtAuthenticationProvider provider;
 
     @BeforeEach
     void setUp() {
-        provider = new JwtAuthenticationProvider(jwtTokenService, usuarioRepository);
+        provider = new JwtAuthenticationProvider(jwtTokenService, usuarioRepository, usuarioAuthoritiesService);
         ReflectionTestUtils.setField(provider, "maxIdleMinutes", 20L);
+        java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> authorities =
+                java.util.List.of(new SimpleGrantedAuthority(RolUsuario.ROL_SUPER_ADMIN.name()));
+        lenient().doReturn(authorities).when(usuarioAuthoritiesService).buildAuthorities(any());
     }
 
     @Test

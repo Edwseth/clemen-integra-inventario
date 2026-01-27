@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaAuthe
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import com.willyes.clemenintegra.shared.security.service.JwtAuthenticationToken;
 import com.willyes.clemenintegra.shared.security.service.JwtTokenService;
+import com.willyes.clemenintegra.shared.security.service.UsuarioAuthoritiesService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -35,6 +36,7 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
 
     private final JwtTokenService jwtTokenService;
     private final UsuarioRepository usuarioRepository;
+    private final UsuarioAuthoritiesService usuarioAuthoritiesService;
 
     @Value("${security.session.max-idle-minutes:20}")
     private long maxIdleMinutes;
@@ -51,7 +53,7 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
 
             validarSesion(claims, usuario);
 
-            CustomUserDetails principal = new CustomUserDetails(usuario);
+            CustomUserDetails principal = new CustomUserDetails(usuario, usuarioAuthoritiesService.buildAuthorities(usuario));
             UsernamePasswordAuthenticationToken authenticated = new UsernamePasswordAuthenticationToken(
                     principal, token, principal.getAuthorities()
             );
