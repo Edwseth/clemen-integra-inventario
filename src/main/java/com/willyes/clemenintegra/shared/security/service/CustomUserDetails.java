@@ -11,9 +11,15 @@ import java.util.Collections;
 public class CustomUserDetails implements UserDetails {
 
     private final Usuario usuario;
+    private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserDetails(Usuario usuario) {
+        this(usuario, Collections.singletonList(new SimpleGrantedAuthority(usuario.getRol().name())));
+    }
+
+    public CustomUserDetails(Usuario usuario, Collection<? extends GrantedAuthority> authorities) {
         this.usuario = usuario;
+        this.authorities = authorities;
     }
 
     // Este es el método que usarás en tu UsuarioService
@@ -27,8 +33,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Convertimos tu Enum RolUsuario a GrantedAuthority
-        return Collections.singletonList(new SimpleGrantedAuthority(usuario.getRol().name()));
+        return authorities;
     }
 
     @Override
@@ -61,4 +66,3 @@ public class CustomUserDetails implements UserDetails {
         return usuario.isActivo();
     }
 }
-

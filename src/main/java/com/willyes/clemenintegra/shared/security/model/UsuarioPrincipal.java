@@ -14,9 +14,15 @@ import java.util.List;
 public class UsuarioPrincipal implements UserDetails {
 
     private final Usuario usuario;
+    private final Collection<? extends GrantedAuthority> authorities;
 
     public UsuarioPrincipal(Usuario usuario) {
+        this(usuario, List.of(new SimpleGrantedAuthority(usuario.getRol().name())));
+    }
+
+    public UsuarioPrincipal(Usuario usuario, Collection<? extends GrantedAuthority> authorities) {
         this.usuario = usuario;
+        this.authorities = authorities;
     }
 
     public Usuario getUsuario() {
@@ -25,8 +31,7 @@ public class UsuarioPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Convertimos el rol del usuario en un GrantedAuthority
-        return List.of(new SimpleGrantedAuthority(usuario.getRol().name()));
+        return authorities;
     }
 
     @Override
@@ -59,4 +64,3 @@ public class UsuarioPrincipal implements UserDetails {
         return usuario.isActivo();
     }
 }
-

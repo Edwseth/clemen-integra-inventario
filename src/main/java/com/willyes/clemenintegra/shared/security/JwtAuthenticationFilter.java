@@ -29,7 +29,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AuthenticationEntryPoint authenticationEntryPoint;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
     private final List<String> publicMatchers = List.of(
-            "/api/auth/**",
+            "/api/auth/login",
+            "/api/auth/verificar",
             "/api/public/**",
             "/api/health",
             "/api/health/**",

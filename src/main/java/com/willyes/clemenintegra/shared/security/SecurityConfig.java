@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.shared.security.model.UsuarioPrincipal;
+import com.willyes.clemenintegra.shared.security.service.UsuarioAuthoritiesService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +20,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -30,6 +32,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -95,7 +98,8 @@ public class SecurityConfig {
                             "/api/health",
                             "/api/health/**",
                             "/auth/login",
-                            "/api/auth/**",
+                            "/api/auth/login",
+                            "/api/auth/verificar",
                             "/v3/api-docs/**",
                             "/swagger-ui.html",
                             "/swagger-ui/**",
@@ -476,10 +480,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UsuarioRepository usuarioRepository) {
+    public UserDetailsService userDetailsService(UsuarioRepository usuarioRepository,
+                                                 ObjectProvider<UsuarioAuthoritiesService> usuarioAuthoritiesServiceProvider) {
         return username -> usuarioRepository
                 .findByNombreUsuario(username.trim())
-                .map(UsuarioPrincipal::new) // usa tu clase que implementa UserDetails
+                .map(usuario -> {
+                    UsuarioAuthoritiesService usuarioAuthoritiesService = usuarioAuthoritiesServiceProvider.getIfAvailable();
+                    if (usuarioAuthoritiesService == null) {
+                        return new UsuarioPrincipal(usuario,
+                                List.of(new SimpleGrantedAuthority(usuario.getRol().name())));
+                    }
+                    return new UsuarioPrincipal(usuario, usuarioAuthoritiesService.buildAuthorities(usuario));
+                })
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
     }
 }
