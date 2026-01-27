@@ -35,6 +35,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -178,16 +179,13 @@ class OrdenProduccionControllerSecurityTest {
     @Test
     @WithMockUser(authorities = "ROL_PLANEADOR")
     @DisplayName("POST /api/produccion/ordenes/{id}/cancelar permite workflow con rol planeador")
-    void cancelarOrden_conRolPlaneador_devuelve200() throws Exception {
-        OrdenProduccion orden = new OrdenProduccion();
-        orden.setId(1L);
-        orden.setEstado(EstadoProduccion.CREADA);
-        when(ordenProduccionService.cancelarOrden(any(), any())).thenReturn(orden);
+    void cancelarOrden_conRolPlaneador_devuelve204() throws Exception {
+        doNothing().when(ordenProduccionService).cancelarOrden(any(), any());
 
         mockMvc.perform(post("/api/produccion/ordenes/{id}/cancelar", 1L)
                         .contentType("application/json")
                         .content("{}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
     }
 
     @Test

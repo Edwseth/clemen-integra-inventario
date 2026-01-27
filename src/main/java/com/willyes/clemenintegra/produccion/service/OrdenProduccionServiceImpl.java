@@ -2044,7 +2044,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     @Override
     @Transactional
-    public OrdenProduccion cancelarOrden(Long ordenProduccionId, @Nullable String motivo) {
+    public void cancelarOrden(Long ordenProduccionId, @Nullable String motivo) {
         OrdenProduccion orden = repository.findByIdForUpdate(ordenProduccionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
 
@@ -2110,7 +2110,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             orden.setFechaFin(LocalDateTime.now());
         }
 
-        return repository.save(orden);
+        repository.save(orden);
     }
 
     @Transactional

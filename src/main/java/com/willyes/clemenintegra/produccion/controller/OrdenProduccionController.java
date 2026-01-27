@@ -156,10 +156,10 @@ public class OrdenProduccionController {
     @PostMapping("/{id}/cancelar")
     @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_CANCEL','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
-    public ResponseEntity<OrdenProduccionResponseDTO> cancelar(@PathVariable Long id,
-                                                               @RequestBody(required = false) CancelarOrdenRequestDTO request) {
-        OrdenProduccion orden = service.cancelarOrden(id, request != null ? request.getMotivo() : null);
-        return ResponseEntity.ok(ProduccionMapper.toResponse(orden));
+    public ResponseEntity<Void> cancelar(@PathVariable Long id,
+                                         @RequestBody(required = false) CancelarOrdenRequestDTO request) {
+        service.cancelarOrden(id, request != null ? request.getMotivo() : null);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/cierres")

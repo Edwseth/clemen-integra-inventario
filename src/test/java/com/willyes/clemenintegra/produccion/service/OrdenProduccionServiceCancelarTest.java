@@ -92,10 +92,10 @@ class OrdenProduccionServiceCancelarTest {
             return op;
         });
 
-        OrdenProduccion resultado = service.cancelarOrden(1L, "ajuste formula");
+        service.cancelarOrden(1L, "ajuste formula");
 
-        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.CANCELADA);
-        assertThat(resultado.getFechaFin()).isNotNull();
+        assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.CANCELADA);
+        assertThat(orden.getFechaFin()).isNotNull();
         assertThat(detalle.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.CANCELADO);
         assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitudMovimiento.CANCELADA);
         verify(reservaLoteService, times(1)).liberarReservasPorOrden(1L);
@@ -128,4 +128,3 @@ class OrdenProduccionServiceCancelarTest {
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.CONFLICT);
     }
 }
-
