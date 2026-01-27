@@ -150,8 +150,8 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
-    @DisplayName("POST /api/produccion/ordenes permite crear con rol planeador")
+    @WithMockUser(authorities = {"ROL_PLANEADOR", "PROD_OP_CREATE"})
+    @DisplayName("POST /api/produccion/ordenes permite crear con permiso de creación")
     void crearOrden_conRolPlaneador_devuelve201() throws Exception {
         when(ordenProduccionService.crearOrden(any()))
                 .thenReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).build());
@@ -198,6 +198,22 @@ class OrdenProduccionControllerSecurityTest {
                         .contentType("application/json")
                         .content("{}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_PLANEADOR", "PROD_ETAPA_START"})
+    @DisplayName("PATCH /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar permite iniciar etapa")
+    void iniciarEtapa_conPermisoPlaneador_devuelve200() throws Exception {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(1L);
+        orden.setEstado(EstadoProduccion.CREADA);
+
+        when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.of(orden));
+        when(ordenProduccionService.iniciarEtapa(1L, 2L)).thenReturn(new com.willyes.clemenintegra.produccion.model.EtapaProduccion());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar", 1L, 2L))
+                .andExpect(status().isOk());
     }
 
     @Test

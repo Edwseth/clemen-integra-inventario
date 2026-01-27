@@ -83,9 +83,9 @@ class ChecklistEtapaControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
-    @DisplayName("Actualizar checklist requiere autenticación y rol válido")
-    void actualizarChecklist_conRolProduccion() throws Exception {
+    @WithMockUser(authorities = {"ROL_PLANEADOR", "PROD_ETAPA_CHECKLIST_WRITE"})
+    @DisplayName("Actualizar checklist permite permiso de escritura")
+    void actualizarChecklist_conPermisoEscritura() throws Exception {
         when(checklistEtapaService.actualizar(anyLong(), org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(ChecklistEtapaDTO.builder().etapaId(1L).build());
 
