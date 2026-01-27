@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.produccion.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
+import com.willyes.clemenintegra.produccion.dto.CancelarOrdenRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
@@ -50,6 +51,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -165,6 +167,23 @@ class OrdenProduccionControllerTest {
                 .andExpect(status().isOk());
 
         verify(ordenProduccionService).listarInsumos(10L);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @DisplayName("POST /api/produccion/ordenes/{id}/cancelar retorna 204 para cancelación exitosa")
+    void cancelarOrden_respondeNoContent() throws Exception {
+        CancelarOrdenRequestDTO request = new CancelarOrdenRequestDTO();
+        request.setMotivo("Motivo de cancelación");
+
+        doNothing().when(ordenProduccionService).cancelarOrden(10L, "Motivo de cancelación");
+
+        mockMvc.perform(post("/api/produccion/ordenes/{id}/cancelar", 10L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(ordenProduccionService).cancelarOrden(10L, "Motivo de cancelación");
     }
 
     @Test
