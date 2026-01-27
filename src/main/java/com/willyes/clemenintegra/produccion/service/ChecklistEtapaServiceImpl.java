@@ -178,7 +178,9 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
     public byte[] exportCsvPorOrden(Long ordenId) {
         List<EtapaProduccion> etapas = etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenId);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        String header = "ordenId,etapaId,etapaNombre,paso,obligatorio,estado,noAplica,permitirNoAplica,observacion,completedAt,completedBy\n";
+        String lineSeparator = System.lineSeparator();
+        String header = "ordenId,etapaId,etapaNombre,paso,obligatorio,estado,noAplica,permitirNoAplica,observacion,completedAt,completedBy"
+                + lineSeparator;
         try {
             out.write(header.getBytes(StandardCharsets.UTF_8));
             for (EtapaProduccion etapa : etapas) {
@@ -197,7 +199,7 @@ public class ChecklistEtapaServiceImpl implements ChecklistEtapaService {
                             safe(item.getCompletedAt()),
                             csv(item.getCompletedBy() != null ? item.getCompletedBy().getNombreCompleto() : null)
                     );
-                    out.write((line + "\\n").getBytes(StandardCharsets.UTF_8));
+                    out.write((line + lineSeparator).getBytes(StandardCharsets.UTF_8));
                 }
             }
             return out.toByteArray();

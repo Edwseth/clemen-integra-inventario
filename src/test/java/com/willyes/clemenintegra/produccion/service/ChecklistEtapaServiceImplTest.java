@@ -21,6 +21,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -297,5 +298,43 @@ class ChecklistEtapaServiceImplTest {
         when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(15L)).thenReturn(List.of(placeholder));
 
         assertThrows(CustomBusinessException.class, () -> service.validarChecklistCompleto(15L));
+    }
+
+    @Test
+    @DisplayName("Exportar CSV por orden genera multiples lineas reales")
+    void exportCsvPorOrden_generaLineas() {
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(1L)
+                .nombre("Empaque")
+                .build();
+        when(etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(99L))
+                .thenReturn(List.of(etapa));
+        when(checklistRepository.findByEtapaProduccionIdOrderByIdAsc(1L))
+                .thenReturn(List.of(
+                        ChecklistEtapaItem.builder()
+                                .id(10L)
+                                .nombrePaso("Paso 1")
+                                .obligatorio(true)
+                                .estado(EstadoChecklistItem.COMPLETADO)
+                                .noAplica(false)
+                                .permitirNoAplica(true)
+                                .build(),
+                        ChecklistEtapaItem.builder()
+                                .id(11L)
+                                .nombrePaso("Paso 2")
+                                .obligatorio(false)
+                                .estado(EstadoChecklistItem.PENDIENTE)
+                                .noAplica(false)
+                                .permitirNoAplica(false)
+                                .build()
+                ));
+
+        byte[] bytes = service.exportCsvPorOrden(99L);
+        String csv = new String(bytes, StandardCharsets.UTF_8);
+
+        assertThat(csv).doesNotContain("\\n");
+        String[] lines = csv.split("\n");
+        assertThat(lines.length).isGreaterThan(2);
+        assertThat(lines[0]).contains("ordenId,etapaId,etapaNombre");
     }
 }
