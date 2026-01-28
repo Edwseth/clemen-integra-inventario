@@ -117,6 +117,7 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/productos/**").hasAnyAuthority(
+                            "INV_PRODUCT_READ",
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
@@ -137,6 +138,20 @@ public class SecurityConfig {
                             RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                             RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/productos/**").hasAnyAuthority(
+                            "INV_PRODUCT_READ",
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
