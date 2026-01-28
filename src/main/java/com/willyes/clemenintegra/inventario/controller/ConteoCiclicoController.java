@@ -28,7 +28,7 @@ public class ConteoCiclicoController {
     private final ConteoCiclicoService conteoCiclicoService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
     public ResponseEntity<Page<ConteoCiclicoResumenResponseDTO>> listar(
             @RequestParam(required = false) Integer almacenId,
             @RequestParam(required = false) String estado,
@@ -42,14 +42,14 @@ public class ConteoCiclicoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
     public ResponseEntity<ConteoCiclicoResponseDTO> obtenerPorId(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.obtenerPorId(id);
         return ResponseEntity.ok(respuesta);
     }
 
     @GetMapping("/{id}/lotes")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
     public ResponseEntity<List<ConteoCiclicoLoteResponseDTO>> listarLotes(
             @PathVariable Long id,
             @RequestParam Long productoId,
