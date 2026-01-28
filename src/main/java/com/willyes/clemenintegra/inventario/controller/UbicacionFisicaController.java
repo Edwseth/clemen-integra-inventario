@@ -19,7 +19,7 @@ public class UbicacionFisicaController {
     private final UbicacionFisicaService ubicacionFisicaService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_UBICACIONES_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
     public ResponseEntity<List<UbicacionFisicaResponseDTO>> listar(
             @RequestParam Integer almacenId,
             @RequestParam(required = false) String q) {

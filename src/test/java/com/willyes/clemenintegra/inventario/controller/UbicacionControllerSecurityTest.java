@@ -1,10 +1,7 @@
 package com.willyes.clemenintegra.inventario.controller;
 
-import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResumenResponseDTO;
-import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
-import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
-import com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico;
-import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
+import com.willyes.clemenintegra.inventario.dto.UbicacionFisicaResponseDTO;
+import com.willyes.clemenintegra.inventario.service.UbicacionFisicaService;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -29,23 +26,20 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ConteoCiclicoController.class)
+@WebMvcTest(UbicacionFisicaController.class)
 @AutoConfigureMockMvc(addFilters = true)
-@Import({SecurityConfig.class, ConteoCiclicoControllerSecurityTest.MethodSecurityConfig.class})
+@Import({SecurityConfig.class, UbicacionControllerSecurityTest.MethodSecurityConfig.class})
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
-class ConteoCiclicoControllerSecurityTest {
+class UbicacionControllerSecurityTest {
 
     @org.springframework.boot.test.context.TestConfiguration
     @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity(prePostEnabled = true)
@@ -55,11 +49,8 @@ class ConteoCiclicoControllerSecurityTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
     @MockBean
-    private ConteoCiclicoService conteoCiclicoService;
+    private UbicacionFisicaService ubicacionFisicaService;
     @MockBean
     private JwtAuthenticationProvider jwtAuthenticationProvider;
     @MockBean
@@ -109,52 +100,20 @@ class ConteoCiclicoControllerSecurityTest {
     }
 
     @Test
-    void permiteListarConteosConPermisoLectura() throws Exception {
-        ConteoCiclicoResumenResponseDTO response = ConteoCiclicoResumenResponseDTO.builder()
+    void permiteListarUbicacionesConPermisoLectura() throws Exception {
+        UbicacionFisicaResponseDTO response = UbicacionFisicaResponseDTO.builder()
                 .id(1L)
-                .estado(EstadoConteoCiclico.BORRADOR)
+                .almacenId(5)
+                .codigo("A1")
+                .descripcion("Pasillo 1")
+                .activo(true)
                 .build();
-        when(conteoCiclicoService.listar(any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of(response)));
+        when(ubicacionFisicaService.buscar(5, null)).thenReturn(List.of(response));
 
-        mockMvc.perform(get("/api/inventario/conteos")
-                        .param("page", "0")
-                        .param("size", "10")
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador-permiso")
-                                .authorities(() -> "INV_CONTEOS_READ")))
+        mockMvc.perform(get("/api/ubicaciones")
+                        .param("almacenId", "5")
+                        .with(SecurityMockMvcRequestPostProcessors.user("contador-ubicaciones")
+                                .authorities(() -> "INV_UBICACIONES_READ")))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void permiteCrearConteoConPermisoEscritura() throws Exception {
-        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
-                .id(10L)
-                .almacenId(1)
-                .estado(EstadoConteoCiclico.BORRADOR)
-                .build();
-        when(conteoCiclicoService.crearConteo(any(ConteoCiclicoRequestDTO.class))).thenReturn(response);
-
-        ConteoCiclicoRequestDTO request = new ConteoCiclicoRequestDTO();
-        request.setAlmacenId(1);
-
-        mockMvc.perform(post("/api/inventario/conteos")
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(request))
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador-write")
-                                .authorities(() -> "INV_CONTEOS_WRITE")))
-                .andExpect(status().isCreated());
-    }
-
-    @Test
-    void rechazaCrearConteoSinPermisoEscritura() throws Exception {
-        ConteoCiclicoRequestDTO request = new ConteoCiclicoRequestDTO();
-        request.setAlmacenId(1);
-
-        mockMvc.perform(post("/api/inventario/conteos")
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(request))
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador-read")
-                                .authorities(() -> "INV_CONTEOS_READ")))
-                .andExpect(status().isForbidden());
     }
 }
