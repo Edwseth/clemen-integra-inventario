@@ -518,6 +518,8 @@ class OrdenProduccionServiceImplTest {
             assertThat(etapa.getEstado()).isEqualTo(EstadoEtapa.PENDIENTE);
             assertThat(etapa.getFechaInicio()).isNull();
             assertThat(etapa.getFechaFin()).isNull();
+            assertThat(etapa.getUsuarioId()).isNull();
+            assertThat(etapa.getUsuarioNombre()).isNull();
         });
     }
 
