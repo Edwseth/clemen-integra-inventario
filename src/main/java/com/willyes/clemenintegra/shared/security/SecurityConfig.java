@@ -349,7 +349,8 @@ public class SecurityConfig {
 
                     auth.requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
                             RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            RolUsuario.ROL_SUPER_ADMIN.name(),
+                            "INV_AJUSTES_WRITE"
                     );
 
                     auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
