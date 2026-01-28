@@ -1342,6 +1342,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .estado(EstadoEtapa.PENDIENTE)
                         .fechaInicio(null)
                         .fechaFin(null)
+                        .usuarioId(null)
+                        .usuarioNombre(null)
                         .build())
                 .toList();
         etapaProduccionRepository.saveAll(etapas);
