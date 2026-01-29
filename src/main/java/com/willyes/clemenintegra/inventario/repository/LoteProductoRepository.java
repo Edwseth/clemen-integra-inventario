@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.dto.LoteAlertaActivaProjection;
+import com.willyes.clemenintegra.inventario.dto.LoteUbicacionPicklistProjection;
 import com.willyes.clemenintegra.inventario.dto.StockAlertaProjection;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
@@ -319,4 +320,21 @@ WHERE lp.codigoLote = :codigoLote
         WHERE lp.fecha_vencimiento IS NOT NULL
         """, nativeQuery = true)
     List<LoteAlertaActivaProjection> listarLotesConVencimiento();
+
+    @Query(value = """
+        SELECT lp.productos_id AS productoId,
+               lp.almacenes_id AS almacenId,
+               lp.codigo_lote AS codigoLote,
+               uf.codigo AS ubicacionCodigo,
+               uf.descripcion AS ubicacionDescripcion
+        FROM lotes_productos lp
+        LEFT JOIN ubicaciones_fisicas uf ON uf.id = lp.ubicaciones_fisicas_id
+        WHERE lp.productos_id IN (:productoIds)
+          AND lp.almacenes_id IN (:almacenIds)
+          AND lp.codigo_lote IN (:codigosLote)
+        """, nativeQuery = true)
+    List<LoteUbicacionPicklistProjection> findUbicacionesFisicasPicklist(
+            @Param("productoIds") Collection<Integer> productoIds,
+            @Param("almacenIds") Collection<Integer> almacenIds,
+            @Param("codigosLote") Collection<String> codigosLote);
 }

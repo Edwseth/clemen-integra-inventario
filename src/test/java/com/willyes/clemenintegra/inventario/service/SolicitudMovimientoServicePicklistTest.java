@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.LoteUbicacionPicklistProjection;
 import com.willyes.clemenintegra.inventario.dto.PicklistDTO;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
@@ -68,6 +69,14 @@ class SolicitudMovimientoServicePicklistTest {
                 BigDecimal.valueOf(5)
         );
 
+        when(loteRepository.findUbicacionesFisicasPicklist(anySet(), anySet(), anySet()))
+                .thenReturn(List.of(crearUbicacionProjection(
+                        solicitud.getProducto().getId(),
+                        solicitud.getDetalles().getFirst().getAlmacenOrigen().getId(),
+                        "L-001",
+                        "BOD-05-A01",
+                        "PT.POSICION A01"
+                )));
         when(repository.findWithDetalles(eq(1L), isNull(), isNull(), isNull(), eq(false), anyList()))
                 .thenReturn(List.of(solicitud));
 
@@ -78,9 +87,9 @@ class SolicitudMovimientoServicePicklistTest {
         assertThat(item.producto()).isEqualTo("EQUINACEA POLVO");
         assertThat(item.lote()).isEqualTo("L-001");
         assertThat(item.almacenOrigen()).isEqualTo("Bodega MP");
-        assertThat(item.ubicacionOrigen()).isEqualTo("Pasillo 1");
+        assertThat(item.ubicacionOrigen()).isEqualTo("BOD-05-A01 - PT.POSICION A01");
         assertThat(item.almacenDestino()).isEqualTo("Pre-Bodega");
-        assertThat(item.ubicacionDestino()).isEqualTo("Zona F");
+        assertThat(item.ubicacionDestino()).isEqualTo("-");
 
         PicklistDTO picklist = service.generarPicklist(1L, true);
         assertThat(picklist.getArchivo()).isNotEmpty();
@@ -89,6 +98,8 @@ class SolicitudMovimientoServicePicklistTest {
     @Test
     @DisplayName("generarPicklist crea una fila por cada detalle con su lote")
     void generarPicklist_multiDetalleGeneraMultiplesFilas() throws Exception {
+        when(loteRepository.findUbicacionesFisicasPicklist(anySet(), anySet(), anySet()))
+                .thenReturn(List.of());
         SolicitudMovimientoDetalle detalle1 = crearDetalle("L-001", "Bodega 1", "Rack A", BigDecimal.valueOf(2));
         SolicitudMovimientoDetalle detalle2 = crearDetalle("L-002", "Bodega 2", "Rack B", BigDecimal.valueOf(3));
 
@@ -111,13 +122,16 @@ class SolicitudMovimientoServicePicklistTest {
     @Test
     @DisplayName("generarPicklist usa cabecera como respaldo cuando no hay detalles")
     void generarPicklist_sinDetallesUsaCabecera() throws Exception {
+        when(loteRepository.findUbicacionesFisicasPicklist(anySet(), anySet(), anySet()))
+                .thenReturn(List.of());
         Producto producto = new Producto();
         producto.setNombre("Producto sin detalle");
         UnidadMedida um = new UnidadMedida();
         um.setNombre("KG");
         producto.setUnidadMedida(um);
+        producto.setId(99);
 
-        Almacen origen = Almacen.builder().nombre("Almacen Cabecera").ubicacion("Zona C").build();
+        Almacen origen = Almacen.builder().id(7).nombre("Almacen Cabecera").ubicacion("Zona C").build();
         LoteProducto loteCabecera = new LoteProducto();
         loteCabecera.setCodigoLote("CAB-001");
 
@@ -141,9 +155,57 @@ class SolicitudMovimientoServicePicklistTest {
                 .satisfies(item -> {
                     assertThat(item.lote()).isEqualTo("CAB-001");
                     assertThat(item.almacenOrigen()).isEqualTo("Almacen Cabecera");
-                    assertThat(item.ubicacionOrigen()).isEqualTo("Zona C");
+                    assertThat(item.ubicacionOrigen()).isEqualTo("-");
                     assertThat(item.producto()).isEqualTo("Producto sin detalle");
                 });
+    }
+
+    @Test
+    @DisplayName("generarPicklist usa ubicacion fisica cuando existe y '-' cuando no existe")
+    void generarPicklist_ubicacionFisicaOptional() {
+        SolicitudMovimiento solicitud = crearSolicitudConDetalle(
+                "Producto ubicacion",
+                "L-100",
+                "Almacen A",
+                "Pasillo Z",
+                "Almacen B",
+                "Zona X",
+                BigDecimal.valueOf(2)
+        );
+        when(loteRepository.findUbicacionesFisicasPicklist(anySet(), anySet(), anySet()))
+                .thenReturn(List.of(crearUbicacionProjection(
+                        solicitud.getProducto().getId(),
+                        solicitud.getDetalles().getFirst().getAlmacenOrigen().getId(),
+                        "L-100",
+                        "BOD-05-A01",
+                        "PT.POSICION A01"
+                )));
+
+        List<SolicitudMovimientoServiceImpl.PicklistItem> items = service.buildPicklistItems(List.of(solicitud));
+
+        assertThat(items)
+                .hasSize(1)
+                .first()
+                .satisfies(item -> {
+                    assertThat(item.ubicacionOrigen()).isEqualTo("BOD-05-A01 - PT.POSICION A01");
+                    assertThat(item.ubicacionDestino()).isEqualTo("-");
+                });
+
+        when(loteRepository.findUbicacionesFisicasPicklist(anySet(), anySet(), anySet()))
+                .thenReturn(List.of(crearUbicacionProjection(
+                        solicitud.getProducto().getId(),
+                        solicitud.getDetalles().getFirst().getAlmacenOrigen().getId(),
+                        "L-100",
+                        null,
+                        null
+                )));
+
+        List<SolicitudMovimientoServiceImpl.PicklistItem> itemsSinUbicacion = service.buildPicklistItems(List.of(solicitud));
+
+        assertThat(itemsSinUbicacion)
+                .hasSize(1)
+                .first()
+                .satisfies(item -> assertThat(item.ubicacionOrigen()).isEqualTo("-"));
     }
 
     private SolicitudMovimiento crearSolicitudConDetalle(String nombreProducto,
@@ -155,8 +217,8 @@ class SolicitudMovimientoServicePicklistTest {
                                                          BigDecimal cantidad) {
         SolicitudMovimiento solicitud = crearSolicitudBase(nombreProducto, "GRM");
 
-        Almacen origen = Almacen.builder().nombre(nombreAlmacenOrigen).ubicacion(ubicacionAlmacenOrigen).build();
-        Almacen destino = Almacen.builder().nombre(nombreAlmacenDestino).ubicacion(ubicacionDestino).build();
+        Almacen origen = Almacen.builder().id(10).nombre(nombreAlmacenOrigen).ubicacion(ubicacionAlmacenOrigen).build();
+        Almacen destino = Almacen.builder().id(11).nombre(nombreAlmacenDestino).ubicacion(ubicacionDestino).build();
         LoteProducto lote = new LoteProducto();
         lote.setCodigoLote(codigoLote);
 
@@ -175,7 +237,7 @@ class SolicitudMovimientoServicePicklistTest {
     private SolicitudMovimientoDetalle crearDetalle(String codigoLote, String nombreAlmacen, String ubicacion, BigDecimal cantidad) {
         LoteProducto lote = new LoteProducto();
         lote.setCodigoLote(codigoLote);
-        Almacen origen = Almacen.builder().nombre(nombreAlmacen).ubicacion(ubicacion).build();
+        Almacen origen = Almacen.builder().id(20).nombre(nombreAlmacen).ubicacion(ubicacion).build();
 
         return SolicitudMovimientoDetalle.builder()
                 .lote(lote)
@@ -191,6 +253,7 @@ class SolicitudMovimientoServicePicklistTest {
         Producto producto = new Producto();
         producto.setNombre(nombreProducto);
         producto.setUnidadMedida(um);
+        producto.setId(1);
 
         OrdenProduccion ordenProduccion = OrdenProduccion.builder()
                 .id(1L)
@@ -208,6 +271,39 @@ class SolicitudMovimientoServicePicklistTest {
                 .fechaSolicitud(LocalDateTime.now())
                 .observaciones("Observacion prueba")
                 .build();
+    }
+
+    private LoteUbicacionPicklistProjection crearUbicacionProjection(Integer productoId,
+                                                                     Integer almacenId,
+                                                                     String codigoLote,
+                                                                     String codigo,
+                                                                     String descripcion) {
+        return new LoteUbicacionPicklistProjection() {
+            @Override
+            public Integer getProductoId() {
+                return productoId;
+            }
+
+            @Override
+            public Integer getAlmacenId() {
+                return almacenId;
+            }
+
+            @Override
+            public String getCodigoLote() {
+                return codigoLote;
+            }
+
+            @Override
+            public String getUbicacionCodigo() {
+                return codigo;
+            }
+
+            @Override
+            public String getUbicacionDescripcion() {
+                return descripcion;
+            }
+        };
     }
 
 }

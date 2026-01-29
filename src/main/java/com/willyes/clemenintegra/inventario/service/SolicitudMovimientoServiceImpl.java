@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -690,6 +691,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
 
     List<PicklistItem> buildPicklistItems(List<SolicitudMovimiento> solicitudes) {
         List<PicklistItem> items = new ArrayList<>();
+        Map<PicklistKey, String> ubicaciones = cargarUbicacionesFisicas(solicitudes);
 
         for (SolicitudMovimiento solicitud : solicitudes) {
             List<SolicitudMovimientoDetalle> detalles = Optional.ofNullable(solicitud.getDetalles())
@@ -707,9 +709,10 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                             ? solicitud.getProducto().getUnidadMedida().getNombre()
                             : "-";
                     String almOrigen = origen != null ? origen.getNombre() : "-";
-                    String ubicOrigen = origen != null && origen.getUbicacion() != null ? origen.getUbicacion() : "-";
+                    String ubicOrigen = resolverUbicacionFisica(ubicaciones, solicitud, origen,
+                            detalle != null ? detalle.getLote() : null);
                     String almDestino = destino != null ? destino.getNombre() : "-";
-                    String ubicDestino = destino != null && destino.getUbicacion() != null ? destino.getUbicacion() : "-";
+                    String ubicDestino = "-";
                     String obs = solicitud.getObservaciones() != null ? solicitud.getObservaciones() : "-";
 
                     items.add(new PicklistItem(
@@ -734,9 +737,9 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                     ? solicitud.getProducto().getUnidadMedida().getNombre()
                     : "-";
             String almOrigen = solicitud.getAlmacenOrigen() != null ? solicitud.getAlmacenOrigen().getNombre() : "-";
-            String ubicOrigen = solicitud.getAlmacenOrigen() != null ? solicitud.getAlmacenOrigen().getUbicacion() : "-";
+            String ubicOrigen = resolverUbicacionFisica(ubicaciones, solicitud, solicitud.getAlmacenOrigen(), solicitud.getLote());
             String almDestino = solicitud.getAlmacenDestino() != null ? solicitud.getAlmacenDestino().getNombre() : "-";
-            String ubicDestino = solicitud.getAlmacenDestino() != null ? solicitud.getAlmacenDestino().getUbicacion() : "-";
+            String ubicDestino = "-";
             String obs = solicitud.getObservaciones() != null ? solicitud.getObservaciones() : "-";
 
             items.add(new PicklistItem(
@@ -771,6 +774,87 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
             String ubicacionDestino,
             String observaciones
     ) {
+    }
+
+    private Map<PicklistKey, String> cargarUbicacionesFisicas(List<SolicitudMovimiento> solicitudes) {
+        Set<Integer> productoIds = new HashSet<>();
+        Set<Integer> almacenIds = new HashSet<>();
+        Set<String> codigosLote = new HashSet<>();
+
+        for (SolicitudMovimiento solicitud : solicitudes) {
+            List<SolicitudMovimientoDetalle> detalles = Optional.ofNullable(solicitud.getDetalles())
+                    .orElseGet(Collections::emptyList);
+            if (!detalles.isEmpty()) {
+                for (SolicitudMovimientoDetalle detalle : detalles) {
+                    Almacen origen = detalle.getAlmacenOrigen() != null ? detalle.getAlmacenOrigen() : solicitud.getAlmacenOrigen();
+                    registrarLlaveUbicacion(productoIds, almacenIds, codigosLote, solicitud, origen,
+                            detalle != null ? detalle.getLote() : null);
+                }
+                continue;
+            }
+            registrarLlaveUbicacion(productoIds, almacenIds, codigosLote, solicitud, solicitud.getAlmacenOrigen(),
+                    solicitud.getLote());
+        }
+
+        if (productoIds.isEmpty() || almacenIds.isEmpty() || codigosLote.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<LoteUbicacionPicklistProjection> ubicaciones = loteRepository.findUbicacionesFisicasPicklist(
+                productoIds,
+                almacenIds,
+                codigosLote
+        );
+        Map<PicklistKey, String> resultado = new HashMap<>();
+        for (LoteUbicacionPicklistProjection ubicacion : ubicaciones) {
+            PicklistKey key = new PicklistKey(
+                    ubicacion.getProductoId(),
+                    ubicacion.getAlmacenId(),
+                    ubicacion.getCodigoLote()
+            );
+            resultado.putIfAbsent(key, formatearUbicacion(ubicacion.getUbicacionCodigo(),
+                    ubicacion.getUbicacionDescripcion()));
+        }
+        return resultado;
+    }
+
+    private void registrarLlaveUbicacion(Set<Integer> productoIds,
+                                         Set<Integer> almacenIds,
+                                         Set<String> codigosLote,
+                                         SolicitudMovimiento solicitud,
+                                         Almacen origen,
+                                         LoteProducto lote) {
+        Integer productoId = solicitud.getProducto() != null ? solicitud.getProducto().getId() : null;
+        Integer almacenId = origen != null ? origen.getId() : null;
+        String codigoLote = lote != null ? lote.getCodigoLote() : null;
+        if (productoId != null && almacenId != null && StringUtils.hasText(codigoLote)) {
+            productoIds.add(productoId);
+            almacenIds.add(almacenId);
+            codigosLote.add(codigoLote);
+        }
+    }
+
+    private String resolverUbicacionFisica(Map<PicklistKey, String> ubicaciones,
+                                           SolicitudMovimiento solicitud,
+                                           Almacen origen,
+                                           LoteProducto lote) {
+        Integer productoId = solicitud.getProducto() != null ? solicitud.getProducto().getId() : null;
+        Integer almacenId = origen != null ? origen.getId() : null;
+        String codigoLote = lote != null ? lote.getCodigoLote() : null;
+        if (productoId == null || almacenId == null || !StringUtils.hasText(codigoLote)) {
+            return "-";
+        }
+        return ubicaciones.getOrDefault(new PicklistKey(productoId, almacenId, codigoLote), "-");
+    }
+
+    private String formatearUbicacion(String codigo, String descripcion) {
+        if (!StringUtils.hasText(codigo) || !StringUtils.hasText(descripcion)) {
+            return "-";
+        }
+        return codigo + " - " + descripcion;
+    }
+
+    private record PicklistKey(Integer productoId, Integer almacenId, String codigoLote) {
     }
 
     private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s, SolicitudMovimientoDetalle det) {
