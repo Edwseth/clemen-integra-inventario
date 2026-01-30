@@ -99,6 +99,7 @@ class OrdenProduccionServiceCierreTotalTest {
         ChecklistEtapaService checklistEtapaService = mock(ChecklistEtapaService.class);
         com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository checklistEtapaItemRepository =
                 mock(com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository.class);
+        LoteConsecutivoDiaService loteConsecutivoDiaService = mock(LoteConsecutivoDiaService.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -126,7 +127,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 reservaLoteRepository,
                 disponibilidadInsumoService,
                 checklistEtapaService,
-                checklistEtapaItemRepository
+                checklistEtapaItemRepository,
+                loteConsecutivoDiaService
         );
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDO");
