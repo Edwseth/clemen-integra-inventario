@@ -69,6 +69,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -116,6 +117,7 @@ class OrdenProduccionServiceReservaTest {
     @Mock private VidaUtilProductoService vidaUtilProductoService;
     @Mock private ReservaLoteService reservaLoteService;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
+    @Mock private LoteConsecutivoDiaService loteConsecutivoDiaService;
 
     @InjectMocks
     private OrdenProduccionServiceImpl service;
@@ -185,6 +187,7 @@ class OrdenProduccionServiceReservaTest {
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "EJECUTADA");
         ReflectionTestUtils.setField(service, "clasificacionEntradaPtConf", "ENTRADA_PRODUCTO_TERMINADO");
+        lenient().when(loteConsecutivoDiaService.obtenerSiguienteConsecutivo(any(LocalDate.class))).thenReturn(1);
     }
 
     @Test
@@ -258,19 +261,19 @@ class OrdenProduccionServiceReservaTest {
 
         DistribucionFefoResult resultado = DistribucionFefoResult.builder()
                 .productoInsumoId(50L)
-                .requerido(new BigDecimal("6.000000"))
-                .stockFisicoTotal(new BigDecimal("6.000000"))
+                .requerido(new BigDecimal("6.790123"))
+                .stockFisicoTotal(new BigDecimal("6.790123"))
                 .stockReservadoTotal(BigDecimal.ZERO)
-                .stockLibreTotal(new BigDecimal("6.000000"))
+                .stockLibreTotal(new BigDecimal("6.790123"))
                 .faltante(BigDecimal.ZERO)
                 .suficiente(true)
                 .detalles(List.of(
                         DistribucionFefoDetalle.builder()
                                 .loteProductoId(300L)
                                 .almacenId(99L)
-                                .cantidadCalculo(new BigDecimal("6.00000000"))
-                                .cantidadReserva(new BigDecimal("6.000000"))
-                                .disponible(new BigDecimal("6.000000"))
+                                .cantidadCalculo(new BigDecimal("6.79012300"))
+                                .cantidadReserva(new BigDecimal("6.790123"))
+                                .disponible(new BigDecimal("6.790123"))
                                 .estado("DISPONIBLE")
                                 .build()
                 ))
