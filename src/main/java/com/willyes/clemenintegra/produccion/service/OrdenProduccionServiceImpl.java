@@ -45,6 +45,7 @@ import com.willyes.clemenintegra.inventario.dto.LoteFefoDisponibleProjection;
 import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
 import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
+import com.willyes.clemenintegra.produccion.service.LoteConsecutivoDiaService;
 import com.willyes.clemenintegra.produccion.dto.LoteProductoResponse;
 import com.willyes.clemenintegra.inventario.dto.AlmacenResponseDTO;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
@@ -142,6 +143,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final DisponibilidadInsumoService disponibilidadInsumoService;
     private final ChecklistEtapaService checklistEtapaService;
     private final ChecklistEtapaItemRepository checklistEtapaItemRepository;
+    private final LoteConsecutivoDiaService loteConsecutivoDiaService;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -166,24 +168,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "PRODUCTO_NO_TERMINADO");
         }
         String prefijo = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        Optional<OrdenProduccion> ultimo = repository
-                .findTopByLoteProduccionStartingWithOrderByLoteProduccionDesc(prefijo);
-        int consecutivo = 0;
-        if (ultimo.isPresent() && ultimo.get().getLoteProduccion() != null) {
-            String codigo = ultimo.get().getLoteProduccion();
-            if (codigo.length() >= 10) {
-                String seq = codigo.substring(8, 10);
-                consecutivo = Integer.parseInt(seq) + 1;
-            }
-        }
-        if (consecutivo > 99) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CONSECUTIVO_DIARIO_EXCEDIDO");
-        }
+        int consecutivo = loteConsecutivoDiaService.obtenerSiguienteConsecutivo(LocalDate.now());
         String iniciales = producto.getNombre() != null
                 ? producto.getNombre().replaceAll("\\s+", "").toUpperCase()
                 : "";
         iniciales = iniciales.substring(0, Math.min(3, iniciales.length()));
-        return prefijo + String.format("%02d", consecutivo) + "-" + iniciales;
+        return prefijo + String.format("%03d", consecutivo) + "-" + iniciales;
     }
 
     private List<EstadoSolicitudMovimiento> parseEstados(String raw) {
