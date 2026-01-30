@@ -86,6 +86,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.lang.Nullable;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.http.ProblemDetail;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -1334,6 +1335,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     public void clonarEtapasParaOrden(OrdenProduccion op, List<EtapaPlantilla> plantilla) {
         if (plantilla == null || plantilla.isEmpty()) return;
+        if (op == null || op.getId() == null) {
+            return;
+        }
+        if (etapaProduccionRepository.existsByOrdenProduccionId(op.getId())) {
+            return;
+        }
         List<EtapaProduccion> etapas = plantilla.stream()
                 .map(p -> EtapaProduccion.builder()
                         .nombre(p.getNombre())
@@ -1346,7 +1353,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .usuarioNombre(null)
                         .build())
                 .toList();
-        etapaProduccionRepository.saveAll(etapas);
+        try {
+            etapaProduccionRepository.saveAll(etapas);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ETAPAS_DUPLICADAS_OP", ex);
+        }
     }
 
     public void clonarEtapas(Long ordenId) {

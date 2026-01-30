@@ -53,6 +53,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.BeforeEach;
@@ -1576,6 +1577,58 @@ class OrdenProduccionServiceImplTest {
         assertThat(dto.getCantidadConsumida()).isEqualByComparingTo(new BigDecimal("3"));
         assertThat(dto.getFaltante()).isEqualByComparingTo(new BigDecimal("7"));
         assertThat(dto.getCantidadAlistada()).isEqualByComparingTo(new BigDecimal("2.5"));
+    }
+
+    @Test
+    @DisplayName("clonarEtapasParaOrden crea etapas cuando la OP no tiene etapas previas")
+    void clonarEtapasParaOrden_creaEtapas() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(10L);
+        EtapaPlantilla etapa1 = EtapaPlantilla.builder().id(1L).nombre("Dispensado").secuencia(1).build();
+        EtapaPlantilla etapa2 = EtapaPlantilla.builder().id(2L).nombre("Mezcla").secuencia(2).build();
+
+        when(etapaProduccionRepository.existsByOrdenProduccionId(10L)).thenReturn(false);
+
+        ArgumentCaptor<List<EtapaProduccion>> captor = ArgumentCaptor.forClass(List.class);
+        service.clonarEtapasParaOrden(orden, List.of(etapa1, etapa2));
+
+        verify(etapaProduccionRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("clonarEtapasParaOrden es idempotente cuando ya existen etapas")
+    void clonarEtapasParaOrden_idempotente() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(11L);
+        EtapaPlantilla etapa = EtapaPlantilla.builder().id(1L).nombre("Envasado").secuencia(1).build();
+
+        when(etapaProduccionRepository.existsByOrdenProduccionId(11L)).thenReturn(false, true);
+
+        service.clonarEtapasParaOrden(orden, List.of(etapa));
+        service.clonarEtapasParaOrden(orden, List.of(etapa));
+
+        verify(etapaProduccionRepository, times(1)).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("clonarEtapasParaOrden traduce conflicto de integridad a 409")
+    void clonarEtapasParaOrden_traduceConflict() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(12L);
+        EtapaPlantilla etapa = EtapaPlantilla.builder().id(1L).nombre("Control").secuencia(1).build();
+
+        when(etapaProduccionRepository.existsByOrdenProduccionId(12L)).thenReturn(false);
+        doThrow(new DataIntegrityViolationException("dup"))
+                .when(etapaProduccionRepository).saveAll(anyList());
+
+        assertThatThrownBy(() -> service.clonarEtapasParaOrden(orden, List.of(etapa)))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(rse.getReason()).isEqualTo("ETAPAS_DUPLICADAS_OP");
+                });
     }
 
     private OrdenProduccion crearOrdenBase(Long id, BigDecimal programada, BigDecimal producida, EstadoProduccion estado) {
