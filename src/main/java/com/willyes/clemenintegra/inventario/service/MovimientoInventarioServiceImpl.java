@@ -1601,7 +1601,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         try {
             usuario = usuarioService.obtenerUsuarioAutenticado();
         } catch (AuthenticationCredentialsNotFoundException ex) {
-            usuario = usuarioService.obtenerUsuarioSistema();
+            usuario = usuarioService.obtenerUsuarioSistemaJobVencimientos();
         }
 
         if (usuario == null) {

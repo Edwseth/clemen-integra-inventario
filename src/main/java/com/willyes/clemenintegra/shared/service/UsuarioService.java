@@ -56,4 +56,16 @@ public class UsuarioService {
         return usuarioRepository.findFirstByRolAndActivoTrueOrderByIdAsc(RolUsuario.ROL_SUPER_ADMIN)
                 .orElseThrow(() -> new IllegalStateException("No se encontró un usuario activo con rol SUPER_ADMIN para tareas automáticas"));
     }
+
+    public Usuario obtenerUsuarioSistemaJobVencimientos() {
+        Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase("SYSTEM")
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "USUARIO_SISTEMA_NO_CONFIGURADO"
+                ));
+        if (!usuario.isActivo()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "USUARIO_SISTEMA_NO_CONFIGURADO");
+        }
+        return usuario;
+    }
 }
