@@ -71,6 +71,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -132,6 +133,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private ReservaLoteRepository reservaLoteRepository;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
     @Mock private ChecklistEtapaService checklistEtapaService;
+    @Mock private LoteConsecutivoDiaService loteConsecutivoDiaService;
 
     @Spy
     @InjectMocks
@@ -168,6 +170,7 @@ class OrdenProduccionServiceImplTest {
         lenient().when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(11L);
         lenient().when(catalogResolver.getMotivoSalidaProduccionId()).thenReturn(11L);
         lenient().when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+        lenient().when(loteConsecutivoDiaService.obtenerSiguienteConsecutivo(any(LocalDate.class))).thenReturn(1);
         TipoMovimientoDetalle tipoSalida = new TipoMovimientoDetalle();
         tipoSalida.setId(11L);
         lenient().when(tipoMovimientoDetalleRepository.findById(11L)).thenReturn(Optional.of(tipoSalida));

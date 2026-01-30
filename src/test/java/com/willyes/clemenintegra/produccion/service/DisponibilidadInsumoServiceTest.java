@@ -12,6 +12,7 @@ import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.never;
@@ -43,6 +45,11 @@ class DisponibilidadInsumoServiceTest {
 
     @InjectMocks
     private DisponibilidadInsumoService service;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(null);
+    }
 
     @Test
     @DisplayName("calcularDisponibilidad mantiene faltante y stock en preview y real")
