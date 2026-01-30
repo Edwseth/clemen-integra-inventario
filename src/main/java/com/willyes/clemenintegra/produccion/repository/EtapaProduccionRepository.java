@@ -10,6 +10,10 @@ import java.util.Optional;
 public interface EtapaProduccionRepository extends JpaRepository<EtapaProduccion, Long> {
     List<EtapaProduccion> findByOrdenProduccionIdOrderBySecuenciaAsc(Long ordenProduccionId);
 
+    boolean existsByOrdenProduccionId(Long ordenProduccionId);
+
+    long countByOrdenProduccionId(Long ordenProduccionId);
+
     long countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(Long ordenProduccionId);
 
     Optional<EtapaProduccion> findTopByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNullOrderByFechaInicioDescIdDesc(Long ordenProduccionId);
