@@ -1612,6 +1612,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 if (usarDetalle.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
+                Long almacenOrigenId = detalleDistribucion.getAlmacenId();
+                Long almacenDestinoId = solicitud.getAlmacenDestino() != null
+                        ? Long.valueOf(solicitud.getAlmacenDestino().getId())
+                        : null;
+                if (almacenOrigenId != null && Objects.equals(almacenOrigenId, almacenDestinoId)) {
+                    throw new CustomBusinessException(
+                            ApiErrorCode.SOLICITUD_ORIGEN_DESTINO_IGUALES,
+                            "SOLICITUD_ORIGEN_DESTINO_IGUALES",
+                            Map.of(
+                                    "ordenProduccionId", ordenId,
+                                    "productoInsumoId", insumoId,
+                                    "almacenOrigenId", almacenOrigenId,
+                                    "almacenDestinoId", almacenDestinoId
+                            ));
+                }
 
                 SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
                         .solicitudMovimiento(solicitud)
@@ -1619,8 +1634,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                                 ? new LoteProducto(detalleDistribucion.getLoteProductoId())
                                 : null)
                         .cantidad(usarDetalle)
-                        .almacenOrigen(detalleDistribucion.getAlmacenId() != null
-                                ? new Almacen(Math.toIntExact(detalleDistribucion.getAlmacenId()))
+                        .almacenOrigen(almacenOrigenId != null
+                                ? new Almacen(Math.toIntExact(almacenOrigenId))
                                 : null)
                         .almacenDestino(solicitud.getAlmacenDestino())
                         .build();

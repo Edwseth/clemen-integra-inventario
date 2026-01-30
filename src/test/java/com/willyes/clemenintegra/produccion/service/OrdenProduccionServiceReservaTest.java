@@ -50,6 +50,8 @@ import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -238,6 +240,51 @@ class OrdenProduccionServiceReservaTest {
         assertThat(detalles.get(1).getCantidad().scale()).isEqualTo(6);
         assertThat(total).isEqualByComparingTo(new BigDecimal("6.790123"));
         verify(reservaLoteService).sincronizarReservasSolicitud(solicitudCaptor.getValue());
+    }
+
+    @Test
+    @DisplayName("reservarInsumosParaOP falla si origen y destino coinciden en el detalle")
+    void reservarInsumosParaOp_validaOrigenDestino() {
+        when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().id(100L).build());
+
+        Almacen destino = new Almacen();
+        destino.setId(99);
+        SolicitudMovimiento solicitudBase = new SolicitudMovimiento();
+        solicitudBase.setId(100L);
+        solicitudBase.setDetalles(new ArrayList<>());
+        solicitudBase.setAlmacenDestino(destino);
+        when(solicitudMovimientoRepository.findById(100L)).thenReturn(Optional.of(solicitudBase));
+
+        DistribucionFefoResult resultado = DistribucionFefoResult.builder()
+                .productoInsumoId(50L)
+                .requerido(new BigDecimal("6.000000"))
+                .stockFisicoTotal(new BigDecimal("6.000000"))
+                .stockReservadoTotal(BigDecimal.ZERO)
+                .stockLibreTotal(new BigDecimal("6.000000"))
+                .faltante(BigDecimal.ZERO)
+                .suficiente(true)
+                .detalles(List.of(
+                        DistribucionFefoDetalle.builder()
+                                .loteProductoId(300L)
+                                .almacenId(99L)
+                                .cantidadCalculo(new BigDecimal("6.00000000"))
+                                .cantidadReserva(new BigDecimal("6.000000"))
+                                .disponible(new BigDecimal("6.000000"))
+                                .estado("DISPONIBLE")
+                                .build()
+                ))
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(50L), any(BigDecimal.class), anyList(), eq(false)))
+                .thenReturn(resultado);
+
+        assertThatThrownBy(() -> service.reservarInsumosParaOP(1L, null))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException error = (CustomBusinessException) ex;
+                    assertThat(error.getCode()).isEqualTo(ApiErrorCode.SOLICITUD_ORIGEN_DESTINO_IGUALES);
+                });
     }
 
     @Test

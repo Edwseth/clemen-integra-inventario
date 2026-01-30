@@ -10,6 +10,8 @@ import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.never;
@@ -46,8 +49,8 @@ class DisponibilidadInsumoServiceTest {
     void calcularDisponibilidad_previewYRealIguales() {
         when(loteProductoRepository.findFefoDisponibles(10L, Integer.MAX_VALUE))
                 .thenReturn(List.of(
-                        lote(1L, "A", new BigDecimal("4.000000"), new BigDecimal("5.000000"), new BigDecimal("1.000000"), EstadoLote.DISPONIBLE),
-                        lote(2L, "B", new BigDecimal("2.000000"), new BigDecimal("2.000000"), BigDecimal.ZERO, EstadoLote.LIBERADO)
+                        lote(1L, "A", new BigDecimal("4.000000"), new BigDecimal("5.000000"), new BigDecimal("1.000000"), EstadoLote.DISPONIBLE, 5L),
+                        lote(2L, "B", new BigDecimal("2.000000"), new BigDecimal("2.000000"), BigDecimal.ZERO, EstadoLote.LIBERADO, 5L)
                 ));
 
         DistribucionFefoResult preview = service.calcularDisponibilidad(10L, new BigDecimal("5"), List.of(), true);
@@ -67,9 +70,8 @@ class DisponibilidadInsumoServiceTest {
     void calcularDisponibilidad_insuficienteCalculaFaltante() {
         when(loteProductoRepository.findFefoDisponibles(20L, Integer.MAX_VALUE))
                 .thenReturn(List.of(
-                        lote(5L, "C", new BigDecimal("2.500000"), new BigDecimal("3.000000"), new BigDecimal("0.500000"), EstadoLote.DISPONIBLE)
+                        lote(5L, "C", new BigDecimal("2.500000"), new BigDecimal("3.000000"), new BigDecimal("0.500000"), EstadoLote.DISPONIBLE, 5L)
                 ));
-        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(99L);
         when(catalogResolver.getAlmacenOrigenMateriaPrimaId()).thenReturn(7L);
 
         Producto insumo = new Producto();
@@ -92,9 +94,9 @@ class DisponibilidadInsumoServiceTest {
     void calcularDisponibilidad_detectaFaltantePorReservas() {
         when(loteProductoRepository.findFefoDisponibles(30L, Integer.MAX_VALUE))
                 .thenReturn(List.of(
-                        lote(10L, "L-170925-3", new BigDecimal("125.000000"), new BigDecimal("125.000000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
-                        lote(11L, "L-271025-02", new BigDecimal("130.000000"), new BigDecimal("500.000000"), new BigDecimal("370.000000"), EstadoLote.DISPONIBLE),
-                        lote(12L, "L-060825-3", new BigDecimal("47.500000"), new BigDecimal("150.000000"), new BigDecimal("102.500000"), EstadoLote.DISPONIBLE)
+                        lote(10L, "L-170925-3", new BigDecimal("125.000000"), new BigDecimal("125.000000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L),
+                        lote(11L, "L-271025-02", new BigDecimal("130.000000"), new BigDecimal("500.000000"), new BigDecimal("370.000000"), EstadoLote.DISPONIBLE, 5L),
+                        lote(12L, "L-060825-3", new BigDecimal("47.500000"), new BigDecimal("150.000000"), new BigDecimal("102.500000"), EstadoLote.DISPONIBLE, 5L)
                 ));
         when(productoRepository.findById(30L)).thenReturn(Optional.empty());
 
@@ -111,14 +113,14 @@ class DisponibilidadInsumoServiceTest {
     void calcularDisponibilidad_jarabeBaseSinFaltantes() {
         when(loteProductoRepository.findFefoDisponibles(38L, Integer.MAX_VALUE))
                 .thenReturn(List.of(
-                        lote(117L, "L-120925-3", new BigDecimal("10000"), new BigDecimal("10000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
-                        lote(92L, "L-110925-3", new BigDecimal("30000"), new BigDecimal("30000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
-                        lote(118L, "L-120925-2", new BigDecimal("10000"), new BigDecimal("10000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
-                        lote(85L, "L-160925-2", new BigDecimal("25000"), new BigDecimal("25000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
-                        lote(103L, "L-180925-8", new BigDecimal("59500"), new BigDecimal("59500"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
-                        lote(119L, "L-050825-3", new BigDecimal("5000"), new BigDecimal("5000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
-                        lote(156L, "L-151125-2", new BigDecimal("59650"), new BigDecimal("59650"), BigDecimal.ZERO, EstadoLote.DISPONIBLE),
-                        lote(148L, "L-271025-00", new BigDecimal("5000"), new BigDecimal("5000"), BigDecimal.ZERO, EstadoLote.EN_CUARENTENA)
+                        lote(117L, "L-120925-3", new BigDecimal("10000"), new BigDecimal("10000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L),
+                        lote(92L, "L-110925-3", new BigDecimal("30000"), new BigDecimal("30000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L),
+                        lote(118L, "L-120925-2", new BigDecimal("10000"), new BigDecimal("10000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L),
+                        lote(85L, "L-160925-2", new BigDecimal("25000"), new BigDecimal("25000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L),
+                        lote(103L, "L-180925-8", new BigDecimal("59500"), new BigDecimal("59500"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L),
+                        lote(119L, "L-050825-3", new BigDecimal("5000"), new BigDecimal("5000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L),
+                        lote(156L, "L-151125-2", new BigDecimal("59650"), new BigDecimal("59650"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L),
+                        lote(148L, "L-271025-00", new BigDecimal("5000"), new BigDecimal("5000"), BigDecimal.ZERO, EstadoLote.EN_CUARENTENA, 5L)
                 ));
 
         DistribucionFefoResult resultado = service.calcularDisponibilidad(38L, new BigDecimal("139650"), List.of(), true);
@@ -149,9 +151,42 @@ class DisponibilidadInsumoServiceTest {
         verify(loteProductoRepository, never()).findFefoDisponibles(anyLong(), anyInt());
     }
 
+    @Test
+    @DisplayName("calcularDisponibilidad excluye lotes de Pre-Bodega Producción")
+    void calcularDisponibilidad_excluyePreBodega() {
+        when(loteProductoRepository.findFefoDisponibles(55L, Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        lote(200L, "PB-001", new BigDecimal("4.000000"), new BigDecimal("4.000000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 6L),
+                        lote(201L, "MP-001", new BigDecimal("4.000000"), new BigDecimal("4.000000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L)
+                ));
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+
+        DistribucionFefoResult resultado = service.calcularDisponibilidad(55L, new BigDecimal("3"), List.of(), true);
+
+        assertThat(resultado.getDetalles()).hasSize(1);
+        assertThat(resultado.getDetalles().get(0).getAlmacenId()).isEqualTo(5L);
+    }
+
+    @Test
+    @DisplayName("calcularDisponibilidad falla si solo hay stock en Pre-Bodega Producción")
+    void calcularDisponibilidad_preBodegaUnicoOrigen() {
+        when(loteProductoRepository.findFefoDisponibles(66L, Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        lote(300L, "PB-002", new BigDecimal("5.000000"), new BigDecimal("5.000000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 6L)
+                ));
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+
+        assertThatThrownBy(() -> service.calcularDisponibilidad(66L, new BigDecimal("1"), List.of(), false))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException error = (CustomBusinessException) ex;
+                    assertThat(error.getCode()).isEqualTo(ApiErrorCode.PREBODEGA_ORIGEN_INVALIDO);
+                });
+    }
+
     private LoteFefoDisponibleProjection lote(Long id, String codigo, BigDecimal stockLibre,
                                                BigDecimal stockFisico, BigDecimal stockReservado,
-                                               EstadoLote estado) {
+                                               EstadoLote estado, Long almacenId) {
         return new LoteFefoDisponibleProjection() {
             @Override
             public Long getLoteProductoId() {
@@ -185,7 +220,7 @@ class DisponibilidadInsumoServiceTest {
 
             @Override
             public Long getAlmacenId() {
-                return 5L;
+                return almacenId;
             }
 
             @Override
