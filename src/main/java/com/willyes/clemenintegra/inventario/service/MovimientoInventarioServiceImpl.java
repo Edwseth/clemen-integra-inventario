@@ -218,7 +218,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         boolean esRecepcionDevolucionCliente = tipoMovimiento == TipoMovimiento.RECEPCION
                 && clasificacion == ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE;
-        boolean esCorreccionSalidaCliente = clasificacion == ClasificacionMovimientoInventario.CORRECCION_SALIDA_CLIENTE;
         boolean loteLegacy = Boolean.TRUE.equals(dto.loteLegacy());
 
         if (esRecepcionDevolucionCliente) {
@@ -241,9 +240,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     && dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
             Long destinoId = vaABodegaPt ? almacenPtId : almacenCuarentenaId;
             almacenDestinoIdNormalizado = Math.toIntExact(destinoId);
-        }
-        if (esCorreccionSalidaCliente) {
-            validarCorreccionSalidaCliente(dto);
         }
 
         // >>> NUEVO: identifica si el cierre de OP está enviando una ENTRADA de PT
@@ -381,10 +377,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         log.debug("MOV-REQ (pre-solicitud) tipo={}, clasificacion={}, prod={}, qty={}, opIdDTO={}",
                 tipoMovimiento, clasificacion, dto.productoId(), dto.cantidad(), dto.ordenProduccionId());
-
-        if (esCorreccionSalidaCliente) {
-            dto = asegurarLoteCorreccionSalidaCliente(dto, almacenDestinoIdNormalizado, producto);
-        }
 
         Long solicitudIdReferencia = dto.solicitudMovimientoId();
         SolicitudMovimiento solicitud = null;
@@ -713,11 +705,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         validarParametros(tipoMovimiento, almacenOrigen, almacenDestino);
 
         Long motivoMovimientoId = dto.motivoMovimientoId();
-        if (esCorreccionSalidaCliente && motivoMovimientoId == null) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "Debe indicar un motivo para la corrección de salida a cliente",
-                    Map.of("clasificacion", ClasificacionMovimientoInventario.CORRECCION_SALIDA_CLIENTE.name()));
-        }
         if (motivoMovimientoId == null && esRecepcionDevolucionCliente) {
             motivoMovimientoId = resolverMotivoDevolucionCliente(almacenDestino);
         }
@@ -787,19 +774,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (esRecepcionDevolucionCliente) {
             lotesProcesados = procesarRecepcionDevolucionCliente(dto, producto, cantidadSolicitada, almacenDestino, loteLegacy);
-        } else if (esCorreccionSalidaCliente) {
-            lotesProcesados = procesarMovimientoConLoteExistente(
-                    dto,
-                    tipoMovimiento,
-                    clasificacion,
-                    almacenOrigen,
-                    almacenDestino,
-                    producto,
-                    cantidadSolicitada,
-                    devolucionInterna,
-                    /* solicitud */ solicitud,
-                    solicitudOpProcesadaEnLote
-            );
         } else if (tipoMovimiento == TipoMovimiento.RECEPCION) {
             if (dto.ordenCompraId() == null) {
                 throw new IllegalArgumentException("Las recepciones sin Orden de Compra deben usar un lote existente");
@@ -1004,10 +978,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
         MotivoMovimiento motivoMovimiento = movimiento.getMotivoMovimiento();
         Long motivoId = motivoMovimiento != null ? motivoMovimiento.getId() : null;
-        boolean esCorreccionSalidaCliente = movimiento.getClasificacion()
-                == ClasificacionMovimientoInventario.CORRECCION_SALIDA_CLIENTE;
-        if (!esCorreccionSalidaCliente
-                && (motivoId == null || !MOTIVOS_MOVIMIENTO_CRITICOS.contains(motivoId))) {
+        if (motivoId == null || !MOTIVOS_MOVIMIENTO_CRITICOS.contains(motivoId)) {
             return;
         }
         if (usuario == null || usuario.getId() == null) {
@@ -1015,7 +986,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     movimiento.getId());
             return;
         }
-        String accion = esCorreccionSalidaCliente ? "CORRECCION_SALIDA_CLIENTE" : "MOVIMIENTO_CRITICO_REGISTRADO";
         String valorNuevo = buildResumenMovimiento(movimiento, motivoId);
         String observacion = buildObservacionMovimiento(movimiento.getDocReferencia(), idempotencyKey);
         try {
@@ -1025,7 +995,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .campoModificado("movimiento")
                     .valorAnt("N/A")
                     .valorNuevo(valorNuevo)
-                    .accion(accion)
+                    .accion("MOVIMIENTO_CRITICO_REGISTRADO")
                     .observacion(observacion)
                     .fechaCambio(LocalDateTime.now())
                     .usuarioId(usuario.getId())
@@ -2373,17 +2343,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return List.of(new MovimientoLoteDetalle(actualizado, cantidad));
         }
 
-        if (tipo == TipoMovimiento.RECEPCION) {
-            BigDecimal nuevo = Optional.ofNullable(loteOrigen.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
-            loteOrigen.setStockLote(nuevo);
-            if (loteOrigen.isAgotado() && nuevo.compareTo(BigDecimal.ZERO) > 0) {
-                loteOrigen.setAgotado(false);
-                loteOrigen.setFechaAgotado(null);
-            }
-            LoteProducto actualizado = loteProductoRepository.save(loteOrigen);
-            return List.of(new MovimientoLoteDetalle(actualizado, cantidad));
-        }
-
         if (tipo == TipoMovimiento.AJUSTE) {
             if (esAjusteNegativo) {
                 log.debug("VAL-ACTUALIZA (AJUSTE-) antes actualizarStockLote loteId={} stockAntes={} req={}",
@@ -2673,84 +2632,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     "La devolución legacy requiere observaciones adicionales",
                     detalles);
         }
-    }
-
-    private void validarCorreccionSalidaCliente(MovimientoInventarioDTO dto) {
-        if (dto.tipoMovimiento() != TipoMovimiento.RECEPCION) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "CORRECCION_SALIDA_CLIENTE_TIPO_INVALIDO");
-        }
-        if (!StringUtils.hasText(dto.docReferencia())) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "CORRECCION_SALIDA_CLIENTE_DOC_REFERENCIA_REQUERIDA");
-        }
-        String observaciones = dto.destinoTexto() != null ? dto.destinoTexto().trim() : "";
-        if (observaciones.isBlank() || observaciones.length() < 10) {
-            throw new CustomBusinessException(ApiErrorCode.OBSERVACION_REQUERIDA,
-                    "La corrección de salida a cliente requiere observaciones",
-                    Map.of("minLength", 10));
-        }
-        if (dto.cantidad() == null || dto.cantidad().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "CORRECCION_SALIDA_CLIENTE_CANTIDAD_INVALIDA");
-        }
-    }
-
-    private MovimientoInventarioDTO asegurarLoteCorreccionSalidaCliente(MovimientoInventarioDTO dto,
-                                                                        Integer almacenDestinoId,
-                                                                        Producto producto) {
-        if (dto.loteProductoId() != null) {
-            return dto;
-        }
-        String codigoLote = dto.codigoLote() != null ? dto.codigoLote().trim() : "";
-        if (codigoLote.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "CORRECCION_SALIDA_CLIENTE_LOTE_REQUERIDO");
-        }
-        if (almacenDestinoId == null) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "CORRECCION_SALIDA_CLIENTE_DESTINO_REQUERIDO");
-        }
-        Optional<LoteProducto> loteOpt = loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
-                codigoLote, producto.getId(), almacenDestinoId);
-        LoteProducto lote = loteOpt.orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
-                "No se encontró el lote indicado para la corrección",
-                Map.of("codigoLote", codigoLote, "productoId", producto.getId(), "almacenId", almacenDestinoId)));
-        return copiarConLoteProductoId(dto, lote.getId());
-    }
-
-    private MovimientoInventarioDTO copiarConLoteProductoId(MovimientoInventarioDTO dto, Long loteProductoId) {
-        return new MovimientoInventarioDTO(
-                dto.id(),
-                dto.cantidad(),
-                dto.tipoMovimiento(),
-                dto.clasificacionMovimientoInventario(),
-                dto.docReferencia(),
-                dto.destinoTexto(),
-                dto.clienteNombre(),
-                dto.causaDevolucionPt(),
-                dto.condicionProductoDevuelto(),
-                dto.productoId(),
-                loteProductoId,
-                dto.almacenOrigenId(),
-                dto.almacenDestinoId(),
-                dto.proveedorId(),
-                dto.ordenCompraId(),
-                dto.motivoMovimientoId(),
-                dto.tipoMovimientoDetalleId(),
-                dto.solicitudMovimientoId(),
-                dto.usuarioId(),
-                dto.ordenProduccionId(),
-                dto.ordenProduccionEtapaId(),
-                dto.ordenCompraDetalleId(),
-                dto.codigoLote(),
-                dto.fechaVencimiento(),
-                dto.estadoLote(),
-                dto.autoSplit(),
-                dto.atenciones(),
-                dto.loteLegacy(),
-                dto.ubicacionDestinoId()
-        );
     }
 
     private MovimientoLoteDetalle ejecutarTransferenciaDesdeLote(LoteProducto loteOrigen,

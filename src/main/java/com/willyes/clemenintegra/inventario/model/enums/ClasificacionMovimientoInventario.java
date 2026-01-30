@@ -22,7 +22,6 @@ public enum ClasificacionMovimientoInventario {
     SALIDA_MUESTRA_CALIDAD, //
     SALIDA_PRODUCCION,
     SALIDA_CLIENTE,//
-    CORRECCION_SALIDA_CLIENTE,
 
     // TRANSFERENCIAS
     TRANSFERENCIA_INTERNA_PRODUCCION,
@@ -30,6 +29,7 @@ public enum ClasificacionMovimientoInventario {
     LIBERACION_CALIDAD,
     RECHAZO_CALIDAD
 }
+
 
 
 
