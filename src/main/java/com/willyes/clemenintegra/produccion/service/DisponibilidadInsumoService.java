@@ -11,6 +11,8 @@ import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -104,12 +106,34 @@ public class DisponibilidadInsumoService {
 
         List<LoteFefoDisponibleProjection> lotesDisponibles = loteProductoRepository
                 .findFefoDisponibles(productoInsumoId, Integer.MAX_VALUE);
+        Long preBodegaId = catalogResolver.getAlmacenPreBodegaProduccionId();
+        if (preBodegaId != null) {
+            lotesDisponibles = lotesDisponibles.stream()
+                    .filter(lote -> lote.getAlmacenId() == null || !Objects.equals(lote.getAlmacenId(), preBodegaId))
+                    .toList();
+        }
 
         EnumSet<EstadoLote> estadosPermitidos = obtenerEstadosPermitidos(producto);
         List<LoteFefoDisponibleProjection> lotesElegibles = lotesDisponibles.stream()
                 .filter(l -> esLotePermitido(l, estadosPermitidos))
                 .filter(l -> loteForzadoId == null || Objects.equals(l.getLoteProductoId(), loteForzadoId))
                 .toList();
+
+        BigDecimal stockLibreElegible = lotesElegibles.stream()
+                .map(this::calcularStockLibre)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (preBodegaId != null && stockLibreElegible.compareTo(requerida) < 0) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.PREBODEGA_ORIGEN_INVALIDO,
+                    "STOCK_INSUFICIENTE_ORIGEN: la Pre-Bodega Producción no se considera origen de insumos",
+                    Map.of(
+                            "productoInsumoId", productoInsumoId,
+                            "preBodegaId", preBodegaId,
+                            "requerido", requerida,
+                            "stockLibreElegible", stockLibreElegible
+                    ));
+        }
 
         List<LoteFefoDisponibleProjection> lotesSeleccionados = new ArrayList<>(lotesElegibles);
         boolean usoFallback = false;
