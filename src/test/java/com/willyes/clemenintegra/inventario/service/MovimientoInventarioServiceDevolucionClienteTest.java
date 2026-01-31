@@ -120,7 +120,7 @@ class MovimientoInventarioServiceDevolucionClienteTest {
     }
 
     @Test
-    void shouldRouteToBodegaPt_whenTrocadoAndOptimo_andNotLegacy() {
+    void shouldRouteToBodegaPt_whenCondicionOptimo() {
         Producto producto = crearProducto(100);
         LoteProducto lote = crearLote(400L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
@@ -159,11 +159,11 @@ class MovimientoInventarioServiceDevolucionClienteTest {
     }
 
     @Test
-    void shouldRouteToCuarentena_whenCortaFecha_or_CondicionNotOptimo() {
+    void shouldRouteToCuarentena_whenCondicionNotOptimo() {
         Producto producto = crearProducto(200);
         LoteProducto lote = crearLote(500L, producto, 2, EstadoLote.LIBERADO);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
-                CausaDevolucionPT.CORTA_FECHA, CondicionProductoDevuelto.OPTIMO, false, null, null);
+                CausaDevolucionPT.CORTA_FECHA, CondicionProductoDevuelto.DUDOSO, false, null, null);
 
         stubCatalogosRecepcionDevolucion();
         configurarMocksBasicos(producto, lote, ALMACEN_CUARENTENA_ID, TIPO_DETALLE_TRANSFERENCIA_ID);
