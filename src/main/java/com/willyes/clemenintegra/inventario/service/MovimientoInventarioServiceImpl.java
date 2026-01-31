@@ -10,7 +10,6 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO.
 import com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.*;
-import com.willyes.clemenintegra.inventario.model.enums.CausaDevolucionPT;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.CondicionProductoDevuelto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
@@ -235,9 +234,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CONFIG_FALTANTE");
             }
 
-            boolean vaABodegaPt = !loteLegacy
-                    && dto.causaDevolucionPt() == CausaDevolucionPT.TROCADO
-                    && dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
+            boolean vaABodegaPt = dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
             Long destinoId = vaABodegaPt ? almacenPtId : almacenCuarentenaId;
             almacenDestinoIdNormalizado = Math.toIntExact(destinoId);
         }
@@ -2885,10 +2882,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private Long resolveTipoDetalleRecepcionDevolucionCliente(MovimientoInventarioDTO dto) {
-        boolean loteLegacy = Boolean.TRUE.equals(dto.loteLegacy());
-        boolean vaABodegaPt = !loteLegacy
-                && dto.causaDevolucionPt() == CausaDevolucionPT.TROCADO
-                && dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
+        boolean vaABodegaPt = dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO;
         Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
         Long tipoDetalleEntradaId = catalogResolver.getTipoDetalleEntradaId();
         if (!vaABodegaPt && tipoDetalleTransferenciaId != null) {
