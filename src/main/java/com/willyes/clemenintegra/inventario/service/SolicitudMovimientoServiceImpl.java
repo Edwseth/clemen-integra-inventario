@@ -858,32 +858,19 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     }
 
     private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s, SolicitudMovimientoDetalle det) {
-        Long almacenOrigenId = Optional.ofNullable(det.getAlmacenOrigen())
-                .map(Almacen::getId)
-                .map(Integer::longValue)
+        Almacen almacenOrigen = Optional.ofNullable(det.getAlmacenOrigen())
                 .orElseGet(() -> Optional.ofNullable(s.getAlmacenOrigen())
-                        .map(Almacen::getId)
-                        .map(Integer::longValue)
                         .orElseGet(() -> Optional.ofNullable(det.getLote())
                                 .map(LoteProducto::getAlmacen)
-                                .map(Almacen::getId)
-                                .map(Integer::longValue)
                                 .orElse(null)));
-        Long almacenDestinoId = Optional.ofNullable(det.getAlmacenDestino())
-                .map(Almacen::getId)
-                .map(Integer::longValue)
+        Almacen almacenDestino = Optional.ofNullable(det.getAlmacenDestino())
                 .orElseGet(() -> Optional.ofNullable(s.getAlmacenDestino())
-                        .map(Almacen::getId)
-                        .map(Integer::longValue)
                         .orElse(null));
-        Almacen almacenOrigen = almacenOrigenId != null
-                ? almacenRepository.findById(almacenOrigenId).orElse(null)
-                : null;
-        Almacen almacenDestino = almacenDestinoId != null
-                ? almacenRepository.findById(almacenDestinoId).orElse(null)
-                : null;
-        String estadoDetalle = det.getEstado() != null
-                ? det.getEstado().name()
+        Long almacenOrigenId = almacenOrigen != null ? almacenOrigen.getId().longValue() : null;
+        Long almacenDestinoId = almacenDestino != null ? almacenDestino.getId().longValue() : null;
+        String estadoDetalle = det.getEstado() != null ? det.getEstado().name() : null;
+        String estado = estadoDetalle != null
+                ? estadoDetalle
                 : (s.getEstado() != null ? s.getEstado().name() : null);
 
         return SolicitudMovimientoItemDTO.builder()
@@ -903,7 +890,7 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .ubicacionAlmacenDestino(almacenDestino != null ? almacenDestino.getUbicacion() : "-")
                 .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
                 .tipoMovimientoDetalleId(s.getTipoMovimientoDetalle() != null ? s.getTipoMovimientoDetalle().getId() : null)
-                .estado(estadoDetalle)
+                .estado(estado)
                 .estadoDetalle(estadoDetalle)
                 .fechaSolicitud(s.getFechaSolicitud())
                 .usuarioSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
@@ -915,15 +902,22 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
         if (items == null || items.isEmpty()) {
             return "PENDIENTE";
         }
-        boolean todosPendientes = items.stream().allMatch(i -> "PENDIENTE".equals(i.getEstado()));
-        boolean todosAutorizados = items.stream().allMatch(i -> "AUTORIZADA".equals(i.getEstado()));
+        boolean todosPendientes = items.stream().allMatch(i -> "PENDIENTE".equals(resolverEstadoItem(i)));
+        boolean todosAtendidos = items.stream().allMatch(i -> "ATENDIDO".equals(resolverEstadoItem(i)));
         if (todosPendientes) {
             return "PENDIENTE";
         }
-        if (todosAutorizados) {
-            return "AUTORIZADA";
+        if (todosAtendidos) {
+            return "ATENDIDO";
         }
         return "MIXTO";
+    }
+
+    private String resolverEstadoItem(SolicitudMovimientoItemDTO item) {
+        if (item == null) {
+            return null;
+        }
+        return item.getEstadoDetalle() != null ? item.getEstadoDetalle() : item.getEstado();
     }
 
     /**
