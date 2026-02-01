@@ -30,6 +30,7 @@ public class SolicitudMovimientoItemDTO {
     private Long motivoMovimientoId;
     private Long tipoMovimientoDetalleId;
     private String estado;
+    private String estadoDetalle;
     private LocalDateTime fechaSolicitud;
     private String usuarioSolicitante;
     private String observaciones;

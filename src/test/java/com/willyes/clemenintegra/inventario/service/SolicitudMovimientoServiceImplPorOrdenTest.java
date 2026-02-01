@@ -121,6 +121,8 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
 
         when(repository.findWithDetalles(eq(op.getId()), isNull(), isNull(), isNull(), eq(false), anyList()))
                 .thenReturn(List.of(pendiente, atendida));
+        when(almacenRepository.findById(1L)).thenReturn(java.util.Optional.of(origen));
+        when(almacenRepository.findById(6L)).thenReturn(java.util.Optional.of(destino));
 
         SolicitudesPorOrdenDTO dto = service.obtenerPorOrden(op.getId());
 
@@ -131,7 +133,10 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
                 .orElseThrow();
 
         assertThat(itemPendiente.getEstado()).isEqualTo("PENDIENTE");
+        assertThat(itemPendiente.getEstadoDetalle()).isEqualTo("PENDIENTE");
         assertThat(itemPendiente.getAlmacenOrigenId()).isEqualTo(1L);
         assertThat(itemPendiente.getAlmacenDestinoId()).isEqualTo(6L);
+        assertThat(itemPendiente.getNombreAlmacenOrigen()).isEqualTo("Alm Origen");
+        assertThat(itemPendiente.getNombreAlmacenDestino()).isEqualTo("Pre-Bodega Producción");
     }
 }
