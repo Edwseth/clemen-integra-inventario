@@ -858,13 +858,30 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     }
 
     private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s, SolicitudMovimientoDetalle det) {
-        Almacen almacenOrigen = Optional.ofNullable(det.getAlmacenOrigen())
+        Long almacenOrigenId = Optional.ofNullable(det.getAlmacenOrigen())
+                .map(Almacen::getId)
+                .map(Integer::longValue)
                 .orElseGet(() -> Optional.ofNullable(s.getAlmacenOrigen())
+                        .map(Almacen::getId)
+                        .map(Integer::longValue)
                         .orElseGet(() -> Optional.ofNullable(det.getLote())
                                 .map(LoteProducto::getAlmacen)
+                                .map(Almacen::getId)
+                                .map(Integer::longValue)
                                 .orElse(null)));
-        Almacen almacenDestino = Optional.ofNullable(det.getAlmacenDestino())
-                .orElse(s.getAlmacenDestino());
+        Long almacenDestinoId = Optional.ofNullable(det.getAlmacenDestino())
+                .map(Almacen::getId)
+                .map(Integer::longValue)
+                .orElseGet(() -> Optional.ofNullable(s.getAlmacenDestino())
+                        .map(Almacen::getId)
+                        .map(Integer::longValue)
+                        .orElse(null));
+        Almacen almacenOrigen = almacenOrigenId != null
+                ? almacenRepository.findById(almacenOrigenId).orElse(null)
+                : null;
+        Almacen almacenDestino = almacenDestinoId != null
+                ? almacenRepository.findById(almacenDestinoId).orElse(null)
+                : null;
         String estadoDetalle = det.getEstado() != null
                 ? det.getEstado().name()
                 : (s.getEstado() != null ? s.getEstado().name() : null);
@@ -878,15 +895,16 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .cantidadSolicitada(det.getCantidad())
                 .cantidadAtendida(det.getCantidadAtendida())
                 .unidadMedida(s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : null)
-                .almacenOrigenId(almacenOrigen != null ? almacenOrigen.getId().longValue() : null)
+                .almacenOrigenId(almacenOrigenId)
                 .nombreAlmacenOrigen(almacenOrigen != null ? almacenOrigen.getNombre() : null)
                 .ubicacionAlmacenOrigen(almacenOrigen != null ? almacenOrigen.getUbicacion() : "-")
-                .almacenDestinoId(almacenDestino != null ? almacenDestino.getId().longValue() : null)
+                .almacenDestinoId(almacenDestinoId)
                 .nombreAlmacenDestino(almacenDestino != null ? almacenDestino.getNombre() : null)
                 .ubicacionAlmacenDestino(almacenDestino != null ? almacenDestino.getUbicacion() : "-")
                 .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
                 .tipoMovimientoDetalleId(s.getTipoMovimientoDetalle() != null ? s.getTipoMovimientoDetalle().getId() : null)
                 .estado(estadoDetalle)
+                .estadoDetalle(estadoDetalle)
                 .fechaSolicitud(s.getFechaSolicitud())
                 .usuarioSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
                 .observaciones(s.getObservaciones())
