@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -147,6 +148,10 @@ class SolicitudMovimientoServiceFiltroOpTest {
         almacen.setId(1);
         almacen.setNombre("ALM-1");
 
+        Almacen almacenDestino = new Almacen();
+        almacenDestino.setId(6);
+        almacenDestino.setNombre("ALM-DEST");
+
         LoteProducto lote = new LoteProducto();
         lote.setId(100L);
         lote.setCodigoLote("L-100");
@@ -157,6 +162,8 @@ class SolicitudMovimientoServiceFiltroOpTest {
                 .lote(lote)
                 .cantidad(BigDecimal.ONE)
                 .almacenOrigen(almacen)
+                .almacenDestino(almacenDestino)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
                 .build();
 
         SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
