@@ -3295,6 +3295,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         // Solo procesamos partidas PENDIENTE o PARCIAL
         for (SolicitudMovimientoDetalle det : solicitud.getDetalles()) {
+            validarDetalleCompleto(solicitud, det);
             if (det.getEstado() != EstadoSolicitudMovimientoDetalle.PENDIENTE
                     && det.getEstado() != EstadoSolicitudMovimientoDetalle.PARCIAL) {
                 continue;
@@ -3310,7 +3311,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             // 1) Lote origen con lock
             Long loteId = det.getLote() != null ? det.getLote().getId() : null;
             if (loteId == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_SIN_LOTE");
+                throw new CustomBusinessException(
+                        ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO,
+                        "SOLICITUD_DETALLE_INCOMPLETO",
+                        Map.of(
+                                "solicitudId", solicitud.getId(),
+                                "detalleId", det.getId(),
+                                "missingFields", List.of("lote_id")
+                        )
+                );
             }
 
             LoteProducto loteOrigen = loteProductoRepository.findByIdForUpdate(loteId)
@@ -3337,9 +3346,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             else if (det.getLote() != null && det.getLote().getCodigoLote() != null) {
                 codigoLote = det.getLote().getCodigoLote();
             }
-            // 3) Como último recurso, tomamos el que traiga la solicitud principal
-            else if (solicitud != null && solicitud.getCodigoLote() != null) {
-                codigoLote = solicitud.getCodigoLote();
+            if (!StringUtils.hasText(codigoLote)) {
+                throw new CustomBusinessException(
+                        ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO,
+                        "SOLICITUD_DETALLE_INCOMPLETO",
+                        Map.of(
+                                "solicitudId", solicitud.getId(),
+                                "detalleId", det.getId(),
+                                "missingFields", List.of("codigo_lote")
+                        )
+                );
             }
             LoteProducto loteDestino = ensureDestinoLote(
                     producto,
@@ -3694,6 +3710,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     "CONFIG_FALTANTE: inventory.tipoDetalle.salidaId");
 
             for (SolicitudMovimientoDetalle det : Optional.ofNullable(sol.getDetalles()).orElse(List.of())) {
+                validarDetalleCompleto(sol.getId(), det);
 
                 // Cantidad “a consumir” = atendida (si la hubo) o solicitada
                 final BigDecimal qtySolicitada = Optional.ofNullable(det.getCantidad()).orElse(BigDecimal.ZERO);
@@ -3711,11 +3728,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 final String codigoLote =
                         (det.getLote() != null && det.getLote().getCodigoLote() != null)
                                 ? det.getLote().getCodigoLote()
-                                : sol.getCodigoLote();
+                                : null;
 
-                if (codigoLote == null) {
-                    log.warn("CONSUMO_OP: detalle sin codigoLote, solId={}, detId={}", sol.getId(), det.getId());
-                    continue;
+                if (!StringUtils.hasText(codigoLote)) {
+                    throw new CustomBusinessException(
+                            ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO,
+                            "SOLICITUD_DETALLE_INCOMPLETO",
+                            Map.of(
+                                    "solicitudId", sol.getId(),
+                                    "detalleId", det.getId(),
+                                    "missingFields", List.of("codigo_lote")
+                            )
+                    );
                 }
 
                 final Optional<LoteProducto> lotePreBodegaOpt = loteProductoRepository
