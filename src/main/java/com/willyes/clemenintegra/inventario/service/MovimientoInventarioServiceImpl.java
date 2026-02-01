@@ -1106,15 +1106,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_CANTIDAD_INVALIDA");
             }
 
-            Long loteId = atencion.getLoteId();
-            if (loteId == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_LOTE_REQUERIDO");
-            }
-
             SolicitudMovimientoDetalle detalle = obtenerDetalleParaAtencion(solicitud, atencion);
             if (detalle == null) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_NO_COMPATIBLE");
             }
+            validarDetalleCompleto(solicitud, detalle);
+
+            Long loteId = detalle.getLote().getId();
 
             EstadoSolicitudMovimientoDetalle estadoDetalle = detalle.getEstado();
             if (estadoDetalle != null && !EnumSet.of(
@@ -1182,16 +1180,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_CANTIDAD_INVALIDA");
             }
 
-            Long loteId = atencion.getLoteId();
-            if (loteId == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ATENCION_LOTE_REQUERIDO");
-            }
-
-            LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
-                    .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
-
             SolicitudMovimientoDetalle detalle = obtenerDetalleParaAtencion(solicitud, atencion);
+            Long loteId = detalle != null && detalle.getLote() != null ? detalle.getLote().getId() : atencion.getLoteId();
             if (detalle != null) {
+                validarDetalleCompleto(solicitud, detalle);
                 BigDecimal solicitada = Optional.ofNullable(detalle.getCantidad()).orElse(BigDecimal.ZERO)
                         .setScale(6, RoundingMode.HALF_UP);
                 BigDecimal atendidaPrev = Optional.ofNullable(detalle.getCantidadAtendida()).orElse(BigDecimal.ZERO)
@@ -1211,6 +1203,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
                 }
             }
+
+            if (loteId == null) {
+                throw new CustomBusinessException(
+                        ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO,
+                        "SOLICITUD_DETALLE_INCOMPLETO",
+                        Map.of(
+                                "solicitudId", solicitud.getId(),
+                                "detalleId", detalle != null ? detalle.getId() : null,
+                                "missingFields", List.of("lote_id")
+                        )
+                );
+            }
+
+            LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
+                    .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
 
             reservaLoteService.consumirReserva(solicitud, detalle, lote, cantidad);
 
@@ -1252,9 +1259,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         Long loteObjetivo = dto.loteProductoId();
-        if (loteObjetivo == null && solicitud.getLote() != null) {
-            loteObjetivo = solicitud.getLote().getId();
-        }
 
         BigDecimal restanteTotal = dto.cantidad() != null
                 ? dto.cantidad().setScale(6, RoundingMode.HALF_UP)
@@ -1302,6 +1306,44 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return List.of();
     }
 
+    private Long resolverLoteIdSolicitud(MovimientoInventarioDTO dto, SolicitudMovimiento solicitud) {
+        if (solicitud == null) {
+            return dto.loteProductoId();
+        }
+
+        List<AtencionDTO> atenciones = dto.atenciones() != null
+                ? dto.atenciones().stream().filter(Objects::nonNull).collect(Collectors.toList())
+                : List.of();
+        if (!atenciones.isEmpty()) {
+            AtencionDTO atencion = atenciones.get(0);
+            SolicitudMovimientoDetalle detalle = obtenerDetalleParaAtencion(solicitud, atencion);
+            if (detalle == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_NO_COMPATIBLE");
+            }
+            validarDetalleConLote(solicitud.getId(), detalle);
+            return detalle.getLote().getId();
+        }
+
+        List<SolicitudMovimientoDetalle> detalles = Optional.ofNullable(solicitud.getDetalles()).orElse(List.of());
+        if (detalles.size() == 1) {
+            SolicitudMovimientoDetalle detalle = detalles.get(0);
+            validarDetalleConLote(solicitud.getId(), detalle);
+            return detalle.getLote().getId();
+        }
+        if (!detalles.isEmpty()) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO,
+                    "SOLICITUD_DETALLE_INCOMPLETO",
+                    Map.of(
+                            "solicitudId", solicitud.getId(),
+                            "detalleId", null,
+                            "missingFields", List.of("detalle_id")
+                    )
+            );
+        }
+        return dto.loteProductoId();
+    }
+
     private BigDecimal generarAtencionesDesdeDetalles(
             List<SolicitudMovimientoDetalle> detalles,
             MovimientoInventarioDTO dto,
@@ -1314,6 +1356,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             if (restanteTotal != null && restanteTotal.compareTo(cero) <= 0) {
                 break;
             }
+
+            validarDetalleCompleto(dto != null ? dto.solicitudMovimientoId() : null, detalle);
 
             BigDecimal solicitada = Optional.ofNullable(detalle.getCantidad())
                     .orElse(BigDecimal.ZERO)
@@ -1343,25 +1387,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
             AtencionDTO generado = new AtencionDTO();
             generado.setDetalleId(detalle.getId());
-            generado.setLoteId(detalleLoteId != null ? detalleLoteId : loteObjetivo);
+            generado.setLoteId(detalleLoteId);
             generado.setCantidad(cantidadAtencion);
             generado.setAlmacenOrigenId(
                     detalle.getAlmacenOrigen() != null
                             ? (detalle.getAlmacenOrigen().getId() != null ? detalle.getAlmacenOrigen().getId().intValue() : null)
-                            : (dto.almacenOrigenId() != null ? dto.almacenOrigenId().intValue() : null)
+                            : null
             );
 
-            // --- NORMALIZAR A INTEGER EL DESTINO ---
             Integer destinoAtencion =
                     (detalle.getAlmacenDestino() != null
                             ? (detalle.getAlmacenDestino().getId() != null ? detalle.getAlmacenDestino().getId().intValue() : null)
-                            : (dto.almacenDestinoId() != null ? dto.almacenDestinoId().intValue() : null)
+                            : null
                     );
-
-            // Para OP, forzar Pre-Bodega como destino de la atención
-            if (dto.ordenProduccionId() != null && preBodegaId != null) {
-                destinoAtencion = preBodegaId; // ya es Integer
-            }
 
             generado.setAlmacenDestinoId(destinoAtencion);
             generadas.add(generado);
@@ -1498,6 +1536,63 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return null;
         }
         return detalleOpt.get();
+    }
+
+    private void validarDetalleCompleto(SolicitudMovimiento solicitud, SolicitudMovimientoDetalle detalle) {
+        validarDetalleCompleto(solicitud != null ? solicitud.getId() : null, detalle);
+    }
+
+    private void validarDetalleConLote(Long solicitudId, SolicitudMovimientoDetalle detalle) {
+        List<String> camposFaltantes = new ArrayList<>();
+        if (detalle == null) {
+            camposFaltantes.add("detalle");
+        } else if (detalle.getLote() == null || detalle.getLote().getId() == null) {
+            camposFaltantes.add("lote_id");
+        }
+
+        if (!camposFaltantes.isEmpty()) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO,
+                    "SOLICITUD_DETALLE_INCOMPLETO",
+                    Map.of(
+                            "solicitudId", solicitudId,
+                            "detalleId", detalle != null ? detalle.getId() : null,
+                            "missingFields", camposFaltantes
+                    )
+            );
+        }
+    }
+
+    private void validarDetalleCompleto(Long solicitudId, SolicitudMovimientoDetalle detalle) {
+        List<String> camposFaltantes = new ArrayList<>();
+        if (detalle == null) {
+            camposFaltantes.add("detalle");
+        } else {
+            if (detalle.getLote() == null || detalle.getLote().getId() == null) {
+                camposFaltantes.add("lote_id");
+            }
+            if (detalle.getAlmacenOrigen() == null || detalle.getAlmacenOrigen().getId() == null) {
+                camposFaltantes.add("almacen_origen_id");
+            }
+            if (detalle.getAlmacenDestino() == null || detalle.getAlmacenDestino().getId() == null) {
+                camposFaltantes.add("almacen_destino_id");
+            }
+            if (detalle.getEstado() == null) {
+                camposFaltantes.add("estado");
+            }
+        }
+
+        if (!camposFaltantes.isEmpty()) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO,
+                    "SOLICITUD_DETALLE_INCOMPLETO",
+                    Map.of(
+                            "solicitudId", solicitudId,
+                            "detalleId", detalle != null ? detalle.getId() : null,
+                            "missingFields", camposFaltantes
+                    )
+            );
+        }
     }
 
     private void actualizarDetalleSolicitud(SolicitudMovimientoDetalle detalle, BigDecimal incremento) {
@@ -2037,7 +2132,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                                                            boolean devolucionInterna,
                                                                            SolicitudMovimiento solicitud,
                                                                            AtomicBoolean solicitudOpProcesada) {
-        if (dto.loteProductoId() == null) {
+        Long loteId = resolverLoteIdSolicitud(dto, solicitud);
+        if (loteId == null) {
             log.info(
                     "[INVENTARIO] movimiento con lote existente sin id de lote. tipo={} productoId={} origenId={} destinoId={} cantidad={}",
                     tipo, producto.getId(), origen != null ? origen.getId() : null,
@@ -2046,14 +2142,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     "Debe seleccionar el lote a mover.");
         }
 
-        LoteProducto loteOrigen = loteProductoRepository.findByIdForUpdate(dto.loteProductoId())
+        LoteProducto loteOrigen = loteProductoRepository.findByIdForUpdate(loteId)
                 .orElseThrow(() -> {
                     log.info(
                             "[INVENTARIO] movimiento con lote inexistente. loteId={} productoId={}",
-                            dto.loteProductoId(), producto.getId());
+                            loteId, producto.getId());
                     return new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                             "No se encontró el lote indicado.",
-                            Map.of("loteId", dto.loteProductoId()));
+                            Map.of("loteId", loteId));
                 });
 
         boolean esPorLote = solicitud != null;

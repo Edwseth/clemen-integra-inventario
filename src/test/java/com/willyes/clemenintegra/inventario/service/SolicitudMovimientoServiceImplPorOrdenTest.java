@@ -18,6 +18,8 @@ import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoReposi
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -67,7 +70,7 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
     private SolicitudMovimientoServiceImpl service;
 
     @Test
-    void obtenerPorOrdenMantieneOrigenDesdeLoteYEstadoPendienteEnDetalle() {
+    void obtenerPorOrdenSerializaDatosDesdeDetalle() {
         Almacen origen = Almacen.builder()
                 .id(1)
                 .nombre("Alm Origen")
@@ -89,7 +92,7 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
                 .cantidad(BigDecimal.TEN)
                 .cantidadAtendida(BigDecimal.ZERO)
                 .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
-                .almacenOrigen(null)
+                .almacenOrigen(origen)
                 .almacenDestino(destino)
                 .build();
         SolicitudMovimientoDetalle atendidoDetalle = SolicitudMovimientoDetalle.builder()
@@ -129,11 +132,46 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
                 .findFirst()
                 .orElseThrow();
 
+        assertThat(itemPendiente.getDetalleId()).isEqualTo(228L);
         assertThat(itemPendiente.getEstado()).isEqualTo("PENDIENTE");
         assertThat(itemPendiente.getEstadoDetalle()).isEqualTo("PENDIENTE");
         assertThat(itemPendiente.getAlmacenOrigenId()).isEqualTo(1L);
         assertThat(itemPendiente.getAlmacenDestinoId()).isEqualTo(6L);
         assertThat(itemPendiente.getNombreAlmacenOrigen()).isEqualTo("Alm Origen");
         assertThat(itemPendiente.getNombreAlmacenDestino()).isEqualTo("Pre-Bodega Producción");
+    }
+
+    @Test
+    void obtenerPorOrdenRechazaDetalleIncompleto() {
+        SolicitudMovimientoDetalle pendienteDetalle = SolicitudMovimientoDetalle.builder()
+                .id(228L)
+                .cantidad(BigDecimal.TEN)
+                .cantidadAtendida(BigDecimal.ZERO)
+                .estado(null)
+                .almacenOrigen(null)
+                .almacenDestino(null)
+                .lote(null)
+                .build();
+        OrdenProduccion op = OrdenProduccion.builder()
+                .id(100L)
+                .codigoOrden("OP-TEST-001")
+                .fechaInicio(LocalDateTime.now())
+                .build();
+        SolicitudMovimiento pendiente = SolicitudMovimiento.builder()
+                .id(222L)
+                .estado(EstadoSolicitudMovimiento.PENDIENTE)
+                .ordenProduccion(op)
+                .detalles(List.of(pendienteDetalle))
+                .build();
+
+        when(repository.findWithDetalles(eq(op.getId()), isNull(), isNull(), isNull(), eq(false), anyList()))
+                .thenReturn(List.of(pendiente));
+
+        assertThatThrownBy(() -> service.obtenerPorOrden(op.getId()))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException cbe = (CustomBusinessException) ex;
+                    assertThat(cbe.getCode()).isEqualTo(ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO);
+                });
     }
 }

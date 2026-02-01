@@ -10,6 +10,8 @@ import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoDetall
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,8 +49,6 @@ import java.util.*;
 import java.util.Locale;
 import java.util.stream.Collectors;
 import jakarta.persistence.EntityNotFoundException;
-
-import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 
 @Service
 @RequiredArgsConstructor
@@ -858,23 +858,17 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     }
 
     private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s, SolicitudMovimientoDetalle det) {
-        Almacen almacenOrigen = Optional.ofNullable(det.getAlmacenOrigen())
-                .orElseGet(() -> Optional.ofNullable(s.getAlmacenOrigen())
-                        .orElseGet(() -> Optional.ofNullable(det.getLote())
-                                .map(LoteProducto::getAlmacen)
-                                .orElse(null)));
-        Almacen almacenDestino = Optional.ofNullable(det.getAlmacenDestino())
-                .orElseGet(() -> Optional.ofNullable(s.getAlmacenDestino())
-                        .orElse(null));
+        validarDetalleCompleto(s, det);
+        Almacen almacenOrigen = det.getAlmacenOrigen();
+        Almacen almacenDestino = det.getAlmacenDestino();
         Long almacenOrigenId = almacenOrigen != null ? almacenOrigen.getId().longValue() : null;
         Long almacenDestinoId = almacenDestino != null ? almacenDestino.getId().longValue() : null;
         String estadoDetalle = det.getEstado() != null ? det.getEstado().name() : null;
-        String estado = estadoDetalle != null
-                ? estadoDetalle
-                : (s.getEstado() != null ? s.getEstado().name() : null);
+        String estado = estadoDetalle;
 
         return SolicitudMovimientoItemDTO.builder()
                 .solicitudId(s.getId())
+                .detalleId(det.getId())
                 .productoId(s.getProducto() != null ? s.getProducto().getId().longValue() : null)
                 .nombreProducto(s.getProducto() != null ? s.getProducto().getNombre() : null)
                 .loteId(det.getLote() != null ? det.getLote().getId() : null)
@@ -896,6 +890,40 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .usuarioSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
                 .observaciones(s.getObservaciones())
                 .build();
+    }
+
+    private void validarDetalleCompleto(SolicitudMovimiento solicitud, SolicitudMovimientoDetalle detalle) {
+        List<String> camposFaltantes = new ArrayList<>();
+        if (detalle == null) {
+            camposFaltantes.add("detalle");
+        } else {
+            if (detalle.getLote() == null || detalle.getLote().getId() == null) {
+                camposFaltantes.add("lote_id");
+            }
+            if (detalle.getAlmacenOrigen() == null || detalle.getAlmacenOrigen().getId() == null) {
+                camposFaltantes.add("almacen_origen_id");
+            }
+            if (detalle.getAlmacenDestino() == null || detalle.getAlmacenDestino().getId() == null) {
+                camposFaltantes.add("almacen_destino_id");
+            }
+            if (detalle.getEstado() == null) {
+                camposFaltantes.add("estado");
+            }
+        }
+
+        if (!camposFaltantes.isEmpty()) {
+            Long solicitudId = solicitud != null ? solicitud.getId() : null;
+            Long detalleId = detalle != null ? detalle.getId() : null;
+            throw new CustomBusinessException(
+                    ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO,
+                    "SOLICITUD_DETALLE_INCOMPLETO",
+                    Map.of(
+                            "solicitudId", solicitudId,
+                            "detalleId", detalleId,
+                            "missingFields", camposFaltantes
+                    )
+            );
+        }
     }
 
     private String calcularEstadoAgregado(List<SolicitudMovimientoItemDTO> items) {

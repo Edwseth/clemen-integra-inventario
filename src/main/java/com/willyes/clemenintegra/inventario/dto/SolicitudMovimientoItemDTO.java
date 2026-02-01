@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 public class SolicitudMovimientoItemDTO {
     private Long solicitudId;
+    private Long detalleId;
     private Long productoId;
     private String nombreProducto;
     private Long loteId;

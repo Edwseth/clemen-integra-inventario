@@ -110,6 +110,7 @@ class SolicitudPorOrdenControllerTest {
     void listarPorOrdenIncluyeEstadoDetalleYAlmacenes() throws Exception {
         SolicitudMovimientoItemDTO item = SolicitudMovimientoItemDTO.builder()
                 .solicitudId(222L)
+                .detalleId(228L)
                 .almacenOrigenId(1L)
                 .almacenDestinoId(6L)
                 .nombreAlmacenOrigen("Alm Origen")
@@ -135,6 +136,7 @@ class SolicitudPorOrdenControllerTest {
                                 .authorities(() -> "ROL_PLANEADOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].items[0].estadoDetalle").value("PENDIENTE"))
+                .andExpect(jsonPath("$.content[0].items[0].detalleId").value(228))
                 .andExpect(jsonPath("$.content[0].items[0].almacenOrigenId").value(1))
                 .andExpect(jsonPath("$.content[0].items[0].almacenDestinoId").value(6))
                 .andExpect(jsonPath("$.content[0].items[0].nombreAlmacenOrigen").value("Alm Origen"))
