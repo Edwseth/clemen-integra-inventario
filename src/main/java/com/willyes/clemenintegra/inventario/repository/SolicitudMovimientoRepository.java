@@ -66,21 +66,7 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
     java.util.Optional<SolicitudMovimiento> findWithDetalles(@Param("id") Long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select distinct s from SolicitudMovimiento s " +
-            "left join fetch s.producto p " +
-            "left join fetch p.unidadMedida um " +
-            "left join fetch s.lote l " +
-            "left join fetch s.almacenOrigen ao " +
-            "left join fetch s.almacenDestino ad " +
-            "left join fetch s.usuarioSolicitante us " +
-            "left join fetch s.ordenProduccion op " +
-            "left join fetch s.motivoMovimiento mm " +
-            "left join fetch s.tipoMovimientoDetalle tmd " +
-            "left join fetch s.detalles det " +
-            "left join fetch det.lote detLote " +
-            "left join fetch det.almacenOrigen detAo " +
-            "left join fetch det.almacenDestino detAd " +
-            "where s.id = :id")
+    @Query("select s from SolicitudMovimiento s where s.id = :id")
     Optional<SolicitudMovimiento> findByIdWithLock(@Param("id") Long id);
 
     @Override
