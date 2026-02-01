@@ -858,6 +858,17 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     }
 
     private SolicitudMovimientoItemDTO toItemDTO(SolicitudMovimiento s, SolicitudMovimientoDetalle det) {
+        Almacen almacenOrigen = Optional.ofNullable(det.getAlmacenOrigen())
+                .orElseGet(() -> Optional.ofNullable(s.getAlmacenOrigen())
+                        .orElseGet(() -> Optional.ofNullable(det.getLote())
+                                .map(LoteProducto::getAlmacen)
+                                .orElse(null)));
+        Almacen almacenDestino = Optional.ofNullable(det.getAlmacenDestino())
+                .orElse(s.getAlmacenDestino());
+        String estadoDetalle = det.getEstado() != null
+                ? det.getEstado().name()
+                : (s.getEstado() != null ? s.getEstado().name() : null);
+
         return SolicitudMovimientoItemDTO.builder()
                 .solicitudId(s.getId())
                 .productoId(s.getProducto() != null ? s.getProducto().getId().longValue() : null)
@@ -867,15 +878,15 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 .cantidadSolicitada(det.getCantidad())
                 .cantidadAtendida(det.getCantidadAtendida())
                 .unidadMedida(s.getProducto() != null && s.getProducto().getUnidadMedida() != null ? s.getProducto().getUnidadMedida().getNombre() : null)
-                .almacenOrigenId(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getId().longValue() : null)
-                .nombreAlmacenOrigen(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getNombre() : null)
-                .ubicacionAlmacenOrigen(det.getAlmacenOrigen() != null ? det.getAlmacenOrigen().getUbicacion() : "-")
-                .almacenDestinoId(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getId().longValue() : null)
-                .nombreAlmacenDestino(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getNombre() : null)
-                .ubicacionAlmacenDestino(det.getAlmacenDestino() != null ? det.getAlmacenDestino().getUbicacion() : "-")
+                .almacenOrigenId(almacenOrigen != null ? almacenOrigen.getId().longValue() : null)
+                .nombreAlmacenOrigen(almacenOrigen != null ? almacenOrigen.getNombre() : null)
+                .ubicacionAlmacenOrigen(almacenOrigen != null ? almacenOrigen.getUbicacion() : "-")
+                .almacenDestinoId(almacenDestino != null ? almacenDestino.getId().longValue() : null)
+                .nombreAlmacenDestino(almacenDestino != null ? almacenDestino.getNombre() : null)
+                .ubicacionAlmacenDestino(almacenDestino != null ? almacenDestino.getUbicacion() : "-")
                 .motivoMovimientoId(s.getMotivoMovimiento() != null ? s.getMotivoMovimiento().getId() : null)
                 .tipoMovimientoDetalleId(s.getTipoMovimientoDetalle() != null ? s.getTipoMovimientoDetalle().getId() : null)
-                .estado(s.getEstado() != null ? s.getEstado().name() : null)
+                .estado(estadoDetalle)
                 .fechaSolicitud(s.getFechaSolicitud())
                 .usuarioSolicitante(s.getUsuarioSolicitante() != null ? s.getUsuarioSolicitante().getNombreCompleto() : null)
                 .observaciones(s.getObservaciones())
