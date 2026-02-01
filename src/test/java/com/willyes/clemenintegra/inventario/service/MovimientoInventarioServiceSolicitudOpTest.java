@@ -398,6 +398,37 @@ class MovimientoInventarioServiceSolicitudOpTest {
     }
 
     @Test
+    void procesarMovimientoPorPartidas_rechazaDetalleSinAlmacenOrigen() {
+        SolicitudMovimientoDetalle detalle = new SolicitudMovimientoDetalle();
+        detalle.setId(400L);
+        detalle.setCantidad(new BigDecimal("10"));
+        detalle.setCantidadAtendida(BigDecimal.ZERO);
+        detalle.setEstado(EstadoSolicitudMovimientoDetalle.PENDIENTE);
+        detalle.setLote(LoteProducto.builder().id(500L).codigoLote("L-500").build());
+        detalle.setAlmacenOrigen(null);
+        detalle.setAlmacenDestino(new Almacen(6));
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(450L);
+        solicitud.setDetalles(List.of(detalle));
+        detalle.setSolicitudMovimiento(solicitud);
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(
+                service,
+                "procesarMovimientoPorPartidas",
+                solicitud,
+                new Producto(),
+                new Almacen(6),
+                TipoMovimiento.TRANSFERENCIA,
+                false))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException cbe = (CustomBusinessException) ex;
+                    assertThat(cbe.getCode()).isEqualTo(ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO);
+                });
+    }
+
+    @Test
     void registrarMovimiento_solicitudOp_sinSolicitudIdUsaDetalleFallback() {
         Producto producto = new Producto();
         producto.setId(2);
