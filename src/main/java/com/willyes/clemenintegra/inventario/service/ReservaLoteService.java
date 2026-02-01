@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.ReservaLote;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
@@ -7,6 +8,7 @@ import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ReservaLoteRepository;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoDetalleRepository;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -15,12 +17,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -32,6 +36,7 @@ public class ReservaLoteService {
 
     private final ReservaLoteRepository reservaLoteRepository;
     private final LoteProductoRepository loteProductoRepository;
+    private final SolicitudMovimientoDetalleRepository solicitudMovimientoDetalleRepository;
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
 
     @Transactional(readOnly = true)
@@ -120,9 +125,8 @@ public class ReservaLoteService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_RESERVA_INVALIDO");
         }
 
-        Long loteId = detalle.getLote().getId();
-        LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
-                .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+        LoteProducto lote = resolverLoteOrigen(detalle);
+        Long loteId = lote.getId();
 
         BigDecimal cantidad = Optional.ofNullable(detalle.getCantidad())
                 .orElse(BigDecimal.ZERO)
@@ -138,7 +142,7 @@ public class ReservaLoteService {
                 .findByDetalleIdAndLoteIdForUpdate(detalle.getId(), loteId);
 
         BigDecimal totalPendiente = Optional.ofNullable(reservaLoteRepository
-                        .sumPendienteByLoteId(loteId, EstadoReservaLote.CANCELADA))
+                        .sumPendienteActivaByLoteId(loteId, EstadoReservaLote.ACTIVA))
                 .orElse(BigDecimal.ZERO)
                 .setScale(6, RoundingMode.HALF_UP);
 
@@ -288,7 +292,7 @@ public class ReservaLoteService {
 
     private void recalcularStockReservado(LoteProducto lote) {
         BigDecimal totalPendiente = Optional.ofNullable(reservaLoteRepository
-                        .sumPendienteByLoteId(lote.getId(), EstadoReservaLote.CANCELADA))
+                        .sumPendienteActivaByLoteId(lote.getId(), EstadoReservaLote.ACTIVA))
                 .orElse(BigDecimal.ZERO)
                 .setScale(6, RoundingMode.HALF_UP);
         lote.setStockReservado(totalPendiente);
@@ -300,5 +304,45 @@ public class ReservaLoteService {
                     lote.getId(), totalPendiente, stock);
         }
     }
-}
 
+    private LoteProducto resolverLoteOrigen(SolicitudMovimientoDetalle detalle) {
+        Long loteId = detalle.getLote() != null ? detalle.getLote().getId() : null;
+        if (loteId == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_LOTE_INVALIDA");
+        }
+
+        LoteProducto loteDetalle = loteProductoRepository.findById(loteId)
+                .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+
+        Integer productoId = loteDetalle.getProducto() != null ? loteDetalle.getProducto().getId() : null;
+        String codigoLote = loteDetalle.getCodigoLote();
+
+        Integer almacenOrigenId = Optional.ofNullable(detalle.getAlmacenOrigen())
+                .map(almacen -> almacen.getId())
+                .orElseGet(() -> Optional.ofNullable(detalle.getSolicitudMovimiento())
+                        .map(SolicitudMovimiento::getAlmacenOrigen)
+                        .map(Almacen::getId)
+                        .orElseGet(() -> loteDetalle.getAlmacen() != null ? loteDetalle.getAlmacen().getId() : null));
+
+        if (productoId == null || almacenOrigenId == null || !StringUtils.hasText(codigoLote)) {
+            log.warn("RESERVA_LOTE_ORIGEN_INCOMPLETO detalleId={} loteId={} productoId={} almacenOrigenId={} codigoLote={}",
+                    detalle.getId(), loteId, productoId, almacenOrigenId, codigoLote);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_LOTE_ORIGEN_INCOMPLETO");
+        }
+
+        LoteProducto loteOrigen = loteProductoRepository
+                .findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(productoId, codigoLote, almacenOrigenId)
+                .orElseThrow(() -> {
+                    log.warn("RESERVA_LOTE_ORIGEN_NO_ENCONTRADO detalleId={} productoId={} almacenOrigenId={} codigoLote={}",
+                            detalle.getId(), productoId, almacenOrigenId, codigoLote);
+                    return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_LOTE_ORIGEN_NO_ENCONTRADO");
+                });
+
+        if (!Objects.equals(loteOrigen.getId(), loteId)) {
+            detalle.setLote(loteOrigen);
+            solicitudMovimientoDetalleRepository.save(detalle);
+        }
+
+        return loteOrigen;
+    }
+}

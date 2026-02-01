@@ -45,6 +45,15 @@ public interface ReservaLoteRepository extends JpaRepository<ReservaLote, Long> 
     BigDecimal sumPendienteActivaByLoteId(@Param("loteId") Long loteId,
                                           @Param("estadoActiva") EstadoReservaLote estadoActiva);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<ReservaLote> findByEstadoAndSolicitudMovimientoDetalleIdIn(EstadoReservaLote estado,
+                                                                    Collection<Long> detalleIds);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<ReservaLote> findByEstadoAndSolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(
+            EstadoReservaLote estado,
+            Long ordenProduccionId);
+
     List<ReservaLote> findBySolicitudMovimientoDetalleId(Long detalleId);
 
     List<ReservaLote> findBySolicitudMovimientoDetalle_SolicitudMovimientoId(Long solicitudId);
@@ -63,4 +72,3 @@ public interface ReservaLoteRepository extends JpaRepository<ReservaLote, Long> 
                                               @Param("productoId") Long productoId,
                                               @Param("estado") EstadoReservaLote estado);
 }
-
