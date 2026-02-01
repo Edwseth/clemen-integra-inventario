@@ -121,9 +121,6 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
 
         when(repository.findWithDetalles(eq(op.getId()), isNull(), isNull(), isNull(), eq(false), anyList()))
                 .thenReturn(List.of(pendiente, atendida));
-        when(almacenRepository.findById(1L)).thenReturn(java.util.Optional.of(origen));
-        when(almacenRepository.findById(6L)).thenReturn(java.util.Optional.of(destino));
-
         SolicitudesPorOrdenDTO dto = service.obtenerPorOrden(op.getId());
 
         assertThat(dto.getItems()).hasSize(2);
