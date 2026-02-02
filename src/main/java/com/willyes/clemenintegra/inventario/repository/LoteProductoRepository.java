@@ -199,9 +199,9 @@ WHERE lp.codigoLote = :codigoLote
     @Query(value = """
         SELECT lp.id AS loteProductoId,
                lp.codigo_lote AS codigoLote,
-               (lp.stock_lote - lp.stock_reservado) AS stockLote,
+               (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) AS stockLote,
                lp.stock_lote AS stockFisico,
-               lp.stock_reservado AS stockReservado,
+               COALESCE(lp.stock_reservado, 0) AS stockReservado,
                lp.fecha_vencimiento AS fechaVencimiento,
                lp.almacenes_id AS almacenId,
                a.nombre AS nombreAlmacen,
@@ -211,7 +211,7 @@ WHERE lp.codigoLote = :codigoLote
         WHERE lp.productos_id = :productoId
           AND lp.estado IN ('DISPONIBLE','LIBERADO')
           AND lp.agotado = false
-          AND (lp.stock_lote - lp.stock_reservado) > 0
+          AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
         ORDER BY lp.fecha_vencimiento ASC
         LIMIT :limit
         """, nativeQuery = true)
