@@ -107,7 +107,11 @@ public class DisponibilidadInsumoService {
         List<LoteFefoDisponibleProjection> lotesDisponibles = loteProductoRepository
                 .findFefoDisponibles(productoInsumoId, Integer.MAX_VALUE);
         Long preBodegaId = catalogResolver.getAlmacenPreBodegaProduccionId();
+        List<LoteFefoDisponibleProjection> lotesPreBodega = List.of();
         if (preBodegaId != null) {
+            lotesPreBodega = lotesDisponibles.stream()
+                    .filter(lote -> Objects.equals(lote.getAlmacenId(), preBodegaId))
+                    .toList();
             lotesDisponibles = lotesDisponibles.stream()
                     .filter(lote -> lote.getAlmacenId() == null || !Objects.equals(lote.getAlmacenId(), preBodegaId))
                     .toList();
@@ -123,16 +127,26 @@ public class DisponibilidadInsumoService {
                 .map(this::calcularStockLibre)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (preBodegaId != null && stockLibreElegible.compareTo(requerida) < 0) {
+        BigDecimal stockLibrePreBodega = lotesPreBodega.stream()
+                .map(this::calcularStockLibre)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Long almacenOrigenId = resolveAlmacenOrigenId(preferidos, producto);
+        BigDecimal faltanteOrigen = requerida.subtract(stockLibreElegible).max(BigDecimal.ZERO);
+        if (preBodegaId != null
+                && stockLibreElegible.compareTo(BigDecimal.ZERO) == 0
+                && stockLibrePreBodega.compareTo(BigDecimal.ZERO) > 0) {
+            Map<String, Object> detalles = new java.util.LinkedHashMap<>();
+            detalles.put("productoInsumoId", productoInsumoId);
+            detalles.put("preBodegaId", preBodegaId);
+            detalles.put("almacenOrigenId", almacenOrigenId);
+            detalles.put("requerido", requerida);
+            detalles.put("disponibleElegible", stockLibreElegible);
+            detalles.put("faltante", faltanteOrigen);
             throw new CustomBusinessException(
                     ApiErrorCode.PREBODEGA_ORIGEN_INVALIDO,
                     "STOCK_INSUFICIENTE_ORIGEN: la Pre-Bodega Producción no se considera origen de insumos",
-                    Map.of(
-                            "productoInsumoId", productoInsumoId,
-                            "preBodegaId", preBodegaId,
-                            "requerido", requerida,
-                            "stockLibreElegible", stockLibreElegible
-                    ));
+                    detalles);
         }
 
         List<LoteFefoDisponibleProjection> lotesSeleccionados = new ArrayList<>(lotesElegibles);
@@ -158,7 +172,6 @@ public class DisponibilidadInsumoService {
             if (lotesSeleccionados.isEmpty() || cubierto.compareTo(requerida) < 0) {
                 usoFallback = true;
                 motivoFallback = lotesSeleccionados.isEmpty() ? "SIN_ALMACEN_CONFIGURADO" : "STOCK_NO_DISPONIBLE_EN_ORIGEN";
-                lotesSeleccionados = lotesElegibles;
             }
         } else if (!lotesElegibles.isEmpty()) {
             usoFallback = true;
@@ -185,9 +198,10 @@ public class DisponibilidadInsumoService {
                 .findFirst()
                 .ifPresent(estado -> log.warn("Disponibilidad FEFO detectó lote en estado no permitido: {}", estado));
 
-        BigDecimal stockFisicoTotal = sumar(lotesElegibles, LoteFefoDisponibleProjection::getStockFisico);
-        BigDecimal stockReservadoTotal = sumar(lotesElegibles, LoteFefoDisponibleProjection::getStockReservado);
-        BigDecimal stockLibreTotal = lotesElegibles.stream()
+        List<LoteFefoDisponibleProjection> lotesTotales = preferidos.isEmpty() ? lotesElegibles : lotesSeleccionados;
+        BigDecimal stockFisicoTotal = sumar(lotesTotales, LoteFefoDisponibleProjection::getStockFisico);
+        BigDecimal stockReservadoTotal = sumar(lotesTotales, LoteFefoDisponibleProjection::getStockReservado);
+        BigDecimal stockLibreTotal = lotesTotales.stream()
                 .map(this::calcularStockLibre)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(6, RoundingMode.HALF_UP);
@@ -288,6 +302,18 @@ public class DisponibilidadInsumoService {
     private boolean esLotePermitido(LoteFefoDisponibleProjection lote, EnumSet<EstadoLote> estadosPermitidos) {
         EstadoLote estado = parseEstadoLoteSafe(lote.getEstado());
         return estado != null && estadosPermitidos.contains(estado);
+    }
+
+    private Long resolveAlmacenOrigenId(List<Long> preferidos, Producto producto) {
+        if (preferidos != null && !preferidos.isEmpty()) {
+            return preferidos.get(0);
+        }
+        return Optional.ofNullable(producto)
+                .map(Producto::getCategoriaProducto)
+                .map(CategoriaProducto::getTipo)
+                .map(ALMACENES_ORIGEN_POR_CATEGORIA::get)
+                .map(func -> func.apply(catalogResolver))
+                .orElse(null);
     }
 
     private BigDecimal calcularStockLibre(LoteFefoDisponibleProjection lote) {

@@ -77,7 +77,7 @@ class DisponibilidadInsumoServiceTest {
     void calcularDisponibilidad_insuficienteCalculaFaltante() {
         when(loteProductoRepository.findFefoDisponibles(20L, Integer.MAX_VALUE))
                 .thenReturn(List.of(
-                        lote(5L, "C", new BigDecimal("2.500000"), new BigDecimal("3.000000"), new BigDecimal("0.500000"), EstadoLote.DISPONIBLE, 5L)
+                        lote(5L, "C", new BigDecimal("2.500000"), new BigDecimal("3.000000"), new BigDecimal("0.500000"), EstadoLote.DISPONIBLE, 7L)
                 ));
         when(catalogResolver.getAlmacenOrigenMateriaPrimaId()).thenReturn(7L);
 
@@ -175,6 +175,22 @@ class DisponibilidadInsumoServiceTest {
     }
 
     @Test
+    @DisplayName("calcularDisponibilidad no falla cuando hay stock suficiente en almacén origen válido")
+    void calcularDisponibilidad_stockSuficienteOrigenValido() {
+        when(loteProductoRepository.findFefoDisponibles(65L, Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        lote(210L, "PB-003", new BigDecimal("2.000000"), new BigDecimal("2.000000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 6L),
+                        lote(211L, "MP-002", new BigDecimal("5.000000"), new BigDecimal("5.000000"), BigDecimal.ZERO, EstadoLote.DISPONIBLE, 5L)
+                ));
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+
+        DistribucionFefoResult resultado = service.calcularDisponibilidad(65L, new BigDecimal("3"), List.of(5L), false);
+
+        assertThat(resultado.isSuficiente()).isTrue();
+        assertThat(resultado.getFaltante()).isEqualByComparingTo(BigDecimal.ZERO.setScale(6));
+    }
+
+    @Test
     @DisplayName("calcularDisponibilidad falla si solo hay stock en Pre-Bodega Producción")
     void calcularDisponibilidad_preBodegaUnicoOrigen() {
         when(loteProductoRepository.findFefoDisponibles(66L, Integer.MAX_VALUE))
@@ -188,6 +204,14 @@ class DisponibilidadInsumoServiceTest {
                 .satisfies(ex -> {
                     CustomBusinessException error = (CustomBusinessException) ex;
                     assertThat(error.getCode()).isEqualTo(ApiErrorCode.PREBODEGA_ORIGEN_INVALIDO);
+                    assertThat(error.getDetails())
+                            .isInstanceOfSatisfying(java.util.Map.class, details -> assertThat(details).containsKeys(
+                                    "productoInsumoId",
+                                    "preBodegaId",
+                                    "almacenOrigenId",
+                                    "requerido",
+                                    "disponibleElegible",
+                                    "faltante"));
                 });
     }
 
