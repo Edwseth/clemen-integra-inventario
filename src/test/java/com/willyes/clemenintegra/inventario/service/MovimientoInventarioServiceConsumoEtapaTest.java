@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
@@ -227,6 +228,31 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         assertThatThrownBy(() -> service.consumirInsumosPorOrden(10L, 20L, 5L))
                 .isInstanceOf(CustomBusinessException.class)
                 .hasFieldOrPropertyWithValue("code", ApiErrorCode.CONSUMO_PREBODEGA_INSUFICIENTE);
+    }
+
+    @Test
+    void consumirInsumosPorOrden_sinControlStockOmiteConsumo() {
+        SolicitudMovimiento solicitud = solicitudConDetalle();
+        solicitud.getProducto().setModoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK);
+
+        TypedQuery<SolicitudMovimiento> query = mock(TypedQuery.class);
+        when(entityManager.createQuery(anyString(), eq(SolicitudMovimiento.class))).thenReturn(query);
+        when(query.setParameter(eq("opId"), any())).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(solicitud));
+
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(30L);
+        EtapaProduccion etapaActiva = EtapaProduccion.builder()
+                .id(20L)
+                .estado(EstadoEtapa.EN_PROCESO)
+                .fechaInicio(LocalDateTime.now())
+                .ordenProduccion(OrdenProduccion.builder().id(10L).build())
+                .build();
+        when(etapaProduccionRepository.findById(anyLong())).thenReturn(Optional.of(etapaActiva));
+
+        service.consumirInsumosPorOrden(10L, 20L, 5L);
+
+        verify(service, never()).registrarMovimiento(any(MovimientoInventarioDTO.class));
+        verify(loteProductoRepository, never()).findByCodigoLoteAndProductoIdAndAlmacenId(anyString(), anyInt(), anyInt());
     }
 
     @Test

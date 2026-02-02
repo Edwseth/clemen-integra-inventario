@@ -17,6 +17,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoReservaLote;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimiento;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimientoDetalle;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
@@ -3780,6 +3781,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             final Producto producto = sol.getProducto();
             if (producto == null || producto.getId() == null) {
                 log.warn("CONSUMO_OP: solicitud sin producto. solId={}", sol.getId());
+                continue;
+            }
+            ModoControlInventario modoControl = Optional.ofNullable(producto.getModoControlInventario())
+                    .orElse(ModoControlInventario.CONTROL_STOCK);
+            if (modoControl == ModoControlInventario.SIN_CONTROL_STOCK) {
+                log.debug("CONSUMO_OP: producto sin control de stock, se omite consumo automático. solId={}, productoId={}",
+                        sol.getId(), producto.getId());
                 continue;
             }
 

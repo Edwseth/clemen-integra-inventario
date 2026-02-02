@@ -1527,6 +1527,37 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("listarInsumos omite insumos sin control de stock")
+    void listarInsumos_omiteSinControlStock() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(202L);
+        orden.setCantidadProgramada(new BigDecimal("5"));
+        Producto producto = new Producto();
+        producto.setId(10);
+        orden.setProducto(producto);
+
+        Producto insumo = new Producto();
+        insumo.setId(302);
+        insumo.setNombre("Insumo SM");
+        insumo.setModoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("2"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(detalle));
+
+        when(ordenProduccionRepository.findById(202L)).thenReturn(Optional.of(orden));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        List<com.willyes.clemenintegra.produccion.dto.InsumoOPDTO> lista = service.listarInsumos(202L);
+
+        assertThat(lista).isEmpty();
+    }
+
+    @Test
     @DisplayName("listarInsumos descuenta reservas consumidas")
     void listarInsumos_conReservasConsumidas() {
         OrdenProduccion orden = new OrdenProduccion();
