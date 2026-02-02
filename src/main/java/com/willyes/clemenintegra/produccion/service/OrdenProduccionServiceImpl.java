@@ -1946,6 +1946,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             if (det == null || det.getInsumo() == null) {
                 continue;
             }
+            ModoControlInventario modoControl = Optional.ofNullable(det.getInsumo().getModoControlInventario())
+                    .orElse(ModoControlInventario.CONTROL_STOCK);
+            if (modoControl == ModoControlInventario.SIN_CONTROL_STOCK) {
+                log.debug("OP-insumos: insumo {} sin control de stock, se omite en faltantes", det.getInsumo().getId());
+                continue;
+            }
             BigDecimal requerida = det.getCantidadNecesaria().multiply(orden.getCantidadProgramada());
             Long insumoId = det.getInsumo().getId().longValue();
             // Consumido real: salidas de producción registradas para la OP (independiente de etapa).
