@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoItemDTO;
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudesPorOrdenDTO;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
@@ -285,5 +286,41 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
                     CustomBusinessException cbe = (CustomBusinessException) ex;
                     assertThat(cbe.getCode()).isEqualTo(ApiErrorCode.SOLICITUD_DETALLE_INCOMPLETO);
                 });
+    }
+
+    @Test
+    void obtenerSolicitudIncluyeIdsDetalleYLoteProducto() {
+        LoteProducto lote = LoteProducto.builder()
+                .id(60L)
+                .codigoLote("L-060")
+                .build();
+        SolicitudMovimientoDetalle detalle1 = SolicitudMovimientoDetalle.builder()
+                .id(501L)
+                .lote(lote)
+                .cantidad(BigDecimal.ONE)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .build();
+        SolicitudMovimientoDetalle detalle2 = SolicitudMovimientoDetalle.builder()
+                .id(502L)
+                .lote(lote)
+                .cantidad(BigDecimal.TEN)
+                .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                .build();
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(114L)
+                .detalles(List.of(detalle1, detalle2))
+                .build();
+
+        when(repository.findWithDetalles(eq(114L))).thenReturn(java.util.Optional.of(solicitud));
+
+        SolicitudMovimientoResponseDTO respuesta = service.obtenerSolicitud(114L);
+
+        assertThat(respuesta.getDetalles()).hasSize(2);
+        assertThat(respuesta.getDetalles().get(0).getId()).isEqualTo(501L);
+        assertThat(respuesta.getDetalles().get(0).getLoteProductoId()).isEqualTo(60L);
+        assertThat(respuesta.getDetalles().get(0).getLoteId()).isEqualTo(60L);
+        assertThat(respuesta.getDetalles().get(1).getId()).isEqualTo(502L);
+        assertThat(respuesta.getDetalles().get(1).getLoteProductoId()).isEqualTo(60L);
+        assertThat(respuesta.getDetalles().get(1).getLoteId()).isEqualTo(60L);
     }
 }
