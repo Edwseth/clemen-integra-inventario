@@ -158,15 +158,6 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 .build();
         solicitud.setUsuarioResponsable(usuario);
 
-        LoteProducto loteDestino = new LoteProducto();
-        loteDestino.setId(301L);
-        loteDestino.setProducto(producto);
-        loteDestino.setCodigoLote(lote.getCodigoLote());
-        loteDestino.setAlmacen(new Almacen(40));
-        loteDestino.setEstado(EstadoLote.DISPONIBLE);
-        loteDestino.setStockLote(BigDecimal.ZERO);
-        loteDestino.setStockReservado(BigDecimal.ZERO);
-
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
 
@@ -345,8 +336,10 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(productoRepository.findById(1L)).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(50L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
         given(solicitudMovimientoRepository.findByIdWithLock(222L)).willReturn(Optional.of(solicitud));
-        given(solicitudMovimientoDetalleRepository.findBySolicitudMovimientoIdAndEstado(
-                222L, EstadoSolicitudMovimientoDetalle.PENDIENTE)).willReturn(List.of(detalle));
+        given(solicitudMovimientoDetalleRepository
+                .findBySolicitudMovimientoIdAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoId(
+                        222L, lote.getId(), 1L, 6L))
+                .willReturn(List.of(detalle));
         given(solicitudMovimientoDetalleRepository.findById(detalle.getId())).willReturn(Optional.of(detalle));
         given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
@@ -395,6 +388,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         detalle1.setCantidadAtendida(BigDecimal.ZERO);
         detalle1.setEstado(EstadoSolicitudMovimientoDetalle.PENDIENTE);
         detalle1.setLote(lote);
+        detalle1.setAlmacenOrigen(new Almacen(1));
+        detalle1.setAlmacenDestino(new Almacen(6));
 
         SolicitudMovimientoDetalle detalle2 = new SolicitudMovimientoDetalle();
         detalle2.setId(229L);
@@ -402,6 +397,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
         detalle2.setCantidadAtendida(BigDecimal.ZERO);
         detalle2.setEstado(EstadoSolicitudMovimientoDetalle.PENDIENTE);
         detalle2.setLote(lote);
+        detalle2.setAlmacenOrigen(new Almacen(1));
+        detalle2.setAlmacenDestino(new Almacen(6));
 
         SolicitudMovimiento solicitud = new SolicitudMovimiento();
         solicitud.setId(222L);
@@ -458,8 +455,10 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(productoRepository.findById(1L)).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(50L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
         given(solicitudMovimientoRepository.findByIdWithLock(222L)).willReturn(Optional.of(solicitud));
-        given(solicitudMovimientoDetalleRepository.findBySolicitudMovimientoIdAndEstado(
-                222L, EstadoSolicitudMovimientoDetalle.PENDIENTE)).willReturn(List.of(detalle1, detalle2));
+        given(solicitudMovimientoDetalleRepository
+                .findBySolicitudMovimientoIdAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoId(
+                        222L, lote.getId(), 1L, 6L))
+                .willReturn(List.of(detalle1, detalle2));
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Number id = invocation.getArgument(1);
@@ -468,11 +467,11 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("SOLICITUD_DETALLE_REQUERIDO");
+                .hasMessageContaining("DETALLE_SOLICITUD_AMBIGUO");
     }
 
     @Test
-    void registrarMovimiento_detallePendienteMismatchLanzaError() {
+    void registrarMovimiento_detalleSinCandidatosRechaza() {
         Producto producto = new Producto();
         producto.setId(1);
         UnidadMedida unidad = new UnidadMedida();
@@ -520,16 +519,16 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         AtencionDTO atencion = new AtencionDTO();
         atencion.setDetalleId(null);
-        atencion.setLoteId(9999L);
+        atencion.setLoteId(lote.getId());
         atencion.setCantidad(new BigDecimal("30"));
-        atencion.setAlmacenOrigenId(2);
+        atencion.setAlmacenOrigenId(1);
         atencion.setAlmacenDestinoId(6);
 
         MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("30"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
-                "DOC-MISMATCH",
+                "DOC-NO-DET",
                 producto.getId(),
                 lote.getId(),
                 1,
@@ -551,14 +550,74 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(productoRepository.findById(1L)).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(50L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
         given(solicitudMovimientoRepository.findByIdWithLock(222L)).willReturn(Optional.of(solicitud));
-        given(solicitudMovimientoDetalleRepository.findBySolicitudMovimientoIdAndEstado(
-                222L, EstadoSolicitudMovimientoDetalle.PENDIENTE)).willReturn(List.of(detalle));
+        given(loteProductoRepository.findById(lote.getId())).willReturn(Optional.of(lote));
+        given(solicitudMovimientoDetalleRepository
+                .findBySolicitudMovimientoIdAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoId(
+                        222L, lote.getId(), 1L, 6L))
+                .willReturn(List.of());
+        given(solicitudMovimientoDetalleRepository
+                .findBySolicitudMovimientoIdAndLoteCodigoAndAlmacenOrigenIdAndAlmacenDestinoId(
+                        222L, lote.getCodigoLote(), 1L, 6L))
+                .willReturn(List.of());
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Number id = invocation.getArgument(1);
             return new Almacen(id.intValue());
         });
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("DETALLE_SOLICITUD_NO_ENCONTRADO");
+    }
+
+    @Test
+    void registrarMovimiento_detallePendienteMismatchLanzaError() {
+        Producto producto = new Producto();
+        producto.setId(1);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(99L);
+        producto.setUnidadMedida(unidad);
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(2148L);
+        lote.setProducto(producto);
+        lote.setCodigoLote("L-2148");
+        lote.setAlmacen(new Almacen(1));
+        lote.setStockLote(new BigDecimal("340"));
+        lote.setStockReservado(new BigDecimal("30"));
+        lote.setEstado(EstadoLote.DISPONIBLE);
+
+        SolicitudMovimientoDetalle detalle = new SolicitudMovimientoDetalle();
+        detalle.setId(228L);
+        detalle.setCantidad(new BigDecimal("30"));
+        detalle.setCantidadAtendida(BigDecimal.ZERO);
+        detalle.setEstado(EstadoSolicitudMovimientoDetalle.PENDIENTE);
+        detalle.setLote(lote);
+        detalle.setAlmacenOrigen(new Almacen(1));
+        detalle.setAlmacenDestino(new Almacen(6));
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(222L);
+        solicitud.setProducto(producto);
+        solicitud.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        solicitud.setEstado(EstadoSolicitudMovimiento.PENDIENTE);
+        solicitud.setCantidad(new BigDecimal("30"));
+        solicitud.setDetalles(List.of(detalle));
+        detalle.setSolicitudMovimiento(solicitud);
+
+        AtencionDTO atencion = new AtencionDTO();
+        atencion.setDetalleId(detalle.getId());
+        atencion.setLoteId(9999L);
+        atencion.setCantidad(new BigDecimal("30"));
+        atencion.setAlmacenOrigenId(2);
+        atencion.setAlmacenDestinoId(6);
+        given(solicitudMovimientoDetalleRepository.findById(detalle.getId())).willReturn(Optional.of(detalle));
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(
+                service,
+                "obtenerDetalleParaAtencion",
+                solicitud,
+                atencion))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("SOLICITUD_DETALLE_MISMATCH");
     }
@@ -618,10 +677,10 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         AtencionDTO atencion = new AtencionDTO();
         atencion.setDetalleId(detalle.getId());
-        atencion.setLoteId(999L);
+        atencion.setLoteId(lote.getId());
         atencion.setCantidad(new BigDecimal("1000"));
-        atencion.setAlmacenOrigenId(999);
-        atencion.setAlmacenDestinoId(999);
+        atencion.setAlmacenOrigenId(10);
+        atencion.setAlmacenDestinoId(20);
 
         MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("1000"),
@@ -730,7 +789,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
     }
 
     @Test
-    void registrarMovimiento_solicitudOp_sinSolicitudIdUsaDetalleFallback() {
+    void registrarMovimiento_solicitudOp_sinSolicitudId_rechazaAtenciones() {
         Producto producto = new Producto();
         producto.setId(2);
         UnidadMedida unidad = new UnidadMedida();
@@ -797,9 +856,6 @@ class MovimientoInventarioServiceSolicitudOpTest {
         loteDestino.setStockLote(BigDecimal.ZERO);
         loteDestino.setStockReservado(BigDecimal.ZERO);
 
-        MovimientoInventario movimientoEntidad = new MovimientoInventario();
-        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
-
         MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("500"),
                 TipoMovimiento.TRANSFERENCIA,
@@ -819,18 +875,9 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 List.of(atencion)
         );
 
-        prepararEscenarioComun(dto, producto, solicitud, detalle, lote, loteDestino, movimientoEntidad, usuario);
-
-        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
-
-        assertThat(respuesta).isNotNull();
-        assertThat(respuesta.getId()).isEqualTo(900L);
-        assertThat(detalle.getCantidadAtendida()).isEqualByComparingTo(new BigDecimal("500.000000"));
-        assertThat(detalle.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
-        assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitudMovimiento.CERRADA);
-
-        verify(solicitudMovimientoRepository, atLeastOnce()).findByIdWithLock(solicitud.getId());
-        verify(reservaLoteService, times(1)).consumirReserva(eq(solicitud), eq(detalle), eq(lote), eq(new BigDecimal("500.000000")));
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
     }
 
     @Test
@@ -1309,13 +1356,6 @@ class MovimientoInventarioServiceSolicitudOpTest {
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setFechaIngreso(LocalDateTime.now());
 
-        AtencionDTO atencion = new AtencionDTO();
-        atencion.setDetalleId(null);
-        atencion.setLoteId(loteOrigen.getId());
-        atencion.setCantidad(new BigDecimal("30000"));
-        atencion.setAlmacenOrigenId(10);
-        atencion.setAlmacenDestinoId(20);
-
         MovimientoInventarioDTO dto = crearMovimientoInventario(
                 new BigDecimal("30000"),
                 TipoMovimiento.TRANSFERENCIA,
@@ -1332,7 +1372,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 null,
                 null,
                 loteOrigen.getCodigoLote(),
-                List.of(atencion)
+                null
         );
 
         Usuario usuario = Usuario.builder()
