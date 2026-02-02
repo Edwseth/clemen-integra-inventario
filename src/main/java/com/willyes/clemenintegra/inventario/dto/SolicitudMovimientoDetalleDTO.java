@@ -13,7 +13,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class SolicitudMovimientoDetalleDTO {
+    private Long id;
     private Long loteId;
+    private Long loteProductoId;
     private String codigoLote;
     private BigDecimal cantidad;
     private BigDecimal cantidadAtendida;
