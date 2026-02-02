@@ -625,6 +625,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
 
         }
+        if (solicitud != null && !atenciones.isEmpty()) {
+            validarAtencionesConSolicitud(dto, solicitud, atenciones);
+        }
         // === /OP OVERRIDES ===
         Long ordenProduccionIdContexto = dto.ordenProduccionId();
         if (ordenProduccionIdContexto == null && ordenProduccion != null) {
@@ -1245,6 +1248,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? dto.atenciones().stream().filter(Objects::nonNull).collect(Collectors.toList())
                 : List.of();
         if (!atenciones.isEmpty()) {
+            validarAtencionesConSolicitud(dto, solicitud, atenciones);
             log.debug("SOLICITUD atenciones recibidas: {}", atenciones.size());
             return atenciones;
         }
@@ -1253,58 +1257,86 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return List.of();
         }
 
-        List<SolicitudMovimientoDetalle> detalles = Optional.ofNullable(solicitud.getDetalles()).orElse(List.of());
-        if (detalles.isEmpty()) {
-            return List.of();
-        }
-
-        Long loteObjetivo = dto.loteProductoId();
-
-        BigDecimal restanteTotal = dto.cantidad() != null
-                ? dto.cantidad().setScale(6, RoundingMode.HALF_UP)
-                : null;
-        BigDecimal cero = BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
-
-        List<AtencionDTO> generadas = new ArrayList<>();
-        List<SolicitudMovimientoDetalle> detallesCoincidentes = new ArrayList<>();
-        List<SolicitudMovimientoDetalle> detallesRestantes = new ArrayList<>();
-        for (SolicitudMovimientoDetalle detalle : detalles) {
-            if (detalle == null) {
-                continue;
-            }
-
-            EstadoSolicitudMovimientoDetalle estadoDetalle = detalle.getEstado();
-            if (estadoDetalle != EstadoSolicitudMovimientoDetalle.PENDIENTE
-                    && estadoDetalle != EstadoSolicitudMovimientoDetalle.PARCIAL) {
-                continue;
-            }
-
-            Long detalleLoteId = detalle.getLote() != null ? detalle.getLote().getId() : null;
-            if (loteObjetivo != null && Objects.equals(loteObjetivo, detalleLoteId)) {
-                detallesCoincidentes.add(detalle);
-            } else {
-                detallesRestantes.add(detalle);
-            }
-        }
-
-        restanteTotal = generarAtencionesDesdeDetalles(detallesCoincidentes, dto, loteObjetivo, cero, restanteTotal, generadas);
-
-        boolean debeProcesarRestantes = (restanteTotal == null || restanteTotal.compareTo(cero) > 0)
-                && !detallesRestantes.isEmpty();
-        if (debeProcesarRestantes) {
-            restanteTotal = generarAtencionesDesdeDetalles(detallesRestantes, dto, loteObjetivo, cero, restanteTotal, generadas);
-        }
-
-        if (restanteTotal != null && restanteTotal.compareTo(cero) > 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "ATENCION_CANTIDAD_EXCEDE_PENDIENTE");
-        }
-
-        if (!generadas.isEmpty()) {
-            log.debug("SOLICITUD atenciones generadas automaticamente: {}", generadas.size());
-            return generadas;
-        }
-        return List.of();
+        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_REQUERIDO");
     }
+
+    private void validarAtencionesConSolicitud(MovimientoInventarioDTO dto,
+                                               SolicitudMovimiento solicitud,
+                                               List<AtencionDTO> atenciones) {
+        Long solicitudId = solicitud != null ? solicitud.getId() : (dto != null ? dto.solicitudMovimientoId() : null);
+        if (solicitudId == null) {
+            return;
+        }
+
+        long totalSinDetalle = atenciones.stream()
+                .filter(atencion -> atencion != null && atencion.getDetalleId() == null)
+                .count();
+        if (totalSinDetalle == 0) {
+            return;
+        }
+
+        if (atenciones.size() == 1 && totalSinDetalle == 1) {
+            AtencionDTO atencion = atenciones.get(0);
+            SolicitudMovimientoDetalle detalle = resolverDetallePendienteUnico(solicitudId);
+            validarAtencionCompatibleConDetalle(solicitudId, atencion, detalle);
+            atencion.setDetalleId(detalle.getId());
+            log.info("SOLICITUD_DETALLE_RESUELTO: solicitudId={} detalleId={} cantidadSolicitada={}",
+                    solicitudId, detalle.getId(), atencion.getCantidad());
+            return;
+        }
+
+        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_REQUERIDO");
+    }
+
+    private SolicitudMovimientoDetalle resolverDetallePendienteUnico(Long solicitudId) {
+        List<SolicitudMovimientoDetalle> pendientes = solicitudMovimientoDetalleRepository
+                .findBySolicitudMovimientoIdAndEstado(solicitudId, EstadoSolicitudMovimientoDetalle.PENDIENTE);
+        if (pendientes.size() != 1) {
+            log.warn("SOLICITUD_DETALLE_PENDIENTE_AMBIGUO: solicitudId={} pendientes={}",
+                    solicitudId, pendientes.size());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_REQUERIDO");
+        }
+
+        SolicitudMovimientoDetalle detalle = pendientes.get(0);
+        if (detalle.getId() != null) {
+            return solicitudMovimientoDetalleRepository.findById(detalle.getId()).orElse(detalle);
+        }
+        return detalle;
+    }
+
+    private void validarAtencionCompatibleConDetalle(Long solicitudId,
+                                                     AtencionDTO atencion,
+                                                     SolicitudMovimientoDetalle detalle) {
+        Long loteDetalleId = detalle.getLote() != null ? detalle.getLote().getId() : null;
+        if (atencion.getLoteId() != null && loteDetalleId != null
+                && !Objects.equals(atencion.getLoteId(), loteDetalleId)) {
+            log.warn("SOLICITUD_DETALLE_MISMATCH lote: solicitudId={} detalleId={} loteDetalle={} loteAtencion={}",
+                    solicitudId, detalle.getId(), loteDetalleId, atencion.getLoteId());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_MISMATCH");
+        }
+
+        Long almacenDetalleId = detalle.getAlmacenOrigen() != null
+                ? Long.valueOf(detalle.getAlmacenOrigen().getId())
+                : null;
+        if (atencion.getAlmacenOrigenId() != null && almacenDetalleId != null
+                && !Objects.equals(atencion.getAlmacenOrigenId().longValue(), almacenDetalleId)) {
+            log.warn("SOLICITUD_DETALLE_MISMATCH almacen: solicitudId={} detalleId={} almacenDetalle={} almacenAtencion={}",
+                    solicitudId, detalle.getId(), almacenDetalleId, atencion.getAlmacenOrigenId());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_MISMATCH");
+        }
+
+        BigDecimal cantidadAtencion = normalizarCantidad(atencion.getCantidad());
+        BigDecimal cantidadDetalle = detalle.getCantidad() != null
+                ? detalle.getCantidad().setScale(6, RoundingMode.HALF_UP)
+                : null;
+        if (cantidadAtencion != null && cantidadDetalle != null && cantidadAtencion.compareTo(cantidadDetalle) > 0) {
+            log.warn("SOLICITUD_DETALLE_MISMATCH cantidad: solicitudId={} detalleId={} detalleCantidad={} atencionCantidad={}",
+                    solicitudId, detalle.getId(), cantidadDetalle, cantidadAtencion);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_MISMATCH");
+        }
+    }
+
+
 
     private Long resolverLoteIdSolicitud(MovimientoInventarioDTO dto, SolicitudMovimiento solicitud) {
         if (solicitud == null) {
@@ -1315,6 +1347,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 ? dto.atenciones().stream().filter(Objects::nonNull).collect(Collectors.toList())
                 : List.of();
         if (!atenciones.isEmpty()) {
+            validarAtencionesConSolicitud(dto, solicitud, atenciones);
             AtencionDTO atencion = atenciones.get(0);
             SolicitudMovimientoDetalle detalle = obtenerDetalleParaAtencion(solicitud, atencion);
             if (detalle == null) {

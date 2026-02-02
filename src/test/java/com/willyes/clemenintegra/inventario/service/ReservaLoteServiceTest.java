@@ -207,4 +207,38 @@ class ReservaLoteServiceTest {
 
         assertThat(reserva.getLote().getId()).isEqualTo(2148L);
     }
+
+    @Test
+    @DisplayName("consumirReserva rechaza cuando la reserva pendiente es menor que la cantidad solicitada")
+    void consumirReserva_reservaInsuficiente() {
+        LoteProducto lote = LoteProducto.builder()
+                .id(55L)
+                .stockLote(new BigDecimal("100"))
+                .stockReservado(new BigDecimal("5"))
+                .build();
+
+        SolicitudMovimientoDetalle detalle = SolicitudMovimientoDetalle.builder()
+                .id(99L)
+                .lote(lote)
+                .build();
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setId(222L);
+
+        ReservaLote reserva = ReservaLote.builder()
+                .id(77L)
+                .lote(lote)
+                .solicitudMovimientoDetalle(detalle)
+                .cantidadReservada(new BigDecimal("5.000000"))
+                .cantidadConsumida(new BigDecimal("4.000000"))
+                .estado(EstadoReservaLote.ACTIVA)
+                .build();
+
+        when(reservaLoteRepository.findFirstBySolicitudMovimientoDetalleIdAndEstadoInOrderByIdAsc(
+                99L, List.of(EstadoReservaLote.ACTIVA))).thenReturn(Optional.of(reserva));
+
+        assertThatThrownBy(() -> service.consumirReserva(solicitud, detalle, lote, new BigDecimal("2")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("RESERVA_STOCK_INSUFICIENTE");
+    }
 }

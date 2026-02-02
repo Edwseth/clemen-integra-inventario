@@ -57,6 +57,12 @@ public interface SolicitudMovimientoDetalleRepository extends JpaRepository<Soli
             Collection<EstadoSolicitudMovimientoDetalle> estados
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<SolicitudMovimientoDetalle> findBySolicitudMovimientoIdAndEstado(
+            Long solicitudId,
+            EstadoSolicitudMovimientoDetalle estado
+    );
+
     long countBySolicitudMovimientoIdAndEstadoNot(Long solicitudId, EstadoSolicitudMovimientoDetalle estado);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -76,4 +82,3 @@ public interface SolicitudMovimientoDetalleRepository extends JpaRepository<Soli
     BigDecimal calcularReservaPendientePorSolicitudYLote(@Param("solicitudId") Long solicitudId,
                                                          @Param("loteId") Long loteId);
 }
-

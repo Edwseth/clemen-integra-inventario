@@ -78,11 +78,21 @@ public class ReservaLoteService {
         ReservaLote reserva = obtenerReservaParaConsumo(solicitud, detalle, lote.getId());
 
         BigDecimal pendiente = calcularPendiente(reserva);
+        log.info("RESERVA_ENCONTRADA: solicitudId={} detalleId={} reservaId={} pendiente={} solicitado={}",
+                solicitud != null ? solicitud.getId() : null,
+                detalle != null ? detalle.getId() : null,
+                reserva.getId(),
+                pendiente,
+                normalizada);
         if (pendiente.compareTo(normalizada) < 0) {
-            log.warn("RESERVA_INSUFICIENTE: reservaId={} pendiente={} solicitado={} solicitudId={} loteId={}",
-                    reserva.getId(), pendiente, normalizada,
-                    solicitud != null ? solicitud.getId() : null, lote.getId());
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "RESERVA_INSUFICIENTE");
+            log.warn("RESERVA_STOCK_INSUFICIENTE: reservaId={} pendiente={} solicitado={} solicitudId={} detalleId={} loteId={}",
+                    reserva.getId(),
+                    pendiente,
+                    normalizada,
+                    solicitud != null ? solicitud.getId() : null,
+                    detalle != null ? detalle.getId() : null,
+                    lote.getId());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_STOCK_INSUFICIENTE");
         }
 
         BigDecimal nuevoConsumido = reserva.getCantidadConsumida().add(normalizada);
