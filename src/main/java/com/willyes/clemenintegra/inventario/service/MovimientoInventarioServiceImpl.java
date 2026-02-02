@@ -255,6 +255,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 : List.of();
         if (!atenciones.isEmpty()) {
             log.debug("MOV-SERVICE atenciones recibidas: {}", atenciones.size());
+            if (dto.solicitudMovimientoId() == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
+            }
         }
         /*
          * Ganchos disponibles para enlazar un movimiento con su solicitud/detalle:
@@ -264,11 +268,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
          *  - dto.ordenProduccionId() y dto.loteProductoId(): referencias de contexto
          *    que permiten validar compatibilidad cuando se resuelve la solicitud.
          */
-        Long detalleSolicitudGanchoId = atenciones.stream()
-                .map(AtencionDTO::getDetalleId)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
         boolean autoSplitSolicitado = Boolean.TRUE.equals(dto.autoSplit());
 
         List<MovimientoInventarioResponseDTO.SolicitudDetalleAtencionDTO> detalleRespuesta = List.of();
@@ -377,21 +376,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         Long solicitudIdReferencia = dto.solicitudMovimientoId();
         SolicitudMovimiento solicitud = null;
-        if (solicitudIdReferencia == null && detalleSolicitudGanchoId != null) {
-            SolicitudMovimientoDetalle detalleGancho = solicitudMovimientoDetalleRepository
-                    .findById(detalleSolicitudGanchoId)
-                    .orElse(null);
-            if (detalleGancho != null && detalleGancho.getSolicitudMovimiento() != null) {
-                solicitudIdReferencia = detalleGancho.getSolicitudMovimiento().getId();
-                log.info("FALLBACK_SOLICITUD_DESDE_DETALLE: detalleId={} solicitudId={}",
-                        detalleSolicitudGanchoId, solicitudIdReferencia);
-            } else {
-                log.warn("FALLBACK_SOLICITUD_NO_DISPONIBLE: detalleId={} detalleEncontrado={} solicitudEnDetalle={}",
-                        detalleSolicitudGanchoId,
-                        detalleGancho != null,
-                        detalleGancho != null && detalleGancho.getSolicitudMovimiento() != null);
-            }
-        }
         if (solicitudIdReferencia != null) {
             final Long solicitudIdCarga = solicitudIdReferencia;
             solicitud = solicitudMovimientoRepository.findByIdWithLock(solicitudIdCarga)
@@ -1263,8 +1247,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private void validarAtencionesConSolicitud(MovimientoInventarioDTO dto,
                                                SolicitudMovimiento solicitud,
                                                List<AtencionDTO> atenciones) {
-        Long solicitudId = solicitud != null ? solicitud.getId() : (dto != null ? dto.solicitudMovimientoId() : null);
+        Long solicitudId = dto != null ? dto.solicitudMovimientoId() : (solicitud != null ? solicitud.getId() : null);
         if (solicitudId == null) {
+            if (!atenciones.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
+            }
             return;
         }
 
@@ -1275,33 +1263,32 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return;
         }
 
-        if (atenciones.size() == 1 && totalSinDetalle == 1) {
-            AtencionDTO atencion = atenciones.get(0);
-            SolicitudMovimientoDetalle detalle = resolverDetallePendienteUnico(solicitudId);
-            validarAtencionCompatibleConDetalle(solicitudId, atencion, detalle);
-            atencion.setDetalleId(detalle.getId());
+        for (AtencionDTO atencion : atenciones) {
+            if (atencion == null || atencion.getDetalleId() != null) {
+                continue;
+            }
+            Long loteId = atencion.getLoteId() != null
+                    ? atencion.getLoteId()
+                    : (dto != null ? dto.loteProductoId() : null);
+            Long almacenOrigenId = atencion.getAlmacenOrigenId() != null
+                    ? atencion.getAlmacenOrigenId().longValue()
+                    : (dto != null && dto.almacenOrigenId() != null ? dto.almacenOrigenId().longValue() : null);
+            Long almacenDestinoId = atencion.getAlmacenDestinoId() != null
+                    ? atencion.getAlmacenDestinoId().longValue()
+                    : (dto != null && dto.almacenDestinoId() != null ? dto.almacenDestinoId().longValue() : null);
+            BigDecimal cantidad = atencion.getCantidad() != null
+                    ? atencion.getCantidad()
+                    : (dto != null ? dto.cantidad() : null);
+            Long detalleId = resolveDetalleIdOrThrow(
+                    solicitudId,
+                    loteId,
+                    almacenOrigenId,
+                    almacenDestinoId,
+                    cantidad);
+            atencion.setDetalleId(detalleId);
             log.info("SOLICITUD_DETALLE_RESUELTO: solicitudId={} detalleId={} cantidadSolicitada={}",
-                    solicitudId, detalle.getId(), atencion.getCantidad());
-            return;
+                    solicitudId, detalleId, atencion.getCantidad());
         }
-
-        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_REQUERIDO");
-    }
-
-    private SolicitudMovimientoDetalle resolverDetallePendienteUnico(Long solicitudId) {
-        List<SolicitudMovimientoDetalle> pendientes = solicitudMovimientoDetalleRepository
-                .findBySolicitudMovimientoIdAndEstado(solicitudId, EstadoSolicitudMovimientoDetalle.PENDIENTE);
-        if (pendientes.size() != 1) {
-            log.warn("SOLICITUD_DETALLE_PENDIENTE_AMBIGUO: solicitudId={} pendientes={}",
-                    solicitudId, pendientes.size());
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_REQUERIDO");
-        }
-
-        SolicitudMovimientoDetalle detalle = pendientes.get(0);
-        if (detalle.getId() != null) {
-            return solicitudMovimientoDetalleRepository.findById(detalle.getId()).orElse(detalle);
-        }
-        return detalle;
     }
 
     private void validarAtencionCompatibleConDetalle(Long solicitudId,
@@ -1550,25 +1537,93 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             if (!Objects.equals(detalle.getSolicitudMovimiento().getId(), solicitud.getId())) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_NO_PERTENECE_SOLICITUD");
             }
+            validarAtencionCompatibleConDetalle(solicitud.getId(), atencion, detalle);
             return detalle;
         }
 
-        Collection<EstadoSolicitudMovimientoDetalle> estadosValidos = List.of(
-                EstadoSolicitudMovimientoDetalle.PENDIENTE,
-                EstadoSolicitudMovimientoDetalle.PARCIAL
-        );
+        Long detalleId = resolveDetalleIdOrThrow(
+                solicitud.getId(),
+                atencion.getLoteId(),
+                atencion.getAlmacenOrigenId() != null ? atencion.getAlmacenOrigenId().longValue() : null,
+                atencion.getAlmacenDestinoId() != null ? atencion.getAlmacenDestinoId().longValue() : null,
+                atencion.getCantidad());
+        SolicitudMovimientoDetalle detalle = solicitudMovimientoDetalleRepository.findById(detalleId)
+                .orElseThrow(() -> new NoSuchElementException("Detalle de solicitud no encontrado"));
+        validarAtencionCompatibleConDetalle(solicitud.getId(), atencion, detalle);
+        return detalle;
+    }
 
-        Optional<SolicitudMovimientoDetalle> detalleOpt = solicitudMovimientoDetalleRepository
-                .findFirstBySolicitudMovimientoIdAndLoteIdAndEstadoInOrderByIdAsc(
-                        solicitud.getId(), atencion.getLoteId(), estadosValidos);
-
-        if (detalleOpt.isEmpty()) {
-            if (solicitud.getDetalles() != null && !solicitud.getDetalles().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_NO_COMPATIBLE");
-            }
-            return null;
+    private Long resolveDetalleIdOrThrow(Long solicitudMovimientoId,
+                                         Long loteId,
+                                         Long almacenOrigenId,
+                                         Long almacenDestinoId,
+                                         BigDecimal cantidad) {
+        if (solicitudMovimientoId == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_MOVIMIENTO_ID_REQUERIDO");
         }
-        return detalleOpt.get();
+        if (loteId == null || almacenOrigenId == null || almacenDestinoId == null) {
+            log.warn("DETALLE_SOLICITUD_MISMATCH: solicitudId={} loteId={} almacenOrigenId={} almacenDestinoId={}",
+                    solicitudMovimientoId, loteId, almacenOrigenId, almacenDestinoId);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_SOLICITUD_MISMATCH");
+        }
+
+        List<SolicitudMovimientoDetalle> candidatos = solicitudMovimientoDetalleRepository
+                .findBySolicitudMovimientoIdAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoId(
+                        solicitudMovimientoId, loteId, almacenOrigenId, almacenDestinoId);
+        if (candidatos.isEmpty()) {
+            Optional<String> codigoOpt = loteProductoRepository.findById(loteId)
+                    .map(LoteProducto::getCodigoLote)
+                    .filter(StringUtils::hasText);
+            if (codigoOpt.isPresent()) {
+                List<SolicitudMovimientoDetalle> candidatosCodigo = solicitudMovimientoDetalleRepository
+                        .findBySolicitudMovimientoIdAndLoteCodigoAndAlmacenOrigenIdAndAlmacenDestinoId(
+                                solicitudMovimientoId,
+                                codigoOpt.get(),
+                                almacenOrigenId,
+                                almacenDestinoId);
+                if (candidatosCodigo.size() == 1) {
+                    SolicitudMovimientoDetalle detalle = candidatosCodigo.get(0);
+                    validarCantidadDetalle(solicitudMovimientoId, detalle, cantidad);
+                    log.info("DETALLE_RESUELTO_POR_CODIGO_LOTE: solicitudId={} detalleId={} loteIdOriginal={} codigoLote={}",
+                            solicitudMovimientoId, detalle.getId(), loteId, codigoOpt.get());
+                    return detalle.getId();
+                }
+                if (!candidatosCodigo.isEmpty()) {
+                    log.warn("DETALLE_SOLICITUD_AMBIGUO: solicitudId={} codigoLote={} candidatos={}",
+                            solicitudMovimientoId,
+                            codigoOpt.get(),
+                            candidatosCodigo.stream().map(SolicitudMovimientoDetalle::getId).toList());
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_SOLICITUD_AMBIGUO");
+                }
+            }
+            log.warn("DETALLE_SOLICITUD_NO_ENCONTRADO: solicitudId={} loteId={} almacenOrigenId={} almacenDestinoId={}",
+                    solicitudMovimientoId, loteId, almacenOrigenId, almacenDestinoId);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_SOLICITUD_NO_ENCONTRADO");
+        }
+        if (candidatos.size() > 1) {
+            log.warn("DETALLE_SOLICITUD_AMBIGUO: solicitudId={} loteId={} candidatos={}",
+                    solicitudMovimientoId,
+                    loteId,
+                    candidatos.stream().map(SolicitudMovimientoDetalle::getId).toList());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_SOLICITUD_AMBIGUO");
+        }
+        SolicitudMovimientoDetalle detalle = candidatos.get(0);
+        validarCantidadDetalle(solicitudMovimientoId, detalle, cantidad);
+        return detalle.getId();
+    }
+
+    private void validarCantidadDetalle(Long solicitudMovimientoId,
+                                        SolicitudMovimientoDetalle detalle,
+                                        BigDecimal cantidad) {
+        BigDecimal cantidadAtencion = normalizarCantidad(cantidad);
+        BigDecimal cantidadDetalle = detalle.getCantidad() != null
+                ? detalle.getCantidad().setScale(6, RoundingMode.HALF_UP)
+                : null;
+        if (cantidadAtencion != null && cantidadDetalle != null && cantidadAtencion.compareTo(cantidadDetalle) > 0) {
+            log.warn("DETALLE_SOLICITUD_MISMATCH cantidad: solicitudId={} detalleId={} detalleCantidad={} atencionCantidad={}",
+                    solicitudMovimientoId, detalle.getId(), cantidadDetalle, cantidadAtencion);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DETALLE_SOLICITUD_MISMATCH");
+        }
     }
 
     private void validarDetalleCompleto(SolicitudMovimiento solicitud, SolicitudMovimientoDetalle detalle) {

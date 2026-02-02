@@ -58,6 +58,38 @@ public interface SolicitudMovimientoDetalleRepository extends JpaRepository<Soli
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select d
+            from SolicitudMovimientoDetalle d
+            where d.solicitudMovimiento.id = :solicitudId
+              and d.lote.id = :loteId
+              and d.almacenOrigen.id = :almacenOrigenId
+              and d.almacenDestino.id = :almacenDestinoId
+            """)
+    List<SolicitudMovimientoDetalle> findBySolicitudMovimientoIdAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoId(
+            @Param("solicitudId") Long solicitudId,
+            @Param("loteId") Long loteId,
+            @Param("almacenOrigenId") Long almacenOrigenId,
+            @Param("almacenDestinoId") Long almacenDestinoId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select d
+            from SolicitudMovimientoDetalle d
+            where d.solicitudMovimiento.id = :solicitudId
+              and d.lote.codigoLote = :codigoLote
+              and d.almacenOrigen.id = :almacenOrigenId
+              and d.almacenDestino.id = :almacenDestinoId
+            """)
+    List<SolicitudMovimientoDetalle> findBySolicitudMovimientoIdAndLoteCodigoAndAlmacenOrigenIdAndAlmacenDestinoId(
+            @Param("solicitudId") Long solicitudId,
+            @Param("codigoLote") String codigoLote,
+            @Param("almacenOrigenId") Long almacenOrigenId,
+            @Param("almacenDestinoId") Long almacenDestinoId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<SolicitudMovimientoDetalle> findBySolicitudMovimientoIdAndEstado(
             Long solicitudId,
             EstadoSolicitudMovimientoDetalle estado
