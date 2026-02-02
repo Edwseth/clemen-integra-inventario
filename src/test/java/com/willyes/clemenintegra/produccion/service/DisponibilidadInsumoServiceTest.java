@@ -159,6 +159,54 @@ class DisponibilidadInsumoServiceTest {
     }
 
     @Test
+    @DisplayName("calcularDisponibilidad PS LIBERADO cubre requerido y no bloquea")
+    void calcularDisponibilidad_psLiberadoCubreRequerido() {
+        when(loteProductoRepository.findFefoDisponibles(80L, Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        lote(401L, "PS-001", new BigDecimal("2860.000000"), new BigDecimal("2860.000000"),
+                                BigDecimal.ZERO, EstadoLote.LIBERADO, 9L)
+                ));
+
+        DistribucionFefoResult resultado = service.calcularDisponibilidad(80L, new BigDecimal("90"), List.of(), true);
+
+        assertThat(resultado.isSuficiente()).isTrue();
+        assertThat(resultado.getStockLibreTotal()).isEqualByComparingTo(new BigDecimal("2860.000000"));
+        assertThat(resultado.getFaltante()).isEqualByComparingTo(BigDecimal.ZERO.setScale(6));
+    }
+
+    @Test
+    @DisplayName("calcularDisponibilidad PS en cuarentena o retenido no aporta stock libre")
+    void calcularDisponibilidad_psNoElegiblePorEstado() {
+        when(loteProductoRepository.findFefoDisponibles(81L, Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        lote(402L, "PS-002", new BigDecimal("2860.000000"), new BigDecimal("2860.000000"),
+                                BigDecimal.ZERO, EstadoLote.EN_CUARENTENA, 9L)
+                ));
+
+        DistribucionFefoResult resultado = service.calcularDisponibilidad(81L, new BigDecimal("90"), List.of(), true);
+
+        assertThat(resultado.isSuficiente()).isFalse();
+        assertThat(resultado.getStockLibreTotal()).isEqualByComparingTo(BigDecimal.ZERO.setScale(6));
+        assertThat(resultado.getFaltante()).isEqualByComparingTo(new BigDecimal("90.000000"));
+    }
+
+    @Test
+    @DisplayName("calcularDisponibilidad descuenta reservas parciales sin quedar en cero")
+    void calcularDisponibilidad_descuentaReservasParciales() {
+        when(loteProductoRepository.findFefoDisponibles(82L, Integer.MAX_VALUE))
+                .thenReturn(List.of(
+                        lote(403L, "PS-003", new BigDecimal("70.000000"), new BigDecimal("100.000000"),
+                                new BigDecimal("30.000000"), EstadoLote.LIBERADO, 9L)
+                ));
+
+        DistribucionFefoResult resultado = service.calcularDisponibilidad(82L, new BigDecimal("60"), List.of(), true);
+
+        assertThat(resultado.isSuficiente()).isTrue();
+        assertThat(resultado.getStockLibreTotal()).isEqualByComparingTo(new BigDecimal("70.000000"));
+        assertThat(resultado.getFaltante()).isEqualByComparingTo(BigDecimal.ZERO.setScale(6));
+    }
+
+    @Test
     @DisplayName("calcularDisponibilidad excluye lotes de Pre-Bodega Producción")
     void calcularDisponibilidad_excluyePreBodega() {
         when(loteProductoRepository.findFefoDisponibles(55L, Integer.MAX_VALUE))
