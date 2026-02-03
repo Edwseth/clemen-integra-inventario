@@ -291,8 +291,8 @@ class OrdenProduccionServiceReservaTest {
     }
 
     @Test
-    @DisplayName("reservarInsumosParaOP usa el lote PS forzado cuando la fórmula lo requiere")
-    void reservarInsumosParaOp_conPsUsaLoteForzado() {
+    @DisplayName("reservarInsumosParaOP trata PS como insumo estándar aunque se envíe lotePsId")
+    void reservarInsumosParaOp_psSinForzarLote() {
         Producto insumoPs = new Producto();
         insumoPs.setId(200);
         insumoPs.setNombre("Base PS");
@@ -330,7 +330,7 @@ class OrdenProduccionServiceReservaTest {
                         .build()))
                 .build();
 
-        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(false), eq(500L), eq(true)))
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(false)))
                 .thenReturn(distribucion);
 
         SolicitudMovimiento solicitudBase = new SolicitudMovimiento();
@@ -341,13 +341,132 @@ class OrdenProduccionServiceReservaTest {
 
         service.reservarInsumosParaOP(1L, 500L);
 
-        verify(disponibilidadInsumoService).calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(false), eq(500L), eq(true));
+        verify(disponibilidadInsumoService).calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(false));
 
         ArgumentCaptor<SolicitudMovimiento> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimiento.class);
         verify(solicitudMovimientoRepository).saveAndFlush(solicitudCaptor.capture());
         List<SolicitudMovimientoDetalle> detallesGuardados = solicitudCaptor.getValue().getDetalles();
         assertThat(detallesGuardados).hasSize(1);
         assertThat(detallesGuardados.get(0).getLote().getId()).isEqualTo(500L);
+    }
+
+    @Test
+    @DisplayName("reservarInsumosParaOP permite múltiples PS en la fórmula")
+    void reservarInsumosParaOp_multiplesPs() {
+        Producto insumoPs1 = new Producto();
+        insumoPs1.setId(200);
+        insumoPs1.setNombre("PS Base 1");
+        insumoPs1.setUnidadMedida(new UnidadMedida());
+        com.willyes.clemenintegra.inventario.model.CategoriaProducto categoriaPs1 = new com.willyes.clemenintegra.inventario.model.CategoriaProducto();
+        categoriaPs1.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        insumoPs1.setCategoriaProducto(categoriaPs1);
+
+        Producto insumoPs2 = new Producto();
+        insumoPs2.setId(201);
+        insumoPs2.setNombre("PS Base 2");
+        insumoPs2.setUnidadMedida(new UnidadMedida());
+        com.willyes.clemenintegra.inventario.model.CategoriaProducto categoriaPs2 = new com.willyes.clemenintegra.inventario.model.CategoriaProducto();
+        categoriaPs2.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        insumoPs2.setCategoriaProducto(categoriaPs2);
+
+        DetalleFormula detallePs1 = new DetalleFormula();
+        detallePs1.setInsumo(insumoPs1);
+        detallePs1.setCantidadNecesaria(BigDecimal.ONE);
+
+        DetalleFormula detallePs2 = new DetalleFormula();
+        detallePs2.setInsumo(insumoPs2);
+        detallePs2.setCantidadNecesaria(BigDecimal.ONE);
+
+        FormulaProducto formulaPs = new FormulaProducto();
+        formulaPs.setDetalles(List.of(detallePs1, detallePs2));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPs));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumoPs1)).thenReturn(List.of(5L));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumoPs2)).thenReturn(List.of(5L));
+        when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().id(100L).build(),
+                        SolicitudMovimientoResponseDTO.builder().id(101L).build());
+
+        DistribucionFefoResult distribucionPs1 = DistribucionFefoResult.builder()
+                .productoInsumoId(insumoPs1.getId().longValue())
+                .requerido(new BigDecimal("5.50000000"))
+                .stockLibreTotal(new BigDecimal("6.000000"))
+                .faltante(BigDecimal.ZERO)
+                .suficiente(true)
+                .detalles(List.of(DistribucionFefoDetalle.builder()
+                        .loteProductoId(500L)
+                        .almacenId(5L)
+                        .cantidadCalculo(new BigDecimal("5.50000000"))
+                        .cantidadReserva(new BigDecimal("5.500000"))
+                        .disponible(new BigDecimal("6.000000"))
+                        .estado(EstadoLote.LIBERADO.name())
+                        .build()))
+                .build();
+
+        DistribucionFefoResult distribucionPs2 = DistribucionFefoResult.builder()
+                .productoInsumoId(insumoPs2.getId().longValue())
+                .requerido(new BigDecimal("5.50000000"))
+                .stockLibreTotal(new BigDecimal("6.000000"))
+                .faltante(BigDecimal.ZERO)
+                .suficiente(true)
+                .detalles(List.of(DistribucionFefoDetalle.builder()
+                        .loteProductoId(501L)
+                        .almacenId(5L)
+                        .cantidadCalculo(new BigDecimal("5.50000000"))
+                        .cantidadReserva(new BigDecimal("5.500000"))
+                        .disponible(new BigDecimal("6.000000"))
+                        .estado(EstadoLote.LIBERADO.name())
+                        .build()))
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(false)))
+                .thenReturn(distribucionPs1);
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(201L), any(BigDecimal.class), eq(List.of(5L)), eq(false)))
+                .thenReturn(distribucionPs2);
+
+        when(solicitudMovimientoRepository.findById(anyLong()))
+                .thenAnswer(invocation -> Optional.of(crearSolicitudBase()));
+
+        service.reservarInsumosParaOP(1L, null);
+
+        verify(disponibilidadInsumoService).calcularDisponibilidad(eq(200L), any(BigDecimal.class), eq(List.of(5L)), eq(false));
+        verify(disponibilidadInsumoService).calcularDisponibilidad(eq(201L), any(BigDecimal.class), eq(List.of(5L)), eq(false));
+    }
+
+    @Test
+    @DisplayName("obtenerLotePsReservado no falla si hay múltiples lotes PS")
+    void obtenerLotePsReservado_conMultiplesLotesPs() {
+        LoteProducto lote1 = new LoteProducto();
+        lote1.setId(701L);
+        Producto ps1 = new Producto();
+        com.willyes.clemenintegra.inventario.model.CategoriaProducto categoriaPs = new com.willyes.clemenintegra.inventario.model.CategoriaProducto();
+        categoriaPs.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        ps1.setCategoriaProducto(categoriaPs);
+        lote1.setProducto(ps1);
+
+        LoteProducto lote2 = new LoteProducto();
+        lote2.setId(702L);
+        Producto ps2 = new Producto();
+        ps2.setCategoriaProducto(categoriaPs);
+        lote2.setProducto(ps2);
+
+        SolicitudMovimientoDetalle detalle1 = new SolicitudMovimientoDetalle();
+        detalle1.setLote(lote1);
+        SolicitudMovimientoDetalle detalle2 = new SolicitudMovimientoDetalle();
+        detalle2.setLote(lote2);
+
+        SolicitudMovimiento solicitud = new SolicitudMovimiento();
+        solicitud.setDetalles(List.of(detalle1, detalle2));
+
+        when(solicitudMovimientoRepository.findWithDetalles(eq(1L), eq(null), eq(null), eq(null), eq(false), anyList()))
+                .thenReturn(List.of(solicitud));
+        when(loteProductoRepository.findById(701L)).thenReturn(Optional.of(lote1));
+
+        LoteProducto resultado = ReflectionTestUtils.invokeMethod(service, "obtenerLotePsReservado", 1L);
+
+        assertThat(resultado).isNotNull();
+        assertThat(resultado.getId()).isEqualTo(701L);
     }
 
     @Test
