@@ -324,38 +324,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         BigDecimal cantidadProgramada = orden.getCantidadProgramada();
 
-        // --- PS: detectar insumo semielaborado, pero lotePsId es OPCIONAL ---
         List<DetalleFormula> detallesFormula = obtenerDetallesFormulaSeguro(formula);
-        List<DetalleFormula> insumosPs = obtenerInsumosPs(detallesFormula);
-
-        if (insumosPs.size() > 1) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "Solo se admite un insumo de tipo PRODUCTO_SEMI_ELABORADO por fórmula");
-        }
-
-        // ID del insumo PS (si existe)
-        Long insumoPsId = insumosPs.isEmpty()
-                ? null
-                : insumosPs.get(0).getInsumo().getId().longValue();
-
-        // Lote PS seleccionado manualmente (opcional)
-        LoteProducto lotePsSeleccionado = null;
-        if (insumoPsId != null && orden.getLotePsId() != null) {
-            Long lotePsId = orden.getLotePsId();
-            lotePsSeleccionado = loteProductoRepository.findById(lotePsId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
-
-            if (lotePsSeleccionado.getProducto() == null
-                    || lotePsSeleccionado.getProducto().getCategoriaProducto() == null
-                    || lotePsSeleccionado.getProducto().getCategoriaProducto().getTipo() != TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
-                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                        "El lote seleccionado no corresponde a un producto semielaborado");
-            }
-            if (lotePsSeleccionado.getEstado() != EstadoLote.LIBERADO) {
-                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                        "El lote de producto semielaborado debe estar LIBERADO");
-            }
-        }
 
         // Cargar todos los productos de los insumos en una sola consulta para evitar N+1
         List<Long> insumoIds = detallesFormula.stream()
@@ -391,27 +360,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             }
 
             // ---- FEFO: preview por insumo ----
-            DistribucionFefoResult distribucionPreview;
-            if (insumoPsId != null && insumoPsId.equals(insumoId)) {
-                // PS: FEFO pero forzando a un solo lote. Si no hay selección manual, FEFO elige.
-                Long loteForzadoId = (lotePsSeleccionado != null ? lotePsSeleccionado.getId() : null);
-                distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
-                        insumoId,
-                        cantidadRequerida,
-                        almacenesValidos,
-                        true,              // modoPreview: solo validación
-                        loteForzadoId,     // null → FEFO elige lote PS
-                        true               // bloquearMultiplesLotes: un único lote PS
-                );
-            } else {
-                // MP / ME / SU: lógica normal
-                distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
-                        insumoId,
-                        cantidadRequerida,
-                        almacenesValidos,
-                        true               // modoPreview
-                );
-            }
+            DistribucionFefoResult distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
+                    insumoId,
+                    cantidadRequerida,
+                    almacenesValidos,
+                    true               // modoPreview
+            );
 
             BigDecimal stockLibreFefo = Optional.ofNullable(distribucionPreview.getStockLibreTotal())
                     .orElse(BigDecimal.ZERO);
@@ -1421,10 +1375,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         if (lotesPs.isEmpty()) {
             return null;
         }
-        if (lotesPs.size() > 1) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "Solo se permite consumir un lote de producto semielaborado por orden");
-        }
         Long loteId = lotesPs.get(0);
         return loteProductoRepository.findById(loteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
@@ -1450,11 +1400,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         List<DetalleFormula> detallesFormula = obtenerDetallesFormulaSeguro(formula);
         List<DetalleFormula> insumosPs = obtenerInsumosPs(detallesFormula);
-        if (insumosPs.size() > 1) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "Solo se admite un insumo de tipo PRODUCTO_SEMI_ELABORADO por fórmula");
-        }
-        Long insumoPsId = insumosPs.isEmpty() ? null : insumosPs.get(0).getInsumo().getId().longValue();
+        boolean tieneInsumoPsEnFormula = !insumosPs.isEmpty();
+        java.util.Set<Long> insumosPsIds = insumosPs.stream()
+                .map(DetalleFormula::getInsumo)
+                .filter(Objects::nonNull)
+                .map(Producto::getId)
+                .filter(Objects::nonNull)
+                .map(Integer::longValue)
+                .collect(Collectors.toSet());
 
         // Idempotencia: si ya existen solicitudes SALIDA pendientes para esta OP, no recrear
         List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
@@ -1489,8 +1442,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
         boolean esProductoSemiElaborado = tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO;
-        boolean tieneInsumoPsEnFormula = insumoPsId != null;
-
         for (DetalleFormula insumo : detallesFormula) {
             if (insumo == null || insumo.getInsumo() == null) {
                 continue;
@@ -1517,7 +1468,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .orElse(null);
 
             if (!esProductoSemiElaborado && tieneInsumoPsEnFormula
-                    && !Objects.equals(insumoId, insumoPsId)
                     && tipoInsumo == TipoCategoria.MATERIA_PRIMA) {
                 log.debug("OP-reserva: MP {} omitida en OP con PS para evitar doble consumo", insumoId);
                 continue;
@@ -1526,23 +1476,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
 
-            boolean esInsumoPs = insumoPsId != null && insumoPsId.equals(insumoId);
-            DistribucionFefoResult distribucion;
-            if (esInsumoPs) {
-                distribucion = disponibilidadInsumoService.calcularDisponibilidad(
-                        insumoId,
-                        requerida,
-                        almacenesValidos,
-                        false,
-                        lotePsId,
-                        true);
-            } else {
-                distribucion = disponibilidadInsumoService.calcularDisponibilidad(
-                        insumoId,
-                        requerida,
-                        almacenesValidos,
-                        false);
-            }
+            boolean esInsumoPs = insumosPsIds.contains(insumoId);
+            DistribucionFefoResult distribucion = disponibilidadInsumoService.calcularDisponibilidad(
+                    insumoId,
+                    requerida,
+                    almacenesValidos,
+                    false);
 
             BigDecimal faltanteDistribucion = Optional.ofNullable(distribucion.getFaltante())
                     .orElse(BigDecimal.ZERO)
@@ -1562,12 +1501,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             Long primerLoteId = primerDetalle.getLoteProductoId();
             if (primerLoteId == null) {
                 manejarStockInsuficiente(insumo.getInsumo(), distribucion);
-            }
-
-            if (esInsumoPs && lotePsId != null
-                    && !lotePsId.equals(primerLoteId)) {
-                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                        "El lote reservado para el producto semielaborado no coincide con el solicitado");
             }
 
             SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()

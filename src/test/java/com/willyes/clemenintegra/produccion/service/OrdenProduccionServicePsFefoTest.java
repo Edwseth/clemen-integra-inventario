@@ -7,7 +7,6 @@ import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
-import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
@@ -37,7 +36,6 @@ import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
-import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
@@ -186,14 +184,14 @@ class OrdenProduccionServicePsFefoTest {
     }
 
     @Test
-    @DisplayName("Crea OP con PS sin lote explícito eligiendo FEFO en un solo lote")
+    @DisplayName("Crea OP con PS sin lote explícito usando FEFO estándar")
     void crearOp_psAutoSeleccion() {
         DistribucionFefoResult preview = fefoResult(true, 501L);
         DistribucionFefoResult reserva = fefoResult(false, 501L);
 
-        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(true), isNull(), eq(true)))
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(true)))
                 .thenReturn(preview);
-        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(false), isNull(), eq(true)))
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(false)))
                 .thenReturn(reserva);
 
         ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
@@ -201,9 +199,9 @@ class OrdenProduccionServicePsFefoTest {
         assertThat(resultado.isEsValida()).isTrue();
         assertThat(resultado.getOrden()).isNotNull();
         verify(disponibilidadInsumoService, times(1))
-                .calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(true), isNull(), eq(true));
+                .calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(true));
         verify(disponibilidadInsumoService, times(1))
-                .calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(false), isNull(), eq(true));
+                .calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(false));
     }
 
     @Test
@@ -220,7 +218,7 @@ class OrdenProduccionServicePsFefoTest {
                 .detalles(List.of())
                 .build();
 
-        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(true), isNull(), eq(true)))
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(true)))
                 .thenReturn(preview);
 
         ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
@@ -231,38 +229,44 @@ class OrdenProduccionServicePsFefoTest {
     }
 
     @Test
-    @DisplayName("Valida que el lote forzado sea PS")
-    void crearOp_loteNoPs() {
-        LoteProducto lote = new LoteProducto();
-        lote.setId(900L);
-        Producto otroProducto = new Producto();
-        CategoriaProducto catMp = new CategoriaProducto();
-        catMp.setTipo(TipoCategoria.MATERIA_PRIMA);
-        otroProducto.setCategoriaProducto(catMp);
-        lote.setProducto(otroProducto);
-        orden.setLotePsId(900L);
+    @DisplayName("Permite múltiples insumos PS en la fórmula sin restricción de lote")
+    void crearOp_conMultiplesPs() {
+        Producto productoPs2 = new Producto();
+        productoPs2.setId(201);
+        CategoriaProducto categoriaPs2 = new CategoriaProducto();
+        categoriaPs2.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        productoPs2.setCategoriaProducto(categoriaPs2);
+        UnidadMedida umPs2 = new UnidadMedida();
+        umPs2.setSimbolo("KG");
+        productoPs2.setUnidadMedida(umPs2);
+        productoPs2.setModoControlInventario(ModoControlInventario.CONTROL_STOCK);
 
-        when(loteProductoRepository.findById(900L)).thenReturn(Optional.of(lote));
+        DetalleFormula insumoPs2 = new DetalleFormula();
+        insumoPs2.setInsumo(productoPs2);
+        insumoPs2.setCantidadNecesaria(BigDecimal.ONE);
 
-        assertThatThrownBy(() -> service.guardarConValidacionStock(orden))
-                .isInstanceOf(CustomBusinessException.class)
-                .hasMessageContaining("no corresponde a un producto semielaborado");
-    }
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(insumoPs, insumoPs2));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(100L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(anyList())).thenReturn(List.of(productoPs, productoPs2));
 
-    @Test
-    @DisplayName("Valida que el lote PS esté LIBERADO")
-    void crearOp_lotePsNoLiberado() {
-        LoteProducto lote = new LoteProducto();
-        lote.setId(901L);
-        lote.setEstado(EstadoLote.DISPONIBLE);
-        lote.setProducto(productoPs);
-        orden.setLotePsId(901L);
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(true)))
+                .thenReturn(fefoResult(true, 501L));
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(201L), any(BigDecimal.class), anyList(), eq(true)))
+                .thenReturn(fefoResult(true, 502L));
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(false)))
+                .thenReturn(fefoResult(false, 501L));
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(201L), any(BigDecimal.class), anyList(), eq(false)))
+                .thenReturn(fefoResult(false, 502L));
 
-        when(loteProductoRepository.findById(901L)).thenReturn(Optional.of(lote));
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
 
-        assertThatThrownBy(() -> service.guardarConValidacionStock(orden))
-                .isInstanceOf(CustomBusinessException.class)
-                .hasMessageContaining("debe estar LIBERADO");
+        assertThat(resultado.isEsValida()).isTrue();
+        verify(disponibilidadInsumoService, times(1))
+                .calcularDisponibilidad(eq(200L), any(BigDecimal.class), anyList(), eq(true));
+        verify(disponibilidadInsumoService, times(1))
+                .calcularDisponibilidad(eq(201L), any(BigDecimal.class), anyList(), eq(true));
     }
 
     private DistribucionFefoResult fefoResult(boolean preview, Long loteId) {
