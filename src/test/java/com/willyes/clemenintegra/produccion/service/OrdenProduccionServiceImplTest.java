@@ -1857,8 +1857,8 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
-    @DisplayName("reservarInsumosParaOP en PT con PS omite MP y conserva PS + ME")
-    void reservarInsumosParaOP_ptConPsIncluyePsYMe() {
+    @DisplayName("reservarInsumosParaOP en PT con PS incluye MP, PS y ME")
+    void reservarInsumosParaOP_ptConPsIncluyeTodos() {
         doCallRealMethod().when(service).reservarInsumosParaOP(anyLong(), any());
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE,AUTORIZADA");
 
@@ -1885,14 +1885,14 @@ class OrdenProduccionServiceImplTest {
         service.reservarInsumosParaOP(600L, null);
 
         ArgumentCaptor<SolicitudMovimientoRequestDTO> captor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
-        verify(solicitudMovimientoService, times(2)).registrarSolicitud(captor.capture());
+        verify(solicitudMovimientoService, times(3)).registrarSolicitud(captor.capture());
 
         List<Long> productosSolicitados = captor.getAllValues().stream()
                 .map(SolicitudMovimientoRequestDTO::getProductoId)
                 .toList();
 
         assertThat(productosSolicitados)
-                .containsExactlyInAnyOrder(301L, 302L);
+                .containsExactlyInAnyOrder(301L, 302L, 303L);
     }
 
     @Test

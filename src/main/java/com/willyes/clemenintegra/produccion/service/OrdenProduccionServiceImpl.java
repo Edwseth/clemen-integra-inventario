@@ -1399,16 +1399,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
 
         List<DetalleFormula> detallesFormula = obtenerDetallesFormulaSeguro(formula);
-        List<DetalleFormula> insumosPs = obtenerInsumosPs(detallesFormula);
-        boolean tieneInsumoPsEnFormula = !insumosPs.isEmpty();
-        java.util.Set<Long> insumosPsIds = insumosPs.stream()
-                .map(DetalleFormula::getInsumo)
-                .filter(Objects::nonNull)
-                .map(Producto::getId)
-                .filter(Objects::nonNull)
-                .map(Integer::longValue)
-                .collect(Collectors.toSet());
-
         // Idempotencia: si ya existen solicitudes SALIDA pendientes para esta OP, no recrear
         List<EstadoSolicitudMovimiento> estadosPendientes = parseEstados(estadosSolicitudPendientesConf);
         List<SolicitudMovimiento> yaPendientes = Optional.ofNullable(
@@ -1440,8 +1430,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .findById(catalogResolver.getTipoDetalleSalidaId())
                 .orElseThrow(() -> new IllegalStateException("Tipo detalle SALIDA_PRODUCCION no configurado"));
 
-        TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
-        boolean esProductoSemiElaborado = tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO;
         for (DetalleFormula insumo : detallesFormula) {
             if (insumo == null || insumo.getInsumo() == null) {
                 continue;
@@ -1463,20 +1451,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 continue;
             }
 
-            TipoCategoria tipoInsumo = Optional.ofNullable(insumo.getInsumo().getCategoriaProducto())
-                    .map(CategoriaProducto::getTipo)
-                    .orElse(null);
-
-            if (!esProductoSemiElaborado && tieneInsumoPsEnFormula
-                    && tipoInsumo == TipoCategoria.MATERIA_PRIMA) {
-                log.debug("OP-reserva: MP {} omitida en OP con PS para evitar doble consumo", insumoId);
-                continue;
-            }
-
             BigDecimal requeridaSolicitud = requerida.setScale(6, RoundingMode.HALF_UP);
             List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
 
-            boolean esInsumoPs = insumosPsIds.contains(insumoId);
             DistribucionFefoResult distribucion = disponibilidadInsumoService.calcularDisponibilidad(
                     insumoId,
                     requerida,
@@ -1494,57 +1471,69 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 manejarStockInsuficiente(insumo.getInsumo(), distribucion);
             }
 
-            if (distribucion.getDetalles().isEmpty()) {
-                manejarStockInsuficiente(insumo.getInsumo(), distribucion);
-            }
-            DistribucionFefoDetalle primerDetalle = distribucion.getDetalles().get(0);
-            Long primerLoteId = primerDetalle.getLoteProductoId();
-            if (primerLoteId == null) {
+            List<DistribucionFefoDetalle> detallesDistribucion = distribucion.getDetalles();
+            if (detallesDistribucion.isEmpty()) {
                 manejarStockInsuficiente(insumo.getInsumo(), distribucion);
             }
 
-            SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()
-                    .tipoMovimiento(TipoMovimiento.SALIDA)
-                    .productoId(insumoId)
-                    .loteId(primerLoteId)
-                    .cantidad(requeridaSolicitud)
-                    .ordenProduccionId(orden.getId())
-                    .usuarioSolicitanteId(usuario.getId())
-                    .motivoMovimientoId(motivo.getId())
-                    .tipoMovimientoDetalleId(detalle.getId())
-                    .almacenDestinoId(catalogResolver.getAlmacenPreBodegaProduccionId())
-                    .build();
+            BigDecimal totalReservado = detallesDistribucion.stream()
+                    .map(DistribucionFefoDetalle::getCantidadReserva)
+                    .filter(Objects::nonNull)
+                    .filter(cantidad -> cantidad.compareTo(BigDecimal.ZERO) > 0)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(6, RoundingMode.HALF_UP);
 
-            SolicitudMovimientoResponseDTO solicitudCreada = solicitudMovimientoService.registrarSolicitud(solicitudReq);
-            Long solicitudId = solicitudCreada.getId();
-            if (solicitudId == null) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA");
+            if (totalReservado.compareTo(requeridaSolicitud) != 0) {
+                manejarStockInsuficiente(insumo.getInsumo(), distribucion);
             }
 
-            SolicitudMovimiento solicitud = solicitudMovimientoRepository.findById(solicitudId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA"));
-
-            solicitud.setLote(null);
-            solicitud.setAlmacenOrigen(null);
-
-            List<SolicitudMovimientoDetalle> detallesSolicitud = solicitud.getDetalles();
-            if (detallesSolicitud == null) {
-                detallesSolicitud = new ArrayList<>();
-                solicitud.setDetalles(detallesSolicitud);
-            } else {
-                log.debug("OP-RESERVA antes limpiar: detallesPrevios={} ordenId={} insumoId={}",
-                        detallesSolicitud.size(),
-                        ordenId,
-                        insumoId);
-                detallesSolicitud.clear();
-            }
-
-            for (DistribucionFefoDetalle detalleDistribucion : distribucion.getDetalles()) {
+            for (DistribucionFefoDetalle detalleDistribucion : detallesDistribucion) {
                 BigDecimal usarDetalle = Optional.ofNullable(detalleDistribucion.getCantidadReserva())
                         .orElse(BigDecimal.ZERO);
                 if (usarDetalle.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
+                Long loteId = detalleDistribucion.getLoteProductoId();
+                if (loteId == null) {
+                    manejarStockInsuficiente(insumo.getInsumo(), distribucion);
+                }
+
+                SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()
+                        .tipoMovimiento(TipoMovimiento.SALIDA)
+                        .productoId(insumoId)
+                        .loteId(loteId)
+                        .cantidad(usarDetalle)
+                        .ordenProduccionId(orden.getId())
+                        .usuarioSolicitanteId(usuario.getId())
+                        .motivoMovimientoId(motivo.getId())
+                        .tipoMovimientoDetalleId(detalle.getId())
+                        .almacenDestinoId(catalogResolver.getAlmacenPreBodegaProduccionId())
+                        .build();
+
+                SolicitudMovimientoResponseDTO solicitudCreada = solicitudMovimientoService.registrarSolicitud(solicitudReq);
+                Long solicitudId = solicitudCreada.getId();
+                if (solicitudId == null) {
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA");
+                }
+
+                SolicitudMovimiento solicitud = solicitudMovimientoRepository.findById(solicitudId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SOLICITUD_NO_ENCONTRADA"));
+
+                solicitud.setLote(null);
+                solicitud.setAlmacenOrigen(null);
+
+                List<SolicitudMovimientoDetalle> detallesSolicitud = solicitud.getDetalles();
+                if (detallesSolicitud == null) {
+                    detallesSolicitud = new ArrayList<>();
+                    solicitud.setDetalles(detallesSolicitud);
+                } else {
+                    log.debug("OP-RESERVA antes limpiar: detallesPrevios={} ordenId={} insumoId={}",
+                            detallesSolicitud.size(),
+                            ordenId,
+                            insumoId);
+                    detallesSolicitud.clear();
+                }
+
                 Long almacenOrigenId = detalleDistribucion.getAlmacenId();
                 Long almacenDestinoId = solicitud.getAlmacenDestino() != null
                         ? Long.valueOf(solicitud.getAlmacenDestino().getId())
@@ -1563,9 +1552,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
                 SolicitudMovimientoDetalle detSolicitud = SolicitudMovimientoDetalle.builder()
                         .solicitudMovimiento(solicitud)
-                        .lote(detalleDistribucion.getLoteProductoId() != null
-                                ? new LoteProducto(detalleDistribucion.getLoteProductoId())
-                                : null)
+                        .lote(new LoteProducto(loteId))
                         .cantidad(usarDetalle)
                         .almacenOrigen(almacenOrigenId != null
                                 ? new Almacen(Math.toIntExact(almacenOrigenId))
@@ -1573,10 +1560,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         .almacenDestino(solicitud.getAlmacenDestino())
                         .build();
                 detallesSolicitud.add(detSolicitud);
-            }
 
-            solicitudMovimientoRepository.saveAndFlush(solicitud);
-            reservaLoteService.sincronizarReservasSolicitud(solicitud);
+                solicitudMovimientoRepository.saveAndFlush(solicitud);
+                reservaLoteService.sincronizarReservasSolicitud(solicitud);
+            }
         }
     }
 
