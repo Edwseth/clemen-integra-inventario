@@ -1106,7 +1106,7 @@ class OrdenProduccionServiceImplTest {
     @DisplayName("registrarCierre no re-ejecuta consumo cuando la orden ya está cerrada")
     void registrarCierre_idempotenciaOrdenFinalizada() {
         OrdenProduccion orden = crearOrdenBase(255L, new BigDecimal("50"), BigDecimal.ZERO, EstadoProduccion.FINALIZADA);
-        when(ordenProduccionRepository.findById(255L)).thenReturn(Optional.of(orden));
+        when(ordenProduccionRepository.findByIdForUpdate(255L)).thenReturn(Optional.of(orden));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("5"))
@@ -1119,6 +1119,102 @@ class OrdenProduccionServiceImplTest {
                 .isEqualTo("ORDEN_NO_CERRABLE");
 
         verify(movimientoInventarioService, never()).consumirInsumosPorOrden(anyLong(), any(), anyLong());
+    }
+
+    @Test
+    @DisplayName("registrarCierre parcial no puede completar la cantidad programada")
+    void registrarCierre_parcialNoCompletaProgramada() {
+        OrdenProduccion orden = crearOrdenBase(310L, new BigDecimal("30000"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("30000"))
+                .tipo(TipoCierre.PARCIAL)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(310L, dto))
+                .isInstanceOf(ErrorResponseException.class)
+                .satisfies(ex -> {
+                    ErrorResponseException error = (ErrorResponseException) ex;
+                    ProblemDetail body = error.getBody();
+                    assertThat(body.getProperties().get("code")).isEqualTo("CIERRE_PARCIAL_SUPERA_PROGRAMADA");
+                });
+    }
+
+    @Test
+    @DisplayName("registrarCierre parcial no puede completar programada con el restante exacto")
+    void registrarCierre_parcialNoCompletaConRestante() {
+        OrdenProduccion orden = crearOrdenBase(311L, new BigDecimal("30000"), new BigDecimal("29999"), EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("1"))
+                .tipo(TipoCierre.PARCIAL)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(311L, dto))
+                .isInstanceOf(ErrorResponseException.class)
+                .satisfies(ex -> {
+                    ErrorResponseException error = (ErrorResponseException) ex;
+                    ProblemDetail body = error.getBody();
+                    assertThat(body.getProperties().get("code")).isEqualTo("CIERRE_PARCIAL_SUPERA_PROGRAMADA");
+                });
+    }
+
+    @Test
+    @DisplayName("registrarCierre parcial permite quedarse debajo de la programada")
+    void registrarCierre_parcialPermiteAcumularMenor() {
+        OrdenProduccion orden = crearOrdenBase(312L, new BigDecimal("30000"), new BigDecimal("10000"), EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("19999"))
+                .tipo(TipoCierre.PARCIAL)
+                .build();
+
+        OrdenProduccion resultado = service.registrarCierre(312L, dto);
+
+        assertThat(resultado.getCantidadProducidaAcumulada()).isEqualByComparingTo(new BigDecimal("29999.00"));
+        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+    }
+
+    @Test
+    @DisplayName("registrarCierre total debe cerrar restante exacto")
+    void registrarCierre_totalDebeCerrarExacto() {
+        OrdenProduccion orden = crearOrdenBase(313L, new BigDecimal("30000"), new BigDecimal("29999"), EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("1"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        OrdenProduccion resultado = service.registrarCierre(313L, dto);
+
+        assertThat(resultado.getCantidadProducidaAcumulada()).isEqualByComparingTo(new BigDecimal("30000.00"));
+        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.FINALIZADA);
+    }
+
+    @Test
+    @DisplayName("registrarCierre total rechaza cantidad que no completa la programada")
+    void registrarCierre_totalNoCoincideProgramada() {
+        OrdenProduccion orden = crearOrdenBase(314L, new BigDecimal("30000"), new BigDecimal("20000"), EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("5000"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(314L, dto))
+                .isInstanceOf(ErrorResponseException.class)
+                .satisfies(ex -> {
+                    ErrorResponseException error = (ErrorResponseException) ex;
+                    ProblemDetail body = error.getBody();
+                    assertThat(body.getProperties().get("code")).isEqualTo("CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA");
+                });
     }
 
     @Test
@@ -1142,7 +1238,7 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
-    @DisplayName("registrarCierre total incompleto exige confirmación antes de cerrar")
+    @DisplayName("registrarCierre total incompleto es rechazado")
     void registrarCierre_totalIncompletoRequiereConfirmacion() {
         OrdenProduccion orden = crearOrdenBase(301L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
@@ -1159,16 +1255,15 @@ class OrdenProduccionServiceImplTest {
                 .satisfies(ex -> {
                     ErrorResponseException error = (ErrorResponseException) ex;
                     ProblemDetail body = error.getBody();
-                    assertThat(body.getProperties().get("code")).isEqualTo("OP_CIERRE_PARCIAL_REQUIERE_CONFIRMACION");
+                    assertThat(body.getProperties().get("code")).isEqualTo("CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA");
                 });
     }
 
     @Test
-    @DisplayName("registrarCierre total incompleto con confirmación marca CERRADA_INCOMPLETA")
+    @DisplayName("registrarCierre total incompleto con confirmación también es rechazado")
     void registrarCierre_totalIncompletoConfirmado() {
         OrdenProduccion orden = crearOrdenBase(302L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
-        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("80"))
@@ -1177,10 +1272,13 @@ class OrdenProduccionServiceImplTest {
                 .confirmarCierreParcial(true)
                 .build();
 
-        OrdenProduccion resultado = service.registrarCierre(302L, dto);
-
-        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.CERRADA_INCOMPLETA);
-        assertThat(resultado.getTipoCierre()).isEqualTo(TipoCierre.PARCIAL);
+        assertThatThrownBy(() -> service.registrarCierre(302L, dto))
+                .isInstanceOf(ErrorResponseException.class)
+                .satisfies(ex -> {
+                    ErrorResponseException error = (ErrorResponseException) ex;
+                    ProblemDetail body = error.getBody();
+                    assertThat(body.getProperties().get("code")).isEqualTo("CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA");
+                });
     }
 
     @Test
@@ -1354,7 +1452,7 @@ class OrdenProduccionServiceImplTest {
     @Test
     @DisplayName("registrarCierre total usa la última etapa finalizada cuando no hay activa")
     void registrarCierre_totalSinEtapaActiva() {
-        OrdenProduccion orden = crearOrdenBase(350L, new BigDecimal("80"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        OrdenProduccion orden = crearOrdenBase(350L, new BigDecimal("40"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
         LocalDateTime fin = LocalDateTime.now().minusHours(1);
         EtapaProduccion etapaFinalizada = EtapaProduccion.builder()
@@ -1381,7 +1479,7 @@ class OrdenProduccionServiceImplTest {
     @Test
     @DisplayName("registrarCierre registra consumo real antes de consultar insumos")
     void registrarCierre_actualizaConsumido() {
-        OrdenProduccion orden = crearOrdenBase(360L, new BigDecimal("3"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        OrdenProduccion orden = crearOrdenBase(360L, new BigDecimal("4"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
         Producto insumo = new Producto();
         insumo.setId(600);
@@ -1425,7 +1523,7 @@ class OrdenProduccionServiceImplTest {
     @Test
     @DisplayName("registrarCierre es idempotente al registrar consumos de insumos")
     void registrarCierre_idempotenciaConsumos() {
-        OrdenProduccion orden = crearOrdenBase(370L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        OrdenProduccion orden = crearOrdenBase(370L, new BigDecimal("12"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
         when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -1703,6 +1801,7 @@ class OrdenProduccionServiceImplTest {
     }
 
     private void stubInfraCierre(OrdenProduccion orden, long cierresRegistrados) {
+        when(ordenProduccionRepository.findByIdForUpdate(orden.getId())).thenReturn(Optional.of(orden));
         when(ordenProduccionRepository.findById(orden.getId())).thenReturn(Optional.of(orden));
         when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(
                 orden.getId(), orden.getProducto().getId().longValue())).thenReturn(Optional.empty());

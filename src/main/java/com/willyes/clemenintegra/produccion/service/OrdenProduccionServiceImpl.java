@@ -862,7 +862,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     public OrdenProduccion registrarCierre(Long id, CierreProduccionRequestDTO dto) {
         String traceId = UUID.randomUUID().toString();
         try (MDC.MDCCloseable ignored = MDC.putCloseable("opTraceId", traceId)) {
-            OrdenProduccion orden = repository.findById(id)
+            OrdenProduccion orden = repository.findByIdForUpdate(id)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
 
             if (orden.getEstado() == EstadoProduccion.FINALIZADA ||
@@ -933,6 +933,32 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             BigDecimal cantidadProgramada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
             BigDecimal producidaAntes = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
             BigDecimal producidaDespues = producidaAntes.add(cantidad);
+
+            if (dto.getTipo() == TipoCierre.PARCIAL) {
+                if (producidaDespues.compareTo(cantidadProgramada) >= 0) {
+                    ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+                    problem.setTitle("Regla de cierre de Orden de Producción");
+                    problem.setDetail("El cierre parcial no puede completar o exceder la cantidad programada.");
+                    problem.setProperty("code", "CIERRE_PARCIAL_SUPERA_PROGRAMADA");
+                    problem.setProperty("cantidadProgramada", cantidadProgramada);
+                    problem.setProperty("acumuladoActual", producidaAntes);
+                    problem.setProperty("cantidadSolicitada", cantidad);
+                    problem.setProperty("acumuladoPropuesto", producidaDespues);
+                    throw new ErrorResponseException(HttpStatus.UNPROCESSABLE_ENTITY, problem, null);
+                }
+            } else if (dto.getTipo() == TipoCierre.TOTAL) {
+                if (producidaDespues.compareTo(cantidadProgramada) != 0) {
+                    ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+                    problem.setTitle("Regla de cierre de Orden de Producción");
+                    problem.setDetail("El cierre total debe completar exactamente la cantidad programada.");
+                    problem.setProperty("code", "CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA");
+                    problem.setProperty("cantidadProgramada", cantidadProgramada);
+                    problem.setProperty("acumuladoActual", producidaAntes);
+                    problem.setProperty("cantidadSolicitada", cantidad);
+                    problem.setProperty("acumuladoPropuesto", producidaDespues);
+                    throw new ErrorResponseException(HttpStatus.UNPROCESSABLE_ENTITY, problem, null);
+                }
+            }
             boolean cierreDefinitivo = esCierreDefinitivo(dto);
             EstadoProduccion estadoObjetivo = calcularEstadoObjetivo(orden, producidaDespues, cierreDefinitivo);
 
