@@ -156,6 +156,7 @@ class OrdenProduccionServiceReservaTest {
         unidadInsumo.setNombre("MILILITRO");
         productoInsumo.setUnidadMedida(unidadInsumo);
 
+        when(ordenProduccionRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(orden));
         when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenAnswer(invocation -> Optional.of(crearFormula()));
@@ -766,7 +767,7 @@ class OrdenProduccionServiceReservaTest {
     @DisplayName("registrarCierre total sin pendientes libera reservas")
     void registrarCierre_totalSinPendientesLiberaReservas() {
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
-                .cantidad(new BigDecimal("1.25"))
+                .cantidad(new BigDecimal("5.5"))
                 .tipo(TipoCierre.TOTAL)
                 .confirmarCierreParcial(true)
                 .build();
