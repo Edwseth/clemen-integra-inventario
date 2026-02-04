@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.willyes.clemenintegra.inventario.model.enums.CausaDevolucionPT;
@@ -23,6 +24,7 @@ public record MovimientoInventarioDTO(
         TipoMovimiento tipoMovimiento,
         ClasificacionMovimientoInventario clasificacionMovimientoInventario,
         String docReferencia,
+        @JsonAlias("observaciones")
         String destinoTexto,
         String clienteNombre,
         CausaDevolucionPT causaDevolucionPt,

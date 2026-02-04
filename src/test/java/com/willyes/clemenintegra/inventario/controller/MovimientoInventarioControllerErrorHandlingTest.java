@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -22,6 +23,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -145,5 +147,39 @@ class MovimientoInventarioControllerErrorHandlingTest {
                         .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(42));
+    }
+
+    @Test
+    @WithMockUser(username = "analista", authorities = "ROL_ALMACENISTA")
+    void whenLegacyObservacionesProvidedMapsToDestinoTexto() throws Exception {
+        when(movimientoInventarioService.registrarMovimiento(any(), anyString()))
+                .thenReturn(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO.builder()
+                        .id(55L)
+                        .build());
+
+        String payload = """
+                {
+                  \"tipoMovimiento\": \"RECEPCION\",
+                  \"clasificacionMovimientoInventario\": \"RECEPCION_COMPRA\",
+                  \"productoId\": 8,
+                  \"cantidad\": 1,
+                  \"loteLegacy\": true,
+                  \"observaciones\": \"texto legacy\"
+                }
+                """;
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "test-" + UUID.randomUUID())
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(55));
+
+        ArgumentCaptor<com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO> captor =
+                ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
+        com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO dto = captor.getValue();
+        org.assertj.core.api.Assertions.assertThat(dto.destinoTexto()).isEqualTo("texto legacy");
+        org.assertj.core.api.Assertions.assertThat(dto.loteLegacy()).isTrue();
     }
 }
