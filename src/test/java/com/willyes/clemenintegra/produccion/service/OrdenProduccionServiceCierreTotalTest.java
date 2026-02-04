@@ -186,6 +186,74 @@ class OrdenProduccionServiceCierreTotalTest {
     }
 
     @Test
+    void registrarConsumoRealPorCierreTotal_resuelveLotePrebodegaPorCodigo() {
+        OrdenProduccion orden = ordenProduccion(new BigDecimal("5"));
+        Usuario usuario = usuario(53L);
+        EtapaProduccion etapa = new EtapaProduccion();
+        etapa.setId(77L);
+
+        Producto insumo = producto(203);
+        FormulaProducto formula = formula(insumo, new BigDecimal("2.0"));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(
+                orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)).thenReturn(Optional.of(formula));
+
+        when(catalogResolver.getTipoDetalleSalidaProduccionId()).thenReturn(10L);
+        when(tipoMovimientoDetalleRepository.findById(10L)).thenReturn(Optional.of(tipoMovimientoDetalle(10L)));
+        when(catalogResolver.getMotivoSalidaProduccionId()).thenReturn(11L);
+        when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(motivoMovimiento(11L)));
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+
+        LoteProducto loteOrigen = new LoteProducto();
+        loteOrigen.setId(700L);
+        loteOrigen.setCodigoLote("LOTE-X");
+        loteOrigen.setProducto(insumo);
+        loteOrigen.setAlmacen(new Almacen(1));
+
+        LoteProducto lotePreBodega = new LoteProducto();
+        lotePreBodega.setId(701L);
+        lotePreBodega.setCodigoLote("LOTE-X");
+        lotePreBodega.setProducto(insumo);
+        lotePreBodega.setAlmacen(new Almacen(6));
+
+        MovimientoInventario alistado = new MovimientoInventario();
+        alistado.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        alistado.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
+        alistado.setCantidad(new BigDecimal("12"));
+        alistado.setProducto(insumo);
+        alistado.setLote(loteOrigen);
+        alistado.setAlmacenDestino(new Almacen(6));
+        alistado.setFechaIngreso(LocalDateTime.now());
+
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("LOTE-X", insumo.getId(), 6))
+                .thenReturn(Optional.of(lotePreBodega));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()), eq(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION), any()))
+                .thenReturn(new PageImpl<>(List.of(alistado)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()), eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
+                eq(orden.getId()), eq(insumo.getId().longValue()), eq(TipoMovimiento.SALIDA), eq(10L)))
+                .thenReturn(BigDecimal.ZERO);
+        when(movimientoInventarioService.registrarMovimiento(any()))
+                .thenReturn(MovimientoInventarioResponseDTO.builder().id(1002L).build());
+
+        ReflectionTestUtils.invokeMethod(
+                service,
+                "registrarConsumoRealPorCierreTotal",
+                orden,
+                List.of(etapa),
+                etapa,
+                usuario,
+                "trace-test"
+        );
+
+        ArgumentCaptor<MovimientoInventarioDTO> dtoCaptor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService).registrarMovimiento(dtoCaptor.capture());
+        assertThat(dtoCaptor.getValue().loteProductoId()).isEqualTo(701L);
+    }
+
+    @Test
     void registrarConsumoRealPorCierreTotal_idempotenteCuandoYaConsumido() {
         OrdenProduccion orden = ordenProduccion(new BigDecimal("3"));
         Usuario usuario = usuario(51L);
