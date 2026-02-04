@@ -2754,10 +2754,31 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             // TODO: validar que el lote tenga al menos una SALIDA_CLIENTE previa.
             loteDestino = ensureDestinoLote(producto, codigoLote, loteOrigen, almacenDestino);
         } else {
-            String codigoLote = StringUtils.hasText(dto.codigoLote())
-                    ? dto.codigoLote().trim()
-                    : generarCodigoLoteLegacy(dto.docReferencia());
-            loteDestino = ensureDestinoLote(producto, codigoLote, null, almacenDestino);
+            String codigoLote = dto.codigoLote().trim();
+            Optional<LoteProducto> destinoExistente = loteProductoRepository
+                    .findByCodigoLoteAndProductoIdAndAlmacenId(
+                            codigoLote,
+                            producto.getId(),
+                            almacenDestino.getId());
+
+            EstadoLote estadoLegacy = dto.condicionProductoDevuelto() == CondicionProductoDevuelto.OPTIMO
+                    ? EstadoLote.LIBERADO
+                    : EstadoLote.EN_CUARENTENA;
+
+            if (destinoExistente.isPresent()) {
+                loteDestino = destinoExistente.get();
+                if (loteDestino.getEstado() == null) {
+                    loteDestino.setEstado(estadoLegacy);
+                }
+            } else {
+                loteDestino = new LoteProducto();
+                loteDestino.setProducto(producto);
+                loteDestino.setCodigoLote(codigoLote);
+                loteDestino.setAlmacen(almacenDestino);
+                loteDestino.setEstado(estadoLegacy);
+                loteDestino.setStockLote(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
+                loteDestino.setStockReservado(BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP));
+            }
         }
 
         if (catalogResolver.getAlmacenCuarentenaId() != null
@@ -2781,11 +2802,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
         recalcularAgotadoSegunDisponibilidad(loteDestino);
         return loteProductoRepository.save(loteDestino);
-    }
-
-    private String generarCodigoLoteLegacy(String docReferencia) {
-        String base = StringUtils.hasText(docReferencia) ? docReferencia.trim() : "LEGACY";
-        return "LEGACY-" + base;
     }
 
     private void validarRecepcionDevolucionCliente(MovimientoInventarioDTO dto) {
@@ -2812,6 +2828,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             detalles.put("observaciones", dto.destinoTexto());
             throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_LEGACY_REQUIERE_OBSERVACIONES,
                     "La devolución legacy requiere observaciones adicionales",
+                    detalles);
+        }
+
+        if (Boolean.TRUE.equals(dto.loteLegacy()) && !StringUtils.hasText(dto.codigoLote())) {
+            Map<String, Object> detalles = new HashMap<>();
+            detalles.put("codigoLote", dto.codigoLote());
+            throw new CustomBusinessException(ApiErrorCode.CODIGO_LOTE_LEGACY_REQUERIDO,
+                    "Debe indicar el código de lote legacy",
                     detalles);
         }
     }
