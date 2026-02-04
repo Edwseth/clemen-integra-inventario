@@ -178,6 +178,7 @@ class OrdenProduccionServiceReservaTest {
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
         tipoDetalle.setId(33L);
         when(catalogResolver.getTipoDetalleSalidaProduccionId()).thenReturn(33L);
+        lenient().when(catalogResolver.decimals(any())).thenReturn(6);
         when(tipoMovimientoDetalleRepository.findById(anyLong())).thenReturn(Optional.of(tipoDetalle));
         when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(anyLong(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of()));
@@ -253,6 +254,54 @@ class OrdenProduccionServiceReservaTest {
         assertThat(detalles.get(1).getCantidad().scale()).isEqualTo(6);
         assertThat(total).isEqualByComparingTo(new BigDecimal("6.790123"));
         verify(reservaLoteService, org.mockito.Mockito.times(2)).sincronizarReservasSolicitud(any());
+    }
+
+    @Test
+    @DisplayName("reservarInsumosParaOP usa cantidad programada completa para calcular la solicitud")
+    void reservarInsumosParaOp_cantidadCompletaSinFactor() {
+        orden.setCantidadProgramada(new BigDecimal("30"));
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(productoInsumo);
+        detalle.setCantidadNecesaria(new BigDecimal("5.0"));
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        DistribucionFefoResult distribucion = DistribucionFefoResult.builder()
+                .productoInsumoId(productoInsumo.getId().longValue())
+                .requerido(new BigDecimal("150.000000"))
+                .stockLibreTotal(new BigDecimal("150.000000"))
+                .faltante(BigDecimal.ZERO)
+                .suficiente(true)
+                .detalles(List.of(DistribucionFefoDetalle.builder()
+                        .loteProductoId(400L)
+                        .almacenId(5L)
+                        .cantidadCalculo(new BigDecimal("150.00000000"))
+                        .cantidadReserva(new BigDecimal("150.000000"))
+                        .disponible(new BigDecimal("150.000000"))
+                        .estado(EstadoLote.LIBERADO.name())
+                        .build()))
+                .build();
+
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(productoInsumo.getId().longValue()),
+                any(BigDecimal.class), anyList(), eq(false)))
+                .thenReturn(distribucion);
+        when(solicitudMovimientoService.registrarSolicitud(any(SolicitudMovimientoRequestDTO.class)))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().id(100L).build());
+        when(solicitudMovimientoRepository.findById(100L)).thenReturn(Optional.of(crearSolicitudBase()));
+
+        service.reservarInsumosParaOP(1L, null);
+
+        ArgumentCaptor<BigDecimal> requeridaCaptor = ArgumentCaptor.forClass(BigDecimal.class);
+        verify(disponibilidadInsumoService).calcularDisponibilidad(eq(productoInsumo.getId().longValue()),
+                requeridaCaptor.capture(), anyList(), eq(false));
+        assertThat(requeridaCaptor.getValue()).isEqualByComparingTo(new BigDecimal("150.000000"));
+
+        ArgumentCaptor<SolicitudMovimientoRequestDTO> solicitudCaptor = ArgumentCaptor.forClass(SolicitudMovimientoRequestDTO.class);
+        verify(solicitudMovimientoService).registrarSolicitud(solicitudCaptor.capture());
+        assertThat(solicitudCaptor.getValue().getCantidad()).isEqualByComparingTo(new BigDecimal("150.000000"));
     }
 
     @Test

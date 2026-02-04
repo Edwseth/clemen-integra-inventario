@@ -259,6 +259,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .toList();
     }
 
+    private BigDecimal calcularCantidadRequeridaInsumo(DetalleFormula detalle, OrdenProduccion orden) {
+        if (detalle == null || orden == null) {
+            return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        }
+        BigDecimal cantidadNecesaria = Optional.ofNullable(detalle.getCantidadNecesaria())
+                .orElse(BigDecimal.ZERO);
+        BigDecimal cantidadProgramada = Optional.ofNullable(orden.getCantidadProgramada())
+                .orElse(BigDecimal.ZERO);
+        BigDecimal requerida = cantidadNecesaria.multiply(cantidadProgramada);
+        UnidadMedida unidad = Optional.ofNullable(detalle.getUnidadMedida())
+                .orElseGet(() -> detalle.getInsumo() != null ? detalle.getInsumo().getUnidadMedida() : null);
+        int escala = unidad != null ? catalogResolver.decimals(unidad) : 6;
+        return requerida.setScale(escala, RoundingMode.HALF_UP);
+    }
+
     private BigDecimal validarCantidad(BigDecimal cantidadOriginal, Producto producto) {
         if (cantidadOriginal == null || producto == null || producto.getUnidadMedida() == null
                 || cantidadOriginal.compareTo(BigDecimal.ZERO) <= 0) {
@@ -644,9 +659,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         orden.getId(), productoFabricadoId);
                 continue;
             }
-            BigDecimal requerido = safeCantidad(det.getCantidadNecesaria())
-                    .multiply(orden.getCantidadProgramada())
-                    .setScale(6, RoundingMode.HALF_UP);
+            BigDecimal requerido = calcularCantidadRequeridaInsumo(det, orden);
             if (requerido.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
@@ -691,13 +704,27 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     && !Objects.equals(Long.valueOf(mov.getAlmacenDestino().getId().longValue()), preBodegaId)) {
                 continue;
             }
-            Long loteId = mov.getLote().getId();
+            LoteProducto lotePreBodega = resolverLotePreBodegaParaConsumo(mov, preBodegaId);
+            if (lotePreBodega == null || lotePreBodega.getId() == null) {
+                log.warn("OP-cierre total sin lote en pre-bodega op={}, loteId={}, codigoLote={}, productoId={}",
+                        orden.getId(),
+                        mov.getLote().getId(),
+                        mov.getLote().getCodigoLote(),
+                        mov.getProducto().getId());
+                continue;
+            }
+            Long loteId = lotePreBodega.getId();
             if (loteId == null) {
                 continue;
             }
             BigDecimal cantidad = safeCantidad(mov.getCantidad());
             disponiblePorLote.merge(loteId, cantidad, BigDecimal::add);
-            productoPorLote.put(loteId, mov.getProducto().getId().longValue());
+            Long productoId = mov.getProducto().getId() != null
+                    ? mov.getProducto().getId().longValue()
+                    : (lotePreBodega.getProducto() != null ? lotePreBodega.getProducto().getId().longValue() : null);
+            if (productoId != null) {
+                productoPorLote.put(loteId, productoId);
+            }
             if (mov.getFechaIngreso() != null) {
                 fechaPorLote.merge(loteId, mov.getFechaIngreso(), (previa, nueva) -> {
                     if (previa == null) return nueva;
@@ -834,6 +861,35 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                         orden.getId(), productoId, pendiente);
             }
         }
+    }
+
+    private LoteProducto resolverLotePreBodegaParaConsumo(MovimientoInventario movimiento, Long preBodegaId) {
+        if (movimiento == null) {
+            return null;
+        }
+        LoteProducto lote = movimiento.getLote();
+        if (lote == null) {
+            return null;
+        }
+        if (preBodegaId == null) {
+            return lote;
+        }
+        Long almacenId = lote.getAlmacen() != null && lote.getAlmacen().getId() != null
+                ? lote.getAlmacen().getId().longValue()
+                : null;
+        if (Objects.equals(almacenId, preBodegaId)) {
+            return lote;
+        }
+        String codigoLote = lote.getCodigoLote();
+        Integer productoId = movimiento.getProducto() != null
+                ? movimiento.getProducto().getId()
+                : (lote.getProducto() != null ? lote.getProducto().getId() : null);
+        if (productoId == null || codigoLote == null || codigoLote.isBlank()) {
+            return null;
+        }
+        return loteProductoRepository
+                .findByCodigoLoteAndProductoIdAndAlmacenId(codigoLote, productoId, preBodegaId.intValue())
+                .orElse(null);
     }
 
     public void eliminar(Long id) {
@@ -1461,9 +1517,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 continue;
             }
             Long insumoId = insumo.getInsumo().getId().longValue();
-            BigDecimal requerida = insumo.getCantidadNecesaria()
-                    .multiply(orden.getCantidadProgramada())
-                    .setScale(8, RoundingMode.HALF_UP);
+            BigDecimal requerida = calcularCantidadRequeridaInsumo(insumo, orden);
             if (requerida.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
