@@ -215,6 +215,55 @@ class MovimientoInventarioServiceDevolucionClienteTest {
     }
 
     @Test
+    void shouldCreateLegacyLote_whenCodigoLoteProvided() {
+        Producto producto = crearProducto(350);
+        String codigoLote = "202613-DXY";
+        MovimientoInventarioDTO dto = construirDtoLegacy(producto.getId(), codigoLote, CondicionProductoDevuelto.OPTIMO);
+
+        stubCatalogosRecepcionDevolucion();
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(TIPO_DETALLE_EXPLICITO_ID);
+        given(tipoMovimientoDetalleRepository.findById(TIPO_DETALLE_EXPLICITO_ID))
+                .willReturn(Optional.of(tipoDetalle));
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                codigoLote, producto.getId(), (int) ALMACEN_PT_ID))
+                .willReturn(Optional.empty());
+        given(entityManager.getReference(eq(Almacen.class), any()))
+                .willAnswer(invocation -> new Almacen(((Number) invocation.getArgument(1)).intValue()));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(12L).build());
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(12L);
+            return mov;
+        });
+
+        ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+        doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(1001L);
+            }
+            return lp;
+        }).when(loteProductoRepository).save(loteCaptor.capture());
+
+        service.registrarMovimiento(dto);
+
+        LoteProducto creado = loteCaptor.getValue();
+        assertThat(creado.getCodigoLote()).isEqualTo(codigoLote);
+        assertThat(creado.getEstado()).isNotNull();
+        assertThat(creado.getStockLote()).isEqualByComparingTo(new BigDecimal("10.00"));
+    }
+
+    @Test
     void shouldAssignTipoDetalleEntrada_whenMissingTipoDetalleId() {
         Producto producto = crearProducto(400);
         LoteProducto lote = crearLote(600L, producto, 2, EstadoLote.LIBERADO);
@@ -468,6 +517,42 @@ class MovimientoInventarioServiceDevolucionClienteTest {
                 null,
                 null,
                 loteLegacy,
+                null
+        );
+    }
+
+    private MovimientoInventarioDTO construirDtoLegacy(Integer productoId,
+                                                       String codigoLote,
+                                                       CondicionProductoDevuelto condicion) {
+        return new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("10"),
+                TipoMovimiento.RECEPCION,
+                ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE,
+                "DOC-DEV-LEGACY",
+                "Observaciones legacy",
+                "Cliente Uno",
+                CausaDevolucionPT.TROCADO,
+                condicion,
+                productoId,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                TIPO_DETALLE_EXPLICITO_ID,
+                null,
+                null,
+                null,
+                null,
+                null,
+                codigoLote,
+                null,
+                null,
+                null,
+                null,
+                true,
                 null
         );
     }
