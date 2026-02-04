@@ -135,7 +135,7 @@
         SEDE PRINCIPAL<br />
         Carrera 41 D # 46-40 Union de Vivienda, Cali Valle del Cauca<br />
         Colombia<br />
-        Teléfono / Movil 3175081762
+        Teléfono / Movil 3176446404
       </div>
     </div>
   </div>
