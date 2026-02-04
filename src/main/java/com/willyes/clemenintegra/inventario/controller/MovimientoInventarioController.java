@@ -66,6 +66,7 @@ public class MovimientoInventarioController {
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto,
                                        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        log.debug("[INVENTARIO] payload recibido observaciones={} dto={}", dto.destinoTexto(), dto);
         dto = normalizarMovimientoDto(dto);
         try {
             int atenciones = dto.atenciones() != null ? dto.atenciones().size() : 0;
