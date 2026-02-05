@@ -1264,9 +1264,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return;
         }
 
+        boolean solicitudOpConDetalles = solicitud != null
+                && solicitud.getOrdenProduccion() != null
+                && solicitud.getDetalles() != null
+                && !solicitud.getDetalles().isEmpty();
+
         for (AtencionDTO atencion : atenciones) {
             if (atencion == null || atencion.getDetalleId() != null) {
                 continue;
+            }
+            if (solicitudOpConDetalles && atencion.getCantidad() == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "ATENCION_CANTIDAD_REQUERIDA");
             }
             Long loteId = atencion.getLoteId() != null
                     ? atencion.getLoteId()
