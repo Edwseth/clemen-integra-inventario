@@ -45,4 +45,8 @@ public class OrdenProduccionRequestDTO {
      */
     @NotBlank
     private String unidadMedidaSimbolo;
+
+    private Boolean confirmacionHomeopatico;
+
+    private String motivoOverrideHomeopatico;
 }

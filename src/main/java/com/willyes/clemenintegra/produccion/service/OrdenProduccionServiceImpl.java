@@ -23,9 +23,11 @@ import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.service.UnidadConversionService;
 import com.willyes.clemenintegra.inventario.service.UmValidator;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.OpHomeopaticoOverride;
 import com.willyes.clemenintegra.produccion.model.CierreProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.OpHomeopaticoOverrideRepository;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import com.willyes.clemenintegra.produccion.service.spec.OrdenProduccionSpecifications;
@@ -144,6 +146,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final ChecklistEtapaService checklistEtapaService;
     private final ChecklistEtapaItemRepository checklistEtapaItemRepository;
     private final LoteConsecutivoDiaService loteConsecutivoDiaService;
+    private final OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository;
+
+    private static final int SEMANAS_HOMEOPATICO = 78;
+    private static final BigDecimal CANTIDAD_MAXIMA_HOMEOPATICO = new BigDecimal("30");
+    private static final int MOTIVO_OVERRIDE_MIN_LENGTH = 20;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -469,6 +476,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         validarRendimientoProductoFabricable(producto);
         BigDecimal cantidadConvertida = unidadConversionService.convertir(cantidadBase, unidadBase, unidadProducto);
 
+        Integer semanasVigencia = vidaUtilProductoService.buscarPorProductoId(producto.getId())
+                .map(VidaUtilProducto::getSemanasVigencia)
+                .orElse(null);
+        boolean requiereOverrideHomeopatico = requiereOverrideHomeopatico(semanasVigencia, cantidadConvertida);
+        if (requiereOverrideHomeopatico) {
+            validarHandshakeHomeopatico(dto, producto, semanasVigencia, cantidadConvertida);
+        }
+
         BigDecimal unidadesProducidas = unidadConversionService.dividirNormalizado(
                 cantidadConvertida,
                 unidadProducto,
@@ -481,6 +496,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
 
         ResultadoValidacionOrdenDTO resultado = guardarConValidacionStock(orden);
+        if (requiereOverrideHomeopatico && resultado.isEsValida() && resultado.getOrden() != null
+                && resultado.getOrden().id != null) {
+            registrarOverrideHomeopatico(resultado.getOrden().id, producto, semanasVigencia,
+                    cantidadConvertida, dto.getMotivoOverrideHomeopatico());
+        }
         resultado.setUnidadesProducidas(unidadesProducidas);
         if (resultado.getOrden() != null) {
             resultado.getOrden().cantidadProgramadaBase = cantidadBase;
@@ -489,6 +509,71 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             resultado.getOrden().unidadesProducidas = unidadesProducidas;
         }
         return resultado;
+    }
+
+    private boolean requiereOverrideHomeopatico(Integer semanasVigencia, BigDecimal cantidadSolicitada) {
+        return Objects.equals(semanasVigencia, SEMANAS_HOMEOPATICO)
+                && cantidadSolicitada != null
+                && cantidadSolicitada.compareTo(CANTIDAD_MAXIMA_HOMEOPATICO) > 0;
+    }
+
+    private void validarHandshakeHomeopatico(OrdenProduccionRequestDTO dto,
+                                             Producto producto,
+                                             Integer semanasVigencia,
+                                             BigDecimal cantidadSolicitada) {
+        if (!Boolean.TRUE.equals(dto.getConfirmacionHomeopatico())) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.OP_HOMEOPATICO_REQUIERE_CONFIRMACION,
+                    "La cantidad solicitada supera el máximo recomendado para producto homeopático. Confirma para continuar.",
+                    Map.of(
+                            "productoId", producto.getId(),
+                            "semanasVigencia", semanasVigencia,
+                            "cantidadSolicitada", cantidadSolicitada,
+                            "maxRecomendado", CANTIDAD_MAXIMA_HOMEOPATICO
+                    )
+            );
+        }
+        String motivo = dto.getMotivoOverrideHomeopatico();
+        if (motivo == null || motivo.trim().length() < MOTIVO_OVERRIDE_MIN_LENGTH) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.OP_HOMEOPATICO_MOTIVO_OBLIGATORIO,
+                    "Debe ingresar una justificación de al menos 20 caracteres para continuar con la OP homeopática.",
+                    Map.of(
+                            "productoId", producto.getId(),
+                            "semanasVigencia", semanasVigencia,
+                            "cantidadSolicitada", cantidadSolicitada,
+                            "maxRecomendado", CANTIDAD_MAXIMA_HOMEOPATICO,
+                            "minCaracteresMotivo", MOTIVO_OVERRIDE_MIN_LENGTH
+                    )
+            );
+        }
+    }
+
+    private void registrarOverrideHomeopatico(Long ordenProduccionId,
+                                              Producto producto,
+                                              Integer semanasVigencia,
+                                              BigDecimal cantidadSolicitada,
+                                              String motivo) {
+        Usuario usuarioActual = null;
+        try {
+            usuarioActual = usuarioService.obtenerUsuarioAutenticado();
+        } catch (RuntimeException ex) {
+            log.warn("No fue posible resolver usuario autenticado para auditoría override homeopático", ex);
+        }
+
+        OrdenProduccion ordenRef = new OrdenProduccion();
+        ordenRef.setId(ordenProduccionId);
+
+        OpHomeopaticoOverride auditoria = OpHomeopaticoOverride.builder()
+                .ordenProduccion(ordenRef)
+                .producto(producto)
+                .semanasVigencia(semanasVigencia)
+                .cantidadSolicitada(cantidadSolicitada)
+                .motivo(motivo != null ? motivo.trim() : null)
+                .usuario(usuarioActual)
+                .build();
+
+        opHomeopaticoOverrideRepository.save(auditoria);
     }
 
 
