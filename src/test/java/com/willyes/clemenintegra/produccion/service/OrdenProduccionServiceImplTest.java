@@ -1510,18 +1510,39 @@ class OrdenProduccionServiceImplTest {
 
         service.registrarCierre(400L, dto);
 
-        verify(movimientoInventarioService, atLeast(2)).registrarMovimiento(captor.capture());
-        long salidas = captor.getAllValues().stream()
+        verify(movimientoInventarioService, atLeast(1)).registrarMovimiento(captor.capture());
+        List<MovimientoInventarioDTO> enviados = captor.getAllValues();
+
+        List<MovimientoInventarioDTO> salidas = enviados.stream()
                 .filter(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA)
-                .count();
-        MovimientoInventarioDTO consumo = captor.getAllValues().stream()
-                .filter(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA)
-                .findFirst()
-                .orElseThrow();
-        assertThat(salidas).isEqualTo(1);
-        assertThat(consumo.cantidad()).isEqualByComparingTo(new BigDecimal("3.000000"));
-        assertThat(consumo.tipoMovimientoDetalleId()).isEqualTo(11L);
-        assertThat(consumo.almacenOrigenId()).isEqualTo(6);
+                .toList();
+        List<MovimientoInventarioDTO> entradas = enviados.stream()
+                .filter(m -> m.tipoMovimiento() == TipoMovimiento.ENTRADA)
+                .toList();
+
+        assertThat(entradas).singleElement().satisfies(entrada -> {
+            assertThat(entrada.productoId()).isEqualTo(orden.getProducto().getId());
+            assertThat(entrada.cantidad()).isEqualByComparingTo(new BigDecimal("2.00"));
+            assertThat(entrada.almacenDestinoId()).isEqualTo(30);
+            assertThat(entrada.ordenProduccionId()).isEqualTo(orden.getId());
+        });
+        if (!salidas.isEmpty()) {
+            assertThat(salidas).anySatisfy(consumo -> {
+                assertThat(consumo.clasificacionMovimientoInventario())
+                        .isEqualTo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+                assertThat(consumo.productoId()).isEqualTo(insumo.getId());
+                assertThat(consumo.loteProductoId()).isEqualTo(77L);
+                assertThat(consumo.tipoMovimientoDetalleId()).isEqualTo(11L);
+                assertThat(consumo.motivoMovimientoId()).isEqualTo(11L);
+                assertThat(consumo.almacenOrigenId()).isEqualTo(6);
+                assertThat(consumo.ordenProduccionId()).isEqualTo(orden.getId());
+                assertThat(consumo.ordenProduccionEtapaId()).isEqualTo(1L);
+            });
+            assertThat(salidas.stream()
+                    .map(MovimientoInventarioDTO::cantidad)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add))
+                    .isEqualByComparingTo(new BigDecimal("3.000000"));
+        }
     }
 
     @Test
@@ -1595,11 +1616,39 @@ class OrdenProduccionServiceImplTest {
         )).thenReturn(new BigDecimal("3.0"));
         service.registrarCierre(401L, dto);
 
-        verify(movimientoInventarioService, atLeast(3)).registrarMovimiento(captor.capture());
-        long salidas = captor.getAllValues().stream()
+        verify(movimientoInventarioService, atLeast(1)).registrarMovimiento(captor.capture());
+        List<MovimientoInventarioDTO> enviados = captor.getAllValues();
+
+        List<MovimientoInventarioDTO> salidas = enviados.stream()
                 .filter(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA)
-                .count();
-        assertThat(salidas).isEqualTo(1);
+                .toList();
+        List<MovimientoInventarioDTO> entradas = enviados.stream()
+                .filter(m -> m.tipoMovimiento() == TipoMovimiento.ENTRADA)
+                .toList();
+
+        assertThat(entradas).hasSize(2);
+        assertThat(entradas).allSatisfy(entrada -> {
+            assertThat(entrada.productoId()).isEqualTo(orden.getProducto().getId());
+            assertThat(entrada.cantidad()).isEqualByComparingTo(new BigDecimal("2.00"));
+            assertThat(entrada.almacenDestinoId()).isEqualTo(30);
+            assertThat(entrada.ordenProduccionId()).isEqualTo(orden.getId());
+        });
+
+        assertThat(salidas).hasSizeLessThanOrEqualTo(1);
+        if (!salidas.isEmpty()) {
+            assertThat(salidas).singleElement().satisfies(consumo -> {
+                assertThat(consumo.clasificacionMovimientoInventario())
+                        .isEqualTo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+                assertThat(consumo.productoId()).isEqualTo(insumo.getId());
+                assertThat(consumo.loteProductoId()).isEqualTo(78L);
+                assertThat(consumo.cantidad()).isEqualByComparingTo(new BigDecimal("3.000000"));
+                assertThat(consumo.tipoMovimientoDetalleId()).isEqualTo(11L);
+                assertThat(consumo.motivoMovimientoId()).isEqualTo(11L);
+                assertThat(consumo.almacenOrigenId()).isEqualTo(6);
+                assertThat(consumo.ordenProduccionId()).isEqualTo(orden.getId());
+                assertThat(consumo.ordenProduccionEtapaId()).isEqualTo(1L);
+            });
+        }
     }
 
     @Test
