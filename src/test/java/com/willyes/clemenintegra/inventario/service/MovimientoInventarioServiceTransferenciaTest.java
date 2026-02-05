@@ -16,6 +16,7 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -49,6 +50,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -264,6 +266,130 @@ class MovimientoInventarioServiceTransferenciaTest {
 
         assertThat(respuesta.getId()).isEqualTo(201L);
         assertThat(loteDestino.getUbicacionFisica()).isEqualTo(ubicacion);
+    }
+
+    @Test
+    void movimientoOp_fuerzaDocReferenciaConCodigoOrden() {
+        Producto producto = crearProducto(8, 2);
+        LoteProducto lote = crearLote(30L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("4000"), BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("1000"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                null,
+                "Se realiza movimiento bajo la orden OP-CLEMEN-20260204-57",
+                null,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                6,
+                null,
+                null,
+                null,
+                5L,
+                null,
+                null,
+                100L,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                null,
+                null
+        );
+
+        configurarMocksBasicos(producto, lote);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        movimientoEntidad.setDocReferencia(dto.docReferencia());
+
+        OrdenProduccion op = new OrdenProduccion();
+        op.setId(100L);
+        op.setCodigoOrden("OP-CLEMEN-20260204-57");
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(entityManager.getReference(eq(OrdenProduccion.class), eq(100L))).willReturn(op);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(200L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(200L).build());
+
+        service.registrarMovimiento(dto);
+
+        ArgumentCaptor<MovimientoInventario> movimientoCaptor = ArgumentCaptor.forClass(MovimientoInventario.class);
+        verify(movimientoInventarioRepository, times(1)).save(movimientoCaptor.capture());
+        assertThat(movimientoCaptor.getValue().getDocReferencia()).isEqualTo("OP-CLEMEN-20260204-57");
+    }
+
+    @Test
+    void movimientoNoOp_conDocReferenciaMayorA45_retorna422() {
+        Producto producto = crearProducto(8, 2);
+        LoteProducto lote = crearLote(30L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("4000"), BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("1000"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                "DOC-REFERENCIA-DEMASIADO-LARGA-PARA-VALIDAR-LIMITE-45-CHARS",
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                6,
+                null,
+                null,
+                null,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                null,
+                null
+        );
+
+        configurarMocksBasicos(producto, lote);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        movimientoEntidad.setDocReferencia(dto.docReferencia());
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("422 UNPROCESSABLE_ENTITY \"DOC_REFERENCIA_LARGA\"");
+
+        verify(movimientoInventarioRepository, never()).save(any(MovimientoInventario.class));
     }
 
     @Test

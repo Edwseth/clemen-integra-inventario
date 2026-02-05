@@ -396,8 +396,11 @@ public class MovimientoInventarioController {
             }
         }
         String docReferencia = dto.docReferencia();
-        if ((docReferencia == null || docReferencia.isBlank()) && destinoTexto != null) {
-            docReferencia = "DESTINO: " + destinoTexto;
+        if (docReferencia != null) {
+            docReferencia = docReferencia.trim();
+            if (docReferencia.isBlank()) {
+                docReferencia = null;
+            }
         }
         return new MovimientoInventarioDTO(
                 dto.id(),

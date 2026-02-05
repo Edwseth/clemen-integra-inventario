@@ -116,6 +116,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     );
     private static final int MAX_BITACORA_VALOR_NUEVO = 255;
     private static final int MAX_BITACORA_OBSERVACION = 500;
+    private static final int MAX_DOC_REFERENCIA_LENGTH = 45;
 
     static final record MovimientoLoteDetalle(LoteProducto lote, BigDecimal cantidad) { }
 
@@ -902,6 +903,23 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (clasificacion == ClasificacionMovimientoInventario.SALIDA_CLIENTE) {
             log.debug("SALIDA_CLIENTE motivoMovimientoId={}",
                     movimiento.getMotivoMovimiento() != null ? movimiento.getMotivoMovimiento().getId() : null);
+        }
+
+        if (ordenProduccion != null && StringUtils.hasText(ordenProduccion.getCodigoOrden())) {
+            movimiento.setDocReferencia(ordenProduccion.getCodigoOrden().trim());
+        }
+
+        String docReferenciaFinal = movimiento.getDocReferencia();
+        if (docReferenciaFinal != null) {
+            docReferenciaFinal = docReferenciaFinal.trim();
+            if (docReferenciaFinal.isBlank()) {
+                movimiento.setDocReferencia(null);
+            } else {
+                if (docReferenciaFinal.length() > MAX_DOC_REFERENCIA_LENGTH) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "DOC_REFERENCIA_LARGA");
+                }
+                movimiento.setDocReferencia(docReferenciaFinal);
+            }
         }
 
         MovimientoInventario guardado = repository.save(movimiento);

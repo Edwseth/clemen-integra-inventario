@@ -180,6 +180,7 @@ class MovimientoInventarioControllerErrorHandlingTest {
         verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
         com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO dto = captor.getValue();
         org.assertj.core.api.Assertions.assertThat(dto.destinoTexto()).isEqualTo("texto legacy");
+        org.assertj.core.api.Assertions.assertThat(dto.docReferencia()).isNull();
         org.assertj.core.api.Assertions.assertThat(dto.loteLegacy()).isTrue();
     }
 }
