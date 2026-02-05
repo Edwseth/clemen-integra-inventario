@@ -239,6 +239,25 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("POST /api/produccion/ordenes retorna 409 y code estable al requerir confirmación homeopática")
+    void crearOrden_homeopaticoRequiereConfirmacion_responde409() throws Exception {
+        when(ordenProduccionService.crearOrden(any(OrdenProduccionRequestDTO.class)))
+                .thenThrow(new CustomBusinessException(
+                        ApiErrorCode.OP_HOMEOPATICO_REQUIERE_CONFIRMACION,
+                        "Confirma para continuar",
+                        java.util.Map.of("semanasVigencia", 78, "maxRecomendado", 30)
+                ));
+
+        mockMvc.perform(post("/api/produccion/ordenes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildRequest())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("OP_HOMEOPATICO_REQUIERE_CONFIRMACION"))
+                .andExpect(jsonPath("$.details.semanasVigencia").value(78));
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
     @DisplayName("GET /api/produccion/ordenes/{id} permite consulta a jefe de calidad")
     void obtenerOrden_jefeCalidadPuedeConsultar() throws Exception {

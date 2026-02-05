@@ -61,6 +61,7 @@ class OrdenProduccionServiceChecklistTest {
         com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository checklistEtapaItemRepository =
                 mock(com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository.class);
         LoteConsecutivoDiaService loteConsecutivoDiaService = mock(LoteConsecutivoDiaService.class);
+        OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository = mock(OpHomeopaticoOverrideRepository.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -89,7 +90,8 @@ class OrdenProduccionServiceChecklistTest {
                 disponibilidadInsumoService,
                 checklistEtapaService,
                 checklistEtapaItemRepository,
-                loteConsecutivoDiaService
+                loteConsecutivoDiaService,
+                opHomeopaticoOverrideRepository
         );
 
         OrdenProduccion orden = OrdenProduccion.builder()

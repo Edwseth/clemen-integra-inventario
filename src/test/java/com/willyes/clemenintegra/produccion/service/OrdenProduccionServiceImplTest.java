@@ -36,6 +36,7 @@ import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.OpHomeopaticoOverride;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
@@ -134,6 +135,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
     @Mock private ChecklistEtapaService checklistEtapaService;
     @Mock private LoteConsecutivoDiaService loteConsecutivoDiaService;
+    @Mock private OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository;
 
     @Spy
     @InjectMocks
@@ -305,6 +307,157 @@ class OrdenProduccionServiceImplTest {
                 "UND",
                 new BigDecimal("8"),
                 "UND");
+    }
+
+    @Test
+    @DisplayName("crearOrden exige confirmación para homeopático con cantidad > 30")
+    void crearOrden_homeopaticoSinConfirmacion_rechaza() {
+        Producto producto = productoFabricable(31, TipoCategoria.PRODUCTO_TERMINADO, "UND");
+        when(productoRepository.findById(31L)).thenReturn(Optional.of(producto));
+        when(usuarioRepository.findById(9L)).thenReturn(Optional.of(new Usuario()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenReturn(new BigDecimal("200"));
+        when(vidaUtilProductoService.buscarPorProductoId(31)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(31)
+                .semanasVigencia(78)
+                .build()));
+
+        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        dto.setProductoId(31L);
+        dto.setResponsableId(9L);
+        dto.setCantidadProgramada(new BigDecimal("200"));
+        dto.setUnidadMedidaSimbolo("UND");
+        dto.setEstado("CREADA");
+
+        assertThatThrownBy(() -> service.crearOrden(dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException cbe = (CustomBusinessException) ex;
+                    assertThat(cbe.getCode()).isEqualTo(ApiErrorCode.OP_HOMEOPATICO_REQUIERE_CONFIRMACION);
+                    assertThat(cbe.getDetails()).isInstanceOf(Map.class);
+                    Map<?, ?> details = (Map<?, ?>) cbe.getDetails();
+                    assertThat(details.get("semanasVigencia")).isEqualTo(78);
+                    assertThat(details.get("maxRecomendado")).isEqualTo(new BigDecimal("30"));
+                });
+
+        verify(service, never()).guardarConValidacionStock(any(OrdenProduccion.class));
+        verify(opHomeopaticoOverrideRepository, never()).save(any(OpHomeopaticoOverride.class));
+    }
+
+    @Test
+    @DisplayName("crearOrden homeopático confirmado registra auditoría")
+    void crearOrden_homeopaticoConfirmado_registraAuditoria() {
+        Producto producto = productoFabricable(32, TipoCategoria.PRODUCTO_TERMINADO, "UND");
+        when(productoRepository.findById(32L)).thenReturn(Optional.of(producto));
+        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(new Usuario()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenReturn(new BigDecimal("200"));
+        when(unidadConversionService.dividirNormalizado(any(BigDecimal.class), any(), any(), any()))
+                .thenReturn(new BigDecimal("200"));
+        when(vidaUtilProductoService.buscarPorProductoId(32)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(32)
+                .semanasVigencia(78)
+                .build()));
+        Usuario usuario = new Usuario();
+        usuario.setId(77L);
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        ResultadoValidacionOrdenDTO resultado = ResultadoValidacionOrdenDTO.builder()
+                .esValida(true)
+                .orden(new OrdenProduccionResponseDTO())
+                .build();
+        resultado.getOrden().id = 900L;
+        doReturn(resultado).when(service).guardarConValidacionStock(any(OrdenProduccion.class));
+
+        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        dto.setProductoId(32L);
+        dto.setResponsableId(10L);
+        dto.setCantidadProgramada(new BigDecimal("200"));
+        dto.setUnidadMedidaSimbolo("UND");
+        dto.setEstado("CREADA");
+        dto.setConfirmacionHomeopatico(true);
+        dto.setMotivoOverrideHomeopatico("Se requiere este lote para cubrir pedido regulatorio urgente");
+
+        ResultadoValidacionOrdenDTO respuesta = service.crearOrden(dto);
+        assertThat(respuesta.isEsValida()).isTrue();
+
+        ArgumentCaptor<OpHomeopaticoOverride> captor = ArgumentCaptor.forClass(OpHomeopaticoOverride.class);
+        verify(opHomeopaticoOverrideRepository).save(captor.capture());
+        assertThat(captor.getValue().getOrdenProduccion().getId()).isEqualTo(900L);
+        assertThat(captor.getValue().getProducto().getId()).isEqualTo(32);
+        assertThat(captor.getValue().getSemanasVigencia()).isEqualTo(78);
+    }
+
+    @Test
+    @DisplayName("crearOrden homeopático confirmado sin motivo válido rechaza")
+    void crearOrden_homeopaticoConfirmadoSinMotivo_rechaza() {
+        Producto producto = productoFabricable(33, TipoCategoria.PRODUCTO_TERMINADO, "UND");
+        when(productoRepository.findById(33L)).thenReturn(Optional.of(producto));
+        when(usuarioRepository.findById(11L)).thenReturn(Optional.of(new Usuario()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenReturn(new BigDecimal("200"));
+        when(vidaUtilProductoService.buscarPorProductoId(33)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(33)
+                .semanasVigencia(78)
+                .build()));
+
+        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        dto.setProductoId(33L);
+        dto.setResponsableId(11L);
+        dto.setCantidadProgramada(new BigDecimal("200"));
+        dto.setUnidadMedidaSimbolo("UND");
+        dto.setEstado("CREADA");
+        dto.setConfirmacionHomeopatico(true);
+        dto.setMotivoOverrideHomeopatico("motivo corto");
+
+        assertThatThrownBy(() -> service.crearOrden(dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException cbe = (CustomBusinessException) ex;
+                    assertThat(cbe.getCode()).isEqualTo(ApiErrorCode.OP_HOMEOPATICO_MOTIVO_OBLIGATORIO);
+                });
+
+        verify(service, never()).guardarConValidacionStock(any(OrdenProduccion.class));
+        verify(opHomeopaticoOverrideRepository, never()).save(any(OpHomeopaticoOverride.class));
+    }
+
+    @Test
+    @DisplayName("crearOrden normal no exige confirmación y no audita")
+    void crearOrden_noHomeopatico_noExigeConfirmacion() {
+        Producto producto = productoFabricable(34, TipoCategoria.PRODUCTO_TERMINADO, "UND");
+        when(productoRepository.findById(34L)).thenReturn(Optional.of(producto));
+        when(usuarioRepository.findById(12L)).thenReturn(Optional.of(new Usuario()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenReturn(new BigDecimal("200"));
+        when(unidadConversionService.dividirNormalizado(any(BigDecimal.class), any(), any(), any()))
+                .thenReturn(new BigDecimal("200"));
+        when(vidaUtilProductoService.buscarPorProductoId(34)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(34)
+                .semanasVigencia(12)
+                .build()));
+        doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).build())
+                .when(service).guardarConValidacionStock(any(OrdenProduccion.class));
+
+        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        dto.setProductoId(34L);
+        dto.setResponsableId(12L);
+        dto.setCantidadProgramada(new BigDecimal("200"));
+        dto.setUnidadMedidaSimbolo("UND");
+        dto.setEstado("CREADA");
+
+        ResultadoValidacionOrdenDTO respuesta = service.crearOrden(dto);
+        assertThat(respuesta.isEsValida()).isTrue();
+        verify(service).guardarConValidacionStock(any(OrdenProduccion.class));
+        verify(opHomeopaticoOverrideRepository, never()).save(any(OpHomeopaticoOverride.class));
+    }
+
+    private Producto productoFabricable(int id, TipoCategoria tipoCategoria, String simboloUm) {
+        Producto producto = new Producto();
+        producto.setId(id);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(tipoCategoria);
+        producto.setCategoriaProducto(categoria);
+        UnidadMedida um = new UnidadMedida();
+        um.setSimbolo(simboloUm);
+        producto.setUnidadMedida(um);
+        producto.setRendimientoUnidad(BigDecimal.ONE);
+        return producto;
     }
 
     @Test
