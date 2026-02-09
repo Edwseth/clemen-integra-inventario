@@ -282,11 +282,12 @@ public class SecurityConfig {
                             RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
-                    // 1.1) Detalle de planes semanales: sin acceso para Contador
+                    // 1.1) Detalle de planes semanales: lectura permitida para Contador
                     auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_COMPRADOR.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
                     // 2) Resto de operaciones de planeación (crear/editar/eliminar):
@@ -321,10 +322,26 @@ public class SecurityConfig {
                     );
 
 
+                    auth.requestMatchers(HttpMethod.POST,
+                            "/api/documental/documentos",
+                            "/api/documental/documentos/*/versiones").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name(),
+                            "CONTROL_DOCUMENTAL_WRITE"
+                    );
+
+                    auth.requestMatchers(HttpMethod.DELETE,
+                            "/api/documental/documentos/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers("/api/documental/documentos/**").authenticated();
+
                     auth.requestMatchers(HttpMethod.GET, "/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            RolUsuario.ROL_SUPER_ADMIN.name(),
+                            "CONTROL_DOCUMENTAL_WRITE"
                     );
                     auth.requestMatchers("/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
@@ -350,7 +367,6 @@ public class SecurityConfig {
                             RolUsuario.ROL_MICROBIOLOGO.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -371,7 +387,6 @@ public class SecurityConfig {
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                             RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 

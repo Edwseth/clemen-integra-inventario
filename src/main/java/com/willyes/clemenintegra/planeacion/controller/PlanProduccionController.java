@@ -70,7 +70,7 @@ public class PlanProduccionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlanProduccionSemanalDTO> obtener(@PathVariable Long id) {
         return planProduccionService.buscarPorId(id)
                 .map(plan -> ResponseEntity.ok(toDto(plan)))

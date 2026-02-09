@@ -23,7 +23,7 @@ public class VidaUtilProductoController {
 
     @GetMapping("/producto-terminado/{productoId}")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
-            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<VidaUtilProductoDTO> obtenerPorProducto(@PathVariable Integer productoId) {
         return vidaUtilProductoService.buscarPorProductoId(productoId)
                 .map(vida -> ResponseEntity.ok(mapToDto(vida)))
@@ -32,7 +32,7 @@ public class VidaUtilProductoController {
 
     @GetMapping("/productos-terminados")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
-            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<VidaUtilProductoDTO>> listar(
             @RequestParam(required = false) String filtro,
             @RequestParam(name = "search", required = false) String search,

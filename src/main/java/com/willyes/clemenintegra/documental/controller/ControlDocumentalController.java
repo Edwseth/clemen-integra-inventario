@@ -52,7 +52,7 @@ public class ControlDocumentalController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','CONTROL_DOCUMENTAL_WRITE')")
     public ResponseEntity<DocumentoDTO> crear(
             @Valid @RequestBody DocumentoCreateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -61,7 +61,7 @@ public class ControlDocumentalController {
     }
 
     @PostMapping(path = "/{id}/versiones", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','CONTROL_DOCUMENTAL_WRITE')")
     public ResponseEntity<DocumentoVersionDTO> agregarVersion(
             @PathVariable Long id,
             @RequestPart("archivo") MultipartFile archivo,
