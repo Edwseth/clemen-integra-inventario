@@ -24,7 +24,7 @@ public class RetencionLoteController {
     private final RetencionLoteMapper mapper;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<Page<RetencionLoteDTO>> listar(
             @RequestParam(required = false) EstadoRetencion estado,
             @PageableDefault(size = 10) Pageable pageable) {
@@ -32,7 +32,7 @@ public class RetencionLoteController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<RetencionLoteDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }

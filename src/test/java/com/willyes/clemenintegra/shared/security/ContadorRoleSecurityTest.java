@@ -24,6 +24,7 @@ import com.willyes.clemenintegra.planeacion.controller.PlanProduccionController;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
 import com.willyes.clemenintegra.planeacion.service.MrpReporteService;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
@@ -43,6 +44,17 @@ import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
+import com.willyes.clemenintegra.calidad.controller.NoConformidadController;
+import com.willyes.clemenintegra.calidad.controller.RetencionLoteController;
+import com.willyes.clemenintegra.calidad.controller.VidaUtilProductoController;
+import com.willyes.clemenintegra.calidad.mapper.RetencionLoteMapper;
+import com.willyes.clemenintegra.calidad.service.NoConformidadService;
+import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
+import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
+import com.willyes.clemenintegra.documental.controller.ControlDocumentalController;
+import com.willyes.clemenintegra.documental.dto.DocumentoDTO;
+import com.willyes.clemenintegra.documental.dto.DocumentoVersionDTO;
+import com.willyes.clemenintegra.documental.service.ControlDocumentalService;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -55,6 +67,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +80,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -74,7 +88,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -91,7 +108,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ReporteInventarioController.class,
         PlanProduccionController.class,
         MrpController.class,
-        OrdenCompraController.class
+        OrdenCompraController.class,
+        RetencionLoteController.class,
+        NoConformidadController.class,
+        VidaUtilProductoController.class,
+        ControlDocumentalController.class
 })
 @AutoConfigureMockMvc(addFilters = true)
 @Import({SecurityConfig.class, ContadorRoleSecurityTest.MethodSecurityConfig.class})
@@ -164,6 +185,16 @@ class ContadorRoleSecurityTest {
     private LoteProductoMapper loteProductoMapper;
     @MockBean
     private EvaluacionCalidadService evaluacionCalidadService;
+    @MockBean
+    private RetencionLoteService retencionLoteService;
+    @MockBean
+    private RetencionLoteMapper retencionLoteMapper;
+    @MockBean
+    private NoConformidadService noConformidadService;
+    @MockBean
+    private VidaUtilProductoService vidaUtilProductoService;
+    @MockBean
+    private ControlDocumentalService controlDocumentalService;
     @MockBean
     private UsuarioService usuarioService;
     @MockBean
@@ -343,13 +374,32 @@ class ContadorRoleSecurityTest {
 
     @Test
     @WithMockUser(authorities = "ROL_CONTADOR")
-    void contadorSinAccesoPlaneacionYCreacionOc() throws Exception {
+    void contadorPuedeConsultarPlanSemanalPeroNoMutarlo() throws Exception {
         when(planProduccionService.listar(any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
+        when(planProduccionService.buscarPorId(1L)).thenReturn(Optional.of(new PlanProduccionSemanal()));
 
         mockMvc.perform(get("/api/planeacion/planes-semanales"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/planeacion/planes-semanales/1"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/planeacion/planes-semanales")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(put("/api/planeacion/planes-semanales/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/planeacion/planes-semanales/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete("/api/planeacion/planes-semanales/1"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/mrp/corridas/1"))
@@ -358,6 +408,40 @@ class ContadorRoleSecurityTest {
         mockMvc.perform(post("/api/ordenes-compra")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+
+    @Test
+    @WithMockUser(authorities = {"ROL_CONTADOR", "CONTROL_DOCUMENTAL_WRITE"})
+    void contadorPuedeCrearYSubirControlDocumentalPeroNoEliminar() throws Exception {
+        when(controlDocumentalService.crearDocumento(any(), any())).thenReturn(DocumentoDTO.builder().build());
+        when(controlDocumentalService.agregarVersion(any(), any(), any(), any())).thenReturn(DocumentoVersionDTO.builder().build());
+
+        mockMvc.perform(post("/api/documental/documentos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"codigo\":\"DOC-1\",\"nombre\":\"Manual\",\"tipo\":\"PROCEDIMIENTO\",\"area\":\"CALIDAD\"}"))
+                .andExpect(status().isOk());
+
+        MockMultipartFile archivo = new MockMultipartFile("archivo", "doc.txt", "text/plain", "ok".getBytes());
+        mockMvc.perform(multipart("/api/documental/documentos/1/versiones")
+                        .file(archivo))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/documental/documentos/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    void contadorNoPuedeConsultarRetencionesNiNoConformidadesNiVidaUtil() throws Exception {
+        mockMvc.perform(get("/api/calidad/retenciones"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/calidad/no-conformidades"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/calidad/vida-util/productos-terminados"))
                 .andExpect(status().isForbidden());
     }
 
