@@ -27,7 +27,7 @@ public class NoConformidadController {
     private final UsuarioRepository usuarioRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_CONTADOR')")
     public ResponseEntity<Page<NoConformidadDTO>> listar(
             @RequestParam(required = false) SeveridadNoConformidad severidad,
             @RequestParam(required = false) OrigenNoConformidad origen,
@@ -37,7 +37,7 @@ public class NoConformidadController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_CONTADOR')")
     public ResponseEntity<NoConformidadDetalleDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
