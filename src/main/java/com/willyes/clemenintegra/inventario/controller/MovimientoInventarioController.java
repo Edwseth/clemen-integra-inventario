@@ -276,8 +276,8 @@ public class MovimientoInventarioController {
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
-            " 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> filtrar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
@@ -307,8 +307,8 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
-            " 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
     public ResponseEntity<List<MovimientoInventarioResponseDTO>> consultar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
@@ -337,8 +337,8 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
-            " 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> listarTodos(
             @RequestParam(required = false) String codigoRecepcion,
             @RequestParam(required = false, name = "tipoMovimiento") TipoMovimiento tipoMovimiento,

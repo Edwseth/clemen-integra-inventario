@@ -19,13 +19,13 @@ public class CategoriaProductoController {
     private final CategoriaProductoService categoriaProductoService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_CATEGORIAS_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<CategoriaProductoResponseDTO>> listar() {
         return ResponseEntity.ok(categoriaProductoService.listarTodas());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_CATEGORIAS_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<CategoriaProductoResponseDTO> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(categoriaProductoService.obtenerPorId(id));
     }

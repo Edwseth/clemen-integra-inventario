@@ -27,6 +27,7 @@ public class KardexController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority(" +
+            "'INV_KARDEX_READ'," +
             "'ROL_JEFE_ALMACENES'," +
             "'ROL_ALMACENISTA'," +
             "'ROL_JEFE_PRODUCCION'," +
@@ -34,6 +35,7 @@ public class KardexController {
             "'ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD'," +
             "'ROL_PLANEADOR'," +
+            "'ROL_CONTADOR'," +
             "'ROL_SUPER_ADMIN'" +
             ")")
     public ResponseEntity<List<KardexItemDTO>> obtenerKardex(

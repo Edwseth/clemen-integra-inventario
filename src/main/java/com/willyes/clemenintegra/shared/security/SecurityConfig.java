@@ -123,9 +123,11 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").hasAnyAuthority(
+                            "INV_CATEGORIAS_READ",
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
@@ -214,18 +216,48 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyAuthority(
+                            "INV_MOV_READ",
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/alertas/**").hasAnyAuthority(
+                            "INV_ALERTAS_READ",
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/lotes/**", "/api/inventario/lotes/**").hasAnyAuthority(
+                            "INV_LOTES_READ",
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
+                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/kardex/**").hasAnyAuthority(
+                            "INV_KARDEX_READ",
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
+                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
