@@ -140,6 +140,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                             RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 

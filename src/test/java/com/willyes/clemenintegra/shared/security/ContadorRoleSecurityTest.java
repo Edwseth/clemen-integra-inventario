@@ -55,6 +55,10 @@ import com.willyes.clemenintegra.documental.controller.ControlDocumentalControll
 import com.willyes.clemenintegra.documental.dto.DocumentoDTO;
 import com.willyes.clemenintegra.documental.dto.DocumentoVersionDTO;
 import com.willyes.clemenintegra.documental.service.ControlDocumentalService;
+import com.willyes.clemenintegra.produccion.controller.IndicadoresProduccionController;
+import com.willyes.clemenintegra.produccion.dto.IndicadoresProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.service.ProduccionIndicadoresService;
+import com.willyes.clemenintegra.produccion.service.ReporteIndicadoresProduccionService;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -112,7 +116,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         RetencionLoteController.class,
         NoConformidadController.class,
         VidaUtilProductoController.class,
-        ControlDocumentalController.class
+        ControlDocumentalController.class,
+        IndicadoresProduccionController.class
 })
 @AutoConfigureMockMvc(addFilters = true)
 @Import({SecurityConfig.class, ContadorRoleSecurityTest.MethodSecurityConfig.class})
@@ -196,6 +201,10 @@ class ContadorRoleSecurityTest {
     @MockBean
     private ControlDocumentalService controlDocumentalService;
     @MockBean
+    private ProduccionIndicadoresService produccionIndicadoresService;
+    @MockBean
+    private ReporteIndicadoresProduccionService reporteIndicadoresProduccionService;
+    @MockBean
     private UsuarioService usuarioService;
     @MockBean
     private UsuarioRepository usuarioRepository;
@@ -244,6 +253,27 @@ class ContadorRoleSecurityTest {
             chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
             return null;
         }).when(superAdminSoloLecturaWriteBlockFilter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    void contadorPuedeConsultarIndicadoresYAlertasPeroNoCapas() throws Exception {
+        when(produccionIndicadoresService.calcularIndicadores(any(), any(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(IndicadoresProduccionResponseDTO.builder().build());
+        when(produccionIndicadoresService.obtenerOrdenesConAlertas(any(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/produccion/indicadores")
+                        .param("fechaInicio", "2026-01-01")
+                        .param("fechaFin", "2026-01-31"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/produccion/ordenes/alertas")
+                        .param("fechaReferencia", "2026-01-12"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/calidad/capas"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

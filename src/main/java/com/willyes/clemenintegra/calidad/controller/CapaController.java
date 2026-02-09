@@ -31,7 +31,7 @@ public class CapaController {
     private final CapaService service;
 
     @GetMapping
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<CapaDTO>> listar(
             @RequestParam(required = false) EstadoCapa estado,
             @RequestParam(required = false) SeveridadNoConformidad severidad,
@@ -40,7 +40,7 @@ public class CapaController {
     }
 
     @GetMapping("/{id}")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<CapaDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
@@ -75,13 +75,13 @@ public class CapaController {
     }
 
     @GetMapping("/{id}/archivos")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<CapaArchivoDTO>> listarArchivos(@PathVariable Long id) {
         return ResponseEntity.ok(service.listarArchivos(id));
     }
 
     @GetMapping({"/{capaId}/archivos/{archivoId}/descargar", "/{capaId}/archivos/{archivoId}"})
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<ByteArrayResource> descargarArchivo(@PathVariable Long capaId, @PathVariable Long archivoId) {
         CapaArchivoDescargaDTO archivo = service.descargarArchivo(capaId, archivoId);
         MediaType mediaType = archivo.getContentType() != null
