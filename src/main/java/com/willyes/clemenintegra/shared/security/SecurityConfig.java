@@ -181,6 +181,31 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/conteos/**").hasAnyAuthority(
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name(),
+                            "INV_CONTEOS_READ"
+                    );
+
+                    auth.requestMatchers("/api/inventario/conteos/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name(),
+                            "INV_CONTEOS_WRITE"
+                    );
+
+
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/inventario/ordenes/**",
+                            "/api/ordenes-compra/**").hasAnyAuthority(
+                            RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_ALMACENISTA.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers("/api/ordenes-compra/**").hasAnyAuthority(
                             RolUsuario.ROL_COMPRADOR.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
@@ -222,6 +247,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_COMPRADOR.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
                     // 2) Resto de operaciones de planeación (crear/editar/eliminar):
@@ -234,6 +260,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/api/mrp/**").hasAnyAuthority(
                             RolUsuario.ROL_COMPRADOR.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -255,6 +282,12 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
                     auth.requestMatchers("/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
@@ -279,6 +312,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_MICROBIOLOGO.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -289,6 +323,17 @@ public class SecurityConfig {
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                             RolUsuario.ROL_MICROBIOLOGO.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/calidad/retenciones/**",
+                            "/api/calidad/no-conformidades/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_CALIDAD.name(),
+                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
+                            RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -305,6 +350,19 @@ public class SecurityConfig {
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                             RolUsuario.ROL_MICROBIOLOGO.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/produccion/indicadores",
+                            "/api/produccion/ordenes/alertas",
+                            "/api/produccion/indicadores/export/excel").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
+                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
@@ -372,6 +430,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_ANALISTA_CALIDAD.name(),
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),

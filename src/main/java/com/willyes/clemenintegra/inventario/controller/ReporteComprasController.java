@@ -27,7 +27,7 @@ public class ReporteComprasController {
     private final ReporteComprasService reporteComprasService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
     public List<ReporteComprasRowDTO> obtenerReporte(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
@@ -35,7 +35,7 @@ public class ReporteComprasController {
     }
 
     @GetMapping("/excel")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarExcel(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
