@@ -1,13 +1,32 @@
 package com.willyes.clemenintegra.shared.security;
 
 import com.willyes.clemenintegra.inventario.controller.AjusteInventarioController;
+import com.willyes.clemenintegra.inventario.controller.AlertaInventarioController;
+import com.willyes.clemenintegra.inventario.controller.CategoriaProductoController;
 import com.willyes.clemenintegra.inventario.controller.ConteoCiclicoController;
+import com.willyes.clemenintegra.inventario.controller.LoteProductoController;
+import com.willyes.clemenintegra.inventario.controller.MovimientoInventarioController;
+import com.willyes.clemenintegra.inventario.controller.ProductoController;
 import com.willyes.clemenintegra.inventario.controller.SolicitudMovimientoController;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
+import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.service.AjusteInventarioService;
+import com.willyes.clemenintegra.inventario.service.AlertaInventarioService;
+import com.willyes.clemenintegra.inventario.service.CategoriaProductoService;
 import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.service.LoteProductoService;
+import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
+import com.willyes.clemenintegra.inventario.service.StockQueryService;
+import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -47,7 +66,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {
         ConteoCiclicoController.class,
         AjusteInventarioController.class,
-        SolicitudMovimientoController.class
+        SolicitudMovimientoController.class,
+        ProductoController.class,
+        CategoriaProductoController.class,
+        MovimientoInventarioController.class,
+        LoteProductoController.class,
+        AlertaInventarioController.class
 })
 @AutoConfigureMockMvc(addFilters = true)
 @Import({SecurityConfig.class, ContadorRoleSecurityTest.MethodSecurityConfig.class})
@@ -68,6 +92,34 @@ class ContadorRoleSecurityTest {
     private AjusteInventarioService ajusteInventarioService;
     @MockBean
     private SolicitudMovimientoService solicitudMovimientoService;
+    @MockBean
+    private ProductoService productoService;
+    @MockBean
+    private CategoriaProductoService categoriaProductoService;
+    @MockBean
+    private MovimientoInventarioService movimientoInventarioService;
+    @MockBean
+    private LoteProductoService loteProductoService;
+    @MockBean
+    private AlertaInventarioService alertaInventarioService;
+    @MockBean
+    private ProductoRepository productoRepository;
+    @MockBean
+    private MovimientoInventarioRepository movimientoInventarioRepository;
+    @MockBean
+    private UnidadMedidaRepository unidadMedidaRepository;
+    @MockBean
+    private LoteProductoRepository loteProductoRepository;
+    @MockBean
+    private SolicitudMovimientoRepository solicitudMovimientoRepository;
+    @MockBean
+    private StockQueryService stockQueryService;
+    @MockBean
+    private InventoryCatalogResolver inventoryCatalogResolver;
+    @MockBean
+    private LoteProductoMapper loteProductoMapper;
+    @MockBean
+    private EvaluacionCalidadService evaluacionCalidadService;
     @MockBean
     private UsuarioService usuarioService;
     @MockBean
@@ -188,6 +240,33 @@ class ContadorRoleSecurityTest {
                                   "usuarioId":1
                                 }
                                 """))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    void contadorPuedeLeerModulosInventarioPermitidos() throws Exception {
+        when(productoService.listarTodos(any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
+        when(categoriaProductoService.listarTodas()).thenReturn(List.of());
+        when(movimientoInventarioService.filtrar(any(), any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
+        when(loteProductoService.listarTodos(any(), any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
+        when(alertaInventarioService.obtenerAlertasInventario(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/productos"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/categorias"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/movimientos/filtrar")
+                        .param("fechaInicio", "2026-01-01")
+                        .param("fechaFin", "2026-01-31"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/lotes").param("vencidos", "true"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/inventario/alertas").param("diasVencimiento", "30"))
                 .andExpect(status().isOk());
     }
 

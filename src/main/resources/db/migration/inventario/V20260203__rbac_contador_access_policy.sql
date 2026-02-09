@@ -14,11 +14,34 @@ insert into permisos (codigo, modulo, accion, descripcion, activo)
 select 'INV_AJUSTES_WRITE', 'INV', 'WRITE', 'Gestion de ajustes de inventario', b'1'
 where not exists (select 1 from permisos where codigo = 'INV_AJUSTES_WRITE');
 
+insert into permisos (codigo, modulo, accion, descripcion, activo)
+select 'INV_CATEGORIAS_READ', 'INV', 'READ', 'Lectura de categorias de inventario', b'1'
+where not exists (select 1 from permisos where codigo = 'INV_CATEGORIAS_READ');
+
+insert into permisos (codigo, modulo, accion, descripcion, activo)
+select 'INV_ALERTAS_READ', 'INV', 'READ', 'Lectura de alertas de inventario', b'1'
+where not exists (select 1 from permisos where codigo = 'INV_ALERTAS_READ');
+
+insert into permisos (codigo, modulo, accion, descripcion, activo)
+select 'INV_KARDEX_READ', 'INV', 'READ', 'Lectura de kardex de inventario', b'1'
+where not exists (select 1 from permisos where codigo = 'INV_KARDEX_READ');
+
+insert into permisos (codigo, modulo, accion, descripcion, activo)
+select 'INV_REPORTES_READ', 'INV', 'READ', 'Lectura de reportes de inventario', b'1'
+where not exists (select 1 from permisos where codigo = 'INV_REPORTES_READ');
+
 insert into roles_permisos (rol_id, permiso_id)
 select r.id, p.id
 from roles r
 join permisos p on p.codigo in (
     'INV_CONTEOS_READ',
+    'INV_PRODUCT_READ',
+    'INV_CATEGORIAS_READ',
+    'INV_MOV_READ',
+    'INV_LOTES_READ',
+    'INV_ALERTAS_READ',
+    'INV_REPORTES_READ',
+    'INV_KARDEX_READ',
     'INV_UBICACIONES_READ',
     'INV_AJUSTES_READ',
     'INV_AJUSTES_WRITE',
