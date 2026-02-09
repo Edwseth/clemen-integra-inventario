@@ -274,12 +274,19 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
-                    // 1) Lectura de planes semanales (Producción + Compras + Super Admin)
-                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
+                    // 1) Lectura de listado de planes semanales (auditoría para Contador)
+                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_COMPRADOR.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+                    // 1.1) Detalle de planes semanales: sin acceso para Contador
+                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
+                            RolUsuario.ROL_COMPRADOR.name(),
+                            RolUsuario.ROL_PLANEADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
                     // 2) Resto de operaciones de planeación (crear/editar/eliminar):
@@ -292,7 +299,6 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/api/mrp/**").hasAnyAuthority(
                             RolUsuario.ROL_COMPRADOR.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 

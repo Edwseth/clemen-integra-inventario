@@ -8,6 +8,22 @@ import com.willyes.clemenintegra.inventario.controller.LoteProductoController;
 import com.willyes.clemenintegra.inventario.controller.MovimientoInventarioController;
 import com.willyes.clemenintegra.inventario.controller.ProductoController;
 import com.willyes.clemenintegra.inventario.controller.SolicitudMovimientoController;
+import com.willyes.clemenintegra.inventario.controller.ReporteInventarioController;
+import com.willyes.clemenintegra.inventario.controller.OrdenCompraController;
+import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
+import com.willyes.clemenintegra.inventario.service.RecepcionOCService;
+import com.willyes.clemenintegra.inventario.service.HistorialEstadoOrdenService;
+import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
+import com.willyes.clemenintegra.inventario.service.ReporteInventarioService;
+import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
+import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
+import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
+import com.willyes.clemenintegra.inventario.repository.ProveedorRepository;
+import com.willyes.clemenintegra.planeacion.controller.MrpController;
+import com.willyes.clemenintegra.planeacion.controller.PlanProduccionController;
+import com.willyes.clemenintegra.planeacion.service.MrpService;
+import com.willyes.clemenintegra.planeacion.service.MrpReporteService;
+import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
@@ -71,7 +87,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         CategoriaProductoController.class,
         MovimientoInventarioController.class,
         LoteProductoController.class,
-        AlertaInventarioController.class
+        AlertaInventarioController.class,
+        ReporteInventarioController.class,
+        PlanProduccionController.class,
+        MrpController.class,
+        OrdenCompraController.class
 })
 @AutoConfigureMockMvc(addFilters = true)
 @Import({SecurityConfig.class, ContadorRoleSecurityTest.MethodSecurityConfig.class})
@@ -102,6 +122,30 @@ class ContadorRoleSecurityTest {
     private LoteProductoService loteProductoService;
     @MockBean
     private AlertaInventarioService alertaInventarioService;
+    @MockBean
+    private ReporteInventarioService reporteInventarioService;
+    @MockBean
+    private PlanProduccionService planProduccionService;
+    @MockBean
+    private MrpService mrpService;
+    @MockBean
+    private MrpReporteService mrpReporteService;
+    @MockBean
+    private OrdenCompraService ordenCompraService;
+    @MockBean
+    private RecepcionOCService recepcionOCService;
+    @MockBean
+    private HistorialEstadoOrdenService historialEstadoOrdenService;
+    @MockBean
+    private OrdenCompraPdfService ordenCompraPdfService;
+    @MockBean
+    private OrdenCompraMapper ordenCompraMapper;
+    @MockBean
+    private OrdenCompraRepository ordenCompraRepository;
+    @MockBean
+    private OrdenCompraDetalleRepository ordenCompraDetalleRepository;
+    @MockBean
+    private ProveedorRepository proveedorRepository;
     @MockBean
     private ProductoRepository productoRepository;
     @MockBean
@@ -268,6 +312,53 @@ class ContadorRoleSecurityTest {
 
         mockMvc.perform(get("/api/inventario/alertas").param("diasVencimiento", "30"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    void contadorPuedeExportarReportesInventarioYRotacion() throws Exception {
+        when(reporteInventarioService.generarReporteAltaRotacion(any(), any())).thenReturn(new org.apache.poi.xssf.usermodel.XSSFWorkbook());
+        when(reporteInventarioService.generarReporteBajaRotacion(any(), any())).thenReturn(new org.apache.poi.xssf.usermodel.XSSFWorkbook());
+        when(productoService.generarReporteStockDisponibleExcel()).thenReturn(new org.apache.poi.xssf.usermodel.XSSFWorkbook());
+        when(movimientoInventarioService.generarReporteMovimientosExcel(any(), any())).thenReturn(new org.apache.poi.xssf.usermodel.XSSFWorkbook());
+
+        mockMvc.perform(get("/api/reportes/alta-rotacion")
+                        .param("fechaInicio", "2026-01-01")
+                        .param("fechaFin", "2026-01-31"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/reportes/baja-rotacion")
+                        .param("fechaInicio", "2026-01-01")
+                        .param("fechaFin", "2026-01-31"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/reportes/stock-disponible"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/reportes/movimientos")
+                        .param("fechaInicio", "2026-01-01")
+                        .param("fechaFin", "2026-01-31"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    void contadorSinAccesoPlaneacionYCreacionOc() throws Exception {
+        when(planProduccionService.listar(any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/planeacion/planes-semanales"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/planeacion/planes-semanales/1"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/mrp/corridas/1"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/ordenes-compra")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
