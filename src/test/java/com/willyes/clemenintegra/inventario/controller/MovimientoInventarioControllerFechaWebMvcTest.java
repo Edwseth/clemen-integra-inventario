@@ -126,4 +126,29 @@ class MovimientoInventarioControllerFechaWebMvcTest {
         assertThat(inicioCaptor.getValue()).isEqualTo(LocalDateTime.of(2025, 12, 8, 0, 0));
         assertThat(finCaptor.getValue()).isEqualTo(LocalDateTime.of(2025, 12, 16, 23, 59, 59));
     }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("/filtrar propaga productoId al servicio")
+    void filtrarDebePropagarProductoId() throws Exception {
+        given(movimientoInventarioService.filtrar(any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+                .willReturn(Page.empty());
+
+        mockMvc.perform(get("/api/movimientos/filtrar")
+                        .param("fechaInicio", "2025-12-08")
+                        .param("fechaFin", "2025-12-16")
+                        .param("productoId", "99")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(movimientoInventarioService).filtrar(
+                any(LocalDateTime.class),
+                any(LocalDateTime.class),
+                eq(99L),
+                isNull(),
+                isNull(),
+                isNull(),
+                any(Pageable.class)
+        );
+    }
 }

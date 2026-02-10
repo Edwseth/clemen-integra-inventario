@@ -151,6 +151,83 @@ class MovimientoInventarioRepositoryFechaTest {
         assertThat(resultados.get(0).getFechaIngreso()).isAfterOrEqualTo(resultados.get(1).getFechaIngreso());
     }
 
+    @Test
+    @DisplayName("filtrar por productoId devuelve solo movimientos del producto solicitado")
+    void filtrarPorProductoId() {
+        Producto otroProducto = entityManager.persist(Producto.builder()
+                .codigoSku("SKU-2")
+                .nombre("Producto alterno")
+                .stockMinimo(BigDecimal.ONE)
+                .stockMinimoProveedor(BigDecimal.ZERO)
+                .leadTimeCompraDias(1)
+                .leadTimeProduccionDias(1)
+                .stockSeguridad(BigDecimal.ZERO)
+                .stockMaximoPlaneacion(BigDecimal.ZERO)
+                .rendimientoUnidad(BigDecimal.ONE)
+                .activo(true)
+                .fechaCreacion(LocalDateTime.now())
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .requiereAnalisisFisico(false)
+                .requiereAnalisisQuimico(false)
+                .requiereAnalisisMicrobiologico(false)
+                .unidadMedida(producto.getUnidadMedida())
+                .categoriaProducto(producto.getCategoriaProducto())
+                .creadoPor(usuario)
+                .modoControlInventario(ModoControlInventario.CONTROL_STOCK)
+                .build());
+
+        LoteProducto otroLote = entityManager.persist(LoteProducto.builder()
+                .codigoLote("L-002")
+                .fechaFabricacion(LocalDateTime.of(2025, 12, 2, 10, 0))
+                .fechaVencimiento(LocalDateTime.of(2026, 1, 2, 10, 0))
+                .stockLote(BigDecimal.TEN)
+                .agotado(false)
+                .stockReservado(BigDecimal.ZERO)
+                .estado(EstadoLote.DISPONIBLE)
+                .producto(otroProducto)
+                .almacen(almacen)
+                .build());
+
+        MovimientoInventario movimientoProductoObjetivo = crearMovimiento(
+                LocalDateTime.of(2025, 12, 12, 11, 0),
+                BigDecimal.valueOf(3)
+        );
+
+        MovimientoInventario movimientoOtroProducto = MovimientoInventario.builder()
+                .cantidad(BigDecimal.valueOf(9))
+                .tipoMovimiento(TipoMovimiento.RECEPCION)
+                .clasificacion(ClasificacionMovimientoInventario.RECEPCION_COMPRA)
+                .fechaIngreso(LocalDateTime.of(2025, 12, 12, 12, 0))
+                .docReferencia("OC-999")
+                .registradoPor(usuario)
+                .producto(otroProducto)
+                .lote(otroLote)
+                .almacenOrigen(almacen)
+                .almacenDestino(null)
+                .motivoMovimiento(motivoMovimiento)
+                .tipoMovimientoDetalle(tipoMovimientoDetalle)
+                .build();
+        movimientoInventarioRepository.save(movimientoOtroProducto);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Page<MovimientoInventario> page = movimientoInventarioRepository.filtrar(
+                LocalDateTime.of(2025, 12, 12, 0, 0),
+                LocalDateTime.of(2025, 12, 12, 23, 59, 59),
+                producto.getId().longValue(),
+                null,
+                null,
+                null,
+                PageRequest.of(0, 10, Sort.by("fechaIngreso").descending())
+        );
+
+        assertThat(page.getContent())
+                .hasSize(1)
+                .extracting(MovimientoInventario::getId)
+                .containsExactly(movimientoProductoObjetivo.getId());
+    }
+
     private MovimientoInventario crearMovimiento(LocalDateTime fechaIngreso, BigDecimal cantidad) {
         MovimientoInventario movimiento = MovimientoInventario.builder()
                 .cantidad(cantidad)

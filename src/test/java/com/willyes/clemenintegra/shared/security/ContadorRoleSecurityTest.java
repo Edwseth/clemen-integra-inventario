@@ -355,6 +355,15 @@ class ContadorRoleSecurityTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_COMPRADOR")
+    void compradorNoPuedeConsultarMovimientosFiltrados() throws Exception {
+        mockMvc.perform(get("/api/movimientos/filtrar")
+                        .param("fechaInicio", "2026-01-01")
+                        .param("fechaFin", "2026-01-31"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_CONTADOR")
     void contadorPuedeLeerModulosInventarioPermitidos() throws Exception {
         when(productoService.listarTodos(any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
