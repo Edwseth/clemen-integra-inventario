@@ -105,7 +105,7 @@ public class ConteoCiclicoController {
     }
 
     @PostMapping("/{id}/aplicar")
-    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<ConteoCiclicoResponseDTO> aplicar(@PathVariable Long id,
                                                             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.aplicar(id, idempotencyKey);

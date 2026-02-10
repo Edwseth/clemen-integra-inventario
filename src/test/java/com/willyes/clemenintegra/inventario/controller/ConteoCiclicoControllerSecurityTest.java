@@ -35,6 +35,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -157,4 +159,36 @@ class ConteoCiclicoControllerSecurityTest {
                                 .authorities(() -> "INV_CONTEOS_READ")))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void permiteAplicarConteoConRolContador() throws Exception {
+        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
+                .id(77L)
+                .estado(EstadoConteoCiclico.APLICADO)
+                .build();
+        when(conteoCiclicoService.aplicar(anyLong(), eq("k1"))).thenReturn(response);
+
+        mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
+                        .header("Idempotency-Key", "k1")
+                        .with(SecurityMockMvcRequestPostProcessors.user("contador")
+                                .authorities(() -> "ROL_CONTADOR")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void rechazaAplicarConteoConRolJefeAlmacenes() throws Exception {
+        mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe")
+                                .authorities(() -> "ROL_JEFE_ALMACENES")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void rechazaAplicarConteoConPermisoWriteSinRolContador() throws Exception {
+        mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("perm-write")
+                                .authorities(() -> "INV_CONTEOS_WRITE")))
+                .andExpect(status().isForbidden());
+    }
+
 }
