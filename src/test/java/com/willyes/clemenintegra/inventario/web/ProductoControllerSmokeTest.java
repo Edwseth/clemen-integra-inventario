@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.controller.ProductoController;
 import com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoAutocompleteDTO;
-import com.willyes.clemenintegra.inventario.dto.ProductoOptionDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.UnidadMedidaAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -211,59 +210,63 @@ class ProductoControllerSmokeTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
-    @DisplayName("GET /api/productos/buscar utiliza term/activo y devuelve opciones")
-    void buscarProductos_conTerminoYActivo() throws Exception {
-        ProductoOptionDTO option = ProductoOptionDTO.builder()
-                .id(5L)
-                .nombre("Producto RVC")
-                .sku("RVC001")
-                .build();
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<ProductoOptionDTO> page = new PageImpl<>(List.of(option), pageable, 1);
-        when(productoService.buscarOpciones(anyString(), any(Boolean.class), any(), any(Pageable.class)))
-                .thenReturn(page);
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    @DisplayName("GET /api/productos/buscar permite acceso a contador")
+    void buscarProductosParaAjustes_contadorOk() throws Exception {
+        UnidadMedidaAutocompleteDTO unidad = new UnidadMedidaAutocompleteDTO(3L, "Unidad", "U", 2);
+        ProductoAutocompleteDTO response = new ProductoAutocompleteDTO(5, "SKU-RESV", "Resveratrol 500", unidad);
+
+        when(productoService.buscarAutocompleteInventarioAjustes(eq("resveratrol"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/productos/buscar")
-                        .param("term", "RVC")
-                        .param("activo", "true")
+                        .param("query", "resveratrol")
                         .param("page", "0")
-                        .param("size", "10"))
+                        .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.content[0].id").value(5))
-                .andExpect(jsonPath("$.content[0].sku").value("RVC001"))
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.content[0].codigoSku").value("SKU-RESV"))
+                .andExpect(jsonPath("$.content[0].nombre").value("Resveratrol 500"))
+                .andExpect(jsonPath("$.content[0].unidadMedida.id").value(3))
+                .andExpect(jsonPath("$.content[0].unidadMedida.abreviatura").value("U"));
 
-        verify(productoService).buscarOpciones(eq("RVC"), eq(true), eq(null), any(Pageable.class));
+        verify(productoService).buscarAutocompleteInventarioAjustes(eq("resveratrol"), any(Pageable.class));
     }
 
     @Test
     @WithMockUser(authorities = "ROL_ALMACENISTA")
-    @DisplayName("GET /api/productos/buscar envía almacenId al servicio cuando se proporciona")
-    void buscarProductos_conAlmacenId() throws Exception {
-        ProductoOptionDTO option = ProductoOptionDTO.builder()
-                .id(7L)
-                .nombre("Producto Bodega")
-                .sku("BOD001")
-                .build();
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<ProductoOptionDTO> page = new PageImpl<>(List.of(option), pageable, 1);
-        when(productoService.buscarOpciones(anyString(), any(), anyLong(), any(Pageable.class)))
-                .thenReturn(page);
+    @DisplayName("GET /api/productos/buscar rechaza roles sin permiso")
+    void buscarProductosParaAjustes_rolNoPermitido() throws Exception {
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("query", "resveratrol"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("GET /api/productos/buscar devuelve coincidencias por nombre")
+    void buscarProductosParaAjustes_buscaPorNombre() throws Exception {
+        ProductoAutocompleteDTO response = new ProductoAutocompleteDTO(9, "SKU-123", "Resveratrol Gold", null);
+        when(productoService.buscarAutocompleteInventarioAjustes(eq("resveratrol"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/productos/buscar")
-                        .param("q", "BOD")
-                        .param("almacenId", "8")
-                        .param("page", "0")
-                        .param("size", "10"))
+                        .param("query", "resveratrol"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.content[0].id").value(7))
-                .andExpect(jsonPath("$.content[0].sku").value("BOD001"))
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.content[0].nombre").value("Resveratrol Gold"));
+    }
 
-        verify(productoService).buscarOpciones(eq("BOD"), eq(null), eq(8L), any(Pageable.class));
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("GET /api/productos/buscar devuelve coincidencias por codigoSku")
+    void buscarProductosParaAjustes_buscaPorSku() throws Exception {
+        ProductoAutocompleteDTO response = new ProductoAutocompleteDTO(11, "SKU-ABC-01", "Producto SKU", null);
+        when(productoService.buscarAutocompleteInventarioAjustes(eq("SKU-ABC"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
+
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("query", "SKU-ABC"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].codigoSku").value("SKU-ABC-01"));
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO;
+import com.willyes.clemenintegra.inventario.dto.ProductoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
@@ -74,7 +75,7 @@ class ProductoRepositoryAutocompleteTest {
 
         producto = productoRepository.save(Producto.builder()
                 .codigoSku("MP-001")
-                .nombre("Insumo Prueba")
+                .nombre("Resveratrol Insumo Prueba")
                 .stockMinimo(BigDecimal.ONE)
                 .activo(true)
                 .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
@@ -105,4 +106,35 @@ class ProductoRepositoryAutocompleteTest {
         assertThat(resultado.getUnidadMedidaId()).isEqualTo(unidad.getId());
         assertThat(resultado.getUnidadMedidaNombre()).isEqualToIgnoringCase("Unidad");
     }
+
+
+    @Test
+    @DisplayName("buscarAutocompleteInventarioAjustes encuentra coincidencias por nombre")
+    void buscarAutocompleteInventarioAjustes_porNombre() {
+        Page<ProductoAutocompleteDTO> page = productoRepository.buscarAutocompleteInventarioAjustes(
+                "resveratrol",
+                PageRequest.of(0, 20)
+        );
+
+        assertThat(page.getContent()).hasSize(1);
+        ProductoAutocompleteDTO resultado = page.getContent().get(0);
+        assertThat(resultado.nombre()).isEqualTo("Resveratrol Insumo Prueba");
+        assertThat(resultado.unidadMedida()).isNotNull();
+        assertThat(resultado.unidadMedida().abreviatura()).isEqualTo("U");
+        assertThat(resultado.unidadMedida().decimales()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("buscarAutocompleteInventarioAjustes encuentra coincidencias por codigoSku")
+    void buscarAutocompleteInventarioAjustes_porSku() {
+        Page<ProductoAutocompleteDTO> page = productoRepository.buscarAutocompleteInventarioAjustes(
+                "MP-001",
+                PageRequest.of(0, 20)
+        );
+
+        assertThat(page.getContent()).hasSize(1);
+        ProductoAutocompleteDTO resultado = page.getContent().get(0);
+        assertThat(resultado.codigoSku()).isEqualTo("MP-001");
+    }
+
 }

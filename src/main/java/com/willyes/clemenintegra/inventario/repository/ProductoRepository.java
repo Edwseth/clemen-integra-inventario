@@ -191,4 +191,38 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
             @Param("term") String term,
             Pageable pageable
     );
+
+    @Query(value = """
+    SELECT new com.willyes.clemenintegra.inventario.dto.ProductoAutocompleteDTO(
+        p.id,
+        p.codigoSku,
+        p.nombre,
+        new com.willyes.clemenintegra.inventario.dto.UnidadMedidaAutocompleteDTO(
+            um.id,
+            um.nombre,
+            um.simbolo,
+            2
+        )
+    )
+    FROM Producto p
+    JOIN p.unidadMedida um
+    WHERE p.activo = true
+      AND (
+           UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:query), '%')
+        OR UPPER(p.nombre) LIKE CONCAT('%', UPPER(:query), '%')
+      )
+    """, countQuery = """
+    SELECT COUNT(p)
+    FROM Producto p
+    WHERE p.activo = true
+      AND (
+           UPPER(p.codigoSku) LIKE CONCAT('%', UPPER(:query), '%')
+        OR UPPER(p.nombre) LIKE CONCAT('%', UPPER(:query), '%')
+      )
+    """)
+    Page<ProductoAutocompleteDTO> buscarAutocompleteInventarioAjustes(
+            @Param("query") String query,
+            Pageable pageable
+    );
+
 }
