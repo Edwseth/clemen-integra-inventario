@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.calidad.service.NoConformidadService;
 import com.willyes.clemenintegra.documental.controller.ControlDocumentalController;
 import com.willyes.clemenintegra.documental.service.ControlDocumentalService;
 import com.willyes.clemenintegra.inventario.controller.AjusteInventarioController;
+import com.willyes.clemenintegra.inventario.controller.ConteoCiclicoController;
 import com.willyes.clemenintegra.inventario.controller.OrdenCompraController;
 import com.willyes.clemenintegra.inventario.controller.ProductoController;
 import com.willyes.clemenintegra.inventario.controller.SolicitudMovimientoController;
@@ -58,6 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {
         ProductoController.class,
         AjusteInventarioController.class,
+        ConteoCiclicoController.class,
         SolicitudMovimientoController.class,
         OrdenCompraController.class,
         ControlDocumentalController.class,
@@ -83,6 +85,7 @@ class RoleJefeAlmacenesSecuritySmokeTest {
     @MockBean private UnidadMedidaRepository unidadMedidaRepository;
 
     @MockBean private AjusteInventarioService ajusteInventarioService;
+    @MockBean private ConteoCiclicoService conteoCiclicoService;
 
     @MockBean private SolicitudMovimientoService solicitudMovimientoService;
     @MockBean private UsuarioService usuarioService;
@@ -219,6 +222,25 @@ class RoleJefeAlmacenesSecuritySmokeTest {
     }
 
     @Test
+    void inventarioProductosBuscarAutocompleteDenegadoParaPlaneador() throws Exception {
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("query", "pro")
+                        .with(authentication(planeadorAuth())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void inventarioConteosLotesGetPermitidoParaJefeAlmacenes() throws Exception {
+        when(conteoCiclicoService.listarLotesParaConteo(anyLong(), anyLong(), any(), any()))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/inventario/conteos/8/lotes")
+                        .param("productoId", "55")
+                        .with(authentication(jefeAuth())))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void inventarioProductosBuscarAutocompleteConQueryCortaRetornaPageVacia() throws Exception {
         when(productoService.buscarAutocompleteInventarioAjustes(any(), any())).thenReturn(Page.empty());
 
@@ -290,6 +312,26 @@ class RoleJefeAlmacenesSecuritySmokeTest {
         CustomUserDetails principal = new CustomUserDetails(
                 usuario,
                 List.of(new SimpleGrantedAuthority(RolUsuario.ROL_JEFE_ALMACENES.name())));
+        return new UsernamePasswordAuthenticationToken(
+                principal,
+                "N/A",
+                principal.getAuthorities());
+    }
+
+    private Authentication planeadorAuth() {
+        Usuario usuario = Usuario.builder()
+                .id(11L)
+                .nombreUsuario("planeador")
+                .correo("planeador@demo.com")
+                .nombreCompleto("Planeador")
+                .clave("x")
+                .rol(RolUsuario.ROL_PLANEADOR)
+                .activo(true)
+                .bloqueado(false)
+                .build();
+        CustomUserDetails principal = new CustomUserDetails(
+                usuario,
+                List.of(new SimpleGrantedAuthority(RolUsuario.ROL_PLANEADOR.name())));
         return new UsernamePasswordAuthenticationToken(
                 principal,
                 "N/A",
