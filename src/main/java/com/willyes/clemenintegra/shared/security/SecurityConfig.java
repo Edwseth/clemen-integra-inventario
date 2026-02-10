@@ -214,9 +214,15 @@ public class SecurityConfig {
 
                     auth.requestMatchers("/api/ordenes-compra/**").hasAnyAuthority(
                             RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/ajustes/**").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name(),
+                            "INV_AJUSTES_READ",
+                            "INV_AJUSTES_WRITE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyAuthority(
@@ -415,6 +421,7 @@ public class SecurityConfig {
                             "/api/produccion/indicadores",
                             "/api/produccion/ordenes/alertas",
                             "/api/produccion/indicadores/export/excel").hasAnyAuthority(
+                            RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_JEFE_PRODUCCION.name(),
                             RolUsuario.ROL_LIDER_ALIMENTOS.name(),
                             RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
