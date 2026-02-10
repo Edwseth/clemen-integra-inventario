@@ -95,6 +95,8 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
 
     boolean existsBySolicitudMovimientoId(Long solicitudMovimientoId);
 
+    boolean existsByOrdenProduccionId(Long ordenProduccionId);
+
     @EntityGraph(attributePaths = {
             "producto", "producto.unidadMedida", "lote", "lote.producto",
             "almacenOrigen", "almacenDestino", "registradoPor", "ordenProduccion", "ordenProduccionEtapa",

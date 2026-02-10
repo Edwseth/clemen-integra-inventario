@@ -70,6 +70,7 @@ import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem;
+import com.willyes.clemenintegra.produccion.validators.ProduccionEtapasLockValidator;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
@@ -147,6 +148,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final ChecklistEtapaItemRepository checklistEtapaItemRepository;
     private final LoteConsecutivoDiaService loteConsecutivoDiaService;
     private final OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository;
+    private final ProduccionEtapasLockValidator produccionEtapasLockValidator;
 
     private static final int SEMANAS_HOMEOPATICO = 78;
     private static final BigDecimal CANTIDAD_MAXIMA_HOMEOPATICO = new BigDecimal("30");
@@ -1472,6 +1474,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     public void clonarEtapas(Long ordenId) {
+        produccionEtapasLockValidator.assertEtapasEditables(ordenId);
         OrdenProduccion orden = repository.findById(ordenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
         List<EtapaProduccion> existentes = etapaProduccionRepository.findByOrdenProduccionIdOrderBySecuenciaAsc(ordenId);
