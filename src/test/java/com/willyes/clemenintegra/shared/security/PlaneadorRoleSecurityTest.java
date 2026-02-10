@@ -45,6 +45,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {
@@ -129,14 +130,14 @@ class PlaneadorRoleSecurityTest {
 
     @Test
     @WithMockUser(authorities = "ROL_PLANEADOR")
-    void planeadorPuedeBuscarProductos() throws Exception {
-        when(productoService.buscarOpciones(any(), any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of()));
-
+    void planeadorNoPuedeBuscarProductosParaAjustes() throws Exception {
         mockMvc.perform(get("/api/productos/buscar")
-                        .param("q", "CA")
+                        .param("query", "pro")
+                        .param("page", "0")
+                        .param("size", "10")
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ROL_INSUFICIENTE"));
     }
 
     @Test

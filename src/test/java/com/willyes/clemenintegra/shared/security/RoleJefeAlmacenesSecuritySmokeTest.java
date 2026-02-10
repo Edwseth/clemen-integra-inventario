@@ -52,6 +52,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {
@@ -203,6 +204,32 @@ class RoleJefeAlmacenesSecuritySmokeTest {
         mockMvc.perform(delete("/api/inventario/ajustes/1")
                         .with(authentication(jefeAuth())))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void inventarioProductosBuscarAutocompletePermitidoParaJefeAlmacenes() throws Exception {
+        when(productoService.buscarAutocompleteInventarioAjustes(any(), any())).thenReturn(Page.empty());
+
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("query", "pro")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .with(authentication(jefeAuth())))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void inventarioProductosBuscarAutocompleteConQueryCortaRetornaPageVacia() throws Exception {
+        when(productoService.buscarAutocompleteInventarioAjustes(any(), any())).thenReturn(Page.empty());
+
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("query", "p")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .with(authentication(jefeAuth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content").isEmpty());
     }
 
     @Test
