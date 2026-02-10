@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.service.UnidadMedidaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class UnidadMedidaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
     public ResponseEntity<UnidadMedidaResponseDTO> actualizar(@PathVariable Long id,
                                                               @Valid @RequestBody UnidadMedidaRequestDTO dto) {
         UnidadMedidaResponseDTO actualizado = unidadMedidaService.actualizar(id, dto);
@@ -41,6 +43,7 @@ public class UnidadMedidaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         unidadMedidaService.eliminar(id);
         return ResponseEntity.noContent().build();

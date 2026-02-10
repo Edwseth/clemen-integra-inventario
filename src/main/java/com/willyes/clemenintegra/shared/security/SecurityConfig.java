@@ -161,10 +161,8 @@ public class SecurityConfig {
                     auth.requestMatchers(
                             "/api/productos/**",
                             "/api/motivos/**", "/api/lotes/**", "/api/almacenes/**",
-                            "/api/proveedores/**", "/api/unidades/**",
-                            "/api/inventario/historial-ordenes/**",
-                            "/api/inventario/ordenes-compra-detalle/**",
-                            "/api/inventario/tipos-movimiento-detalle/**"
+                            "/api/proveedores/**",
+                            "/api/inventario/historial-ordenes/**"
                     ).hasAnyAuthority(
                             RolUsuario.ROL_ALMACENISTA.name(),
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
@@ -502,7 +500,6 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET,
-                            "/api/inventarios/solicitudes/**",
                             "/api/inventario/solicitudes/**"
                     ).hasAnyAuthority(
                             RolUsuario.ROL_ALMACENISTA.name(),
@@ -513,7 +510,6 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(
-                            "/api/inventarios/solicitudes/**",
                             "/api/inventario/solicitudes/**"
                     ).hasAnyAuthority(
                             RolUsuario.ROL_ALMACENISTA.name(),
