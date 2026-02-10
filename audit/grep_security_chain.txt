@@ -1,0 +1,71 @@
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:18:import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:26:import org.springframework.security.web.SecurityFilterChain;
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:57:    public AuthenticationManager authenticationManager(HttpSecurity http,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:83:    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:91:                .authorizeHttpRequests(auth -> {
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:92:                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:94:                    auth.requestMatchers(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:114:                    auth.requestMatchers(HttpMethod.PATCH, "/api/inventario/productos/*/calidad").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:119:                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/productos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:125:                    auth.requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:135:                    auth.requestMatchers(HttpMethod.GET,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:147:                    auth.requestMatchers(HttpMethod.GET, "/api/productos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:161:                    auth.requestMatchers(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:181:                    auth.requestMatchers("/api/inventario/ordenes/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:187:                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/conteos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:195:                    auth.requestMatchers(HttpMethod.POST, "/api/inventario/conteos/*/aplicar").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:200:                    auth.requestMatchers("/api/inventario/conteos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:207:                    auth.requestMatchers(HttpMethod.GET,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:217:                    auth.requestMatchers("/api/ordenes-compra/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:224:                    auth.requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:235:                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/alertas/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:244:                    auth.requestMatchers(HttpMethod.GET, "/api/lotes/**", "/api/inventario/lotes/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:257:                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/kardex/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:270:                    auth.requestMatchers("/api/movimientos/**", "/api/categorias/**",
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:277:                    auth.requestMatchers("/api/recepciones/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:284:                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:292:                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:300:                    auth.requestMatchers("/api/planeacion/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:306:                    auth.requestMatchers(HttpMethod.GET, "/api/mrp/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:312:                    auth.requestMatchers("/api/mrp/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:317:                    auth.requestMatchers(HttpMethod.POST, "/api/ordenes-compra/*/documentos").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:322:                    auth.requestMatchers(HttpMethod.GET,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:331:                    auth.requestMatchers(HttpMethod.POST,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:339:                    auth.requestMatchers(HttpMethod.DELETE,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:345:                    auth.requestMatchers("/api/documental/documentos/**").authenticated();
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:347:                    auth.requestMatchers(HttpMethod.GET, "/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:352:                    auth.requestMatchers("/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:357:                    auth.requestMatchers(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:368:                    auth.requestMatchers(HttpMethod.GET,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:379:                    auth.requestMatchers(HttpMethod.GET,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:390:                    auth.requestMatchers(HttpMethod.GET,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:399:                    auth.requestMatchers("/api/calidad/**",
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:408:                    auth.requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:416:                    auth.requestMatchers(HttpMethod.GET,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:428:                    auth.requestMatchers(HttpMethod.GET, "/api/produccion/ordenes/*/insumos").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:440:                    auth.requestMatchers(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:454:                    auth.requestMatchers("/api/produccion/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:462:                    auth.requestMatchers(HttpMethod.GET, "/api/bom/formulas/producto/*/formula-activa").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:469:                    auth.requestMatchers(HttpMethod.GET, "/api/bom/formulas/activa").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:476:                    auth.requestMatchers("/api/bom/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:482:                    auth.requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:488:                    auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:500:                    auth.requestMatchers("/actuator/metrics/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:504:                    auth.requestMatchers(HttpMethod.GET,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:515:                    auth.requestMatchers(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:525:                    auth.requestMatchers("/api/inventario/bitacora", "/api/inventario/bitacora/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:531:                    auth.requestMatchers("/error").permitAll();
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:532:                    auth.requestMatchers("/api/**").authenticated();
+src/test/java/com/willyes/clemenintegra/calidad/controller/CapaControllerSecurityTest.java:75:    private Filter springSecurityFilterChain;
+src/test/java/com/willyes/clemenintegra/calidad/controller/CapaControllerSecurityTest.java:92:                .addFilters(springSecurityFilterChain, guard)
+src/test/java/com/willyes/clemenintegra/inventario/controller/BitacoraCambiosInventarioControllerSecurityTest.java:70:    private Filter springSecurityFilterChain;
+src/test/java/com/willyes/clemenintegra/inventario/controller/BitacoraCambiosInventarioControllerSecurityTest.java:87:                .addFilters(springSecurityFilterChain, guard)
+src/test/java/com/willyes/clemenintegra/shared/security/ForwardHeadersIntegrationTest.java:17:import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+src/test/java/com/willyes/clemenintegra/shared/security/ForwardHeadersIntegrationTest.java:18:import org.springframework.security.web.SecurityFilterChain;
+src/test/java/com/willyes/clemenintegra/shared/security/ForwardHeadersIntegrationTest.java:61:        SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+src/test/java/com/willyes/clemenintegra/shared/security/ForwardHeadersIntegrationTest.java:64:                    .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+src/test/java/com/willyes/clemenintegra/shared/security/JwtAuthenticationIntegrationTest.java:12:import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+src/test/java/com/willyes/clemenintegra/shared/security/JwtAuthenticationIntegrationTest.java:14:import org.springframework.security.web.SecurityFilterChain;
+src/test/java/com/willyes/clemenintegra/shared/security/JwtAuthenticationIntegrationTest.java:56:        SecurityFilterChain securityFilterChain(HttpSecurity http,
+src/test/java/com/willyes/clemenintegra/shared/security/JwtAuthenticationIntegrationTest.java:63:                    .authorizeHttpRequests(auth -> auth
+src/test/java/com/willyes/clemenintegra/shared/security/JwtAuthenticationIntegrationTest.java:64:                            .requestMatchers("/api/test").authenticated()
