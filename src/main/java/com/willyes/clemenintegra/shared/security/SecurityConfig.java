@@ -192,6 +192,11 @@ public class SecurityConfig {
                             "INV_CONTEOS_READ"
                     );
 
+                    auth.requestMatchers(HttpMethod.POST, "/api/inventario/conteos/*/aplicar").hasAnyAuthority(
+                            RolUsuario.ROL_CONTADOR.name(),
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     auth.requestMatchers("/api/inventario/conteos/**").hasAnyAuthority(
                             RolUsuario.ROL_JEFE_ALMACENES.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name(),

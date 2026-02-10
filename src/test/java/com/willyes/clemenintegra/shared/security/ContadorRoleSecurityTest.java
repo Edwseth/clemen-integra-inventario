@@ -27,6 +27,7 @@ import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
@@ -305,9 +306,14 @@ class ContadorRoleSecurityTest {
 
     @Test
     @WithMockUser(authorities = "ROL_CONTADOR")
-    void contadorNoPuedeAplicarNiCerrarConteo() throws Exception {
+    void contadorPuedeAplicarPeroNoCerrarConteo() throws Exception {
+        when(conteoCiclicoService.aplicar(any(), any())).thenReturn(ConteoCiclicoResponseDTO.builder()
+                .id(1L)
+                .estado(com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico.APLICADO)
+                .build());
+
         mockMvc.perform(post("/api/inventario/conteos/1/aplicar"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/inventario/conteos/1/cerrar"))
                 .andExpect(status().isForbidden());
