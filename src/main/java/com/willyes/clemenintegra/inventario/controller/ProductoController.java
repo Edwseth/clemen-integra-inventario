@@ -40,16 +40,11 @@ public class ProductoController {
     private final UsuarioRepository usuarioRepository;
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
-            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
-    public ResponseEntity<Page<ProductoOptionDTO>> buscarProductos(
-            @RequestParam(name = "q", required = false) String q,
-            @RequestParam(name = "term", required = false) String term,
-            @RequestParam(name = "activo", required = false) Boolean activo,
-            @RequestParam(name = "almacenId", required = false) Long almacenId,
-            @PageableDefault(size = 10, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
-        String criterio = (term != null && !term.isBlank()) ? term : q;
-        Page<ProductoOptionDTO> page = productoService.buscarOpciones(criterio, activo, almacenId, pageable);
+    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    public ResponseEntity<Page<ProductoAutocompleteDTO>> buscarProductosParaAjustes(
+            @RequestParam(name = "query", required = false) String query,
+            @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<ProductoAutocompleteDTO> page = productoService.buscarAutocompleteInventarioAjustes(query, pageable);
         return ResponseEntity.ok(page);
     }
 

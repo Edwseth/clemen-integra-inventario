@@ -616,6 +616,16 @@ public class ProductoServiceImpl implements ProductoService {
         return productoRepository.buscarFabricablesAutocomplete(tiposFabricables, cleaned, pageable);
     }
 
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductoAutocompleteDTO> buscarAutocompleteInventarioAjustes(String query, Pageable pageable) {
+        if (query == null || query.trim().length() < 2) {
+            return Page.empty(pageable);
+        }
+        return productoRepository.buscarAutocompleteInventarioAjustes(query.trim(), pageable);
+    }
     @Override
     @Transactional(readOnly = true)
     public Page<InsumoAutocompleteDTO> buscarInsumosAutocomplete(String term, Pageable pageable) {
