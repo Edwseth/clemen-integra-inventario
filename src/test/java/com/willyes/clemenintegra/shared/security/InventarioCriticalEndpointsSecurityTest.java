@@ -1,15 +1,17 @@
-package com.willyes.clemenintegra.inventario.controller;
+package com.willyes.clemenintegra.shared.security;
 
-import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
+import com.willyes.clemenintegra.inventario.controller.OrdenCompraDetalleController;
+import com.willyes.clemenintegra.inventario.controller.TipoMovimientoDetalleController;
+import com.willyes.clemenintegra.inventario.controller.UnidadMedidaController;
+import com.willyes.clemenintegra.inventario.mapper.OrdenCompraDetalleMapper;
+import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.inventario.service.OrdenCompraDetalleService;
+import com.willyes.clemenintegra.inventario.service.TipoMovimientoDetalleService;
+import com.willyes.clemenintegra.inventario.service.UnidadMedidaService;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
-import com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider;
-import com.willyes.clemenintegra.shared.security.SecurityConfig;
-import com.willyes.clemenintegra.shared.security.SuperAdminSoloLecturaWriteBlockFilter;
-import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
-import com.willyes.clemenintegra.shared.service.UsuarioService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,25 +26,26 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {SolicitudPorOrdenController.class, SolicitudMovimientoController.class})
+@WebMvcTest(controllers = {
+        UnidadMedidaController.class,
+        OrdenCompraDetalleController.class,
+        TipoMovimientoDetalleController.class
+})
 @AutoConfigureMockMvc(addFilters = true)
-@Import({SecurityConfig.class, SolicitudMovimientoControllerSecurityTest.MethodSecurityConfig.class})
+@Import({SecurityConfig.class, InventarioCriticalEndpointsSecurityTest.MethodSecurityConfig.class})
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
-class SolicitudMovimientoControllerSecurityTest {
+class InventarioCriticalEndpointsSecurityTest {
 
     @org.springframework.boot.test.context.TestConfiguration
     @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity(prePostEnabled = true)
@@ -53,9 +56,18 @@ class SolicitudMovimientoControllerSecurityTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private SolicitudMovimientoService solicitudMovimientoService;
+    private UnidadMedidaService unidadMedidaService;
     @MockBean
-    private UsuarioService usuarioService;
+    private OrdenCompraDetalleService ordenCompraDetalleService;
+    @MockBean
+    private OrdenCompraRepository ordenCompraRepository;
+    @MockBean
+    private ProductoRepository productoRepository;
+    @MockBean
+    private OrdenCompraDetalleMapper ordenCompraDetalleMapper;
+    @MockBean
+    private TipoMovimientoDetalleService tipoMovimientoDetalleService;
+
     @MockBean
     private JwtAuthenticationProvider jwtAuthenticationProvider;
     @MockBean
@@ -105,23 +117,41 @@ class SolicitudMovimientoControllerSecurityTest {
     }
 
     @Test
-    void planeadorPuedeListarSolicitudesPorOrden() throws Exception {
-        when(solicitudMovimientoService.listGroupByOrden(any(), any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of()));
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    void contadorNoPuedeModificarNiEliminarUnidad() throws Exception {
+        mockMvc.perform(put("/api/unidades/1")
+                        .contentType("application/json")
+                        .content("{\"nombre\":\"Kilogramo\",\"simbolo\":\"KG\"}"))
+                .andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/api/inventarios/solicitudes/por-orden")
-                        .param("page", "0")
-                        .param("size", "10")
-                        .with(SecurityMockMvcRequestPostProcessors.user("planeador")
-                                .authorities(() -> "ROL_PLANEADOR")))
-                .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/unidades/1"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    void planeadorNoPuedeAprobarSolicitudes() throws Exception {
-        mockMvc.perform(put("/api/inventario/solicitudes/1/aprobar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("planeador")
-                                .authorities(() -> "ROL_PLANEADOR")))
+    @WithMockUser(authorities = "ROL_PLANEADOR")
+    void planeadorNoPuedeEliminarDetallesSensibles() throws Exception {
+        mockMvc.perform(delete("/api/inventario/ordenes-compra-detalle/1"))
                 .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete("/api/inventario/tipos-movimiento-detalle/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void jefeAlmacenesPuedeEliminarUnidadesYTiposMovimientoDetalle() throws Exception {
+        mockMvc.perform(delete("/api/unidades/1"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete("/api/inventario/tipos-movimiento-detalle/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_COMPRADOR")
+    void compradorPuedeEliminarOrdenCompraDetalle() throws Exception {
+        mockMvc.perform(delete("/api/inventario/ordenes-compra-detalle/1"))
+                .andExpect(status().isNoContent());
     }
 }

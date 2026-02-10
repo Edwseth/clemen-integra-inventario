@@ -110,12 +110,8 @@ src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController
   - `DELETE /api/unidades/{id}` (ANULAR) → CONTADOR=ALLOW, PLANEADOR=ALLOW [SecurityConfig].
   - `GET /api/calidad/lotes/{loteId}/estado-calidad` (CAMBIAR_ESTADO) → CONTADOR=DENY, PLANEADOR=ALLOW [SecurityConfig + @PreAuthorize].
 
-- Inconsistencias de prefijo detectadas (`/api/inventarios` vs `/api/inventario`): 5 endpoints en plural.
-  - `GET /api/inventarios/solicitudes/{id}` (src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:82).
-  - `PUT /api/inventarios/solicitudes/{id}/aprobar` (src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:88).
-  - `PUT /api/inventarios/solicitudes/{id}/rechazar` (src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:98).
-  - `PUT /api/inventarios/solicitudes/{id}/revertir-autorizacion` (src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:106).
-  - `POST /api/inventarios/solicitudes/{id}/autorizar-todo` (src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:116).
+- Inconsistencias de prefijo detectadas (`/api/inventarios` vs `/api/inventario`): **resueltas para SolicitudMovimientoController** migrando el contrato oficial a `/api/inventario/solicitudes`.
+  - Se conserva alias temporal en `SolicitudPorOrdenController` para `/por-orden` y `/ordenes` por compatibilidad con FE.
 
 - Control manual a nivel Service detectado: `RetencionLoteServiceImpl` consulta authorities desde `SecurityContextHolder` (validación adicional fuera de anotaciones).
 
@@ -124,3 +120,10 @@ src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController
 - Para endpoints sin @PreAuthorize, FE debe consumir la matriz y no inferir permisos por módulo.
 - Normalizar consumo de rutas con prefijos `/api/inventario` y `/api/inventarios` para evitar 404/403 inconsistentes entre ambientes.
 - Etiquetar en FE operaciones críticas actualmente ALLOW para CONTADOR/PLANEADOR (ej. unidades, detalles de OC) para revisión funcional con negocio.
+
+## D) Seguimiento de endurecimiento (implementado)
+- Endpoints críticos removidos de matcher global de `SecurityConfig` y movidos a `@PreAuthorize` por controlador:
+  - `PUT/DELETE /api/unidades/{id}` -> solo `ROL_JEFE_ALMACENES` y `ROL_SUPER_ADMIN`.
+  - `DELETE /api/inventario/ordenes-compra-detalle/{id}` -> `ROL_COMPRADOR`, `ROL_JEFE_ALMACENES`, `ROL_SUPER_ADMIN`.
+  - `DELETE /api/inventario/tipos-movimiento-detalle/{id}` -> `ROL_JEFE_ALMACENES`, `ROL_SUPER_ADMIN`.
+- Reducción de endpoints “solo SecurityConfig”: los endpoints anteriores ahora dependen de anotaciones de método para evitar ALLOW accidental por matchers amplios.
