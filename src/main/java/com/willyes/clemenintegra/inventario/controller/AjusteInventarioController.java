@@ -22,7 +22,7 @@ public class AjusteInventarioController {
     private final AjusteInventarioService service;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('INV_AJUSTES_READ','INV_AJUSTES_WRITE','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_AJUSTES_READ','INV_AJUSTES_WRITE','ROL_JEFE_ALMACENES','ROL_CONTADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<AjusteInventarioResponseDTO>> listar(
             @PageableDefault(size = 10, sort = "fecha") Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
@@ -45,4 +45,3 @@ public class AjusteInventarioController {
         return ResponseEntity.noContent().build();
     }
 }
-
