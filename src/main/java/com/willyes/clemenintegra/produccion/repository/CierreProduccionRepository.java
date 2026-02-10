@@ -11,4 +11,6 @@ public interface CierreProduccionRepository extends JpaRepository<CierreProducci
     Page<CierreProduccion> findByOrdenProduccionId(Long ordenId, Pageable pageable);
 
     long countByOrdenProduccionId(Long ordenId);
+
+    boolean existsByOrdenProduccionId(Long ordenId);
 }

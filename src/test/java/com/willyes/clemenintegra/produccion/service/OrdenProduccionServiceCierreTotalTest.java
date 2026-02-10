@@ -22,6 +22,7 @@ import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.OpHomeopaticoOverrideRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.validators.ProduccionEtapasLockValidator;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -102,6 +103,7 @@ class OrdenProduccionServiceCierreTotalTest {
                 mock(com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository.class);
         LoteConsecutivoDiaService loteConsecutivoDiaService = mock(LoteConsecutivoDiaService.class);
         OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository = mock(OpHomeopaticoOverrideRepository.class);
+        ProduccionEtapasLockValidator produccionEtapasLockValidator = mock(ProduccionEtapasLockValidator.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -131,7 +133,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 checklistEtapaService,
                 checklistEtapaItemRepository,
                 loteConsecutivoDiaService,
-                opHomeopaticoOverrideRepository
+                opHomeopaticoOverrideRepository,
+                produccionEtapasLockValidator
         );
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDO");

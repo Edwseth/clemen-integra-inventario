@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.repository.*;
+import com.willyes.clemenintegra.produccion.validators.ProduccionEtapasLockValidator;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +63,7 @@ class OrdenProduccionServiceChecklistTest {
                 mock(com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository.class);
         LoteConsecutivoDiaService loteConsecutivoDiaService = mock(LoteConsecutivoDiaService.class);
         OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository = mock(OpHomeopaticoOverrideRepository.class);
+        ProduccionEtapasLockValidator produccionEtapasLockValidator = mock(ProduccionEtapasLockValidator.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -91,7 +93,8 @@ class OrdenProduccionServiceChecklistTest {
                 checklistEtapaService,
                 checklistEtapaItemRepository,
                 loteConsecutivoDiaService,
-                opHomeopaticoOverrideRepository
+                opHomeopaticoOverrideRepository,
+                produccionEtapasLockValidator
         );
 
         OrdenProduccion orden = OrdenProduccion.builder()

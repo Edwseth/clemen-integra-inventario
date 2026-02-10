@@ -12,6 +12,8 @@ public interface EtapaProduccionRepository extends JpaRepository<EtapaProduccion
 
     boolean existsByOrdenProduccionId(Long ordenProduccionId);
 
+    boolean existsByOrdenProduccionIdAndFechaInicioIsNotNull(Long ordenProduccionId);
+
     long countByOrdenProduccionId(Long ordenProduccionId);
 
     long countByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(Long ordenProduccionId);
