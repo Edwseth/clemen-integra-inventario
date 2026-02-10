@@ -1,0 +1,482 @@
+docs/mrp_export_design.md:62:  - `@PreAuthorize("hasAnyAuthority('ROL_PLANEADOR','ROL_JEFE_PLANEACION','ROL_SUPER_ADMIN')")`
+docs/mrp_export_design.md:67:  - `@PreAuthorize("hasAnyAuthority('ROL_PLANEADOR','ROL_JEFE_PLANEACION','ROL_SUPER_ADMIN')")`
+src/main/java/com/willyes/clemenintegra/bom/controller/BomProductoController.java:25:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DetalleFormulaController.java:25:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DetalleFormulaController.java:33:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DetalleFormulaController.java:42:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DetalleFormulaController.java:52:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DetalleFormulaController.java:67:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DocumentoFormulaController.java:34:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DocumentoFormulaController.java:40:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DocumentoFormulaController.java:55:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/DocumentoFormulaController.java:65:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:49:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:58:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:66:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:141:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:151:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:164:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:176:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:183:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/bom/controller/FormulaProductoController.java:191:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/AlertasCalidadController.java:21:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
+src/main/java/com/willyes/clemenintegra/calidad/controller/AlertasCalidadController.java:22:            "'ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CalidadAuditoriaController.java:29:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CalidadAuditoriaController.java:36:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CalidadAuditoriaController.java:49:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CalidadAuditoriaController.java:61:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:34:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:43:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:49:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:55:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:61:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:67:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:78:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:84:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/CapaController.java:97:    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/DocumentoCalidadController.java:35:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/DocumentoCalidadController.java:45:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/DocumentoCalidadController.java:54:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/DocumentoCalidadController.java:65:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/DocumentoCalidadController.java:71:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/DocumentoCalidadController.java:84:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EspecificacionesCalidadController.java:20:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EspecificacionesCalidadController.java:26:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EspecificacionesCalidadController.java:34:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EspecificacionesCalidadController.java:42:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EspecificacionesCalidadController.java:49:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EspecificacionesCalidadController.java:55:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EspecificacionesCalidadController.java:61:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EspecificacionesCalidadController.java:69:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:41:@PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:48:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:81:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:87:    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:95:    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:108:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:145:    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:157:    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:167:    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/EvaluacionCalidadController.java:173:    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/LoteCalidadController.java:30:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/LoteCalidadController.java:41:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/LoteCalidadController.java:47:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/LoteCalidadController.java:57:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/NoConformidadController.java:30:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/NoConformidadController.java:40:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/NoConformidadController.java:46:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/NoConformidadController.java:59:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/NoConformidadController.java:71:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/NoConformidadController.java:83:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/PlantillaAnalisisMicroController.java:16:@PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/ReportesCalidadController.java:42:@PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/RetencionLoteController.java:27:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/RetencionLoteController.java:35:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/RetencionLoteController.java:41:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/RetencionLoteController.java:52:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/RetencionLoteController.java:64:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/RetencionLoteController.java:71:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/VidaUtilProductoController.java:25:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
+src/main/java/com/willyes/clemenintegra/calidad/controller/VidaUtilProductoController.java:26:            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/VidaUtilProductoController.java:34:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
+src/main/java/com/willyes/clemenintegra/calidad/controller/VidaUtilProductoController.java:35:            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/VidaUtilProductoController.java:45:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/calidad/controller/VidaUtilProductoController.java:54:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/documental/controller/ControlDocumentalController.java:55:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','CONTROL_DOCUMENTAL_WRITE')")
+src/main/java/com/willyes/clemenintegra/documental/controller/ControlDocumentalController.java:64:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','CONTROL_DOCUMENTAL_WRITE')")
+src/main/java/com/willyes/clemenintegra/documental/controller/ControlDocumentalController.java:90:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/AjusteInventarioController.java:25:    @PreAuthorize("hasAnyAuthority('INV_AJUSTES_READ','INV_AJUSTES_WRITE','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/AjusteInventarioController.java:36:    @PreAuthorize("hasAnyAuthority('INV_AJUSTES_WRITE','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/AjusteInventarioController.java:42:    @PreAuthorize("hasAnyAuthority('INV_AJUSTES_WRITE','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/AlertaInventarioController.java:20:    @PreAuthorize("hasAnyAuthority('INV_ALERTAS_READ','ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_CONTADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/AlertaInventarioController.java:27:    @PreAuthorize("hasAnyAuthority('INV_ALERTAS_READ','ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_CONTADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/AlertaInventarioController.java:34:    @PreAuthorize("hasAnyAuthority('INV_ALERTAS_READ','ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_CONTADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/AlertaInventarioController.java:40:    @PreAuthorize("hasAnyAuthority('INV_ALERTAS_READ','ROL_SUPER_ADMIN','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_CONTADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/BitacoraCambiosInventarioController.java:14:@org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/CategoriaProductoController.java:22:    @PreAuthorize("hasAnyAuthority('INV_CATEGORIAS_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/CategoriaProductoController.java:28:    @PreAuthorize("hasAnyAuthority('INV_CATEGORIAS_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/CategoriaProductoController.java:34:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/CategoriaProductoController.java:41:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/CategoriaProductoController.java:49:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:31:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:45:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:52:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:64:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:71:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:79:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:87:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:94:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:101:    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoController.java:108:    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/InventarioConsultaController.java:22:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/InventarioFefoController.java:31:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/InventarioTaskController.java:23:    @PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ROL_JEFE_CALIDAD')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/KardexController.java:29:    @PreAuthorize("hasAnyAuthority(" +
+src/main/java/com/willyes/clemenintegra/inventario/controller/KardexController.java:37:            "'ROL_PLANEADOR'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/KardexController.java:38:            "'ROL_CONTADOR'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:40:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:47:    @PreAuthorize("hasAnyAuthority('INV_LOTES_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_CALIDAD'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:48:            " 'ROL_CONTADOR', 'ROL_PLANEADOR', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:55:    @PreAuthorize("hasAnyAuthority('INV_LOTES_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:56:            " 'ROL_CONTADOR', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:119:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:129:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:135:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:143:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteProductoController.java:151:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteResolverController.java:21:    @PreAuthorize("hasAnyAuthority(" +
+src/main/java/com/willyes/clemenintegra/inventario/controller/LoteResolverController.java:29:            "'ROL_CONTADOR'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/MovimientoInventarioController.java:65:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/MovimientoInventarioController.java:279:    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/MovimientoInventarioController.java:280:            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/MovimientoInventarioController.java:310:    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/MovimientoInventarioController.java:311:            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/MovimientoInventarioController.java:340:    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/MovimientoInventarioController.java:341:            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/OrdenCompraController.java:57:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/OrdenCompraController.java:123:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/OrdenCompraController.java:192:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/OrdenCompraController.java:206:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/OrdenCompraController.java:230:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/OrdenCompraDocumentoController.java:33:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/OrdenCompraDocumentoController.java:47:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/OrdenCompraDocumentoController.java:53:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/PicklistPtController.java:32:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/PicklistPtController.java:38:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/PicklistPtController.java:64:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/PicklistPtController.java:70:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/PicklistPtController.java:80:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/PicklistPtController.java:86:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/PicklistPtController.java:92:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoCalidadController.java:24:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:43:    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:52:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:62:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:72:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:82:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:83:            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:94:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:101:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:107:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:118:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:128:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:134:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:154:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:155:            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:162:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:175:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:187:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:196:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:228:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:229:            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:241:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:242:            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:254:    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProductoController.java:255:            " 'ROL_JEFE_PRODUCCION','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ProveedorController.java:65:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/RecepcionOCController.java:26:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/RecepcionOCController.java:36:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteComprasController.java:30:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteComprasController.java:38:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:44:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:60:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:76:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:91:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:104:    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:121:    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:139:    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:156:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:176:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:177:            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:204:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:205:            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:226:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:227:            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:237:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION'," +
+src/main/java/com/willyes/clemenintegra/inventario/controller/ReporteInventarioController.java:238:            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SalidaPtController.java:37:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SalidaPtController.java:47:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SalidaPtPicklistController.java:22:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SalidaPtPicklistController.java:28:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SalidaPtPicklistController.java:34:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SalidaPtPicklistController.java:44:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:37:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:44:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:85:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:91:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:101:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:109:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoController.java:119:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudPorOrdenController.java:40:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudPorOrdenController.java:82:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/SolicitudPorOrdenController.java:88:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/TrazabilidadLoteController.java:21:    @PreAuthorize("hasAnyAuthority(" +
+src/main/java/com/willyes/clemenintegra/inventario/controller/UbicacionFisicaController.java:22:    @PreAuthorize("hasAnyAuthority('INV_UBICACIONES_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/UbicacionFisicaController.java:30:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/inventario/controller/UbicacionFisicaController.java:37:    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/MrpController.java:38:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/MrpController.java:49:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/MrpController.java:60:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/MrpController.java:74:    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/PlanProduccionController.java:37:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/PlanProduccionController.java:48:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/PlanProduccionController.java:55:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/PlanProduccionController.java:62:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/planeacion/controller/PlanProduccionController.java:73:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/AlistamientoProduccionController.java:21:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/BatchRecordController.java:53:    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/BatchRecordController.java:54:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/BatchRecordController.java:60:    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/BatchRecordController.java:91:    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/BatchRecordController.java:121:    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/BatchRecordController.java:148:    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_EXPORT','ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/BatchRecordController.java:167:    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaController.java:23:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaController.java:24:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaController.java:30:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaController.java:38:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaController.java:39:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaTemplateController.java:23:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaTemplateController.java:29:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaTemplateController.java:36:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaTemplateController.java:43:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ChecklistEtapaTemplateController.java:50:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ControlCalidadProcesoController.java:26:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ControlCalidadProcesoController.java:35:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ControlCalidadProcesoController.java:44:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ControlCalidadProcesoController.java:56:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ControlCalidadProcesoController.java:73:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:28:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:29:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:37:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:38:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:47:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:48:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:59:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:60:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:76:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/DetalleEtapaController.java:77:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaPlantillaController.java:24:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaPlantillaController.java:32:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaPlantillaController.java:43:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaPlantillaController.java:51:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaPlantillaController.java:58:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaPlantillaController.java:66:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaProduccionController.java:24:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaProduccionController.java:25:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaProduccionController.java:33:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaProduccionController.java:34:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaProduccionController.java:43:    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaProduccionController.java:52:    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/EtapaProduccionController.java:65:    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/IndicadoresProduccionController.java:29:    @PreAuthorize("hasAnyAuthority('PROD_INDICADORES_READ','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/IndicadoresProduccionController.java:30:            "'ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/IndicadoresProduccionController.java:39:    @PreAuthorize("hasAnyAuthority('PROD_ALERTAS_READ','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/IndicadoresProduccionController.java:40:            "'ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/IndicadoresProduccionController.java:48:    @PreAuthorize("hasAnyAuthority('PROD_INDICADORES_EXPORT','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/IndicadoresProduccionController.java:49:            "'ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:49:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:50:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:62:    @PreAuthorize("hasAnyAuthority('PROD_OP_EXPORT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:63:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:79:    @PreAuthorize("hasAnyAuthority('PROD_OP_EXPORT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:80:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:96:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:97:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:106:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:107:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:113:    @PreAuthorize("hasAnyAuthority('PROD_OP_CREATE','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:124:    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:141:    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:148:    @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:157:    @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_CANCEL','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:166:    @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:176:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:177:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:184:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:185:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:191:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CLONE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:198:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_START','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:210:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_FINISH','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:218:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:219:            "'ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:225:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:226:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:234:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:235:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:243:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:244:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:252:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:253:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:261:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:270:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:281:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:292:    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_CHECKLIST_WRITE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:300:    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:301:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionController.java:308:    @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ProduccionController.java:32:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ProduccionController.java:49:    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ProduccionReportesController.java:26:    @PreAuthorize("hasAnyAuthority('PROD_REPORTS_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/ProduccionReportesController.java:27:            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ProduccionReportesController.java:33:    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_EXPORT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+src/main/java/com/willyes/clemenintegra/produccion/controller/ProduccionReportesController.java:34:            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/produccion/controller/ProduccionReportesController.java:44:    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_EXPORT','ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+src/main/java/com/willyes/clemenintegra/shared/model/enums/RolUsuario.java:12:    ROL_CONTADOR,
+src/main/java/com/willyes/clemenintegra/shared/model/enums/RolUsuario.java:14:    ROL_PLANEADOR,
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:114:                    auth.requestMatchers(HttpMethod.PATCH, "/api/inventario/productos/*/calidad").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:119:                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/productos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:125:                    auth.requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:130:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:131:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:137:                            "/api/produccion/ordenes/alertas/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:140:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:143:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:147:                    auth.requestMatchers(HttpMethod.GET, "/api/productos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:151:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:157:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:168:                    ).hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:171:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:177:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:181:                    auth.requestMatchers("/api/inventario/ordenes/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:187:                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/conteos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:190:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:195:                    auth.requestMatchers(HttpMethod.POST, "/api/inventario/conteos/*/aplicar").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:196:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:200:                    auth.requestMatchers("/api/inventario/conteos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:209:                            "/api/ordenes-compra/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:213:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:217:                    auth.requestMatchers("/api/ordenes-compra/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:224:                    auth.requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:230:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:231:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:235:                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/alertas/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:239:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:240:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:244:                    auth.requestMatchers(HttpMethod.GET, "/api/lotes/**", "/api/inventario/lotes/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:252:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:253:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:257:                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/kardex/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:265:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:266:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:271:                            "/api/inventario/alertas/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:277:                    auth.requestMatchers("/api/recepciones/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:284:                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:287:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:288:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:292:                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:295:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:296:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:300:                    auth.requestMatchers("/api/planeacion/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:302:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:306:                    auth.requestMatchers(HttpMethod.GET, "/api/mrp/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:308:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:312:                    auth.requestMatchers("/api/mrp/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:317:                    auth.requestMatchers(HttpMethod.POST, "/api/ordenes-compra/*/documentos").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:324:                            "/api/ordenes-compra/documentos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:333:                            "/api/documental/documentos/*/versiones").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:340:                            "/api/documental/documentos/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:347:                    auth.requestMatchers(HttpMethod.GET, "/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:352:                    auth.requestMatchers("/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:362:                    ).hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:370:                            "/api/calidad/vida-util/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:375:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:381:                            "/api/calidad/lotes/*/estado-calidad").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:385:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:386:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:392:                            "/api/calidad/no-conformidades/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:400:                            "/api/calidad/evaluaciones/archivo/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:408:                    auth.requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:419:                            "/api/produccion/indicadores/export/excel").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:423:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:424:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:428:                    auth.requestMatchers(HttpMethod.GET, "/api/produccion/ordenes/*/insumos").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:435:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:445:                    ).hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:450:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:454:                    auth.requestMatchers("/api/produccion/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:458:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:462:                    auth.requestMatchers(HttpMethod.GET, "/api/bom/formulas/producto/*/formula-activa").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:465:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:469:                    auth.requestMatchers(HttpMethod.GET, "/api/bom/formulas/activa").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:472:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:476:                    auth.requestMatchers("/api/bom/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:482:                    auth.requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:483:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:488:                    auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:492:                            RolUsuario.ROL_CONTADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:496:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:500:                    auth.requestMatchers("/actuator/metrics/**").hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:507:                    ).hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:511:                            RolUsuario.ROL_PLANEADOR.name(),
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:518:                    ).hasAnyAuthority(
+src/main/java/com/willyes/clemenintegra/shared/security/SecurityConfig.java:525:                    auth.requestMatchers("/api/inventario/bitacora", "/api/inventario/bitacora/**").hasAnyAuthority(
+src/main/resources/db/migration/inventario/V1__baseline.sql:39:create table usuarios (id bigint not null auto_increment, activo bit not null, bloqueado bit not null, clave varchar(80) not null, codigo_2fa varchar(6), codigo_2fa_expira_en datetime(6), correo varchar(45) not null, nombre_completo varchar(100) not null, nombre_usuario varchar(45) not null, rol enum ('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_LIDER_HOMEOPATICOS','ROL_LIDER_ALIMENTOS','ROL_CONTADOR','ROL_COMPRADOR','ROL_SUPER_ADMIN') not null, primary key (id)) ENGINE=InnoDB;
+src/main/resources/db/migration/inventario/V20251111__calidad_tipo_analisis_v2.sql:35:    MODIFY COLUMN rol ENUM('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_LIDER_HOMEOPATICOS','ROL_LIDER_ALIMENTOS','ROL_CONTADOR','ROL_COMPRADOR','ROL_SUPER_ADMIN') NOT NULL;
+src/main/resources/db/migration/inventario/V20251111__calidad_tipo_analisis_v2.sql:49:-- ALTER TABLE usuarios MODIFY COLUMN rol ENUM('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_LIDER_HOMEOPATICOS','ROL_LIDER_ALIMENTOS','ROL_CONTADOR','ROL_COMPRADOR','ROL_SUPER_ADMIN') NOT NULL;
+src/main/resources/db/migration/inventario/V20260110__add_rol_planeador.sql:1:-- Extiende el ENUM de usuarios.rol para incluir ROL_PLANEADOR
+src/main/resources/db/migration/inventario/V20260110__add_rol_planeador.sql:12:        'ROL_CONTADOR',
+src/main/resources/db/migration/inventario/V20260110__add_rol_planeador.sql:14:        'ROL_PLANEADOR',
+src/main/resources/db/migration/inventario/V20260127__rbac_seed_roles_permisos.sql:34:select 'ROL_CONTADOR', 'Contador', b'1'
+src/main/resources/db/migration/inventario/V20260127__rbac_seed_roles_permisos.sql:35:where not exists (select 1 from roles where codigo = 'ROL_CONTADOR');
+src/main/resources/db/migration/inventario/V20260127__rbac_seed_roles_permisos.sql:42:select 'ROL_PLANEADOR', 'Planeador', b'1'
+src/main/resources/db/migration/inventario/V20260127__rbac_seed_roles_permisos.sql:43:where not exists (select 1 from roles where codigo = 'ROL_PLANEADOR');
+src/main/resources/db/migration/inventario/V20260127__rbac_seed_roles_permisos.sql:163:where r.codigo = 'ROL_PLANEADOR'
+src/main/resources/db/migration/inventario/V20260128__rbac_produccion_permissions_patch.sql:127:where r.codigo = 'ROL_PLANEADOR'
+src/main/resources/db/migration/inventario/V20260129__rbac_planeador_permissions_trim.sql:5:where r.codigo = 'ROL_PLANEADOR'
+src/main/resources/db/migration/inventario/V20260203__rbac_contador_access_policy.sql:53:where r.codigo = 'ROL_CONTADOR'
+src/main/resources/db/migration/inventario/V20260203__rbac_contador_access_policy.sql:63:where r.codigo = 'ROL_CONTADOR'
+src/main/resources/db/migration/inventario/V20260209__rbac_contador_exports_and_remove_planning.sql:11:where r.codigo = 'ROL_CONTADOR'
+src/main/resources/db/migration/inventario/V20260209__rbac_contador_exports_and_remove_planning.sql:21:where r.codigo = 'ROL_CONTADOR'
+src/main/resources/db/migration/inventario/V20260210__rbac_contador_quality_trim_and_documental_write.sql:12:where r.codigo = 'ROL_CONTADOR'
+src/main/resources/db/migration/inventario/V20260210__rbac_contador_quality_trim_and_documental_write.sql:22:where r.codigo = 'ROL_CONTADOR'
+src/test/java/com/willyes/clemenintegra/bom/controller/FormulaProductoActivaSecurityIntegrationTest.java:73:                .rol(RolUsuario.ROL_PLANEADOR)
+src/test/java/com/willyes/clemenintegra/bom/controller/FormulaProductoActivaSecurityIntegrationTest.java:142:                        .with(user("planeador").authorities(new SimpleGrantedAuthority("ROL_PLANEADOR")))
+src/test/java/com/willyes/clemenintegra/bom/controller/FormulaProductoControllerSecurityTest.java:247:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/bom/controller/FormulaProductoControllerSecurityTest.java:248:    @DisplayName("ROL_PLANEADOR puede consultar formula activa de producto")
+src/test/java/com/willyes/clemenintegra/inventario/controller/CategoriaProductoControllerSecurityTest.java:105:                                .authorities(() -> "ROL_PLANEADOR")))
+src/test/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoControllerIntegrationTest.java:79:                .rol(RolUsuario.ROL_CONTADOR)
+src/test/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoControllerIntegrationTest.java:149:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoControllerSecurityTest.java:174:                                .authorities(() -> "ROL_CONTADOR")))
+src/test/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoControllerTest.java:83:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/inventario/controller/ConteoCiclicoControllerTest.java:143:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoControllerSecurityTest.java:116:                                .authorities(() -> "ROL_PLANEADOR")))
+src/test/java/com/willyes/clemenintegra/inventario/controller/SolicitudMovimientoControllerSecurityTest.java:124:                                .authorities(() -> "ROL_PLANEADOR")))
+src/test/java/com/willyes/clemenintegra/inventario/controller/SolicitudPorOrdenControllerTest.java:136:                                .authorities(() -> "ROL_PLANEADOR")))
+src/test/java/com/willyes/clemenintegra/inventario/web/ProductoControllerSmokeTest.java:213:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/planeacion/controller/MrpControllerErrorHandlingTest.java:47:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/controller/BatchRecordControllerTest.java:115:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/controller/BatchRecordControllerTest.java:216:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionControllerTest.java:161:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/controller/OrdenProduccionControllerTest.java:162:    @DisplayName("GET /api/produccion/ordenes/{ordenId}/insumos permite ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/ChecklistEtapaControllerSecurityTest.java:87:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/ChecklistEtapaControllerSecurityTest.java:111:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:131:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:141:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:151:    @WithMockUser(authorities = {"ROL_PLANEADOR", "PROD_OP_CREATE"})
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:164:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:175:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:195:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:204:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:213:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/produccion/web/OrdenProduccionControllerSecurityTest.java:223:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:260:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:281:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:290:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:299:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:308:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:323:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:358:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:385:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:412:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:452:    @WithMockUser(authorities = {"ROL_CONTADOR", "CONTROL_DOCUMENTAL_WRITE"})
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:472:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/ContadorRoleSecurityTest.java:485:    @WithMockUser(authorities = "ROL_CONTADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/PlaneadorRoleSecurityTest.java:131:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/PlaneadorRoleSecurityTest.java:143:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/PlaneadorRoleSecurityTest.java:160:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/PlaneadorRoleSecurityTest.java:183:    @WithMockUser(authorities = "ROL_PLANEADOR")
+src/test/java/com/willyes/clemenintegra/shared/security/controller/AuthControllerTest.java:59:                        .rol(RolUsuario.ROL_PLANEADOR)
+src/test/java/com/willyes/clemenintegra/shared/security/controller/AuthControllerTest.java:79:                .andExpect(jsonPath("$.rol").value("ROL_PLANEADOR"))
+src/test/resources/db/migration/test/V2__rbac_seed_planeador.sql:3:VALUES ('ROL_PLANEADOR', 'Planeador', TRUE);
+src/test/resources/db/migration/test/V2__rbac_seed_planeador.sql:33:WHERE r.codigo = 'ROL_PLANEADOR'
