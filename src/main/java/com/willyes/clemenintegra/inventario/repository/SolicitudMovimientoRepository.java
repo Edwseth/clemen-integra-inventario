@@ -65,6 +65,23 @@ public interface SolicitudMovimientoRepository extends JpaRepository<SolicitudMo
             "where s.id = :id")
     java.util.Optional<SolicitudMovimiento> findWithDetalles(@Param("id") Long id);
 
+    @EntityGraph(attributePaths = {
+            "producto",
+            "producto.unidadMedida",
+            "lote",
+            "almacenOrigen",
+            "almacenDestino",
+            "usuarioSolicitante",
+            "ordenProduccion",
+            "motivoMovimiento",
+            "tipoMovimientoDetalle",
+            "detalles",
+            "detalles.lote",
+            "detalles.almacenOrigen",
+            "detalles.almacenDestino"
+    })
+    Optional<SolicitudMovimiento> findById(Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from SolicitudMovimiento s where s.id = :id")
     Optional<SolicitudMovimiento> findByIdWithLock(@Param("id") Long id);
