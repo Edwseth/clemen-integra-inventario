@@ -38,6 +38,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -311,7 +313,7 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
                 .detalles(List.of(detalle1, detalle2))
                 .build();
 
-        when(repository.findWithDetalles(eq(114L))).thenReturn(java.util.Optional.of(solicitud));
+        when(repository.findById(eq(114L))).thenReturn(java.util.Optional.of(solicitud));
 
         SolicitudMovimientoResponseDTO respuesta = service.obtenerSolicitud(114L);
 
@@ -323,4 +325,24 @@ class SolicitudMovimientoServiceImplPorOrdenTest {
         assertThat(respuesta.getDetalles().get(1).getLoteProductoId()).isEqualTo(60L);
         assertThat(respuesta.getDetalles().get(1).getLoteId()).isEqualTo(60L);
     }
+    @Test
+    void obtenerSolicitudNoDependeDeFindWithDetalles() {
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(999L)
+                .detalles(List.of(SolicitudMovimientoDetalle.builder()
+                        .id(701L)
+                        .cantidad(BigDecimal.ONE)
+                        .estado(EstadoSolicitudMovimientoDetalle.PENDIENTE)
+                        .build()))
+                .build();
+
+        when(repository.findById(eq(999L))).thenReturn(java.util.Optional.of(solicitud));
+
+        SolicitudMovimientoResponseDTO respuesta = service.obtenerSolicitud(999L);
+
+        assertThat(respuesta.getId()).isEqualTo(999L);
+        assertThat(respuesta.getDetalles()).hasSize(1);
+        verify(repository, never()).findWithDetalles(999L);
+    }
+
 }

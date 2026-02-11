@@ -295,9 +295,8 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
     @Override
     @Transactional(readOnly = true)
     public SolicitudMovimientoResponseDTO obtenerSolicitud(Long id) {
-        var solicitud = repository.findWithDetalles(id)
-                .orElseGet(() -> repository.findById(id)
-                        .orElseThrow(() -> new EntityNotFoundException("Solicitud no encontrada: " + id)));
+        var solicitud = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Solicitud no encontrada: " + id));
 
         SolicitudMovimientoResponseDTO dto = toResponse(solicitud);
         if (solicitud.getProducto() != null) {

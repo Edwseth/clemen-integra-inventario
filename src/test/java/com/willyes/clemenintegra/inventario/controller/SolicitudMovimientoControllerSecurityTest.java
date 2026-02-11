@@ -143,6 +143,26 @@ class SolicitudMovimientoControllerSecurityTest {
     }
 
     @Test
+    void listarPorOrdenYConsultarDetalleEnRutaPluralRespondeOk() throws Exception {
+        when(solicitudMovimientoService.listGroupByOrden(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(solicitudMovimientoService.obtenerSolicitud(321L))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().id(321L).build());
+
+        mockMvc.perform(get("/api/inventarios/solicitudes/por-orden")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
+                                .authorities(() -> "ROL_JEFE_PRODUCCION")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/inventarios/solicitudes/321")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
+                                .authorities(() -> "ROL_JEFE_PRODUCCION")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void planeadorNoPuedeAprobarSolicitudes() throws Exception {
         mockMvc.perform(put("/api/inventario/solicitudes/1/aprobar")
                         .with(SecurityMockMvcRequestPostProcessors.user("planeador")
