@@ -4,11 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
 import com.willyes.clemenintegra.produccion.dto.CancelarOrdenRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.ChecklistEtapaDTO;
 import com.willyes.clemenintegra.produccion.dto.ChecklistItemDTO;
+import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
+import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
+import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.produccion.service.ReporteOrdenProduccionService;
 import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
@@ -99,6 +106,9 @@ class OrdenProduccionControllerTest {
     private ReporteOrdenProduccionService reporteOrdenProduccionService;
 
     @MockBean
+    private OrdenProduccionRepository ordenProduccionRepository;
+
+    @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockBean
@@ -179,6 +189,59 @@ class OrdenProduccionControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(ordenProduccionService).cancelarOrden(10L, "Motivo de cancelación");
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("POST /api/produccion/ordenes/{id}/cierres responde 200 y mapea categoriaProducto")
+    void registrarCierre_recargaOrdenParaResponseConCategoria() throws Exception {
+        CierreProduccionRequestDTO request = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("12.50"))
+                .tipo(TipoCierre.PARCIAL)
+                .build();
+
+        OrdenProduccion ordenServicio = OrdenProduccion.builder().id(10L).build();
+        when(ordenProduccionService.registrarCierre(eq(10L), any(CierreProduccionRequestDTO.class)))
+                .thenReturn(ordenServicio);
+
+        CategoriaProducto categoria = CategoriaProducto.builder()
+                .id(6L)
+                .nombre("Terminados")
+                .tipo(TipoCategoria.PRODUCTO_TERMINADO)
+                .build();
+        UnidadMedida unidad = UnidadMedida.builder()
+                .id(1L)
+                .nombre("KILOGRAMO")
+                .simbolo("KG")
+                .build();
+        Producto producto = Producto.builder()
+                .id(99)
+                .nombre("Jarabe")
+                .categoriaProducto(categoria)
+                .unidadMedida(unidad)
+                .build();
+        OrdenProduccion ordenRecargada = OrdenProduccion.builder()
+                .id(10L)
+                .codigoOrden("OP-010")
+                .estado(EstadoProduccion.EN_PROCESO)
+                .cantidadProgramada(new BigDecimal("20.00"))
+                .cantidadProducida(new BigDecimal("12.50"))
+                .cantidadProducidaAcumulada(new BigDecimal("12.50"))
+                .fechaInicio(LocalDateTime.now())
+                .producto(producto)
+                .unidadMedida(unidad)
+                .build();
+        when(ordenProduccionRepository.findByIdForCierreResponse(10L)).thenReturn(Optional.of(ordenRecargada));
+
+        mockMvc.perform(post("/api/produccion/ordenes/{id}/cierres", 10L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10L))
+                .andExpect(jsonPath("$.categoriaProducto").value("PRODUCTO_TERMINADO"));
+
+        verify(ordenProduccionService).registrarCierre(eq(10L), any(CierreProduccionRequestDTO.class));
+        verify(ordenProduccionRepository).findByIdForCierreResponse(10L);
     }
 
     @Test

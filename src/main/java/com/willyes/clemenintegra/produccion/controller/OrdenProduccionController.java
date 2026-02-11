@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.produccion.mapper.ProduccionMapper;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
+import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.service.*;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
@@ -42,6 +43,7 @@ public class OrdenProduccionController {
     private final UsuarioService usuarioService;
     private final com.willyes.clemenintegra.inventario.service.MovimientoInventarioService movimientoInventarioService;
     private final ChecklistEtapaService checklistEtapaService;
+    private final OrdenProduccionRepository ordenProduccionRepository;
     //private final UsuarioService usuarioService;
 
 
@@ -168,8 +170,10 @@ public class OrdenProduccionController {
     public ResponseEntity<OrdenProduccionResponseDTO> registrarCierre(@PathVariable Long id,
                                                                      @Valid @RequestBody CierreProduccionRequestDTO request) {
         log.debug("Registrar cierre recibido: ordenId={}, payload={}", id, request);
-        OrdenProduccion orden = service.registrarCierre(id, request);
-        return ResponseEntity.ok(ProduccionMapper.toResponse(orden));
+        service.registrarCierre(id, request);
+        OrdenProduccion ordenFull = ordenProduccionRepository.findByIdForCierreResponse(id)
+                .orElseThrow(() -> new IllegalArgumentException("Orden de producción no encontrada: " + id));
+        return ResponseEntity.ok(ProduccionMapper.toResponse(ordenFull));
     }
 
     @GetMapping("/{id}/cierres")
