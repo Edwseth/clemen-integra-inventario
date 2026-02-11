@@ -60,6 +60,16 @@ public class ConteoCiclicoController {
         return ResponseEntity.ok(respuesta);
     }
 
+
+    @GetMapping("/lotes")
+    @PreAuthorize("hasAnyAuthority('INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    public ResponseEntity<List<ConteoCiclicoLoteResponseDTO>> listarLotesPorProductoYAlmacen(
+            @RequestParam Long productoId,
+            @RequestParam Integer almacenId) {
+        List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService.listarLotesParaConteo(productoId, almacenId);
+        return ResponseEntity.ok(respuesta);
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyAuthority('INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
     public ResponseEntity<ConteoCiclicoResponseDTO> crear(@Valid @RequestBody ConteoCiclicoRequestDTO request) {

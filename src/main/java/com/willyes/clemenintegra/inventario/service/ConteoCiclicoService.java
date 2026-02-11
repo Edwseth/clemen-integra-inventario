@@ -40,7 +40,6 @@ import java.util.Optional;
 public class ConteoCiclicoService {
 
     private static final EnumSet<EstadoLote> LOTES_OPERABLES = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
-    private static final EnumSet<EstadoLote> LOTES_CONTABLES = EnumSet.of(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
 
     private final ConteoCiclicoRepository conteoRepository;
     private final ConteoCiclicoDetalleRepository detalleRepository;
@@ -102,16 +101,23 @@ public class ConteoCiclicoService {
         }
 
         String filtroTexto = (q == null || q.isBlank()) ? null : q.trim();
+        final UbicacionFisica ubicacionSeleccionada = ubicacion;
+        final String filtroTextoNormalizado = filtroTexto != null ? filtroTexto.toLowerCase() : null;
 
         log.debug("[ConteoCiclico] listarLotes conteoId={}, almacenId={}, productoId={}, ubicacionFisicaId={}, search={}",
-                conteoId, almacenId, producto.getId(), ubicacion != null ? ubicacion.getId() : null, filtroTexto);
+                conteoId, almacenId, producto.getId(),
+                ubicacionSeleccionada != null ? ubicacionSeleccionada.getId() : null, filtroTexto);
 
-        List<LoteProducto> lotes = loteProductoRepository.buscarParaConteo(
+        List<LoteProducto> lotes = loteProductoRepository.buscarParaConteoPorProductoYAlmacen(
                 producto.getId().longValue(),
-                almacenId,
-                ubicacion != null ? ubicacion.getId() : null,
-                filtroTexto,
-                LOTES_CONTABLES);
+                almacenId).stream()
+                .filter(lp -> ubicacionSeleccionada == null || (lp.getUbicacionFisica() != null
+                        && Objects.equals(lp.getUbicacionFisica().getId(), ubicacionSeleccionada.getId())))
+                .filter(lp -> !StringUtils.hasText(filtroTextoNormalizado)
+                        || (lp.getCodigoLote() != null
+                        && lp.getCodigoLote().toLowerCase().contains(filtroTextoNormalizado)))
+                .filter(lp -> lp.getStockLote() != null && lp.getStockLote().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
 
         log.debug("[ConteoCiclico] lotes encontrados antes de mapear: {}", lotes.size());
         lotes.stream()
@@ -128,6 +134,32 @@ public class ConteoCiclicoService {
                 .map(lp -> ConteoCiclicoLoteResponseDTO.builder()
                         .id(lp.getId())
                         .codigoLote(lp.getCodigoLote())
+                        .estado(lp.getEstado() != null ? lp.getEstado().name() : null)
+                        .stockLote(Optional.ofNullable(lp.getStockLote()).orElse(BigDecimal.ZERO))
+                        .fechaVencimiento(lp.getFechaVencimiento())
+                        .ubicacionFisicaId(lp.getUbicacionFisica() != null ? lp.getUbicacionFisica().getId() : null)
+                        .ubicacionCodigo(lp.getUbicacionFisica() != null ? lp.getUbicacionFisica().getCodigo() : null)
+                        .build())
+                .toList();
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<ConteoCiclicoLoteResponseDTO> listarLotesParaConteo(Long productoId, Integer almacenId) {
+        if (productoId == null || almacenId == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe especificar productoId y almacenId");
+        }
+
+        List<LoteProducto> lotes = loteProductoRepository.buscarParaConteoPorProductoYAlmacen(productoId, almacenId).stream()
+                .filter(lp -> lp.getStockLote() != null && lp.getStockLote().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
+
+        return lotes.stream()
+                .map(lp -> ConteoCiclicoLoteResponseDTO.builder()
+                        .id(lp.getId())
+                        .codigoLote(lp.getCodigoLote())
+                        .estado(lp.getEstado() != null ? lp.getEstado().name() : null)
                         .stockLote(Optional.ofNullable(lp.getStockLote()).orElse(BigDecimal.ZERO))
                         .fechaVencimiento(lp.getFechaVencimiento())
                         .ubicacionFisicaId(lp.getUbicacionFisica() != null ? lp.getUbicacionFisica().getId() : null)

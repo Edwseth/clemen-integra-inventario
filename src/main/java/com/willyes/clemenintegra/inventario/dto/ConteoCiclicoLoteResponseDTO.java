@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class ConteoCiclicoLoteResponseDTO {
     Long id;
     String codigoLote;
+    String estado;
     BigDecimal stockLote;
     LocalDateTime fechaVencimiento;
     Long ubicacionFisicaId;
