@@ -362,8 +362,14 @@ class OrdenProduccionServiceImplTest {
                 .esValida(true)
                 .orden(new OrdenProduccionResponseDTO())
                 .build();
+        Long versionEsperada = 5L;
         resultado.getOrden().id = 900L;
-        doReturn(resultado).when(service).guardarConValidacionStock(any(OrdenProduccion.class));
+        doAnswer(invocation -> {
+            OrdenProduccion orden = invocation.getArgument(0);
+            orden.setId(900L);
+            orden.setVersion(versionEsperada);
+            return resultado;
+        }).when(service).guardarConValidacionStock(any(OrdenProduccion.class));
 
         CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(32L);
@@ -379,8 +385,15 @@ class OrdenProduccionServiceImplTest {
         ArgumentCaptor<OpHomeopaticoOverride> captor = ArgumentCaptor.forClass(OpHomeopaticoOverride.class);
         verify(opHomeopaticoOverrideRepository).save(captor.capture());
         assertThat(captor.getValue().getOrdenProduccion().getId()).isEqualTo(900L);
+        assertThat(captor.getValue().getOrdenProduccion().getVersion()).isEqualTo(versionEsperada);
         assertThat(captor.getValue().getProducto().getId()).isEqualTo(32);
         assertThat(captor.getValue().getSemanasVigencia()).isEqualTo(78);
+
+        ArgumentCaptor<OrdenProduccion> ordenCaptor = ArgumentCaptor.forClass(OrdenProduccion.class);
+        verify(service).guardarConValidacionStock(ordenCaptor.capture());
+        assertThat(ordenCaptor.getValue().getConfirmacionHomeopatico()).isTrue();
+        assertThat(ordenCaptor.getValue().getMotivoOverrideHomeopatico())
+                .isEqualTo("Se requiere este lote para cubrir pedido regulatorio urgente");
     }
 
     @Test
