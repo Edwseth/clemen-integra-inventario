@@ -28,7 +28,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
-import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
@@ -260,7 +260,7 @@ class OrdenProduccionServiceImplTest {
         when(productoRepository.findById(20L)).thenReturn(Optional.of(producto));
         when(usuarioRepository.findById(5L)).thenReturn(Optional.of(new Usuario()));
 
-        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(20L);
         dto.setResponsableId(5L);
         dto.setCantidadProgramada(new BigDecimal("10"));
@@ -293,12 +293,11 @@ class OrdenProduccionServiceImplTest {
         doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).build())
                 .when(service).guardarConValidacionStock(any(OrdenProduccion.class));
 
-        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(21L);
         dto.setResponsableId(6L);
         dto.setCantidadProgramada(new BigDecimal("10"));
         dto.setUnidadMedidaSimbolo("UND");
-        dto.setEstado("CREADA");
 
         service.crearOrden(dto);
 
@@ -321,12 +320,11 @@ class OrdenProduccionServiceImplTest {
                 .semanasVigencia(78)
                 .build()));
 
-        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(31L);
         dto.setResponsableId(9L);
         dto.setCantidadProgramada(new BigDecimal("200"));
         dto.setUnidadMedidaSimbolo("UND");
-        dto.setEstado("CREADA");
 
         assertThatThrownBy(() -> service.crearOrden(dto))
                 .isInstanceOf(CustomBusinessException.class)
@@ -367,12 +365,11 @@ class OrdenProduccionServiceImplTest {
         resultado.getOrden().id = 900L;
         doReturn(resultado).when(service).guardarConValidacionStock(any(OrdenProduccion.class));
 
-        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(32L);
         dto.setResponsableId(10L);
         dto.setCantidadProgramada(new BigDecimal("200"));
         dto.setUnidadMedidaSimbolo("UND");
-        dto.setEstado("CREADA");
         dto.setConfirmacionHomeopatico(true);
         dto.setMotivoOverrideHomeopatico("Se requiere este lote para cubrir pedido regulatorio urgente");
 
@@ -398,12 +395,11 @@ class OrdenProduccionServiceImplTest {
                 .semanasVigencia(78)
                 .build()));
 
-        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(33L);
         dto.setResponsableId(11L);
         dto.setCantidadProgramada(new BigDecimal("200"));
         dto.setUnidadMedidaSimbolo("UND");
-        dto.setEstado("CREADA");
         dto.setConfirmacionHomeopatico(true);
         dto.setMotivoOverrideHomeopatico("motivo corto");
 
@@ -434,12 +430,11 @@ class OrdenProduccionServiceImplTest {
         doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).build())
                 .when(service).guardarConValidacionStock(any(OrdenProduccion.class));
 
-        OrdenProduccionRequestDTO dto = new OrdenProduccionRequestDTO();
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(34L);
         dto.setResponsableId(12L);
         dto.setCantidadProgramada(new BigDecimal("200"));
         dto.setUnidadMedidaSimbolo("UND");
-        dto.setEstado("CREADA");
 
         ResultadoValidacionOrdenDTO respuesta = service.crearOrden(dto);
         assertThat(respuesta.isEsValida()).isTrue();

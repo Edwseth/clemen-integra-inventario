@@ -111,7 +111,7 @@ public class OrdenProduccionController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('PROD_OP_CREATE','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
-    public ResponseEntity<ResultadoValidacionOrdenDTO> crear(@Valid @RequestBody OrdenProduccionRequestDTO request) {
+    public ResponseEntity<ResultadoValidacionOrdenDTO> crear(@Valid @RequestBody CrearOrdenProduccionRequestDTO request) {
         ResultadoValidacionOrdenDTO resultado = service.crearOrden(request);
         HttpStatus status = resultado.isEsValida() ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
         if (!resultado.isEsValida()) {

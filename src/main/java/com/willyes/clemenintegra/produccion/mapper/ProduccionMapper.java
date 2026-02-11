@@ -25,6 +25,21 @@ public class ProduccionMapper {
                 .build();
     }
 
+    public static OrdenProduccion toEntity(CrearOrdenProduccionRequestDTO dto, Producto producto, Usuario responsable) {
+        return OrdenProduccion.builder()
+                .fechaFin(dto.getFechaProgramada())
+                .cantidadProgramada(dto.getCantidadProgramada())
+                .cantidadProducida(BigDecimal.ZERO)
+                .estado(EstadoProduccion.CREADA)
+                .producto(producto)
+                .unidadMedida(producto.getUnidadMedida())
+                .responsable(responsable)
+                .lotePsId(dto.getLotePsId())
+                .confirmacionHomeopatico(Boolean.TRUE.equals(dto.getConfirmacionHomeopatico()))
+                .motivoOverrideHomeopatico(dto.getMotivoOverrideHomeopatico() != null ? dto.getMotivoOverrideHomeopatico().trim() : null)
+                .build();
+    }
+
     public static OrdenProduccionResponseDTO toResponse(OrdenProduccion entidad) {
         OrdenProduccionResponseDTO dto = new OrdenProduccionResponseDTO();
         dto.id = entidad.getId();
