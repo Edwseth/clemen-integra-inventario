@@ -151,6 +151,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final ProduccionEtapasLockValidator produccionEtapasLockValidator;
 
     private static final int SEMANAS_HOMEOPATICO = 78;
+    private static final int SEMANAS_HERENCIA_PS_PT = 78;
     private static final BigDecimal CANTIDAD_MAXIMA_HOMEOPATICO = new BigDecimal("30");
     private static final int MOTIVO_OVERRIDE_MIN_LENGTH = 20;
     private static final int MOTIVO_OVERRIDE_MAX_LENGTH = 500;
@@ -1555,6 +1556,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         if (lotesPs.isEmpty()) {
             return null;
         }
+        // TODO: si negocio define prioridad entre múltiples PS, evaluar mínimo vencimiento u otra regla explícita.
         Long loteId = lotesPs.get(0);
         return loteProductoRepository.findById(loteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "LOTE_NO_ENCONTRADO"));
@@ -1881,13 +1883,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             LocalDateTime fechaFabricacion = LocalDateTime.now();
             Integer semanasVigencia = obtenerSemanasVigenciaProductoTerminado(orden.getProducto());
-            LocalDateTime fechaVencimiento = semanasVigencia != null
+            LocalDateTime fechaVencimientoBase = semanasVigencia != null
                     ? fechaFabricacion.plusWeeks(semanasVigencia)
                     : null;
+            LocalDateTime fechaVencimiento = fechaVencimientoBase;
 
             LoteProducto lotePsOrigen = null;
             if (orden.getProducto().getCategoriaProducto() != null
-                    && orden.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO) {
+                    && orden.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO
+                    && Objects.equals(semanasVigencia, SEMANAS_HERENCIA_PS_PT)) {
                 lotePsOrigen = obtenerLotePsReservado(orden.getId());
                 if (lotePsOrigen != null && lotePsOrigen.getFechaVencimiento() != null) {
                     fechaVencimiento = lotePsOrigen.getFechaVencimiento();

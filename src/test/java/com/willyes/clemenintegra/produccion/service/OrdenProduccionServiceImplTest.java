@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.SolicitudMovimiento;
+import com.willyes.clemenintegra.inventario.model.SolicitudMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
@@ -890,6 +891,235 @@ class OrdenProduccionServiceImplTest {
         assertThat(loteGenerado.getFechaVencimiento())
                 .isEqualTo(loteGenerado.getFechaFabricacion().plusWeeks(6));
         assertThat(resultado.getEstado()).isEqualTo(EstadoEtapa.EN_PROCESO);
+    }
+
+    @Test
+    void shouldInheritExpiryFromPS_whenPTIs78WeeksAndPSReservedHasExpiry() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(51L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-051");
+
+        CategoriaProducto categoriaPt = new CategoriaProducto();
+        categoriaPt.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+
+        Producto productoPt = new Producto();
+        productoPt.setId(151);
+        productoPt.setNombre("PT-78");
+        productoPt.setCodigoSku("PT-151");
+        productoPt.setCategoriaProducto(categoriaPt);
+        productoPt.setRequiereAnalisisFisico(false);
+        productoPt.setRequiereAnalisisQuimico(false);
+        productoPt.setRequiereAnalisisMicrobiologico(false);
+        productoPt.recomputarTipoAnalisisDesdeBanderas();
+        orden.setProducto(productoPt);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(151L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .ordenProduccion(orden)
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(19L);
+        usuario.setNombreCompleto("Usuario PT 78");
+
+        CategoriaProducto categoriaPs = new CategoriaProducto();
+        categoriaPs.setTipo(TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        Producto productoPs = new Producto();
+        productoPs.setId(251);
+        productoPs.setCategoriaProducto(categoriaPs);
+
+        LocalDateTime fechaVencimientoPs = LocalDateTime.now().plusWeeks(8);
+        LoteProducto lotePs = new LoteProducto();
+        lotePs.setId(701L);
+        lotePs.setProducto(productoPs);
+        lotePs.setFechaVencimiento(fechaVencimientoPs);
+
+        SolicitudMovimientoDetalle detalle = new SolicitudMovimientoDetalle();
+        detalle.setLote(lotePs);
+        solicitud.setDetalles(List.of(detalle));
+
+        when(ordenProduccionRepository.findById(51L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(151L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(51L)).thenReturn(List.of(solicitud));
+        when(solicitudMovimientoRepository.findWithDetalles(eq(51L), eq(null), eq(null), eq(null), eq(false), anyList()))
+                .thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(2L);
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(new Almacen(1)));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(new Almacen(2)));
+        when(vidaUtilProductoService.buscarPorProductoId(151)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(151)
+                .producto(productoPt)
+                .semanasVigencia(78)
+                .build()));
+        when(loteProductoRepository.findById(701L)).thenReturn(Optional.of(lotePs));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            lote.setId(991L);
+            return lote;
+        });
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.iniciarEtapa(51L, 151L);
+
+        ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository).save(captor.capture());
+        LoteProducto loteGenerado = captor.getValue();
+
+        assertThat(loteGenerado.getLotePsOrigen()).isNotNull();
+        assertThat(loteGenerado.getLotePsOrigen().getId()).isEqualTo(701L);
+        assertThat(loteGenerado.getFechaVencimiento()).isEqualTo(fechaVencimientoPs);
+    }
+
+    @Test
+    void shouldNotInheritExpiryFromPS_whenPTIs104WeeksEvenIfPSReservedHasExpiry() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(52L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-052");
+
+        CategoriaProducto categoriaPt = new CategoriaProducto();
+        categoriaPt.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+
+        Producto productoPt = new Producto();
+        productoPt.setId(152);
+        productoPt.setNombre("PT-104");
+        productoPt.setCodigoSku("PT-152");
+        productoPt.setCategoriaProducto(categoriaPt);
+        productoPt.setRequiereAnalisisFisico(false);
+        productoPt.setRequiereAnalisisQuimico(false);
+        productoPt.setRequiereAnalisisMicrobiologico(false);
+        productoPt.recomputarTipoAnalisisDesdeBanderas();
+        orden.setProducto(productoPt);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(152L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .ordenProduccion(orden)
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(20L);
+        usuario.setNombreCompleto("Usuario PT 104");
+
+        when(ordenProduccionRepository.findById(52L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(152L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(52L)).thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(2L);
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(new Almacen(1)));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(new Almacen(2)));
+        when(vidaUtilProductoService.buscarPorProductoId(152)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(152)
+                .producto(productoPt)
+                .semanasVigencia(104)
+                .build()));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            lote.setId(992L);
+            return lote;
+        });
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.iniciarEtapa(52L, 152L);
+
+        ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository).save(captor.capture());
+        LoteProducto loteGenerado = captor.getValue();
+
+        assertThat(loteGenerado.getFechaVencimiento()).isEqualTo(loteGenerado.getFechaFabricacion().plusWeeks(104));
+        assertThat(loteGenerado.getLotePsOrigen()).isNull();
+        verify(solicitudMovimientoRepository, never())
+                .findWithDetalles(eq(52L), eq(null), eq(null), eq(null), eq(false), anyList());
+    }
+
+    @Test
+    void shouldUsePTExpiry_whenPTIs78WeeksAndNoPSReserved() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(53L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-053");
+
+        CategoriaProducto categoriaPt = new CategoriaProducto();
+        categoriaPt.setTipo(TipoCategoria.PRODUCTO_TERMINADO);
+
+        Producto productoPt = new Producto();
+        productoPt.setId(153);
+        productoPt.setNombre("PT-78-SIN-PS");
+        productoPt.setCodigoSku("PT-153");
+        productoPt.setCategoriaProducto(categoriaPt);
+        productoPt.setRequiereAnalisisFisico(false);
+        productoPt.setRequiereAnalisisQuimico(false);
+        productoPt.setRequiereAnalisisMicrobiologico(false);
+        productoPt.recomputarTipoAnalisisDesdeBanderas();
+        orden.setProducto(productoPt);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(153L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .ordenProduccion(orden)
+                .detalles(List.of())
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(21L);
+        usuario.setNombreCompleto("Usuario PT 78 sin PS");
+
+        when(ordenProduccionRepository.findById(53L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(153L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(53L)).thenReturn(List.of(solicitud));
+        when(solicitudMovimientoRepository.findWithDetalles(eq(53L), eq(null), eq(null), eq(null), eq(false), anyList()))
+                .thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(1L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(2L);
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(new Almacen(1)));
+        when(almacenRepository.findById(2L)).thenReturn(Optional.of(new Almacen(2)));
+        when(vidaUtilProductoService.buscarPorProductoId(153)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(153)
+                .producto(productoPt)
+                .semanasVigencia(78)
+                .build()));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            lote.setId(993L);
+            return lote;
+        });
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.iniciarEtapa(53L, 153L);
+
+        ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository).save(captor.capture());
+        LoteProducto loteGenerado = captor.getValue();
+
+        assertThat(loteGenerado.getFechaVencimiento()).isEqualTo(loteGenerado.getFechaFabricacion().plusWeeks(78));
+        assertThat(loteGenerado.getLotePsOrigen()).isNull();
     }
 
     @Test
