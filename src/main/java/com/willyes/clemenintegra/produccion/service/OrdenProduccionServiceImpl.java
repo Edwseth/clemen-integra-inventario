@@ -153,6 +153,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private static final int SEMANAS_HOMEOPATICO = 78;
     private static final BigDecimal CANTIDAD_MAXIMA_HOMEOPATICO = new BigDecimal("30");
     private static final int MOTIVO_OVERRIDE_MIN_LENGTH = 20;
+    private static final int MOTIVO_OVERRIDE_MAX_LENGTH = 500;
 
     @Value("${inventory.solicitud.estados.pendientes}")
     private String estadosSolicitudPendientesConf;
@@ -536,7 +537,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             );
         }
         String motivo = dto.getMotivoOverrideHomeopatico();
-        if (motivo == null || motivo.trim().length() < MOTIVO_OVERRIDE_MIN_LENGTH) {
+        String motivoNormalizado = motivo != null ? motivo.trim() : null;
+        if (motivoNormalizado == null || motivoNormalizado.length() < MOTIVO_OVERRIDE_MIN_LENGTH) {
             throw new CustomBusinessException(
                     ApiErrorCode.OP_HOMEOPATICO_MOTIVO_OBLIGATORIO,
                     "Debe ingresar una justificación de al menos 20 caracteres para continuar con la OP homeopática.",
@@ -547,6 +549,13 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                             "maxRecomendado", CANTIDAD_MAXIMA_HOMEOPATICO,
                             "minCaracteresMotivo", MOTIVO_OVERRIDE_MIN_LENGTH
                     )
+            );
+        }
+        if (motivoNormalizado.length() > MOTIVO_OVERRIDE_MAX_LENGTH) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.SOLICITUD_INVALIDA,
+                    "motivoOverrideHomeopatico no debe superar 500 caracteres",
+                    Map.of("maxCaracteresMotivo", MOTIVO_OVERRIDE_MAX_LENGTH)
             );
         }
     }

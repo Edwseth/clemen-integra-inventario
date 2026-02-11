@@ -90,6 +90,14 @@ public class OrdenProduccion {
     @Column(name = "batch_record_observaciones_calidad", columnDefinition = "TEXT")
     private String batchRecordObservacionesCalidad;
 
+
+    @Column(name = "confirmacion_homeopatico", nullable = false)
+    @Builder.Default
+    private Boolean confirmacionHomeopatico = Boolean.FALSE;
+
+    @Column(name = "motivo_override_homeopatico", length = 500)
+    private String motivoOverrideHomeopatico;
+
     @Transient
     private Long lotePsId;
 

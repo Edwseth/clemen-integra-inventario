@@ -24,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -172,6 +173,38 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponseDTO> handleDataIntegrityViolation(DataIntegrityViolationException ex,
                                                                          HttpServletRequest request) {
+        Throwable root = getRootCause(ex);
+        String requestId = MDC.get("requestId");
+        String method = request != null ? request.getMethod() : null;
+        String uri = request != null ? request.getRequestURI() : null;
+
+        String sqlState = null;
+        Integer errorCode = null;
+        String constraint = null;
+
+        if (root instanceof SQLException sqlException) {
+            sqlState = sqlException.getSQLState();
+            errorCode = sqlException.getErrorCode();
+        }
+        if (root instanceof org.hibernate.exception.ConstraintViolationException hibernateConstraintViolationException) {
+            constraint = hibernateConstraintViolationException.getConstraintName();
+            if (hibernateConstraintViolationException.getSQLException() != null) {
+                sqlState = hibernateConstraintViolationException.getSQLException().getSQLState();
+                errorCode = hibernateConstraintViolationException.getSQLException().getErrorCode();
+            }
+        }
+
+        log.error("DataIntegrityViolation requestId={} method={} uri={} rootType={} sqlState={} errorCode={} constraint={} rootMessage={}",
+                requestId,
+                method,
+                uri,
+                root != null ? root.getClass().getName() : null,
+                sqlState,
+                errorCode,
+                constraint,
+                root != null ? root.getMessage() : null,
+                ex);
+
         return buildResponse(HttpStatus.CONFLICT,
                 "CONFLICTO_INTEGRIDAD",
                 "Conflicto de integridad en la operación solicitada.",
