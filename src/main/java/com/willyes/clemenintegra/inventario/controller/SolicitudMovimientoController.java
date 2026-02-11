@@ -82,7 +82,7 @@ public class SolicitudMovimientoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerSolicitud(id));
     }

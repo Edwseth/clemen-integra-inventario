@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.controller;
 
+import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
@@ -10,6 +11,7 @@ import com.willyes.clemenintegra.shared.security.SecurityConfig;
 import com.willyes.clemenintegra.shared.security.SuperAdminSoloLecturaWriteBlockFilter;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -115,6 +117,29 @@ class SolicitudMovimientoControllerSecurityTest {
                         .with(SecurityMockMvcRequestPostProcessors.user("planeador")
                                 .authorities(() -> "ROL_PLANEADOR")))
                 .andExpect(status().isOk());
+    }
+
+
+    @Test
+    void jefeProduccionPuedeVerDetalleSolicitud() throws Exception {
+        when(solicitudMovimientoService.obtenerSolicitud(1L))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().id(1L).build());
+
+        mockMvc.perform(get("/api/inventario/solicitudes/1")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
+                                .authorities(() -> "ROL_JEFE_PRODUCCION")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void jefeProduccionRecibeNotFoundSiSolicitudNoExiste() throws Exception {
+        when(solicitudMovimientoService.obtenerSolicitud(999L))
+                .thenThrow(new EntityNotFoundException("Solicitud no encontrada: 999"));
+
+        mockMvc.perform(get("/api/inventario/solicitudes/999")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
+                                .authorities(() -> "ROL_JEFE_PRODUCCION")))
+                .andExpect(status().isNotFound());
     }
 
     @Test
