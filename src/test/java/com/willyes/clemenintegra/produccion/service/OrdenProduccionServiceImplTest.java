@@ -1507,7 +1507,7 @@ class OrdenProduccionServiceImplTest {
         assertThatThrownBy(() -> service.registrarCierre(255L, dto))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("reason")
-                .isEqualTo("ORDEN_NO_CERRABLE");
+                .isEqualTo("OP_YA_FINALIZADA");
 
         verify(movimientoInventarioService, never()).consumirInsumosPorOrden(anyLong(), any(), anyLong());
     }
@@ -1990,6 +1990,77 @@ class OrdenProduccionServiceImplTest {
         assertThat(consumos.get()).isEqualTo(1);
     }
 
+
+    @Test
+    @DisplayName("registrarCierre idempotente en reintento no duplica entrada de PT")
+    void registrarCierre_idempotente_reintento() {
+        OrdenProduccion orden = crearOrdenBase(500L, new BigDecimal("30000"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("30000"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        service.registrarCierre(500L, dto);
+
+        MovimientoInventario movimientoExistente = new MovimientoInventario();
+        movimientoExistente.setId(3007L);
+        LoteProducto loteExistente = new LoteProducto();
+        loteExistente.setId(9001L);
+        loteExistente.setStockLote(new BigDecimal("30000"));
+        movimientoExistente.setLote(loteExistente);
+        when(movimientoInventarioRepository
+                .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                        eq(500L),
+                        eq(TipoMovimiento.ENTRADA),
+                        eq(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO)))
+                .thenReturn(Optional.of(movimientoExistente));
+
+        OrdenProduccion segundo = service.registrarCierre(500L, dto);
+
+        assertThat(segundo).isSameAs(orden);
+        verify(movimientoInventarioService, times(1)).registrarMovimiento(any());
+        verify(movimientoInventarioRepository, times(2))
+                .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                        eq(500L),
+                        eq(TipoMovimiento.ENTRADA),
+                        eq(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO));
+    }
+
+    @Test
+    @DisplayName("registrarCierre concurrente usa lock y no duplica movimiento cierre")
+    void registrarCierre_concurrente_no_duplica() {
+        OrdenProduccion orden = crearOrdenBase(501L, new BigDecimal("30000"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("30000"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        service.registrarCierre(501L, dto);
+
+        MovimientoInventario movimientoExistente = new MovimientoInventario();
+        movimientoExistente.setId(4001L);
+        LoteProducto loteExistente = new LoteProducto();
+        loteExistente.setId(9002L);
+        movimientoExistente.setLote(loteExistente);
+        when(movimientoInventarioRepository
+                .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                        eq(501L),
+                        eq(TipoMovimiento.ENTRADA),
+                        eq(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO)))
+                .thenReturn(Optional.of(movimientoExistente));
+
+        service.registrarCierre(501L, dto);
+
+        verify(ordenProduccionRepository, times(2)).findByIdForUpdate(501L);
+        verify(movimientoInventarioService, times(1)).registrarMovimiento(any());
+    }
+
     @Test
     @DisplayName("registrarCierre definitivo rechaza cierre sin producción acumulada")
     void registrarCierre_definitivoSinProduccion() {
@@ -2292,6 +2363,12 @@ class OrdenProduccionServiceImplTest {
         when(movimientoInventarioRepository
                 .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(anyLong(), anyLong(), any()))
                 .thenReturn(List.of());
+        when(movimientoInventarioRepository
+                .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(anyLong(), any(), any()))
+                .thenReturn(Optional.empty());
+        when(movimientoInventarioRepository
+                .findFirstByOrdenProduccionIdAndLoteIdAndTipoMovimientoAndClasificacionOrderByIdAsc(anyLong(), anyLong(), any(), any()))
+                .thenReturn(Optional.empty());
 
         when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);

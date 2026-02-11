@@ -355,4 +355,15 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
     })
     List<MovimientoInventario> findByOrdenProduccionIdOrderByFechaIngresoAsc(Long ordenProduccionId);
 
+    Optional<MovimientoInventario> findFirstByOrdenProduccionIdAndLoteIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+            Long ordenProduccionId,
+            Long loteId,
+            TipoMovimiento tipoMovimiento,
+            ClasificacionMovimientoInventario clasificacion);
+
+    Optional<MovimientoInventario> findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+            Long ordenProduccionId,
+            TipoMovimiento tipoMovimiento,
+            ClasificacionMovimientoInventario clasificacion);
+
 }

@@ -1019,10 +1019,34 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             OrdenProduccion orden = repository.findByIdForUpdate(id)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
 
-            if (orden.getEstado() == EstadoProduccion.FINALIZADA ||
-                    orden.getEstado() == EstadoProduccion.CANCELADA ||
+            if (orden.getEstado() == EstadoProduccion.CANCELADA ||
                     orden.getEstado() == EstadoProduccion.CERRADA_INCOMPLETA) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_CERRABLE");
+            }
+
+            if (orden.getEstado() == EstadoProduccion.FINALIZADA) {
+                ClasificacionMovimientoInventario clasifCierreFinalizado;
+                try {
+                    clasifCierreFinalizado = ClasificacionMovimientoInventario.valueOf(clasificacionEntradaPtConf);
+                } catch (IllegalArgumentException ex) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_ENTRADA_PT_INVALIDA");
+                }
+                Optional<MovimientoInventario> movimientoCierreExistente = movimientoInventarioRepository
+                        .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                                orden.getId(),
+                                TipoMovimiento.ENTRADA,
+                                clasifCierreFinalizado);
+                if (movimientoCierreExistente.isPresent()) {
+                    MovimientoInventario movimiento = movimientoCierreExistente.get();
+                    Long loteMovimientoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
+                    log.info(
+                            "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
+                            orden.getId(),
+                            loteMovimientoId,
+                            movimiento.getId());
+                    return orden;
+                }
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "OP_YA_FINALIZADA");
             }
 
             if (dto.getCantidad() == null) {
@@ -1259,6 +1283,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
 
+            Optional<MovimientoInventario> movimientoCierreExistente = movimientoInventarioRepository
+                    .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                            orden.getId(),
+                            TipoMovimiento.ENTRADA,
+                            clasifEntrada);
+            if (movimientoCierreExistente.isPresent()) {
+                MovimientoInventario movimiento = movimientoCierreExistente.get();
+                Long loteMovimientoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
+                log.info(
+                        "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
+                        orden.getId(),
+                        loteMovimientoId,
+                        movimiento.getId());
+                return orden;
+            }
+
             BigDecimal acumulada = producidaAntes;
             BigDecimal nuevaAcumulada = producidaDespues;
             BigDecimal porcentajeCumplimiento = calcularPorcentajeCumplimiento(nuevaAcumulada, cantidadProgramada);
@@ -1376,6 +1416,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             loteProductoRepository.save(lote);
             log.info("OP-cierre lote op={}, producto={}, loteId={}, codigoLote={}, cantidad={}, fechaFabricacion={}, fechaVencimiento={}, almacenId={}, estado={}, usuario={}",
                     orden.getId(), orden.getProducto().getId(), lote.getId(), codigoLote, cantidad, fechaFabricacion, fechaVencimiento, destino.getId(), estadoLote, usuario.getId());
+
+            Optional<MovimientoInventario> movimientoCierrePorLote = movimientoInventarioRepository
+                    .findFirstByOrdenProduccionIdAndLoteIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                            orden.getId(),
+                            lote.getId(),
+                            TipoMovimiento.ENTRADA,
+                            clasifEntrada);
+            if (movimientoCierrePorLote.isPresent()) {
+                MovimientoInventario movimiento = movimientoCierrePorLote.get();
+                log.info(
+                        "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
+                        orden.getId(),
+                        lote.getId(),
+                        movimiento.getId());
+                return orden;
+            }
 
             MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
                     null,
