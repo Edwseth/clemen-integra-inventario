@@ -10,7 +10,7 @@ import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepositor
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
-import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
@@ -463,7 +463,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     }
 
     @Transactional
-    public ResultadoValidacionOrdenDTO crearOrden(OrdenProduccionRequestDTO dto) {
+    public ResultadoValidacionOrdenDTO crearOrden(CrearOrdenProduccionRequestDTO dto) {
         Producto producto = productoRepository.findById(dto.getProductoId())
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
         Usuario responsable = usuarioRepository.findById(dto.getResponsableId())
@@ -520,7 +520,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 && cantidadSolicitada.compareTo(CANTIDAD_MAXIMA_HOMEOPATICO) > 0;
     }
 
-    private void validarHandshakeHomeopatico(OrdenProduccionRequestDTO dto,
+    private void validarHandshakeHomeopatico(CrearOrdenProduccionRequestDTO dto,
                                              Producto producto,
                                              Integer semanasVigencia,
                                              BigDecimal cantidadSolicitada) {

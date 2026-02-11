@@ -1,6 +1,6 @@
 package com.willyes.clemenintegra.produccion.service;
 
-import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
@@ -24,7 +24,7 @@ import java.math.BigDecimal;
 
 public interface OrdenProduccionService {
     ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden);
-    ResultadoValidacionOrdenDTO crearOrden(OrdenProduccionRequestDTO dto);
+    ResultadoValidacionOrdenDTO crearOrden(CrearOrdenProduccionRequestDTO dto);
     List<OrdenProduccion> listarTodas();
     Optional<OrdenProduccion> buscarPorId(Long id);
     void eliminar(Long id);

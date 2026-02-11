@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.InsumoOPDTO;
 import com.willyes.clemenintegra.produccion.dto.CancelarOrdenRequestDTO;
-import com.willyes.clemenintegra.produccion.dto.OrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.ChecklistEtapaDTO;
@@ -104,18 +104,13 @@ class OrdenProduccionControllerTest {
     @MockBean
     private JwtAuthenticationProvider jwtAuthenticationProvider;
 
-    private OrdenProduccionRequestDTO buildRequest() {
-        LocalDateTime inicio = LocalDateTime.now().minusHours(1);
+    private CrearOrdenProduccionRequestDTO buildRequest() {
         LocalDateTime fin = LocalDateTime.now().plusHours(1);
-        return OrdenProduccionRequestDTO.builder()
-                .fechaInicio(inicio)
-                .fechaFin(fin)
+        return CrearOrdenProduccionRequestDTO.builder()
+                .fechaProgramada(fin)
                 .cantidadProgramada(BigDecimal.TEN)
-                .cantidadProducida(BigDecimal.ZERO)
-                .estado("CREADA")
                 .productoId(1L)
                 .responsableId(2L)
-                .unidadMedidaSimbolo("kg")
                 .build();
     }
 
@@ -133,7 +128,7 @@ class OrdenProduccionControllerTest {
                 .orden(orden)
                 .build();
 
-        when(ordenProduccionService.crearOrden(any(OrdenProduccionRequestDTO.class))).thenReturn(respuesta);
+        when(ordenProduccionService.crearOrden(any(CrearOrdenProduccionRequestDTO.class))).thenReturn(respuesta);
 
         mockMvc.perform(post("/api/produccion/ordenes")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -200,7 +195,7 @@ class OrdenProduccionControllerTest {
                 .orden(orden)
                 .build();
 
-        when(ordenProduccionService.crearOrden(any(OrdenProduccionRequestDTO.class))).thenReturn(respuesta);
+        when(ordenProduccionService.crearOrden(any(CrearOrdenProduccionRequestDTO.class))).thenReturn(respuesta);
 
         mockMvc.perform(post("/api/produccion/ordenes")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -228,7 +223,7 @@ class OrdenProduccionControllerTest {
                 ))
                 .build();
 
-        when(ordenProduccionService.crearOrden(any(OrdenProduccionRequestDTO.class))).thenReturn(respuesta);
+        when(ordenProduccionService.crearOrden(any(CrearOrdenProduccionRequestDTO.class))).thenReturn(respuesta);
 
         mockMvc.perform(post("/api/produccion/ordenes")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -242,7 +237,7 @@ class OrdenProduccionControllerTest {
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     @DisplayName("POST /api/produccion/ordenes retorna 409 y code estable al requerir confirmación homeopática")
     void crearOrden_homeopaticoRequiereConfirmacion_responde409() throws Exception {
-        when(ordenProduccionService.crearOrden(any(OrdenProduccionRequestDTO.class)))
+        when(ordenProduccionService.crearOrden(any(CrearOrdenProduccionRequestDTO.class)))
                 .thenThrow(new CustomBusinessException(
                         ApiErrorCode.OP_HOMEOPATICO_REQUIERE_CONFIRMACION,
                         "Confirma para continuar",
@@ -262,7 +257,7 @@ class OrdenProduccionControllerTest {
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     @DisplayName("POST /api/produccion/ordenes retorna 400 cuando confirmacionHomeopatico=true y motivo inválido")
     void crearOrden_homeopaticoConfirmadoConMotivoInvalido_responde400() throws Exception {
-        OrdenProduccionRequestDTO request = buildRequest();
+        CrearOrdenProduccionRequestDTO request = buildRequest();
         request.setConfirmacionHomeopatico(true);
         request.setMotivoOverrideHomeopatico("muy corto");
 
