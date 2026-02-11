@@ -257,6 +257,22 @@ class OrdenProduccionControllerTest {
                 .andExpect(jsonPath("$.details.semanasVigencia").value(78));
     }
 
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("POST /api/produccion/ordenes retorna 400 cuando confirmacionHomeopatico=true y motivo inválido")
+    void crearOrden_homeopaticoConfirmadoConMotivoInvalido_responde400() throws Exception {
+        OrdenProduccionRequestDTO request = buildRequest();
+        request.setConfirmacionHomeopatico(true);
+        request.setMotivoOverrideHomeopatico("muy corto");
+
+        mockMvc.perform(post("/api/produccion/ordenes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SOLICITUD_INVALIDA"));
+    }
+
     @Test
     @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
     @DisplayName("GET /api/produccion/ordenes/{id} permite consulta a jefe de calidad")

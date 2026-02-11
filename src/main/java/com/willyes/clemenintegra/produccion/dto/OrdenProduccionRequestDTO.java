@@ -48,5 +48,14 @@ public class OrdenProduccionRequestDTO {
 
     private Boolean confirmacionHomeopatico;
 
+    @Size(max = 500, message = "motivoOverrideHomeopatico no debe superar 500 caracteres")
     private String motivoOverrideHomeopatico;
+
+    @AssertTrue(message = "motivoOverrideHomeopatico es obligatorio cuando confirmacionHomeopatico=true y debe tener al menos 20 caracteres")
+    public boolean isMotivoOverrideValidoCuandoConfirmado() {
+        if (!Boolean.TRUE.equals(confirmacionHomeopatico)) {
+            return true;
+        }
+        return motivoOverrideHomeopatico != null && motivoOverrideHomeopatico.trim().length() >= 20;
+    }
 }

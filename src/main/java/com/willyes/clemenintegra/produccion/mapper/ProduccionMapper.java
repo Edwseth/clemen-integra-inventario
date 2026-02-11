@@ -20,6 +20,8 @@ public class ProduccionMapper {
                 .unidadMedida(producto.getUnidadMedida())
                 .responsable(responsable)
                 .lotePsId(dto.getLotePsId())
+                .confirmacionHomeopatico(Boolean.TRUE.equals(dto.getConfirmacionHomeopatico()))
+                .motivoOverrideHomeopatico(dto.getMotivoOverrideHomeopatico() != null ? dto.getMotivoOverrideHomeopatico().trim() : null)
                 .build();
     }
 
