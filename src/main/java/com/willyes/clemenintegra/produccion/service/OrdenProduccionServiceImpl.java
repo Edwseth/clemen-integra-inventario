@@ -499,9 +499,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
 
         ResultadoValidacionOrdenDTO resultado = guardarConValidacionStock(orden);
-        if (requiereOverrideHomeopatico && resultado.isEsValida() && resultado.getOrden() != null
-                && resultado.getOrden().id != null) {
-            registrarOverrideHomeopatico(resultado.getOrden().id, producto, semanasVigencia,
+        if (requiereOverrideHomeopatico && resultado.isEsValida() && orden.getId() != null) {
+            registrarOverrideHomeopatico(orden, producto, semanasVigencia,
                     cantidadConvertida, dto.getMotivoOverrideHomeopatico());
         }
         resultado.setUnidadesProducidas(unidadesProducidas);
@@ -560,11 +559,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
     }
 
-    private void registrarOverrideHomeopatico(Long ordenProduccionId,
+    private void registrarOverrideHomeopatico(OrdenProduccion orden,
                                               Producto producto,
                                               Integer semanasVigencia,
                                               BigDecimal cantidadSolicitada,
                                               String motivo) {
+        String motivoNormalizado = motivo != null ? motivo.trim() : null;
+
+        orden.setConfirmacionHomeopatico(Boolean.TRUE);
+        orden.setMotivoOverrideHomeopatico(motivoNormalizado);
+
         Usuario usuarioActual = null;
         try {
             usuarioActual = usuarioService.obtenerUsuarioAutenticado();
@@ -572,15 +576,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             log.warn("No fue posible resolver usuario autenticado para auditoría override homeopático", ex);
         }
 
-        OrdenProduccion ordenRef = new OrdenProduccion();
-        ordenRef.setId(ordenProduccionId);
-
         OpHomeopaticoOverride auditoria = OpHomeopaticoOverride.builder()
-                .ordenProduccion(ordenRef)
+                .ordenProduccion(orden)
                 .producto(producto)
                 .semanasVigencia(semanasVigencia)
                 .cantidadSolicitada(cantidadSolicitada)
-                .motivo(motivo != null ? motivo.trim() : null)
+                .motivo(motivoNormalizado)
                 .usuario(usuarioActual)
                 .build();
 
