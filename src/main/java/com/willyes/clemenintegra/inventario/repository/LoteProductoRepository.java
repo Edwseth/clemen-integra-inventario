@@ -282,6 +282,17 @@ WHERE lp.codigoLote = :codigoLote
                                         @Param("q") String q,
                                         @Param("estados") Collection<EstadoLote> estados);
 
+    @Query("""
+        select lp
+        from LoteProducto lp
+        left join fetch lp.ubicacionFisica uf
+        where lp.producto.id = :productoId
+          and lp.almacen.id = :almacenId
+        order by lp.fechaVencimiento asc nulls last, lp.id asc
+    """)
+    List<LoteProducto> buscarParaConteoPorProductoYAlmacen(@Param("productoId") Long productoId,
+                                                            @Param("almacenId") Integer almacenId);
+
     @Query(value = """
         SELECT lp.productos_id        AS productoId,
                p.nombre               AS nombreProducto,

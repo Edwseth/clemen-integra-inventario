@@ -24,7 +24,6 @@ import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +31,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -399,7 +397,7 @@ class ConteoCiclicoServiceTest {
     }
 
     @Test
-    void listarLotesParaConteoUsaEstadosContables() {
+    void listarLotesParaConteoIncluyeEnCuarentenaYFiltraStockCero() {
         ConteoCiclico conteo = ConteoCiclico.builder()
                 .id(2L)
                 .almacen(new Almacen(7))
@@ -407,31 +405,37 @@ class ConteoCiclicoServiceTest {
         Producto producto = new Producto();
         producto.setId(3);
 
-        LoteProducto loteDisponible = LoteProducto.builder()
+        LoteProducto loteCuarentena = LoteProducto.builder()
                 .id(15L)
                 .producto(producto)
                 .almacen(conteo.getAlmacen())
-                .codigoLote("DIS-001")
+                .codigoLote("CUA-001")
+                .estado(EstadoLote.EN_CUARENTENA)
+                .stockLote(new BigDecimal("4.00"))
+                .build();
+
+        LoteProducto loteSinStock = LoteProducto.builder()
+                .id(16L)
+                .producto(producto)
+                .almacen(conteo.getAlmacen())
+                .codigoLote("SIN-001")
                 .estado(EstadoLote.DISPONIBLE)
                 .stockLote(BigDecimal.ZERO)
                 .build();
 
         when(conteoCiclicoRepository.findById(2L)).thenReturn(Optional.of(conteo));
         when(productoRepository.findById(3L)).thenReturn(Optional.of(producto));
-        when(loteProductoRepository.buscarParaConteo(eq(3L), eq(7), isNull(), isNull(), anyCollection()))
-                .thenReturn(List.of(loteDisponible));
+        when(loteProductoRepository.buscarParaConteoPorProductoYAlmacen(3L, 7))
+                .thenReturn(List.of(loteCuarentena, loteSinStock));
 
-        ArgumentCaptor<Collection<EstadoLote>> estadosCaptor = ArgumentCaptor.forClass(Collection.class);
-
-        List<com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
+        List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
                 .listarLotesParaConteo(2L, 3L, null, null);
 
         assertThat(respuesta).hasSize(1);
         assertThat(respuesta.getFirst().getId()).isEqualTo(15L);
+        assertThat(respuesta.getFirst().getEstado()).isEqualTo("EN_CUARENTENA");
 
-        verify(loteProductoRepository).buscarParaConteo(eq(3L), eq(7), isNull(), isNull(), estadosCaptor.capture());
-        assertThat(estadosCaptor.getValue())
-                .containsExactlyInAnyOrder(EstadoLote.DISPONIBLE, EstadoLote.LIBERADO);
+        verify(loteProductoRepository).buscarParaConteoPorProductoYAlmacen(3L, 7);
     }
 
     @Test
@@ -454,7 +458,7 @@ class ConteoCiclicoServiceTest {
 
         when(conteoCiclicoRepository.findById(12L)).thenReturn(Optional.of(conteo));
         when(productoRepository.findById(8L)).thenReturn(Optional.of(producto));
-        when(loteProductoRepository.buscarParaConteo(eq(8L), eq(5), isNull(), isNull(), anyCollection()))
+        when(loteProductoRepository.buscarParaConteoPorProductoYAlmacen(8L, 5))
                 .thenReturn(List.of(lote));
 
         List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
@@ -492,7 +496,7 @@ class ConteoCiclicoServiceTest {
 
         when(conteoCiclicoRepository.findById(14L)).thenReturn(Optional.of(conteo));
         when(productoRepository.findById(11L)).thenReturn(Optional.of(producto));
-        when(loteProductoRepository.buscarParaConteo(eq(11L), eq(4), isNull(), isNull(), anyCollection()))
+        when(loteProductoRepository.buscarParaConteoPorProductoYAlmacen(11L, 4))
                 .thenReturn(List.of(lote));
 
         List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
@@ -523,10 +527,8 @@ class ConteoCiclicoServiceTest {
 
         when(conteoCiclicoRepository.findById(13L)).thenReturn(Optional.of(conteo));
         when(productoRepository.findById(9L)).thenReturn(Optional.of(producto));
-        when(loteProductoRepository.buscarParaConteo(eq(9L), eq(6), isNull(), anyString(), anyCollection()))
+        when(loteProductoRepository.buscarParaConteoPorProductoYAlmacen(9L, 6))
                 .thenReturn(List.of(lote));
-
-        ArgumentCaptor<String> qCaptor = ArgumentCaptor.forClass(String.class);
 
         List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService
                 .listarLotesParaConteo(13L, 9L, null, " 20251003 ");
@@ -534,8 +536,32 @@ class ConteoCiclicoServiceTest {
         assertThat(respuesta).hasSize(1);
         assertThat(respuesta.getFirst().getCodigoLote()).isEqualTo("L20251003-01");
 
-        verify(loteProductoRepository).buscarParaConteo(eq(9L), eq(6), isNull(), qCaptor.capture(), anyCollection());
-        assertThat(qCaptor.getValue()).isEqualTo("20251003");
+        verify(loteProductoRepository).buscarParaConteoPorProductoYAlmacen(9L, 6);
+    }
+
+    @Test
+    void listarLotesParaConteoPorProductoYAlmacenIncluyeEstadoEnCuarentena() {
+        Producto producto = new Producto();
+        producto.setId(728);
+        Almacen almacen = new Almacen(7);
+
+        LoteProducto lote = LoteProducto.builder()
+                .id(501L)
+                .producto(producto)
+                .almacen(almacen)
+                .codigoLote("L-728-01")
+                .estado(EstadoLote.EN_CUARENTENA)
+                .stockLote(new BigDecimal("2.00"))
+                .build();
+
+        when(loteProductoRepository.buscarParaConteoPorProductoYAlmacen(728L, 7))
+                .thenReturn(List.of(lote));
+
+        List<ConteoCiclicoLoteResponseDTO> respuesta = conteoCiclicoService.listarLotesParaConteo(728L, 7);
+
+        assertThat(respuesta).hasSize(1);
+        assertThat(respuesta.getFirst().getEstado()).isEqualTo("EN_CUARENTENA");
+        assertThat(respuesta.getFirst().getCodigoLote()).isEqualTo("L-728-01");
     }
 
     @Test

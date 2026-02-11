@@ -94,6 +94,28 @@ class ConteoCiclicoControllerTest {
                 .andExpect(jsonPath("$.estado").value("EN_CONTEO"));
     }
 
+
+    @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    void listarLotesPorProductoYAlmacenDevuelveLotesEnCuarentena() throws Exception {
+        ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
+                .id(501L)
+                .codigoLote("L-728-01")
+                .estado("EN_CUARENTENA")
+                .stockLote(new BigDecimal("2.00"))
+                .build();
+
+        when(conteoCiclicoService.listarLotesParaConteo(728L, 7)).thenReturn(List.of(lote));
+
+        mockMvc.perform(get("/api/inventario/conteos/lotes")
+                        .param("productoId", "728")
+                        .param("almacenId", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(501))
+                .andExpect(jsonPath("$[0].codigoLote").value("L-728-01"))
+                .andExpect(jsonPath("$[0].estado").value("EN_CUARENTENA"));
+    }
+
     @Test
     @WithMockUser(authorities = "ROL_ALMACENISTA")
     void listarLotesParaConteoSinQDevuelveListado() throws Exception {
