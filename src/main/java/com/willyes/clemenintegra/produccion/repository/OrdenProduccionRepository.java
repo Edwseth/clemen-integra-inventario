@@ -42,6 +42,10 @@ public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion
     @Query("select op from OrdenProduccion op where op.id = :id")
     Optional<OrdenProduccion> findByIdWithProductoCategoria(@Param("id") Long id);
 
+    @EntityGraph(attributePaths = {"producto", "producto.categoriaProducto", "producto.unidadMedida", "unidadMedida", "responsable"})
+    @Query("select op from OrdenProduccion op where op.id = :id")
+    Optional<OrdenProduccion> findByIdForCierreResponse(@Param("id") Long id);
+
     List<OrdenProduccion> findByFechaFinBetween(LocalDateTime inicio, LocalDateTime fin);
 
     List<OrdenProduccion> findByEstadoNotInAndFechaFinBetween(Collection<EstadoProduccion> estados, LocalDateTime inicio, LocalDateTime fin);
