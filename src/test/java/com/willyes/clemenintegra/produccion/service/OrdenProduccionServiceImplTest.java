@@ -2021,7 +2021,11 @@ class OrdenProduccionServiceImplTest {
         OrdenProduccion segundo = service.registrarCierre(500L, dto);
 
         assertThat(segundo).isSameAs(orden);
+        verify(movimientoInventarioService, times(1)).consumirInsumosPorOrden(eq(500L), anyLong(), anyLong());
         verify(movimientoInventarioService, times(1)).registrarMovimiento(any());
+        verify(cierreProduccionRepository, times(1)).save(any());
+        verify(reservaLoteService, times(1)).liberarReservasPorOrden(500L);
+        verify(loteProductoRepository, times(1)).save(any(LoteProducto.class));
         verify(movimientoInventarioRepository, times(2))
                 .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
                         eq(500L),
