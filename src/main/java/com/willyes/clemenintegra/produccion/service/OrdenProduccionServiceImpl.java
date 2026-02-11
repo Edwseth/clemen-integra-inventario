@@ -1024,20 +1024,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_CERRABLE");
             }
 
+            ClasificacionMovimientoInventario clasifEntrada;
+            try {
+                clasifEntrada = ClasificacionMovimientoInventario.valueOf(clasificacionEntradaPtConf);
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_ENTRADA_PT_INVALIDA");
+            }
+
+            Optional<MovimientoInventario> movimientoCierreExistenteTemprano = movimientoInventarioRepository
+                    .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                            orden.getId(),
+                            TipoMovimiento.ENTRADA,
+                            clasifEntrada);
+
             if (orden.getEstado() == EstadoProduccion.FINALIZADA) {
-                ClasificacionMovimientoInventario clasifCierreFinalizado;
-                try {
-                    clasifCierreFinalizado = ClasificacionMovimientoInventario.valueOf(clasificacionEntradaPtConf);
-                } catch (IllegalArgumentException ex) {
-                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_ENTRADA_PT_INVALIDA");
-                }
-                Optional<MovimientoInventario> movimientoCierreExistente = movimientoInventarioRepository
-                        .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                                orden.getId(),
-                                TipoMovimiento.ENTRADA,
-                                clasifCierreFinalizado);
-                if (movimientoCierreExistente.isPresent()) {
-                    MovimientoInventario movimiento = movimientoCierreExistente.get();
+                if (movimientoCierreExistenteTemprano.isPresent()) {
+                    MovimientoInventario movimiento = movimientoCierreExistenteTemprano.get();
                     Long loteMovimientoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
                     log.info(
                             "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
@@ -1047,6 +1049,17 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     return orden;
                 }
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "OP_YA_FINALIZADA");
+            }
+
+            if (movimientoCierreExistenteTemprano.isPresent()) {
+                MovimientoInventario movimiento = movimientoCierreExistenteTemprano.get();
+                Long loteMovimientoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
+                log.info(
+                        "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
+                        orden.getId(),
+                        loteMovimientoId,
+                        movimiento.getId());
+                return orden;
             }
 
             if (dto.getCantidad() == null) {
@@ -1272,32 +1285,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             MotivoMovimiento motivoEntrada = motivoMovimientoRepository.findById(motivoEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_ENTRADA_PT_INEXISTENTE"));
 
-            ClasificacionMovimientoInventario clasifEntrada;
-            try {
-                clasifEntrada = ClasificacionMovimientoInventario.valueOf(clasificacionEntradaPtConf);
-            } catch (IllegalArgumentException ex) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_ENTRADA_PT_INVALIDA");
-            }
-
             Long tipoDetalleEntradaId = catalogResolver.getTipoDetalleEntradaId();
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
-
-            Optional<MovimientoInventario> movimientoCierreExistente = movimientoInventarioRepository
-                    .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                            orden.getId(),
-                            TipoMovimiento.ENTRADA,
-                            clasifEntrada);
-            if (movimientoCierreExistente.isPresent()) {
-                MovimientoInventario movimiento = movimientoCierreExistente.get();
-                Long loteMovimientoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
-                log.info(
-                        "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
-                        orden.getId(),
-                        loteMovimientoId,
-                        movimiento.getId());
-                return orden;
-            }
 
             BigDecimal acumulada = producidaAntes;
             BigDecimal nuevaAcumulada = producidaDespues;
