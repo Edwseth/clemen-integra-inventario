@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
+import com.willyes.clemenintegra.inventario.dto.TipoAjuste;
 import com.willyes.clemenintegra.inventario.mapper.AjusteInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.AjusteInventario;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
@@ -70,9 +71,9 @@ public class AjusteInventarioServiceImpl implements AjusteInventarioService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
 
-        ClasificacionMovimientoInventario clasificacion = dto.getCantidad().compareTo(BigDecimal.ZERO) > 0
-                ? ClasificacionMovimientoInventario.AJUSTE_POSITIVO
-                : ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
+        ClasificacionMovimientoInventario clasificacion = dto.getTipoAjuste() == TipoAjuste.NEGATIVO
+                ? ClasificacionMovimientoInventario.AJUSTE_NEGATIVO
+                : ClasificacionMovimientoInventario.AJUSTE_POSITIVO;
 
         Long motivoMovimientoId = motivoMovimientoRepository.findByMotivo(clasificacion)
                 .map(m -> m.getId())

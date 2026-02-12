@@ -15,6 +15,9 @@ public class AjusteInventarioRequestDTO {
     //@DecimalMin(value = "0.01", message = "La cantidad debe ser mayor a cero")
     private BigDecimal cantidad;
 
+    @NotNull(message = "El tipo de ajuste es obligatorio")
+    private TipoAjuste tipoAjuste;
+
     @NotBlank(message = "El motivo es obligatorio")
     private String motivo;
 

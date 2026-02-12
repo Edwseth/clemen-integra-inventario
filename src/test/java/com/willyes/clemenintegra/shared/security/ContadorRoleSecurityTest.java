@@ -346,9 +346,10 @@ class ContadorRoleSecurityTest {
                                   "motivo":"Ajuste",
                                   "observaciones":"ok",
                                   "cantidad":1,
+                                  "tipoAjuste":"POSITIVO",
                                   "productoId":1,
                                   "almacenId":1,
-                                  "usuarioId":1
+                                  "loteProductoId":1
                                 }
                                 """))
                 .andExpect(status().isOk());

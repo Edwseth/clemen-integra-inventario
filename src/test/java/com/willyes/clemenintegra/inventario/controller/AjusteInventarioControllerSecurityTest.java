@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.TipoAjuste;
 import com.willyes.clemenintegra.inventario.service.AjusteInventarioService;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
@@ -110,6 +111,7 @@ class AjusteInventarioControllerSecurityTest {
     void permiteCrearAjusteConPermisoInventario() throws Exception {
         AjusteInventarioRequestDTO request = AjusteInventarioRequestDTO.builder()
                 .cantidad(new BigDecimal("3.00"))
+                .tipoAjuste(TipoAjuste.POSITIVO)
                 .motivo("Corrección")
                 .productoId(10L)
                 .almacenId(2L)
