@@ -113,7 +113,7 @@ class AjusteInventarioControllerSecurityTest {
                 .motivo("Corrección")
                 .productoId(10L)
                 .almacenId(2L)
-                .usuarioId(5L)
+                .loteProductoId(20L)
                 .build();
 
         when(ajusteInventarioService.crear(any(AjusteInventarioRequestDTO.class)))
