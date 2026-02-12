@@ -232,6 +232,26 @@ class ProductoControllerSmokeTest {
         verify(productoService).buscarAutocompleteInventarioAjustes(eq("resveratrol"), any(Pageable.class));
     }
 
+
+    @Test
+    @WithMockUser(authorities = "ROL_COMPRADOR")
+    @DisplayName("GET /api/productos/buscar permite acceso a comprador")
+    void buscarProductosParaAjustes_compradorOk() throws Exception {
+        ProductoAutocompleteDTO response = new ProductoAutocompleteDTO(6, "SKU-COMP", "Producto Compras", null);
+
+        when(productoService.buscarAutocompleteInventarioAjustes(eq("compras"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
+
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("query", "compras")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].codigoSku").value("SKU-COMP"))
+                .andExpect(jsonPath("$.content[0].nombre").value("Producto Compras"));
+
+        verify(productoService).buscarAutocompleteInventarioAjustes(eq("compras"), any(Pageable.class));
+    }
     @Test
     @WithMockUser(authorities = "ROL_ALMACENISTA")
     @DisplayName("GET /api/productos/buscar rechaza roles sin permiso")

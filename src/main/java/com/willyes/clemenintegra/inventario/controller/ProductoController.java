@@ -40,7 +40,7 @@ public class ProductoController {
     private final UsuarioRepository usuarioRepository;
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR')")
     public ResponseEntity<Page<ProductoAutocompleteDTO>> buscarProductosParaAjustes(
             @RequestParam(name = "query", required = false) String query,
             @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
