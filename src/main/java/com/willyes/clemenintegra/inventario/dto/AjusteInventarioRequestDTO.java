@@ -26,7 +26,6 @@ public class AjusteInventarioRequestDTO {
     @NotNull(message = "El ID del almacén es obligatorio")
     private Long almacenId;
 
-    @NotNull(message = "El ID del usuario es obligatorio")
-    private Long usuarioId;
+    @NotNull(message = "El ID del lote es obligatorio")
+    private Long loteProductoId;
 }
-
