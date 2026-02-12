@@ -3,10 +3,11 @@ package com.willyes.clemenintegra.shared.security.service;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.rbac.PermisoEntity;
 import com.willyes.clemenintegra.shared.repository.PermisoRepository;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -20,20 +21,28 @@ public class UsuarioAuthoritiesService {
     private final PermisoRepository permisoRepository;
 
     public Collection<? extends GrantedAuthority> buildAuthorities(Usuario usuario) {
-        List<GrantedAuthority> authorities = new ArrayList<>();
         if (usuario == null || usuario.getRol() == null) {
-            return authorities;
+            return List.of();
         }
 
+        Set<GrantedAuthority> authorities = new LinkedHashSet<>();
         authorities.add(new SimpleGrantedAuthority(usuario.getRol().name()));
 
-        List<GrantedAuthority> permisos = permisoRepository.findByRolesCodigoAndActivoTrue(usuario.getRol().name()).stream()
-                .map(PermisoEntity::getCodigo)
+        List<String> codigosPermiso = usuario.getId() != null
+                ? permisoRepository.findCodigosPermisosActivosByUsuarioId(usuario.getId())
+                : List.of();
+
+        if (codigosPermiso == null || codigosPermiso.isEmpty()) {
+            codigosPermiso = permisoRepository.findByRolesCodigoAndActivoTrue(usuario.getRol().name()).stream()
+                    .map(PermisoEntity::getCodigo)
+                    .toList();
+        }
+
+        authorities.addAll(codigosPermiso.stream()
                 .filter(Objects::nonNull)
                 .distinct()
                 .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
-        authorities.addAll(permisos);
+                .collect(Collectors.toList()));
 
         return authorities;
     }
