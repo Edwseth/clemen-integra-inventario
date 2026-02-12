@@ -1992,77 +1992,71 @@ class OrdenProduccionServiceImplTest {
 
 
     @Test
-    @DisplayName("registrarCierre idempotente en reintento no duplica entrada de PT")
-    void registrarCierre_idempotente_reintento() {
-        OrdenProduccion orden = crearOrdenBase(500L, new BigDecimal("30000"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+    @DisplayName("registrarCierre parcial y luego total en mismo lote crea dos entradas y finaliza")
+    void registrarCierre_parcial_y_luego_total_mismo_lote() {
+        OrdenProduccion orden = crearOrdenBase(500L, new BigDecimal("10800"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
         when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
-                .cantidad(new BigDecimal("30000"))
+        LoteProducto lotePersistido = new LoteProducto();
+        lotePersistido.setId(9001L);
+        lotePersistido.setCodigoLote("L-9001");
+        lotePersistido.setAlmacen(new Almacen(30));
+        lotePersistido.setEstado(EstadoLote.DISPONIBLE);
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(500L, 500L))
+                .thenReturn(Optional.empty(), Optional.of(lotePersistido));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            if (lote.getId() == null) {
+                lote.setId(9001L);
+            }
+            return lote;
+        });
+
+        CierreProduccionRequestDTO cierreParcial = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("10000"))
+                .tipo(TipoCierre.PARCIAL)
+                .build();
+        CierreProduccionRequestDTO cierreTotal = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("800"))
                 .tipo(TipoCierre.TOTAL)
                 .build();
 
-        service.registrarCierre(500L, dto);
+        service.registrarCierre(500L, cierreParcial);
+        OrdenProduccion resultado = service.registrarCierre(500L, cierreTotal);
 
-        MovimientoInventario movimientoExistente = new MovimientoInventario();
-        movimientoExistente.setId(3007L);
-        LoteProducto loteExistente = new LoteProducto();
-        loteExistente.setId(9001L);
-        loteExistente.setStockLote(new BigDecimal("30000"));
-        movimientoExistente.setLote(loteExistente);
-        when(movimientoInventarioRepository
-                .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                        eq(500L),
-                        eq(TipoMovimiento.ENTRADA),
-                        eq(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO)))
-                .thenReturn(Optional.of(movimientoExistente));
+        ArgumentCaptor<MovimientoInventarioDTO> movimientosCaptor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService, times(2)).registrarMovimiento(movimientosCaptor.capture());
+        List<MovimientoInventarioDTO> movimientos = movimientosCaptor.getAllValues();
 
-        OrdenProduccion segundo = service.registrarCierre(500L, dto);
-
-        assertThat(segundo).isSameAs(orden);
-        verify(movimientoInventarioService, times(1)).consumirInsumosPorOrden(eq(500L), anyLong(), anyLong());
-        verify(movimientoInventarioService, times(1)).registrarMovimiento(any());
-        verify(cierreProduccionRepository, times(1)).save(any());
-        verify(reservaLoteService, times(1)).liberarReservasPorOrden(500L);
-        verify(loteProductoRepository, times(1)).save(any(LoteProducto.class));
-        verify(movimientoInventarioRepository, times(2))
-                .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                        eq(500L),
-                        eq(TipoMovimiento.ENTRADA),
-                        eq(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO));
+        assertThat(movimientos).hasSize(2);
+        assertThat(movimientos.get(0).cantidad()).isEqualByComparingTo(new BigDecimal("10000"));
+        assertThat(movimientos.get(1).cantidad()).isEqualByComparingTo(new BigDecimal("800"));
+        assertThat(movimientos.get(0).tipoMovimiento()).isEqualTo(TipoMovimiento.ENTRADA);
+        assertThat(movimientos.get(1).tipoMovimiento()).isEqualTo(TipoMovimiento.ENTRADA);
+        assertThat(resultado.getCantidadProducidaAcumulada()).isEqualByComparingTo(new BigDecimal("10800.00"));
+        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.FINALIZADA);
     }
 
     @Test
-    @DisplayName("registrarCierre concurrente usa lock y no duplica movimiento cierre")
-    void registrarCierre_concurrente_no_duplica() {
-        OrdenProduccion orden = crearOrdenBase(501L, new BigDecimal("30000"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
-        stubInfraCierre(orden, 1L);
-        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    @DisplayName("registrarCierre reintento tras total con OP finalizada no crea más movimientos")
+    void registrarCierre_reintentoPostTotal_ordenFinalizada() {
+        OrdenProduccion orden = crearOrdenBase(501L, new BigDecimal("10800"), new BigDecimal("10800"), EstadoProduccion.FINALIZADA);
+        when(ordenProduccionRepository.findByIdForUpdate(501L)).thenReturn(Optional.of(orden));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
-                .cantidad(new BigDecimal("30000"))
+                .cantidad(new BigDecimal("800"))
                 .tipo(TipoCierre.TOTAL)
                 .build();
 
-        service.registrarCierre(501L, dto);
+        assertThatThrownBy(() -> service.registrarCierre(501L, dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("reason")
+                .isEqualTo("OP_YA_FINALIZADA");
 
-        MovimientoInventario movimientoExistente = new MovimientoInventario();
-        movimientoExistente.setId(4001L);
-        LoteProducto loteExistente = new LoteProducto();
-        loteExistente.setId(9002L);
-        movimientoExistente.setLote(loteExistente);
-        when(movimientoInventarioRepository
-                .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                        eq(501L),
-                        eq(TipoMovimiento.ENTRADA),
-                        eq(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO)))
-                .thenReturn(Optional.of(movimientoExistente));
-
-        service.registrarCierre(501L, dto);
-
-        verify(ordenProduccionRepository, times(2)).findByIdForUpdate(501L);
-        verify(movimientoInventarioService, times(1)).registrarMovimiento(any());
+        verify(cierreProduccionRepository, never()).save(any());
+        verify(movimientoInventarioService, never()).registrarMovimiento(any());
+        verify(movimientoInventarioService, never()).consumirInsumosPorOrden(anyLong(), anyLong(), anyLong());
     }
 
     @Test

@@ -1031,35 +1031,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_ENTRADA_PT_INVALIDA");
             }
 
-            Optional<MovimientoInventario> movimientoCierreExistenteTemprano = movimientoInventarioRepository
-                    .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                            orden.getId(),
-                            TipoMovimiento.ENTRADA,
-                            clasifEntrada);
-
             if (orden.getEstado() == EstadoProduccion.FINALIZADA) {
-                if (movimientoCierreExistenteTemprano.isPresent()) {
-                    MovimientoInventario movimiento = movimientoCierreExistenteTemprano.get();
-                    Long loteMovimientoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
-                    log.info(
-                            "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
-                            orden.getId(),
-                            loteMovimientoId,
-                            movimiento.getId());
-                    return orden;
-                }
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "OP_YA_FINALIZADA");
-            }
-
-            if (movimientoCierreExistenteTemprano.isPresent()) {
-                MovimientoInventario movimiento = movimientoCierreExistenteTemprano.get();
-                Long loteMovimientoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
-                log.info(
-                        "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
-                        orden.getId(),
-                        loteMovimientoId,
-                        movimiento.getId());
-                return orden;
             }
 
             if (dto.getCantidad() == null) {
@@ -1406,22 +1379,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             loteProductoRepository.save(lote);
             log.info("OP-cierre lote op={}, producto={}, loteId={}, codigoLote={}, cantidad={}, fechaFabricacion={}, fechaVencimiento={}, almacenId={}, estado={}, usuario={}",
                     orden.getId(), orden.getProducto().getId(), lote.getId(), codigoLote, cantidad, fechaFabricacion, fechaVencimiento, destino.getId(), estadoLote, usuario.getId());
-
-            Optional<MovimientoInventario> movimientoCierrePorLote = movimientoInventarioRepository
-                    .findFirstByOrdenProduccionIdAndLoteIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                            orden.getId(),
-                            lote.getId(),
-                            TipoMovimiento.ENTRADA,
-                            clasifEntrada);
-            if (movimientoCierrePorLote.isPresent()) {
-                MovimientoInventario movimiento = movimientoCierrePorLote.get();
-                log.info(
-                        "Cierre OP idempotente: ya existe movimiento cierre opId={}, loteId={}, movimientoId={}",
-                        orden.getId(),
-                        lote.getId(),
-                        movimiento.getId());
-                return orden;
-            }
 
             MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
                     null,
