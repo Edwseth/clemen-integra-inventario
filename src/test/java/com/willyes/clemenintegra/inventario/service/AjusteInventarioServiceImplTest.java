@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.AjusteInventarioRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
+import com.willyes.clemenintegra.inventario.dto.TipoAjuste;
 import com.willyes.clemenintegra.inventario.mapper.AjusteInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.AjusteInventario;
 import com.willyes.clemenintegra.inventario.model.Almacen;
@@ -118,7 +119,8 @@ class AjusteInventarioServiceImplTest {
     @Test
     void ajuste_negativo_crea_movimiento_y_decrementa_stock_lote() {
         AjusteInventarioRequestDTO dto = AjusteInventarioRequestDTO.builder()
-                .cantidad(new BigDecimal("-5"))
+                .cantidad(new BigDecimal("5"))
+                .tipoAjuste(TipoAjuste.NEGATIVO)
                 .motivo("Ajuste negativo")
                 .observaciones("descuento")
                 .productoId(10L)
@@ -139,7 +141,8 @@ class AjusteInventarioServiceImplTest {
     @Test
     void ajuste_negativo_no_permite_stock_negativo() {
         AjusteInventarioRequestDTO dto = AjusteInventarioRequestDTO.builder()
-                .cantidad(new BigDecimal("-5000"))
+                .cantidad(new BigDecimal("5000"))
+                .tipoAjuste(TipoAjuste.NEGATIVO)
                 .motivo("Ajuste negativo")
                 .observaciones("insuficiente")
                 .productoId(10L)
@@ -161,6 +164,7 @@ class AjusteInventarioServiceImplTest {
     void ajuste_positivo_crea_movimiento_y_incrementa_stock_lote() {
         AjusteInventarioRequestDTO dto = AjusteInventarioRequestDTO.builder()
                 .cantidad(new BigDecimal("7"))
+                .tipoAjuste(TipoAjuste.POSITIVO)
                 .motivo("Ajuste positivo")
                 .observaciones("sumar")
                 .productoId(10L)
