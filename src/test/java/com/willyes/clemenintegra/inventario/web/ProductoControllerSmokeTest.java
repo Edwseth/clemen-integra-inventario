@@ -270,6 +270,24 @@ class ProductoControllerSmokeTest {
     }
 
     @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    @DisplayName("GET /api/productos/buscar acepta term por compatibilidad")
+    void buscarProductosParaAjustes_aceptaTerm() throws Exception {
+        ProductoAutocompleteDTO response = new ProductoAutocompleteDTO(12, "SKU-AL-01", "Almidón de maíz", null);
+        when(productoService.buscarAutocompleteInventarioAjustes(eq("al"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
+
+        mockMvc.perform(get("/api/productos/buscar")
+                        .param("term", "al")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].codigoSku").value("SKU-AL-01"));
+
+        verify(productoService).buscarAutocompleteInventarioAjustes(eq("al"), any(Pageable.class));
+    }
+
+    @Test
     @WithMockUser(authorities = "ROL_SUPER_ADMIN")
     @DisplayName("GET /api/productos/insumos/autocomplete devuelve 200 y unidad de medida en DTO")
     void buscarInsumosAutocomplete_deberiaRetornarUnidadMedida() throws Exception {
