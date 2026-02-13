@@ -20,6 +20,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +44,10 @@ public class ProductoController {
     @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR')")
     public ResponseEntity<Page<ProductoAutocompleteDTO>> buscarProductosParaAjustes(
             @RequestParam(name = "query", required = false) String query,
+            @RequestParam(name = "term", required = false) String term,
             @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<ProductoAutocompleteDTO> page = productoService.buscarAutocompleteInventarioAjustes(query, pageable);
+        String searchTerm = StringUtils.hasText(query) ? query : term;
+        Page<ProductoAutocompleteDTO> page = productoService.buscarAutocompleteInventarioAjustes(searchTerm, pageable);
         return ResponseEntity.ok(page);
     }
 
