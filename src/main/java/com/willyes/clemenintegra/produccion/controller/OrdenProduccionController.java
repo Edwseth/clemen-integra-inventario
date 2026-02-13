@@ -11,6 +11,8 @@ import com.willyes.clemenintegra.produccion.service.*;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -92,6 +94,37 @@ public class OrdenProduccionController {
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ordenes-produccion.pdf");
         return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
+    }
+
+
+    @GetMapping("/lookup")
+    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    public ResponseEntity<OrdenProduccionResponseDTO> lookup(@RequestParam(required = false) Long id,
+                                                              @RequestParam(required = false) String codigo) {
+        String codigoNormalizado = codigo != null ? codigo.trim() : null;
+        if (codigo != null && codigoNormalizado.isEmpty()) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe enviar un parámetro válido: codigo o id.");
+        }
+
+        if (codigoNormalizado != null && !codigoNormalizado.isEmpty()) {
+            return ordenProduccionRepository.findByCodigoOrdenIgnoreCase(codigoNormalizado)
+                    .map(ProduccionMapper::toResponse)
+                    .map(ResponseEntity::ok)
+                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.ORDEN_PRODUCCION_NO_ENCONTRADA,
+                            "ORDEN_NO_ENCONTRADA"));
+        }
+
+        if (id != null) {
+            return service.buscarPorId(id)
+                    .map(ProduccionMapper::toResponse)
+                    .map(ResponseEntity::ok)
+                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.ORDEN_PRODUCCION_NO_ENCONTRADA,
+                            "ORDEN_NO_ENCONTRADA"));
+        }
+
+        throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                "Debe enviar un parámetro válido: codigo o id.");
     }
 
     @GetMapping("/{id}")
