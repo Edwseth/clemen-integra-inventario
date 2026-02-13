@@ -3,6 +3,8 @@ package com.willyes.clemenintegra.produccion.web;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.produccion.controller.OrdenProduccionController;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.service.ChecklistEtapaService;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.produccion.service.ReporteOrdenProduccionService;
@@ -49,6 +51,8 @@ class OrdenProduccionControllerSecurityTest {
 
     @MockBean
     private OrdenProduccionService ordenProduccionService;
+    @MockBean
+    private OrdenProduccionRepository ordenProduccionRepository;
     @MockBean
     private ReporteOrdenProduccionService reporteOrdenProduccionService;
     @MockBean
@@ -246,4 +250,61 @@ class OrdenProduccionControllerSecurityTest {
         mockMvc.perform(get("/api/produccion/ordenes/{id}", 1L))
                 .andExpect(status().isUnauthorized());
     }
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    @DisplayName("GET /api/produccion/ordenes/lookup permite contador via capa HTTP")
+    void lookup_conRolContador_noDevuelve403() throws Exception {
+        when(ordenProduccionRepository.findByCodigoOrdenIgnoreCase("OP-CLEMEN-20260129-05"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/produccion/ordenes/lookup")
+                        .param("codigo", "OP-CLEMEN-20260129-05"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @DisplayName("GET /api/produccion/ordenes/lookup rechaza rol no autorizado")
+    void lookup_conRolNoPermitido_devuelve403() throws Exception {
+        mockMvc.perform(get("/api/produccion/ordenes/lookup")
+                        .param("codigo", "OP-CLEMEN-20260129-05"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("GET /api/produccion/ordenes/lookup serializa categoriaProducto sin 500")
+    void lookup_conSuperAdmin_serializaCategoriaSin500() throws Exception {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(10L)
+                .codigoOrden("OP-CLEMEN-20260129-05")
+                .estado(com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion.CREADA)
+                .build();
+
+        com.willyes.clemenintegra.inventario.model.CategoriaProducto categoria =
+                com.willyes.clemenintegra.inventario.model.CategoriaProducto.builder()
+                        .id(5L)
+                        .nombre("Terminados")
+                        .tipo(com.willyes.clemenintegra.inventario.model.enums.TipoCategoria.PRODUCTO_TERMINADO)
+                        .build();
+
+        com.willyes.clemenintegra.inventario.model.Producto producto =
+                com.willyes.clemenintegra.inventario.model.Producto.builder()
+                        .id(99)
+                        .nombre("Producto Prueba")
+                        .categoriaProducto(categoria)
+                        .build();
+
+        orden.setProducto(producto);
+
+        when(ordenProduccionRepository.findByCodigoOrdenIgnoreCase("OP-CLEMEN-20260129-05"))
+                .thenReturn(Optional.of(orden));
+
+        mockMvc.perform(get("/api/produccion/ordenes/lookup")
+                        .param("codigo", "OP-CLEMEN-20260129-05"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.categoriaProducto").value("PRODUCTO_TERMINADO"));
+    }
+
 }
