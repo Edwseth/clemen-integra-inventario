@@ -453,6 +453,7 @@ public class SecurityConfig {
                             RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
                             RolUsuario.ROL_JEFE_CALIDAD.name(),
                             RolUsuario.ROL_PLANEADOR.name(),
+                            RolUsuario.ROL_CONTADOR.name(),
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
