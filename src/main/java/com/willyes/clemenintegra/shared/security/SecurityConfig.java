@@ -530,6 +530,10 @@ public class SecurityConfig {
                             RolUsuario.ROL_SUPER_ADMIN.name()
                     );
 
+                    auth.requestMatchers("/api/admin/rbac/**").hasAuthority(
+                            RolUsuario.ROL_SUPER_ADMIN.name()
+                    );
+
                     // Mantener esta regla genérica al final
                     auth.requestMatchers("/error").permitAll();
                     auth.requestMatchers("/api/**").authenticated();
