@@ -30,6 +30,7 @@ public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion
 
     Optional<OrdenProduccion> findByLoteProduccion(String loteProduccion);
 
+    @EntityGraph(attributePaths = {"producto", "producto.categoriaProducto", "unidadMedida", "responsable"})
     Optional<OrdenProduccion> findByCodigoOrdenIgnoreCase(String codigoOrden);
 
     Long countByCodigoOrdenStartingWith(String prefijo);
