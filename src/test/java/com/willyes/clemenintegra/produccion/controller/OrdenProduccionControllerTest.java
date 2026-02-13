@@ -552,4 +552,74 @@ class OrdenProduccionControllerTest {
 
         verify(ordenProduccionService).finalizarEtapa(44L, 33L, 20L);
     }
+
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    @DisplayName("GET /api/produccion/ordenes/lookup permite lookup por codigo a ROL_CONTADOR")
+    void lookupPorCodigo_contador_respondeOk() throws Exception {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(10L)
+                .codigoOrden("OP-CLEMEN-20260214-01")
+                .estado(EstadoProduccion.CREADA)
+                .build();
+        when(ordenProduccionRepository.findByCodigoOrdenIgnoreCase("OP-CLEMEN-20260214-01"))
+                .thenReturn(Optional.of(orden));
+
+        mockMvc.perform(get("/api/produccion/ordenes/lookup")
+                        .param("codigo", "OP-CLEMEN-20260214-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10L))
+                .andExpect(jsonPath("$.codigoOrden").value("OP-CLEMEN-20260214-01"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("GET /api/produccion/ordenes/lookup permite lookup por codigo a ROL_SUPER_ADMIN")
+    void lookupPorCodigo_superAdmin_respondeOk() throws Exception {
+        OrdenProduccion orden = OrdenProduccion.builder()
+                .id(11L)
+                .codigoOrden("OP-CLEMEN-20260214-02")
+                .estado(EstadoProduccion.CREADA)
+                .build();
+        when(ordenProduccionRepository.findByCodigoOrdenIgnoreCase("OP-CLEMEN-20260214-02"))
+                .thenReturn(Optional.of(orden));
+
+        mockMvc.perform(get("/api/produccion/ordenes/lookup")
+                        .param("codigo", "OP-CLEMEN-20260214-02"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(11L))
+                .andExpect(jsonPath("$.codigoOrden").value("OP-CLEMEN-20260214-02"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("GET /api/produccion/ordenes/lookup rechaza roles no autorizados")
+    void lookupPorCodigo_rolNoAutorizado_responde403() throws Exception {
+        mockMvc.perform(get("/api/produccion/ordenes/lookup")
+                        .param("codigo", "OP-CLEMEN-20260214-03"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("GET /api/produccion/ordenes/lookup devuelve 404 cuando no existe la orden")
+    void lookupPorCodigo_noExiste_responde404() throws Exception {
+        when(ordenProduccionRepository.findByCodigoOrdenIgnoreCase("OP-CLEMEN-404"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/produccion/ordenes/lookup")
+                        .param("codigo", "OP-CLEMEN-404"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.ORDEN_PRODUCCION_NO_ENCONTRADA.name()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @DisplayName("GET /api/produccion/ordenes/lookup devuelve 400 cuando no se envian parametros")
+    void lookupSinParametros_responde400() throws Exception {
+        mockMvc.perform(get("/api/produccion/ordenes/lookup"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.SOLICITUD_INVALIDA.name()));
+    }
+
 }
