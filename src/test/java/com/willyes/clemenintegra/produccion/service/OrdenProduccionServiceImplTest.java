@@ -154,6 +154,7 @@ class OrdenProduccionServiceImplTest {
             return op;
         });
         lenient().when(ordenProduccionRepository.countByCodigoOrdenStartingWith(any())).thenReturn(0L);
+        lenient().when(ordenProduccionRepository.findCodigosByPrefijo(any())).thenReturn(List.of());
         EtapaPlantilla etapa = EtapaPlantilla.builder()
                 .id(1L)
                 .nombre("Preparación")
@@ -182,6 +183,38 @@ class OrdenProduccionServiceImplTest {
         lenient().when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(motivoSalida));
         lenient().when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(anyLong(), anyLong(), any(), anyLong()))
                 .thenReturn(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("generarCodigoOrden usa el máximo consecutivo del día")
+    void generarCodigoOrden_usaMaximoConsecutivoDelDia() {
+        String prefijo = "OP-CLEMEN-" + LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        when(ordenProduccionRepository.findCodigosByPrefijo(prefijo))
+                .thenReturn(List.of(
+                        prefijo + "-01",
+                        prefijo + "-04",
+                        prefijo + "-02"
+                ));
+
+        String codigo = ReflectionTestUtils.invokeMethod(service, "generarCodigoOrden");
+
+        assertThat(codigo).isEqualTo(prefijo + "-05");
+    }
+
+    @Test
+    @DisplayName("generarCodigoOrden ignora sufijos inválidos")
+    void generarCodigoOrden_ignoraSufijosInvalidos() {
+        String prefijo = "OP-CLEMEN-" + LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        when(ordenProduccionRepository.findCodigosByPrefijo(prefijo))
+                .thenReturn(List.of(
+                        prefijo + "-AA",
+                        prefijo + "-  ",
+                        prefijo + "-03"
+                ));
+
+        String codigo = ReflectionTestUtils.invokeMethod(service, "generarCodigoOrden");
+
+        assertThat(codigo).isEqualTo(prefijo + "-04");
     }
 
     @Test
