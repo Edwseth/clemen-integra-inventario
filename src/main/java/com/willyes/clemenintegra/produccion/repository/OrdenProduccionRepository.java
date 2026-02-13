@@ -30,6 +30,8 @@ public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion
 
     Optional<OrdenProduccion> findByLoteProduccion(String loteProduccion);
 
+    Optional<OrdenProduccion> findByCodigoOrdenIgnoreCase(String codigoOrden);
+
     Long countByCodigoOrdenStartingWith(String prefijo);
 
     @Query("select op.codigoOrden from OrdenProduccion op where op.codigoOrden like concat(:prefijo, '-%')")
