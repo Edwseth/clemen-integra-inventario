@@ -168,8 +168,23 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private String generarCodigoOrden() {
         String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefijo = "OP-CLEMEN-" + fecha;
-        Long contador = repository.countByCodigoOrdenStartingWith(prefijo);
-        return prefijo + "-" + String.format("%02d", contador + 1);
+        List<String> codigosDia = repository.findCodigosByPrefijo(prefijo);
+
+        int siguienteConsecutivo = codigosDia.stream()
+                .map(codigo -> codigo.substring(prefijo.length() + 1))
+                .map(String::trim)
+                .filter(sufijo -> !sufijo.isEmpty())
+                .map(sufijo -> {
+                    try {
+                        return Integer.parseInt(sufijo);
+                    } catch (NumberFormatException ex) {
+                        return 0;
+                    }
+                })
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
+
+        return prefijo + "-" + String.format("%02d", siguienteConsecutivo);
     }
 
     private String generarCodigoLote(Producto producto) {
