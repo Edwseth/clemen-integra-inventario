@@ -289,7 +289,10 @@ class RoleJefeAlmacenesSecuritySmokeTest {
                 .build();
         CustomUserDetails principal = new CustomUserDetails(
                 usuario,
-                List.of(new SimpleGrantedAuthority(RolUsuario.ROL_JEFE_ALMACENES.name())));
+                List.of(
+                        new SimpleGrantedAuthority(RolUsuario.ROL_JEFE_ALMACENES.name()),
+                        new SimpleGrantedAuthority("DOC_READ")
+                ));
         return new UsernamePasswordAuthenticationToken(
                 principal,
                 "N/A",

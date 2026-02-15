@@ -34,4 +34,6 @@ public interface ControlDocumentalService {
     DocumentoVersionDownloadDTO descargarArchivoVersion(Long documentoId, Long versionId);
 
     void cambiarEstadoDocumento(Long documentoId, EstadoDocumento nuevoEstado);
+
+    void eliminarDocumento(Long documentoId);
 }

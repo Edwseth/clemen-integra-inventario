@@ -278,6 +278,18 @@ public class ControlDocumentalServiceImpl implements ControlDocumentalService {
         }
     }
 
+
+
+    @Override
+    @Transactional
+    public void eliminarDocumento(Long documentoId) {
+        Documento documento = documentoRepository.findById(documentoId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Documento no encontrado.",
+                        Map.of("documentoId", documentoId)));
+        documentoRepository.delete(documento);
+    }
+
     @Override
     @Transactional
     public void cambiarEstadoDocumento(Long documentoId, EstadoDocumento nuevoEstado) {
