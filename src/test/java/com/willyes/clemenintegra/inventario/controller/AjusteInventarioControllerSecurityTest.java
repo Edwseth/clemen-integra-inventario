@@ -108,7 +108,7 @@ class AjusteInventarioControllerSecurityTest {
     }
 
     @Test
-    void permiteCrearAjusteConPermisoInventario() throws Exception {
+    void permiteCrearAjusteConPermisoCanonicoWrite() throws Exception {
         AjusteInventarioRequestDTO request = AjusteInventarioRequestDTO.builder()
                 .cantidad(new BigDecimal("3.00"))
                 .tipoAjuste(TipoAjuste.POSITIVO)
@@ -128,7 +128,7 @@ class AjusteInventarioControllerSecurityTest {
 
         mockMvc.perform(post("/api/inventario/ajustes")
                         .with(SecurityMockMvcRequestPostProcessors.user("contador-permiso")
-                                .authorities(() -> "INV_AJUSTES_WRITE"))
+                                .authorities(() -> "INV_WRITE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());

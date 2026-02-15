@@ -28,20 +28,21 @@ import java.util.Map;
 @RestController
 @RequestMapping({"/api/inventario/solicitudes", "/api/inventarios/solicitudes"})
 @RequiredArgsConstructor
+// TODO(RBAC-INV): Retirar fallback por roles cuando la migracion a permisos INV_* este completa.
 public class SolicitudMovimientoController {
 
     private final SolicitudMovimientoService service;
     private final UsuarioService usuarioService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> crear(@RequestBody SolicitudMovimientoRequestDTO dto) {
         return new ResponseEntity<>(service.registrarSolicitud(dto), HttpStatus.CREATED);
     }
 
     @GetMapping
     // endpoint que lista las solicitudes de movimiento con paginación
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<SolicitudMovimientoListadoDTO>> listar(
             @PageableDefault(size = 10, sort = "fechaSolicitud", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(required = false) EstadoSolicitudMovimiento estado,
@@ -82,13 +83,13 @@ public class SolicitudMovimientoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerSolicitud(id));
     }
 
     @PutMapping("/{id}/aprobar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> aprobar(@PathVariable Long id,
                                                                   Authentication authentication) {
         String username = authentication.getName();
@@ -98,7 +99,7 @@ public class SolicitudMovimientoController {
     }
 
     @PutMapping("/{id}/rechazar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> rechazar(@PathVariable Long id,
                                                                    @RequestParam Long responsableId,
                                                                    @RequestParam(required = false) String observaciones) {
@@ -106,7 +107,7 @@ public class SolicitudMovimientoController {
     }
 
     @PutMapping("/{id}/revertir-autorizacion")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> revertir(@PathVariable Long id,
                                                                    Authentication authentication) {
         String username = authentication.getName();
@@ -116,7 +117,7 @@ public class SolicitudMovimientoController {
     }
 
     @PostMapping("/{id}/autorizar-todo")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> autorizarCompleta(@PathVariable Long id,
                                                                             Authentication authentication) {
         String username = authentication.getName();

@@ -41,7 +41,7 @@ public class ReporteInventarioController {
             MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
     @GetMapping("/alta-rotacion")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> altaRotacion(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
@@ -57,7 +57,7 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/baja-rotacion")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> bajaRotacion(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
@@ -153,7 +153,7 @@ public class ReporteInventarioController {
     }
 
     @GetMapping(value = "/stock-disponible", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> exportarStockDisponible() {
         log.info("Generando reporte de stock disponible");
         try (Workbook workbook = productoService.generarReporteStockDisponibleExcel();
@@ -174,7 +174,7 @@ public class ReporteInventarioController {
 
     @GetMapping(value = "/productos-por-vencer", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD'," +
-            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> exportarLotesPorVencer(
             @RequestParam(name = "fechaInicio", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(name = "fechaFin", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
@@ -202,7 +202,7 @@ public class ReporteInventarioController {
     @GetMapping(value = "/productos-vencidos",
             produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD'," +
-            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> exportProductosVencidos(
             @RequestParam(name = "producto", required = false) Long productoId,
             @RequestParam(name = "almacen", required = false) Long almacenId) {
@@ -224,7 +224,7 @@ public class ReporteInventarioController {
 
     @GetMapping("/alertas-inventario")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD'," +
-            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> exportarAlertasInventario() {
         ByteArrayOutputStream stream = loteProductoService.generarReporteAlertasActivasExcel();
         return ResponseEntity.ok()
@@ -235,7 +235,7 @@ public class ReporteInventarioController {
 
     @GetMapping(value = "/movimientos", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION'," +
-            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_REPORTES_EXPORT')")
+            "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR','ROL_CONTADOR','INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> exportarReporteMovimientos(
             @RequestParam(name = "fechaInicio", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(name = "fechaFin", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin
