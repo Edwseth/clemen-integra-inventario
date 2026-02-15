@@ -112,8 +112,9 @@ public class SecurityConfig {
                     ).permitAll();
 
                     auth.requestMatchers(HttpMethod.PATCH, "/api/inventario/productos/*/calidad").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_WRITE",
+                            "INV_DECIDE",
+                            "QC_DECIDE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/productos/**").hasAnyAuthority(
@@ -135,13 +136,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/produccion/ordenes/alertas",
                             "/api/produccion/ordenes/alertas/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PROD_ALERTAS_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/productos/**").hasAnyAuthority(
@@ -164,22 +159,19 @@ public class SecurityConfig {
                             "/api/proveedores/**",
                             "/api/inventario/historial-ordenes/**"
                     ).hasAnyAuthority(
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_READ",
+                            "INV_WRITE"
                     );
 
                     auth.requestMatchers("/api/inventario/ordenes/**").hasAnyAuthority(
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_READ",
+                            "INV_WRITE",
+                            "INV_WORKFLOW",
+                            "INV_DECIDE",
+                            "PO_READ",
+                            "PO_WRITE",
+                            "PO_WORKFLOW",
+                            "PO_DECIDE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/conteos/**").hasAnyAuthority(
@@ -191,8 +183,7 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.POST, "/api/inventario/conteos/*/aplicar").hasAnyAuthority(
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_CONTEOS_WRITE"
                     );
 
                     auth.requestMatchers("/api/inventario/conteos/**").hasAnyAuthority(
@@ -205,16 +196,18 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/inventario/ordenes/**",
                             "/api/ordenes-compra/**").hasAnyAuthority(
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_READ",
+                            "INV_WORKFLOW",
+                            "PO_READ"
                     );
 
                     auth.requestMatchers("/api/ordenes-compra/**").hasAnyAuthority(
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_WRITE",
+                            "INV_WORKFLOW",
+                            "INV_DECIDE",
+                            "PO_WRITE",
+                            "PO_WORKFLOW",
+                            "PO_DECIDE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/ajustes/**").hasAnyAuthority(
@@ -273,62 +266,51 @@ public class SecurityConfig {
 
                     auth.requestMatchers("/api/movimientos/**", "/api/categorias/**",
                             "/api/inventario/alertas/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_WRITE"
                     );
 
                     auth.requestMatchers("/api/recepciones/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_WRITE",
+                            "INV_WORKFLOW"
                     );
 
                     // 1) Lectura de listado de planes semanales (auditoría para Contador)
                     auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PO_READ",
+                            "PO_PLAN_SEMANAL_READ"
                     );
                     // 1.1) Detalle de planes semanales: lectura permitida para Contador
                     auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PO_READ",
+                            "PO_PLAN_SEMANAL_READ"
                     );
                     // 2) Resto de operaciones de planeación (crear/editar/eliminar):
                     auth.requestMatchers("/api/planeacion/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PO_WRITE",
+                            "PO_WORKFLOW",
+                            "PO_PLAN_SEMANAL_WRITE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/mrp/**").hasAnyAuthority(
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PO_MRP_READ",
+                            "PO_READ"
                     );
 
                     auth.requestMatchers("/api/mrp/**").hasAnyAuthority(
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PO_MRP_WRITE",
+                            "PO_WRITE"
                     );
 
                     auth.requestMatchers(HttpMethod.POST, "/api/ordenes-compra/*/documentos").hasAnyAuthority(
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_WRITE",
+                            "PO_WRITE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/ordenes-compra/*/documentos",
                             "/api/ordenes-compra/documentos/**").hasAnyAuthority(
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_READ",
+                            "PO_READ"
                     );
 
 
@@ -342,8 +324,7 @@ public class SecurityConfig {
 
                     auth.requestMatchers(HttpMethod.DELETE,
                             "/api/documental/documentos/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "DOC_DELETE"
                     );
 
                     auth.requestMatchers("/api/documental/documentos/**").authenticated();
@@ -354,8 +335,7 @@ public class SecurityConfig {
                             "CONTROL_DOCUMENTAL_WRITE"
                     );
                     auth.requestMatchers("/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "QC_WRITE"
                     );
 
                     auth.requestMatchers(
@@ -364,56 +344,47 @@ public class SecurityConfig {
                             "/api/calidad/evaluaciones/*/resultados-micro",
                             "/api/calidad/evaluaciones/*/micro/pdf"
                     ).hasAnyAuthority(
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "QC_READ",
+                            "QC_WRITE",
+                            "QC_WORKFLOW",
+                            "QC_WORKFLOW_FINISH",
+                            "QC_DECIDE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/calidad/alertas/**",
                             "/api/calidad/vida-util/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "QC_ALERTAS_READ",
+                            "QC_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/calidad/auditoria-lote/*",
                             "/api/calidad/lotes/*/estado-calidad").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "QC_READ",
+                            "QC_WORKFLOW"
                     );
 
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/calidad/retenciones/**",
                             "/api/calidad/no-conformidades/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "QC_READ"
                     );
 
                     auth.requestMatchers("/api/calidad/**",
                             "/api/calidad/evaluaciones/archivo/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name(),
-                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name()
+                            "QC_READ",
+                            "QC_WRITE",
+                            "QC_WORKFLOW",
+                            "QC_WORKFLOW_FINISH",
+                            "QC_DECIDE",
+                            "QC_EXPORT"
                     );
 
                     auth.requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PROD_READ",
+                            "QC_READ",
+                            "QC_WRITE"
                     );
 
 
@@ -421,24 +392,15 @@ public class SecurityConfig {
                             "/api/produccion/indicadores",
                             "/api/produccion/ordenes/alertas",
                             "/api/produccion/indicadores/export/excel").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PROD_INDICADORES_READ",
+                            "PROD_INDICADORES_EXPORT",
+                            "PROD_ALERTAS_READ",
+                            "PROD_REPORTS_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/produccion/ordenes/*/insumos").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PROD_READ",
+                            "PROD_OP_READ"
                     );
 
                     // Acceso de solo lectura a órdenes de producción y batch record para rol de calidad
@@ -448,41 +410,36 @@ public class SecurityConfig {
                             "/api/produccion/ordenes/**",
                             "/api/produccion/batch-record/**"
                     ).hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PROD_READ",
+                            "PROD_OP_READ",
+                            "PROD_BATCH_RECORD_READ"
                     );
 
                     auth.requestMatchers("/api/produccion/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "PROD_READ",
+                            "PROD_WRITE",
+                            "PROD_WORKFLOW",
+                            "PROD_WORKFLOW_START",
+                            "PROD_WORKFLOW_FINISH",
+                            "PROD_DECIDE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/bom/formulas/producto/*/formula-activa").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "BOM_READ",
+                            "BOM_FORMULA_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/bom/formulas/activa").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "BOM_READ",
+                            "BOM_FORMULA_READ"
                     );
 
                     auth.requestMatchers("/api/bom/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "BOM_READ",
+                            "BOM_WRITE",
+                            "BOM_WORKFLOW",
+                            "BOM_WORKFLOW_FINISH",
+                            "BOM_DECIDE"
                     );
 
                     auth.requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
@@ -492,15 +449,11 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers("/api/reportes/**").hasAnyAuthority(
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_REPORTES_EXPORT",
+                            "PO_EXPORT",
+                            "QC_EXPORT",
+                            "PROD_REPORTS_READ",
+                            "PROD_EXPORT"
                     );
 
                     auth.requestMatchers("/actuator/metrics/**").hasAnyAuthority(
@@ -510,29 +463,23 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/inventario/solicitudes/**"
                     ).hasAnyAuthority(
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_READ"
                     );
 
                     auth.requestMatchers(
                             "/api/inventario/solicitudes/**"
                     ).hasAnyAuthority(
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_WRITE",
+                            "INV_WORKFLOW"
                     );
 
                     auth.requestMatchers("/api/inventario/bitacora", "/api/inventario/bitacora/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_DECIDE",
+                            "INV_WRITE"
                     );
 
                     auth.requestMatchers("/api/admin/rbac/**").hasAuthority(
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "ADMIN_RBAC_WRITE"
                     );
 
                     // Mantener esta regla genérica al final
