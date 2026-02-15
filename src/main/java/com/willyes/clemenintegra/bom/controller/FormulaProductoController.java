@@ -165,8 +165,9 @@ public class FormulaProductoController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PreAuthorize("hasAnyAuthority('BOM_DECIDE','BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('BOM_DECIDE','BOM_WORKFLOW','BOM_WORKFLOW_FINISH','BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     @PostMapping("/{id}/cambiar-estado")
+    // TODO:REMOVE_AFTER_BOM_FULL_MIGRATION
     public ResponseEntity<FormulaProductoResumenDTO> cambiarEstado(
             @PathVariable Long id,
             @RequestBody @Valid CambiarEstadoFormulaRequest request,
