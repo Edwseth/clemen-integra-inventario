@@ -38,11 +38,10 @@ class AdminRbacControllerSmokeTest {
     @Test
     void getPermisosInvRetornaCatalogoCanonico() throws Exception {
         when(rbacAdminService.listarPermisos("INV", true))
-                .thenReturn(List.of(new PermisoDTO(10L, "INV_READ", "INV", "READ", "Lectura", true)));
+                .thenReturn(List.of(new PermisoDTO(10L, "INV_READ", "Lectura", "INV", true, "READ")));
 
         mockMvc.perform(get("/api/admin/rbac/permisos")
-                        .param("modulo", "INV")
-                        .param("activo", "true"))
+                        .param("modulo", "INV"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].codigo").value("INV_READ"))
                 .andExpect(jsonPath("$[0].modulo").value("INV"))
@@ -53,8 +52,8 @@ class AdminRbacControllerSmokeTest {
     void getPermisosQcRetornaCatalogoCanonico() throws Exception {
         when(rbacAdminService.listarPermisos("QC", true))
                 .thenReturn(List.of(
-                        new PermisoDTO(20L, "QC_READ", "QC", "READ", "Lectura", true),
-                        new PermisoDTO(21L, "QC_WORKFLOW_FINISH", "QC", "WORKFLOW_FINISH", "Cierre", true)
+                        new PermisoDTO(20L, "QC_READ", "Lectura", "QC", true, "READ"),
+                        new PermisoDTO(21L, "QC_WORKFLOW_FINISH", "Cierre", "QC", true, "WORKFLOW_FINISH")
                 ));
 
         mockMvc.perform(get("/api/admin/rbac/permisos")
@@ -70,7 +69,7 @@ class AdminRbacControllerSmokeTest {
     @Test
     void getPermisosPoRetornaCatalogoCanonico() throws Exception {
         when(rbacAdminService.listarPermisos("PO", true))
-                .thenReturn(List.of(new PermisoDTO(30L, "PO_READ", "PO", "READ", "Lectura", true)));
+                .thenReturn(List.of(new PermisoDTO(30L, "PO_READ", "Lectura", "PO", true, "READ")));
 
         mockMvc.perform(get("/api/admin/rbac/permisos")
                         .param("modulo", "PO")
@@ -85,7 +84,7 @@ class AdminRbacControllerSmokeTest {
     @Test
     void getPermisosBomRetornaCatalogoCanonico() throws Exception {
         when(rbacAdminService.listarPermisos("BOM", true))
-                .thenReturn(List.of(new PermisoDTO(40L, "BOM_READ", "BOM", "READ", "Lectura", true)));
+                .thenReturn(List.of(new PermisoDTO(40L, "BOM_READ", "Lectura", "BOM", true, "READ")));
 
         mockMvc.perform(get("/api/admin/rbac/permisos")
                         .param("modulo", "BOM")
