@@ -48,9 +48,11 @@ public class OrdenProduccionController {
     private final OrdenProduccionRepository ordenProduccionRepository;
     //private final UsuarioService usuarioService;
 
+    // TODO(rbac-prod-cut2): retirar fallback por roles y permisos granulares PROD_* legacy al finalizar migracion canónica.
+
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public Page<OrdenProduccionResponseDTO> listar(
             @RequestParam(required = false) String codigo,
@@ -63,7 +65,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping(value = "/export/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EXPORT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_EXPORT','PROD_OP_EXPORT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarExcel(
             @RequestParam(required = false) String codigo,
@@ -80,7 +82,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping(value = "/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EXPORT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_EXPORT','PROD_OP_EXPORT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarPdf(
             @RequestParam(required = false) String codigo,
@@ -128,7 +130,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
@@ -138,14 +140,14 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}/trazabilidad")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<ProduccionTrazabilidadResponseDTO> obtenerTrazabilidad(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerTrazabilidad(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('PROD_OP_CREATE','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE','PROD_OP_CREATE','ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<ResultadoValidacionOrdenDTO> crear(@Valid @RequestBody CrearOrdenProduccionRequestDTO request) {
         ResultadoValidacionOrdenDTO resultado = service.crearOrden(request);
         HttpStatus status = resultado.isEsValida() ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
@@ -156,7 +158,7 @@ public class OrdenProduccionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE','PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<ResultadoValidacionOrdenDTO> actualizar(@PathVariable Long id, @RequestBody OrdenProduccionRequestDTO request) {
         return service.buscarPorId(id)
                 .map(existente -> {
@@ -173,14 +175,14 @@ public class OrdenProduccionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE','PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/finalizar")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_WORKFLOW_FINISH','PROD_WORKFLOW','PROD_OP_WORKFLOW_FINALIZE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> finalizar(@PathVariable Long id,
                                                                @RequestBody FinalizarOrdenRequestDTO request) {
@@ -198,7 +200,7 @@ public class OrdenProduccionController {
     }
 
     @PostMapping("/{id}/cierres")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_WORKFLOW_FINALIZE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_WORKFLOW_FINISH','PROD_WORKFLOW','PROD_OP_WORKFLOW_FINALIZE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> registrarCierre(@PathVariable Long id,
                                                                      @Valid @RequestBody CierreProduccionRequestDTO request) {
@@ -210,7 +212,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}/cierres")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public Page<CierreProduccionResponseDTO> listarCierres(@PathVariable Long id,
                                                           @PageableDefault(size = 10, sort = "fechaCierre", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -218,7 +220,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}/etapas")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public List<EtapaProduccionResponse> listarEtapas(@PathVariable Long id) {
         return service.listarEtapas(id);
@@ -232,7 +234,7 @@ public class OrdenProduccionController {
     }
 
     @RequestMapping(value = "/{ordenId}/etapas/{etapaId}/iniciar", method = {RequestMethod.PATCH, RequestMethod.POST})
-    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_START','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_WORKFLOW_START','PROD_WORKFLOW','PROD_ETAPA_START','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> iniciarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         service.iniciarEtapa(ordenId, etapaId);
@@ -244,7 +246,7 @@ public class OrdenProduccionController {
 
     // Compatibilidad POST agregada porque el frontend usa POST
     @RequestMapping(value = "/{ordenId}/etapas/{etapaId}/finalizar", method = {RequestMethod.PATCH, RequestMethod.POST})
-    @PreAuthorize("hasAnyAuthority('PROD_ETAPA_FINISH','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_WORKFLOW_FINISH','PROD_WORKFLOW','PROD_ETAPA_FINISH','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_SUPER_ADMIN')")
     public ResponseEntity<EtapaProduccionResponse> finalizarEtapa(@PathVariable Long ordenId, @PathVariable Long etapaId) {
         Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
@@ -252,14 +254,14 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}/insumos")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public List<InsumoOPDTO> listarInsumos(@PathVariable Long id) {
         return service.listarInsumos(id);
     }
 
     @GetMapping("/{id}/movimientos")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public Page<MovimientoInventarioResponseDTO> listarMovimientos(@PathVariable Long id,
                                                                    @RequestParam(name = "etapaId", required = false) Long etapaId,
@@ -268,7 +270,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{ordenId}/etapas/{etapaId}/consumos")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarConsumosPorEtapa(@PathVariable Long ordenId,
                                                                                         @PathVariable Long etapaId,
@@ -277,7 +279,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{ordenId}/etapas/{etapaId}/movimientos")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarMovimientosPorEtapa(@PathVariable Long ordenId,
                                                                                            @PathVariable Long etapaId,
@@ -334,7 +336,7 @@ public class OrdenProduccionController {
     }
 
     @GetMapping("/{id}/lote")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<LoteProductoResponse> obtenerLote(@PathVariable Long id) {
         LoteProductoResponse lote = service.obtenerLote(id);
