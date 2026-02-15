@@ -158,6 +158,65 @@ class AdminRbacIntegrationTest extends IntegrationTestH2 {
     }
 
     @Test
+    void asignarPermisosRolAceptaAliasModule() throws Exception {
+        PermisoEntity permiso = crearPermisoSiNoExiste("INV_RBAC_ALIAS", "INV", "WRITE", true);
+        Long rolPlaneadorId = rolRepository.findByCodigoAndActivoTrue("ROL_PLANEADOR")
+                .orElseThrow()
+                .getId();
+
+        String payload = objectMapper.writeValueAsString(Map.of(
+                "module", "INV",
+                "permisoIds", List.of(permiso.getId())
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].codigo").value("INV_RBAC_ALIAS"));
+    }
+
+    @Test
+    void asignarPermisosRolModuloVacioResponde400ConSolicitudInvalida() throws Exception {
+        Long rolPlaneadorId = rolRepository.findByCodigoAndActivoTrue("ROL_PLANEADOR")
+                .orElseThrow()
+                .getId();
+
+        String payload = objectMapper.writeValueAsString(Map.of(
+                "modulo", "",
+                "permisoIds", List.of()
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SOLICITUD_INVALIDA"))
+                .andExpect(jsonPath("$.details[0].field").value("modulo"));
+    }
+
+    @Test
+    void asignarPermisosRolSinModuloResponde400ConSolicitudInvalida() throws Exception {
+        Long rolPlaneadorId = rolRepository.findByCodigoAndActivoTrue("ROL_PLANEADOR")
+                .orElseThrow()
+                .getId();
+
+        String payload = objectMapper.writeValueAsString(Map.of(
+                "permisoIds", List.of()
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SOLICITUD_INVALIDA"))
+                .andExpect(jsonPath("$.details[0].field").value("modulo"));
+    }
+
+    @Test
     void asignarPermisosRolSeReflejaEnAuthMe() throws Exception {
         PermisoEntity permiso = crearPermisoSiNoExiste("INV_RBAC_ASSIGN", "INV", "WRITE", true);
         Long rolPlaneadorId = rolRepository.findByCodigoAndActivoTrue("ROL_PLANEADOR")
