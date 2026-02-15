@@ -478,6 +478,11 @@ public class SecurityConfig {
                             "INV_WRITE"
                     );
 
+                    auth.requestMatchers(HttpMethod.GET, "/api/admin/rbac/**").hasAnyAuthority(
+                            "ADMIN_RBAC_READ",
+                            "ADMIN_RBAC_WRITE"
+                    );
+
                     auth.requestMatchers("/api/admin/rbac/**").hasAuthority(
                             "ADMIN_RBAC_WRITE"
                     );
