@@ -42,7 +42,7 @@ public class ProductoController {
 
     @GetMapping("/buscar")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<Page<ProductoAutocompleteDTO>> buscarProductosParaAjustes(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "term", required = false) String term,
@@ -53,7 +53,7 @@ public class ProductoController {
     }
 
     @GetMapping("/buscar-insumos")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<Page<ProductoResumenDTO>> buscarInsumos(
             @RequestParam(name = "term") String term,
             @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -63,7 +63,7 @@ public class ProductoController {
     }
 
     @GetMapping("/buscar-pt")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<Page<ProductoResumenDTO>> buscarProductosTerminados(
             @RequestParam(name = "term") String term,
             @PageableDefault(size = 20, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -73,7 +73,7 @@ public class ProductoController {
     }
 
     @GetMapping("/buscar-fabricables")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<Page<ProductoAutocompleteDTO>> buscarProductosFabricablesAutocomplete(
             @RequestParam("term") String term,
             Pageable pageable
@@ -83,8 +83,7 @@ public class ProductoController {
     }
 
     @GetMapping("/categoria/{nombre}")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
-            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
             @PathVariable String nombre) {
         List<ProductoResponseDTO> productos = productoService.buscarPorCategoria(nombre);
@@ -95,20 +94,20 @@ public class ProductoController {
     }
 
     @GetMapping("/fabricables")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<List<ProductoResponseDTO>> getProductosFabricables() {
         List<ProductoResponseDTO> productos = productoService.findProductosFabricables();
         return ResponseEntity.ok(productos);
     }
 
     @GetMapping("/producto-terminado")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public List<ProductoResponseDTO> getProductosTerminados() {
         return productoService.findByCategoriaTipo("PRODUCTO_TERMINADO");
     }
 
     @GetMapping("/insumos")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public List<ProductoResponseDTO> getProductosInsumo() {
         return productoService.findByCategoriaTipoIn(List.of(
                 "MATERIA_PRIMA",
@@ -119,7 +118,7 @@ public class ProductoController {
     }
 
     @GetMapping("/insumos/autocomplete")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<Page<InsumoAutocompleteDTO>> buscarInsumosAutocomplete(
             @RequestParam("term") String term,
             Pageable pageable
@@ -129,14 +128,14 @@ public class ProductoController {
     }
 
     @GetMapping("/terminados")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public List<ProductoResponseDTO> getProductosTerminadosPublico() {
         return productoService.findByCategoriaTipo("PRODUCTO_TERMINADO");
     }
 
     @PostMapping
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW')")
     public ResponseEntity<?> crear(@Valid @RequestBody ProductoRequestDTO dto,
                                    @AuthenticationPrincipal CustomUserDetails principal) {
         if (principal == null) {
@@ -156,8 +155,7 @@ public class ProductoController {
     }
 
     @GetMapping("/{id:[0-9]+}")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
-            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<ProductoResponseDTO> obtenerPorId(@PathVariable Long id) {
         ProductoResponseDTO producto = productoService.obtenerPorId(id);
         return ResponseEntity.ok(producto);
@@ -165,7 +163,7 @@ public class ProductoController {
 
     @PutMapping("/{id}")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW')")
     public ResponseEntity<ProductoResponseDTO> actualizar(@PathVariable Long id,
                                                           @Valid @RequestBody ProductoRequestDTO dto,
                                                           @AuthenticationPrincipal CustomUserDetails principal) {
@@ -179,7 +177,7 @@ public class ProductoController {
     // PROD-INACTIVAR BEGIN
     @DeleteMapping("/{id}")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW')")
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
         try {
             productoService.eliminarProducto(id);
@@ -192,7 +190,7 @@ public class ProductoController {
 
     @PatchMapping("/{id}/estado")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW')")
     public ResponseEntity<ProductoResponseDTO> cambiarEstado(@PathVariable Long id,
                                                              @RequestBody ProductoEstadoRequestDTO body) {
         ProductoResponseDTO dto = productoService.actualizarEstado(id, body.activo());
@@ -202,7 +200,7 @@ public class ProductoController {
 
     @PutMapping("/{id}/unidad-medida")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE')")
     public ResponseEntity<?> cambiarUnidadMedida(
             @PathVariable Long id,
             @RequestBody @Valid UnidadMedidaRequestDTO dto) {
@@ -234,8 +232,7 @@ public class ProductoController {
     }
 
     @GetMapping("/con-lotes")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
-            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<List<ProductoConEstadoLoteDTO>> productosConLotesPorEstado(
             @RequestParam String estado) {
         try {
@@ -247,8 +244,7 @@ public class ProductoController {
     }
 
     @GetMapping("/agrupado-por-lotes")
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_JEFE_PRODUCCION','ROL_COMPRADOR'," +
-            "'ROL_JEFE_CALIDAD','ROL_MICROBIOLOGO','ROL_ANALISTA_CALIDAD','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<List<ProductoConLotesDTO>> productosAgrupadosPorLotesEnEstado(
             @RequestParam String estado) {
         try {
@@ -260,8 +256,7 @@ public class ProductoController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ','ROL_CONTADOR','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD'," +
-            " 'ROL_JEFE_PRODUCCION','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_PRODUCT_READ')")
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerTodos(
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) String sku,

@@ -19,17 +19,7 @@ public class TrazabilidadLoteController {
 
     @GetMapping("/lote/{loteId}")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ'," +
-            "'ROL_JEFE_ALMACENES'," +
-            "'ROL_ALMACENISTA'," +
-            "'ROL_JEFE_PRODUCCION'," +
-            "'ROL_LIDER_ALIMENTOS'," +
-            "'ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_JEFE_CALIDAD'," +
-            "'ROL_ANALISTA_CALIDAD'," +
-            "'ROL_MICROBIOLOGO'," +
-            "'ROL_SUPER_ADMIN'" +
-            ")")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<AuditoriaLoteResponseDTO> obtenerAuditoriaLote(@PathVariable Long loteId) {
         return ResponseEntity.ok(auditoriaLoteService.obtenerAuditoriaDeLote(loteId));
     }

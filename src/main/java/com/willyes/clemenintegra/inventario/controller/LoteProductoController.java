@@ -38,23 +38,21 @@ public class LoteProductoController {
 
     @PostMapping
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW')")
     public ResponseEntity<LoteProductoResponseDTO> crearLote(@RequestBody LoteProductoRequestDTO dto) {
         LoteProductoResponseDTO response = service.crearLote(dto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/estado/{estado}")
-    @PreAuthorize("hasAnyAuthority('INV_LOTES_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_CALIDAD'," +
-            " 'ROL_CONTADOR', 'ROL_PLANEADOR', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_LOTES_READ')")
     public ResponseEntity<List<LoteProductoResponseDTO>> listarPorEstado(@PathVariable String estado) {
         List<LoteProductoResponseDTO> lotes = service.obtenerLotesPorEstado(estado);
         return ResponseEntity.ok(lotes);
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('INV_LOTES_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN'," +
-            " 'ROL_CONTADOR', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_LOTES_READ')")
     public ResponseEntity<Page<LoteProductoResponseDTO>> listar(
             @RequestParam(required = false) String producto,
             @RequestParam(required = false) String estado,
@@ -118,7 +116,7 @@ public class LoteProductoController {
     }
 
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     @GetMapping("/por-evaluar")
     public ResponseEntity<Page<LoteProductoResponseDTO>> obtenerLotesPorEvaluar(
             @org.springframework.data.web.PageableDefault(size = 10, sort = "fechaFabricacion",
@@ -129,14 +127,14 @@ public class LoteProductoController {
 
     @GetMapping("/{id}/evaluaciones")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<java.util.List<EvaluacionCalidadResponseDTO>> obtenerEvaluaciones(@PathVariable Long id) {
         return ResponseEntity.ok(evaluacionService.listarPorLote(id));
     }
 
     @PutMapping("/{id}/liberar")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW')")
     public ResponseEntity<LoteProductoResponseDTO> liberar(@PathVariable Long id,
                                                            @RequestBody(required = false) com.willyes.clemenintegra.inventario.dto.ObservacionRequestDTO request) {
         String observacion = request != null ? request.getObservacion() : null;
@@ -145,7 +143,7 @@ public class LoteProductoController {
 
     @PutMapping("/{id}/rechazar")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW')")
     public ResponseEntity<LoteProductoResponseDTO> rechazar(@PathVariable Long id,
                                                             @RequestBody(required = false) com.willyes.clemenintegra.inventario.dto.ObservacionRequestDTO request) {
         String observacion = request != null ? request.getObservacion() : null;
@@ -154,7 +152,7 @@ public class LoteProductoController {
 
     @PutMapping("/{id}/liberar-retenido")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_CALIDAD', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW')")
     public ResponseEntity<LoteProductoResponseDTO> liberarRetenido(@PathVariable Long id,
                                                                    @RequestBody(required = false) com.willyes.clemenintegra.inventario.dto.ObservacionRequestDTO request) {
         String observacion = request != null ? request.getObservacion() : null;

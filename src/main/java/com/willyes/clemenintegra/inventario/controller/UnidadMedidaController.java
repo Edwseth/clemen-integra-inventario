@@ -36,7 +36,7 @@ public class UnidadMedidaController {
 
     @PutMapping("/{id}")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<UnidadMedidaResponseDTO> actualizar(@PathVariable Long id,
                                                               @Valid @RequestBody UnidadMedidaRequestDTO dto) {
         UnidadMedidaResponseDTO actualizado = unidadMedidaService.actualizar(id, dto);
@@ -45,7 +45,7 @@ public class UnidadMedidaController {
 
     @DeleteMapping("/{id}")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         unidadMedidaService.eliminar(id);
         return ResponseEntity.noContent().build();

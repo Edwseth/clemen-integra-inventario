@@ -29,7 +29,7 @@ public class InventarioFefoController {
 
     @GetMapping("/preview")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<FefoPreviewResponseDTO> preview(
             @RequestParam(required = false) Long almacenId,
             @RequestParam Long productoId,

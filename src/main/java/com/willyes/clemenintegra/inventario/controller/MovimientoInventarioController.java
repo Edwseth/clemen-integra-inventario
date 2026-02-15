@@ -63,7 +63,7 @@ public class MovimientoInventarioController {
     @ApiResponse(responseCode = "404", description = "Producto o lote no encontrado")
     @ApiResponse(responseCode = "409", description = "Conflictos funcionales (p. ej. BLOQUEO_RETENCION_NC, NC_ABIERTA, stock insuficiente)")
     @ApiResponse(responseCode = "500", description = "Error interno del servidor")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW')")
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto,
                                        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
@@ -277,8 +277,7 @@ public class MovimientoInventarioController {
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
-            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> filtrar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
@@ -308,8 +307,7 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
-            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ')")
     public ResponseEntity<List<MovimientoInventarioResponseDTO>> consultar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
@@ -338,8 +336,7 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
-            " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> listarTodos(
             @RequestParam(required = false) String codigoRecepcion,
             @RequestParam(required = false, name = "tipoMovimiento") TipoMovimiento tipoMovimiento,

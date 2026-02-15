@@ -22,7 +22,7 @@ public class ProductoCalidadController {
 
     @PatchMapping("/{id}/calidad")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<ProductoResponseDTO> actualizarCamposCalidad(
             @PathVariable Long id,
             @Valid @RequestBody ProductoCalidadUpdateDTO dto) {

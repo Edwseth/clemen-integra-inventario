@@ -20,7 +20,7 @@ public class ReservaLoteAdminController {
 
     @PostMapping("/reservas-lote")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_DECIDE','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE')")
     public ResponseEntity<ReservaLoteRepairResultDTO> repararReservasLote(
             @RequestBody(required = false) ReservaLoteRepairRequestDTO request) {
         return ResponseEntity.ok(reservaLoteRepairService.repararReservasLote(request));

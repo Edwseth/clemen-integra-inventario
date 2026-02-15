@@ -20,7 +20,7 @@ public class InventarioConsultaController {
     private final InventarioConsultaService inventarioConsultaService;
 
     @GetMapping("/producto/{productoId}")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_PRODUCT_READ','ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_PRODUCT_READ')")
     public ResponseEntity<DisponibilidadProductoResponseDTO> obtenerDisponibilidadPorProducto(@PathVariable Long productoId) {
         try {
             DisponibilidadProductoResponseDTO dto = inventarioConsultaService.obtenerDisponibilidadPorProducto(productoId);
