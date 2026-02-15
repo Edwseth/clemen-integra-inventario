@@ -38,6 +38,7 @@ public class MrpController {
     private final MrpReporteService mrpReporteService;
 
     @PostMapping
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_WRITE','PO_WORKFLOW','PO_WORKFLOW_START','PO_MRP_WRITE'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<CorridaMrpResponseDTO> ejecutar(@RequestBody CorridaMrpRequest request) {
         Optional<PlanProduccionSemanal> plan = planProduccionService.buscarPorId(request.getPlanSemanalId());
@@ -49,6 +50,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}")
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_READ','PO_MRP_READ'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<?> obtener(@PathVariable Long id) {
         try {
@@ -60,6 +62,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}/excel")
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_EXPORT','PO_MRP_READ'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<?> exportarExcel(@PathVariable Long id) {
         try {
@@ -74,6 +77,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}/pdf")
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_EXPORT','PO_MRP_READ','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<?> exportarPdf(@PathVariable Long id) {
         try {

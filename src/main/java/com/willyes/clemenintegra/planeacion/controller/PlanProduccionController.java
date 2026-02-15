@@ -36,6 +36,7 @@ public class PlanProduccionController {
     private final PlanProduccionService planProduccionService;
 
     @PostMapping
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_WRITE','PO_WORKFLOW','PO_WORKFLOW_START','PO_PLAN_SEMANAL_WRITE','" +
             "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlanProduccionSemanalDTO> crearOActualizar(@RequestBody PlanProduccionSemanalDTO dto,
@@ -48,6 +49,7 @@ public class PlanProduccionController {
     }
 
     @PostMapping("/{id}/confirmar")
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_DECIDE','PO_WORKFLOW','PO_WORKFLOW_FINISH','PO_PLAN_SEMANAL_WRITE','" +
             "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlanProduccionSemanalDTO> confirmar(@PathVariable Long id) {
@@ -56,6 +58,7 @@ public class PlanProduccionController {
     }
 
     @PostMapping("/{id}/cerrar")
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_DECIDE','PO_WORKFLOW','PO_WORKFLOW_FINISH','PO_PLAN_SEMANAL_WRITE','" +
             "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlanProduccionSemanalDTO> cerrar(@PathVariable Long id) {
@@ -64,6 +67,7 @@ public class PlanProduccionController {
     }
 
     @GetMapping
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_READ','PO_PLAN_SEMANAL_READ'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<Page<PlanProduccionResumenDTO>> listar(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate semanaInicioDesde,
@@ -75,6 +79,7 @@ public class PlanProduccionController {
     }
 
     @GetMapping("/{id}")
+    // TODO:REMOVE_AFTER_PO_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('PO_READ','PO_PLAN_SEMANAL_READ'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<PlanProduccionSemanalDTO> obtener(@PathVariable Long id) {
         return planProduccionService.buscarPorId(id)
