@@ -28,13 +28,16 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/planeacion/planes-semanales")
 @RequiredArgsConstructor
-// El plan semanal es responsabilidad del rol Jefe de Producción.
 public class PlanProduccionController {
+
+    // TODO(rbac): retirar fallback por rol cuando todos los perfiles PO usen permisos canónicos.
+    private static final String PO_ROLE_FALLBACK = "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_COMPRADOR','ROL_CONTADOR','ROL_SUPER_ADMIN'";
 
     private final PlanProduccionService planProduccionService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_WRITE','PO_WORKFLOW','PO_WORKFLOW_START','PO_PLAN_SEMANAL_WRITE','" +
+            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlanProduccionSemanalDTO> crearOActualizar(@RequestBody PlanProduccionSemanalDTO dto,
                                                                      @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (dto.getCreadoPorId() == null && userDetails != null) {
@@ -45,21 +48,23 @@ public class PlanProduccionController {
     }
 
     @PostMapping("/{id}/confirmar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_DECIDE','PO_WORKFLOW','PO_WORKFLOW_FINISH','PO_PLAN_SEMANAL_WRITE','" +
+            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlanProduccionSemanalDTO> confirmar(@PathVariable Long id) {
         PlanProduccionSemanal plan = planProduccionService.confirmar(id);
         return ResponseEntity.ok(toDto(plan));
     }
 
     @PostMapping("/{id}/cerrar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_DECIDE','PO_WORKFLOW','PO_WORKFLOW_FINISH','PO_PLAN_SEMANAL_WRITE','" +
+            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlanProduccionSemanalDTO> cerrar(@PathVariable Long id) {
         PlanProduccionSemanal plan = planProduccionService.cerrar(id);
         return ResponseEntity.ok(toDto(plan));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_READ','PO_PLAN_SEMANAL_READ'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<Page<PlanProduccionResumenDTO>> listar(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate semanaInicioDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate semanaInicioHasta,
@@ -70,7 +75,7 @@ public class PlanProduccionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_COMPRADOR','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_READ','PO_PLAN_SEMANAL_READ'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<PlanProduccionSemanalDTO> obtener(@PathVariable Long id) {
         return planProduccionService.buscarPorId(id)
                 .map(plan -> ResponseEntity.ok(toDto(plan)))

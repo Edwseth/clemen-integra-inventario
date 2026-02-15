@@ -18,6 +18,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -71,6 +72,16 @@ class MrpControllerSecurityTest {
         when(mrpService.obtenerCorrida(9L)).thenReturn(CorridaMrp.builder().id(9L).build());
 
         var response = mrpController.obtener(9L);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+    }
+
+
+    @Test
+    @WithMockUser(authorities = "PO_EXPORT")
+    void exportarExcelPermitePermisoCanonicoPoExport() {
+        doReturn(new byte[]{1, 2, 3}).when(mrpReporteService).generarExcelCorrida(4L);
+
+        var response = mrpController.exportarExcel(4L);
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
     }
 }

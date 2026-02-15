@@ -30,12 +30,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MrpController {
 
+    // TODO(rbac): retirar fallback por rol cuando los perfiles PO consuman solo permisos canónicos.
+    private static final String PO_ROLE_FALLBACK = "'ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN'";
+
     private final MrpService mrpService;
     private final PlanProduccionService planProduccionService;
     private final MrpReporteService mrpReporteService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_WRITE','PO_WORKFLOW','PO_WORKFLOW_START','PO_MRP_WRITE'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<CorridaMrpResponseDTO> ejecutar(@RequestBody CorridaMrpRequest request) {
         Optional<PlanProduccionSemanal> plan = planProduccionService.buscarPorId(request.getPlanSemanalId());
         if (plan.isEmpty()) {
@@ -46,7 +49,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_READ','PO_MRP_READ'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<?> obtener(@PathVariable Long id) {
         try {
             CorridaMrp corrida = mrpService.obtenerCorrida(id);
@@ -57,7 +60,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}/excel")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_EXPORT','PO_MRP_READ'," + PO_ROLE_FALLBACK + ")")
     public ResponseEntity<?> exportarExcel(@PathVariable Long id) {
         try {
             byte[] excel = mrpReporteService.generarExcelCorrida(id);
@@ -71,7 +74,7 @@ public class MrpController {
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PO_EXPORT','PO_MRP_READ','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<?> exportarPdf(@PathVariable Long id) {
         try {
             byte[] pdf = mrpReporteService.generarPdfCorrida(id);

@@ -106,6 +106,26 @@ class PlanProduccionControllerTest {
         verify(planProduccionService).listar(eq(LocalDate.of(2024, 4, 1)), eq(LocalDate.of(2024, 4, 7)), eq(EstadoPlanProduccion.BORRADOR), any());
     }
 
+
+    @Test
+    @WithMockUser(authorities = "PO_READ")
+    void listarPlanPermitePermisoCanonicoPoRead() throws Exception {
+        when(planProduccionService.listar(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/planeacion/planes-semanales"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "PO_READ")
+    void crearPlanRechazaSiSoloTieneLecturaCanonica() throws Exception {
+        mockMvc.perform(post("/api/planeacion/planes-semanales")
+                        .content("{}")
+                        .contentType(APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     @WithMockUser(authorities = "ROL_COMPRADOR")
     void crearPlanRechazaComprador() throws Exception {
