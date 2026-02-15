@@ -18,11 +18,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DetalleFormulaController {
 
+    private static final String BOM_READ_ROLE_FALLBACK = "'ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN'";
+    private static final String BOM_WRITE_ROLE_FALLBACK = "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN'";
+    // TODO(rbac-bom-cut1): retirar fallback por roles y permisos granulares BOM_* legacy al finalizar migracion canonica.
+
     private final DetalleFormulaService detalleService;
     private final BomMapper bomMapper;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
     public List<DetalleFormulaResponse> listarTodas() {
         return detalleService.listarTodas().stream()
                 .map(detalle -> bomMapper.toResponseDTO(detalle))
@@ -30,7 +34,7 @@ public class DetalleFormulaController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
     public ResponseEntity<DetalleFormulaResponse> obtenerPorId(@PathVariable Long id) {
         return detalleService.buscarPorId(id)
                 .map(detalle -> bomMapper.toResponseDTO(detalle))
@@ -39,7 +43,7 @@ public class DetalleFormulaController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     public ResponseEntity<DetalleFormulaResponse> crear(@RequestBody DetalleFormulaRequest request) {
         FormulaProducto formula = new FormulaProducto(); formula.setId(request.formulaId);
         Producto insumo = new Producto(); insumo.setId(request.insumoId.intValue());
@@ -49,7 +53,7 @@ public class DetalleFormulaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     public ResponseEntity<DetalleFormulaResponse> actualizar(@PathVariable Long id, @RequestBody DetalleFormulaRequest request) {
         return detalleService.buscarPorId(id)
                 .map(existente -> {
@@ -64,10 +68,9 @@ public class DetalleFormulaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         detalleService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 }
-

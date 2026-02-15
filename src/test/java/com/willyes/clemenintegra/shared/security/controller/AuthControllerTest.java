@@ -83,6 +83,7 @@ class AuthControllerTest extends IntegrationTestH2 {
                 .andExpect(jsonPath("$.permisos").value(hasItem("PROD_ETAPA_CHECKLIST_READ")))
                 .andExpect(jsonPath("$.permisos").value(hasItem("PROD_BATCH_RECORD_READ")))
                 .andExpect(jsonPath("$.permisos").value(hasItem("INV_READ")))
+                .andExpect(jsonPath("$.permisos").value(hasItem("BOM_READ")))
                 .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_OP_EDIT"))))
                 .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_ETAPA_START"))))
                 .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_ETAPA_FINISH"))))

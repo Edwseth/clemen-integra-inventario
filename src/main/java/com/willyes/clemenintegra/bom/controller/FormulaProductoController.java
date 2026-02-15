@@ -40,13 +40,17 @@ import jakarta.validation.Valid;
 @Slf4j
 public class FormulaProductoController {
 
+    private static final String BOM_READ_ROLE_FALLBACK = "'ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN'";
+    private static final String BOM_WRITE_ROLE_FALLBACK = "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN'";
+    // TODO(rbac-bom-cut1): retirar fallback por roles y permisos granulares BOM_* legacy al finalizar migracion canonica.
+
     private final FormulaProductoService formulaService;
     private final BomMapper bomMapper;
     private final ProductoService productoService;
     private final UnidadMedidaRepository unidadMedidaRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
     public Page<FormulaProductoSelectorDTO> listarTodas(
             @RequestParam(required = false) EstadoFormula estado,
             @RequestParam(required = false) String producto,
@@ -55,7 +59,7 @@ public class FormulaProductoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
     public ResponseEntity<FormulaProductoDetalleDTO> obtenerPorId(@PathVariable Long id) {
         return formulaService.buscarDetallePorId(id)
                 .map(ResponseEntity::ok)
@@ -63,7 +67,7 @@ public class FormulaProductoController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     public ResponseEntity<FormulaProductoResponse> crear(
             @RequestPart("formula") String formulaJson,
             @RequestPart(value = "archivo", required = false) MultipartFile archivo) throws IOException {
@@ -138,7 +142,7 @@ public class FormulaProductoController {
     }
 
     @PostMapping("/{id}/clonar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     public ResponseEntity<FormulaProductoResumenDTO> clonar(
             @PathVariable Long id,
             @AuthenticationPrincipal com.willyes.clemenintegra.shared.security.service.CustomUserDetails usuario) {
@@ -148,7 +152,7 @@ public class FormulaProductoController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     public ResponseEntity<FormulaProductoResponse> actualizar(@PathVariable Long id, @RequestBody FormulaProductoRequest request) {
         return formulaService.buscarPorId(id)
                 .map(existente -> {
@@ -161,7 +165,7 @@ public class FormulaProductoController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_DECIDE','BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     @PostMapping("/{id}/cambiar-estado")
     public ResponseEntity<FormulaProductoResumenDTO> cambiarEstado(
             @PathVariable Long id,
@@ -173,14 +177,14 @@ public class FormulaProductoController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         formulaService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/activa")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
     public ResponseEntity<FormulaProductoResponse> obtenerFormulaActiva(@RequestParam Long productoId,
                                                                         @RequestParam(defaultValue = "1") BigDecimal cantidad) {
         // LÍNEA CODEx: endpoint consultado por Producción para validar disponibilidad de insumos
@@ -188,7 +192,7 @@ public class FormulaProductoController {
     }
 
     @GetMapping("/producto/{productoId}/formula-activa")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
     public ResponseEntity<FormulaActivaProduccionDTO> obtenerFormulaActivaProduccion(@PathVariable Long productoId) {
         return ResponseEntity.ok(formulaService.obtenerFormulaActivaProduccion(productoId));
     }

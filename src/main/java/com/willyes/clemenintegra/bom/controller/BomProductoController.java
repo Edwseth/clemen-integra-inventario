@@ -19,10 +19,13 @@ import java.util.Comparator;
 @RequiredArgsConstructor
 public class BomProductoController {
 
+    // TODO(rbac-bom-cut1): retirar fallback por roles y permisos granulares BOM_* legacy al finalizar migracion canonica.
+    private static final String BOM_READ_ROLE_FALLBACK = "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN'";
+
     private final ProductoRepository productoRepository;
 
     @GetMapping("/productos-terminados")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
     public ResponseEntity<List<ProductoMinResponseDTO>> listarProductosTerminados() {
         List<Producto> items = productoRepository
                 .findByCategoriaProducto_TipoIn(List.of(
@@ -39,4 +42,3 @@ public class BomProductoController {
         return ResponseEntity.ok(dto);
     }
 }
-

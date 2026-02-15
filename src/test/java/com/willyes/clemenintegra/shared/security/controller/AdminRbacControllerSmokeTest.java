@@ -81,4 +81,20 @@ class AdminRbacControllerSmokeTest {
                 .andExpect(jsonPath("$[0].activo").value(true));
     }
 
+
+    @Test
+    void getPermisosBomRetornaCatalogoCanonico() throws Exception {
+        when(rbacAdminService.listarPermisos("BOM", true))
+                .thenReturn(List.of(new PermisoDTO(40L, "BOM_READ", "BOM", "READ", "Lectura", true)));
+
+        mockMvc.perform(get("/api/admin/rbac/permisos")
+                        .param("modulo", "BOM")
+                        .param("activo", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].codigo").value("BOM_READ"))
+                .andExpect(jsonPath("$[0].modulo").value("BOM"))
+                .andExpect(jsonPath("$[0].activo").value(true));
+    }
+
+
 }
