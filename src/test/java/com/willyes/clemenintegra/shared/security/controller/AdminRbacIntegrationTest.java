@@ -217,6 +217,92 @@ class AdminRbacIntegrationTest extends IntegrationTestH2 {
     }
 
 
+
+    @Test
+    void actualizarPermisosPorModuloMantienePermisosDeOtrosModulos() throws Exception {
+        PermisoEntity docRead = crearPermisoSiNoExiste("DOC_RBAC_KEEP_READ", "DOC", "READ", true);
+        PermisoEntity docWrite = crearPermisoSiNoExiste("DOC_RBAC_KEEP_WRITE", "DOC", "WRITE", true);
+        crearPermisoSiNoExiste("INV_RBAC_REPLACE_OLD", "INV", "WRITE", true);
+        PermisoEntity invRead = crearPermisoSiNoExiste("INV_RBAC_REPLACE_NEW", "INV", "READ", true);
+        Long rolPlaneadorId = rolRepository.findByCodigoAndActivoTrue("ROL_PLANEADOR")
+                .orElseThrow()
+                .getId();
+
+        String setupPayload = objectMapper.writeValueAsString(Map.of(
+                "modulo", "DOC",
+                "permisoIds", List.of(docRead.getId(), docWrite.getId())
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(setupPayload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].codigo", hasItem("DOC_RBAC_KEEP_READ")))
+                .andExpect(jsonPath("$[*].codigo", hasItem("DOC_RBAC_KEEP_WRITE")));
+
+        String updateInvPayload = objectMapper.writeValueAsString(Map.of(
+                "modulo", "INV",
+                "permisoIds", List.of(invRead.getId())
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(updateInvPayload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].codigo", hasItem("DOC_RBAC_KEEP_READ")))
+                .andExpect(jsonPath("$[*].codigo", hasItem("DOC_RBAC_KEEP_WRITE")))
+                .andExpect(jsonPath("$[*].codigo", hasItem("INV_RBAC_REPLACE_NEW")))
+                .andExpect(jsonPath("$[?(@.codigo=='INV_RBAC_REPLACE_OLD')]").isEmpty());
+    }
+
+    @Test
+    void actualizarPermisosPorModuloConListaVaciaEliminaSoloEseModulo() throws Exception {
+        PermisoEntity docRead = crearPermisoSiNoExiste("DOC_RBAC_KEEP_ONLY_DOC", "DOC", "READ", true);
+        PermisoEntity invRead = crearPermisoSiNoExiste("INV_RBAC_REMOVE_ONLY_INV", "INV", "READ", true);
+        Long rolPlaneadorId = rolRepository.findByCodigoAndActivoTrue("ROL_PLANEADOR")
+                .orElseThrow()
+                .getId();
+
+        String setupDocPayload = objectMapper.writeValueAsString(Map.of(
+                "modulo", "DOC",
+                "permisoIds", List.of(docRead.getId())
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(setupDocPayload))
+                .andExpect(status().isOk());
+
+        String setupInvPayload = objectMapper.writeValueAsString(Map.of(
+                "modulo", "INV",
+                "permisoIds", List.of(invRead.getId())
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(setupInvPayload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].codigo", hasItem("DOC_RBAC_KEEP_ONLY_DOC")))
+                .andExpect(jsonPath("$[*].codigo", hasItem("INV_RBAC_REMOVE_ONLY_INV")));
+
+        String removeInvPayload = objectMapper.writeValueAsString(Map.of(
+                "modulo", "INV",
+                "permisoIds", List.of()
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(removeInvPayload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].codigo", hasItem("DOC_RBAC_KEEP_ONLY_DOC")))
+                .andExpect(jsonPath("$[?(@.codigo=='INV_RBAC_REMOVE_ONLY_INV')]").isEmpty());
+    }
+
     @Test
     void asignarPermisosRolDeOtroModuloIncluyeIdYCodigoEnMensaje() throws Exception {
         PermisoEntity permisoInv = crearPermisoSiNoExiste("INV_RBAC_OTRO_MODULO", "INV", "READ", true);
