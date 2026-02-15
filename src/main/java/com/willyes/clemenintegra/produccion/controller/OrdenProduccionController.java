@@ -100,7 +100,8 @@ public class OrdenProduccionController {
 
 
     @GetMapping("/lookup")
-    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_CONTADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenProduccionResponseDTO> lookup(@RequestParam(required = false) Long id,
                                                               @RequestParam(required = false) String codigo) {
         String codigoNormalizado = codigo != null ? codigo.trim() : null;

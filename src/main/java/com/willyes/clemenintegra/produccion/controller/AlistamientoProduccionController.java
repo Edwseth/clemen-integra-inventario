@@ -18,7 +18,8 @@ public class AlistamientoProduccionController {
     private final ProduccionAlistamientoService alistamientoService;
 
     @GetMapping("/{id}/alistamiento")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<AlistamientoOrdenProduccionDTO> obtenerAlistamiento(@PathVariable Long id) {
         return ResponseEntity.ok(alistamientoService.obtenerAlistamientoPorOrden(id));
     }

@@ -25,7 +25,8 @@ public class DetalleEtapaController {
     private final com.willyes.clemenintegra.shared.service.UsuarioService usuarioService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public List<DetalleEtapaResponse> listarTodas() {
         return service.listarTodas().stream()
@@ -34,7 +35,8 @@ public class DetalleEtapaController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<DetalleEtapaResponse> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
@@ -44,7 +46,8 @@ public class DetalleEtapaController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_WORKFLOW','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<DetalleEtapaResponse> crear(@Valid @RequestBody DetalleEtapaRequest request) {
         normalizarRequest(request, null);
@@ -56,7 +59,8 @@ public class DetalleEtapaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_WORKFLOW','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<DetalleEtapaResponse> actualizar(@PathVariable Long id, @Valid @RequestBody DetalleEtapaRequest request) {
         return service.buscarPorId(id)
@@ -73,7 +77,8 @@ public class DetalleEtapaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_WORKFLOW','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
             "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
