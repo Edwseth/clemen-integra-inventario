@@ -17,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,12 +27,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/calidad/capas")
 @RequiredArgsConstructor
+// TODO(rbac-qc-cut3): retirar fallback por ROL_* cuando todos los perfiles usen permisos QC_* de forma canonica.
 public class CapaController {
 
     private final CapaService service;
 
     @GetMapping
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<CapaDTO>> listar(
             @RequestParam(required = false) EstadoCapa estado,
             @RequestParam(required = false) SeveridadNoConformidad severidad,
@@ -40,31 +42,31 @@ public class CapaController {
     }
 
     @GetMapping("/{id}")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<CapaDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<CapaDTO> crear(@Valid @RequestBody CapaDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.crear(dto));
     }
 
     @PutMapping("/{id}")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<CapaDTO> actualizar(@PathVariable Long id, @Valid @RequestBody CapaDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
     @PatchMapping("/{id}/cerrar")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<CapaDTO> cerrar(@PathVariable Long id) {
         return ResponseEntity.ok(service.cerrar(id));
     }
 
     @PostMapping(path = "/{id}/archivos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<CapaArchivoDTO> adjuntarArchivo(@PathVariable Long id,
                                                           @RequestPart("archivo") MultipartFile archivo,
                                                           @RequestPart(value = "nombreVisible", required = false) String nombreVisible,
@@ -75,13 +77,13 @@ public class CapaController {
     }
 
     @GetMapping("/{id}/archivos")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<CapaArchivoDTO>> listarArchivos(@PathVariable Long id) {
         return ResponseEntity.ok(service.listarArchivos(id));
     }
 
     @GetMapping({"/{capaId}/archivos/{archivoId}/descargar", "/{capaId}/archivos/{archivoId}"})
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_EXPORT','QC_READ','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<ByteArrayResource> descargarArchivo(@PathVariable Long capaId, @PathVariable Long archivoId) {
         CapaArchivoDescargaDTO archivo = service.descargarArchivo(capaId, archivoId);
         MediaType mediaType = archivo.getContentType() != null
@@ -94,7 +96,7 @@ public class CapaController {
     }
 
     @DeleteMapping("/{id}")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();

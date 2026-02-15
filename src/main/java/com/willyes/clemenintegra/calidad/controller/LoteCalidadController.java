@@ -27,7 +27,8 @@ public class LoteCalidadController {
     private final LoteProductoService service;
 
     @PutMapping("/{loteId}/liberar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO(rbac-qc-cut3): retirar fallback por ROL_* cuando todos los perfiles usen permisos QC_* de forma canonica.
+    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<LoteProductoResponseDTO> liberarLote(
             @PathVariable Long loteId,
             @RequestBody(required = false) com.willyes.clemenintegra.inventario.dto.ObservacionRequestDTO request,
@@ -38,13 +39,13 @@ public class LoteCalidadController {
     }
 
     @GetMapping("/{loteId}/estado-calidad")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_PLANEADOR')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_PLANEADOR')")
     public ResponseEntity<EstadoCalidadLoteResponseDTO> obtenerEstadoCalidad(@PathVariable Long loteId) {
         return ResponseEntity.ok(service.obtenerEstadoCalidad(loteId));
     }
 
     @GetMapping("/{loteId}/condiciones-uso")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
     public ResponseEntity<List<CondicionUsoResponseDTO>> listarCondicionesUso(
             @PathVariable Long loteId,
             @RequestParam(name = "estado", required = false) EstadoCondicionUso estado) {
@@ -54,7 +55,7 @@ public class LoteCalidadController {
     }
 
     @PatchMapping("/{loteId}/reabrir")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<LoteProductoResponseDTO> reabrirParaReevaluacion(
             @PathVariable Long loteId,
             @RequestBody @Valid ReaperturaLoteRequestDTO dto,
