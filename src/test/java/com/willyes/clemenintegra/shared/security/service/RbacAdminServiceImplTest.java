@@ -2,17 +2,18 @@ package com.willyes.clemenintegra.shared.security.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.willyes.clemenintegra.shared.model.rbac.PermisoEntity;
+import com.willyes.clemenintegra.shared.model.rbac.RolEntity;
 import com.willyes.clemenintegra.shared.repository.PermisoRepository;
-import com.willyes.clemenintegra.shared.repository.RolPermisoRepository;
 import com.willyes.clemenintegra.shared.repository.RolRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,8 +28,6 @@ class RbacAdminServiceImplTest {
     private RolRepository rolRepository;
     @Mock
     private PermisoRepository permisoRepository;
-    @Mock
-    private RolPermisoRepository rolPermisoRepository;
 
     @InjectMocks
     private RbacAdminServiceImpl service;
@@ -55,61 +54,80 @@ class RbacAdminServiceImplTest {
     }
 
     @Test
-    void actualizarPermisosRolReemplazaSetAnterior() {
+    void actualizarPermisosRolReemplazaSoloElModuloSolicitado() {
         Long rolId = 10L;
-        when(rolRepository.existsById(rolId)).thenReturn(true);
+        RolEntity rol = rolConPermisos(
+                permiso(100L, "DOC_READ", "DOC"),
+                permiso(101L, "DOC_WRITE", "DOC"),
+                permiso(200L, "INV_OLD", "INV")
+        );
 
-        PermisoEntity p1 = permiso(1L, "INV_READ", "INV");
-        PermisoEntity p2 = permiso(2L, "INV_WRITE", "INV");
+        PermisoEntity invRead = permiso(1L, "INV_READ", "INV");
 
-        when(permisoRepository.findAllById(Set.of(1L, 2L))).thenReturn(List.of(p1, p2));
-        when(permisoRepository.findByRolesIdOrderByCodigoAsc(rolId)).thenReturn(List.of(p1, p2));
+        when(rolRepository.findById(rolId)).thenReturn(Optional.of(rol));
+        when(permisoRepository.findAllById(Set.of(1L))).thenReturn(List.of(invRead));
 
-        var resultado = service.actualizarPermisosRol(rolId, List.of(1L, 2L, 2L), "INV");
+        var resultado = service.actualizarPermisosRol(rolId, List.of(1L), "INV");
 
-        verify(rolPermisoRepository).deleteByRolId(rolId);
-        verify(rolPermisoRepository).insertBatch(rolId, List.of(1L, 2L));
-        assertThat(resultado).hasSize(2);
-        assertThat(resultado.get(0).codigo()).isEqualTo("INV_READ");
+        verify(rolRepository).save(rol);
+        assertThat(codigos(rol.getPermisos())).containsExactlyInAnyOrder("DOC_READ", "DOC_WRITE", "INV_READ");
+        assertThat(resultado).extracting("codigo").containsExactly("DOC_READ", "DOC_WRITE", "INV_READ");
+    }
+
+    @Test
+    void actualizarPermisosRolConListaVaciaQuitaSoloPermisosDelModulo() {
+        Long rolId = 11L;
+        RolEntity rol = rolConPermisos(
+                permiso(100L, "DOC_READ", "DOC"),
+                permiso(101L, "DOC_WRITE", "DOC"),
+                permiso(200L, "INV_OLD", "INV")
+        );
+
+        when(rolRepository.findById(rolId)).thenReturn(Optional.of(rol));
+
+        var resultado = service.actualizarPermisosRol(rolId, List.of(), "INV");
+
+        verify(rolRepository).save(rol);
+        verify(permisoRepository, never()).findAllById(org.mockito.ArgumentMatchers.anySet());
+        assertThat(codigos(rol.getPermisos())).containsExactlyInAnyOrder("DOC_READ", "DOC_WRITE");
+        assertThat(resultado).extracting("codigo").containsExactly("DOC_READ", "DOC_WRITE");
     }
 
     @Test
     void actualizarPermisosRolValidaModuloSeleccionado() {
         Long rolId = 10L;
-        when(rolRepository.existsById(rolId)).thenReturn(true);
+        RolEntity rol = rolConPermisos(permiso(100L, "DOC_READ", "DOC"));
 
         PermisoEntity p1 = permiso(1L, "INV_READ", "INV");
         PermisoEntity p2 = permiso(2L, "QC_READ", "QC");
 
+        when(rolRepository.findById(rolId)).thenReturn(Optional.of(rol));
         when(permisoRepository.findAllById(Set.of(1L, 2L))).thenReturn(List.of(p1, p2));
 
         assertThatThrownBy(() -> service.actualizarPermisosRol(rolId, List.of(1L, 2L), "INV"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("módulo INV");
 
-        verify(rolPermisoRepository, never()).deleteByRolId(rolId);
-    }
-
-    @Test
-    void actualizarConListaVaciaBorraTodo() {
-        Long rolId = 11L;
-        when(rolRepository.existsById(rolId)).thenReturn(true);
-        when(permisoRepository.findByRolesIdOrderByCodigoAsc(rolId)).thenReturn(List.of());
-
-        var resultado = service.actualizarPermisosRol(rolId, List.of(), "INV");
-
-        verify(rolPermisoRepository).deleteByRolId(rolId);
-        verify(rolPermisoRepository, never()).insertBatch(org.mockito.ArgumentMatchers.anyLong(), anyList());
-        assertThat(resultado).isEmpty();
+        verify(rolRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
     void rolInexistenteLanzaNotFound() {
-        when(rolRepository.existsById(99L)).thenReturn(false);
+        when(rolRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.actualizarPermisosRol(99L, List.of(1L), "INV"))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("Rol no encontrado");
+    }
+
+    private Set<String> codigos(Set<PermisoEntity> permisos) {
+        return permisos.stream().map(PermisoEntity::getCodigo).collect(java.util.stream.Collectors.toSet());
+    }
+
+    private RolEntity rolConPermisos(PermisoEntity... permisos) {
+        RolEntity rol = new RolEntity();
+        rol.setPermisos(new HashSet<>(List.of(permisos)));
+        return rol;
     }
 
     private PermisoEntity permiso(Long id, String codigo, String modulo) {

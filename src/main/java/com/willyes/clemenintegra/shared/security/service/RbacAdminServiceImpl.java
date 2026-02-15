@@ -3,12 +3,12 @@ package com.willyes.clemenintegra.shared.security.service;
 import com.willyes.clemenintegra.shared.model.rbac.PermisoEntity;
 import com.willyes.clemenintegra.shared.model.rbac.RolEntity;
 import com.willyes.clemenintegra.shared.repository.PermisoRepository;
-import com.willyes.clemenintegra.shared.repository.RolPermisoRepository;
 import com.willyes.clemenintegra.shared.repository.RolRepository;
 import com.willyes.clemenintegra.shared.security.dto.rbac.PermisoDTO;
 import com.willyes.clemenintegra.shared.security.dto.rbac.RolDTO;
 import jakarta.persistence.EntityNotFoundException;
-import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -28,7 +28,6 @@ public class RbacAdminServiceImpl implements RbacAdminService {
 
     private final RolRepository rolRepository;
     private final PermisoRepository permisoRepository;
-    private final RolPermisoRepository rolPermisoRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -67,7 +66,7 @@ public class RbacAdminServiceImpl implements RbacAdminService {
     @Override
     @Transactional
     public List<PermisoDTO> actualizarPermisosRol(Long rolId, List<Long> permisoIds, String modulo) {
-        validarRolExiste(rolId);
+        RolEntity rol = obtenerRol(rolId);
         String moduloNormalizado = normalizarModulo(modulo);
 
         List<Long> idsNormalizados = permisoIds == null ? List.of() : permisoIds;
@@ -97,15 +96,20 @@ public class RbacAdminServiceImpl implements RbacAdminService {
                     .toList());
         }
 
-        rolPermisoRepository.deleteByRolId(rolId);
+        Set<PermisoEntity> permisosOtrosModulos = rol.getPermisos().stream()
+                .filter(permiso -> permiso.getModulo() == null || !moduloNormalizado.equalsIgnoreCase(permiso.getModulo()))
+                .collect(java.util.stream.Collectors.toCollection(HashSet::new));
 
-        if (!idsUnicos.isEmpty()) {
-            rolPermisoRepository.insertBatch(rolId, new ArrayList<>(idsUnicos));
-        }
+        Set<PermisoEntity> permisosFinales = new HashSet<>(permisosOtrosModulos);
+        permisosFinales.addAll(permisos);
+
+        rol.setPermisos(permisosFinales);
+        rolRepository.save(rol);
 
         auditarCambioPermisosRol(rolId, moduloNormalizado, idsUnicos);
 
-        return permisoRepository.findByRolesIdOrderByCodigoAsc(rolId).stream()
+        return rol.getPermisos().stream()
+                .sorted(Comparator.comparing(PermisoEntity::getCodigo, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toPermisoDTO)
                 .toList();
     }
@@ -124,10 +128,16 @@ public class RbacAdminServiceImpl implements RbacAdminService {
         return modulo.trim().toUpperCase(Locale.ROOT);
     }
 
-    private void validarRolExiste(Long rolId) {
-        if (rolId == null || !rolRepository.existsById(rolId)) {
-            throw new EntityNotFoundException("Rol no encontrado: " + rolId);
+    private RolEntity obtenerRol(Long rolId) {
+        if (rolId == null) {
+            throw new EntityNotFoundException("Rol no encontrado: null");
         }
+        return rolRepository.findById(rolId)
+                .orElseThrow(() -> new EntityNotFoundException("Rol no encontrado: " + rolId));
+    }
+
+    private void validarRolExiste(Long rolId) {
+        obtenerRol(rolId);
     }
 
     private RolDTO toRolDTO(RolEntity rol) {
