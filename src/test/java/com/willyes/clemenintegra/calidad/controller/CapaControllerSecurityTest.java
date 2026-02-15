@@ -1,41 +1,39 @@
 package com.willyes.clemenintegra.calidad.controller;
 
+import com.willyes.clemenintegra.calidad.dto.CapaArchivoDescargaDTO;
 import com.willyes.clemenintegra.calidad.dto.CapaDTO;
 import com.willyes.clemenintegra.calidad.service.CapaService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
+import jakarta.servlet.Filter;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
-import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.context.WebApplicationContext;
-import org.junit.jupiter.api.BeforeEach;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.context.annotation.Import;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.context.annotation.Bean;
-import jakarta.servlet.Filter;
-
-import java.util.List;
+import org.springframework.web.context.WebApplicationContext;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @WebMvcTest(CapaController.class)
 @AutoConfigureMockMvc(addFilters = true)
@@ -131,6 +129,32 @@ class CapaControllerSecurityTest {
                         .header("X-Test-Allow", "true")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void permiteCerrarConPermisoCanonicoQcWorkflowFinish() throws Exception {
+        when(capaService.cerrar(5L)).thenReturn(new CapaDTO());
+
+        mockMvc.perform(patch("/api/calidad/capas/5/cerrar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("finisher")
+                                .authorities(new SimpleGrantedAuthority("QC_WORKFLOW_FINISH")))
+                        .header("X-Test-Allow", "true"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void permiteDescargarArchivoConPermisoCanonicoQcExport() throws Exception {
+        when(capaService.descargarArchivo(7L, 9L)).thenReturn(CapaArchivoDescargaDTO.builder()
+                .nombreArchivo("evidencia.txt")
+                .contentType(MediaType.TEXT_PLAIN_VALUE)
+                .contenido("ok".getBytes())
+                .build());
+
+        mockMvc.perform(get("/api/calidad/capas/7/archivos/9/descargar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("exporter")
+                                .authorities(new SimpleGrantedAuthority("QC_EXPORT")))
+                        .header("X-Test-Allow", "true"))
                 .andExpect(status().isOk());
     }
 }

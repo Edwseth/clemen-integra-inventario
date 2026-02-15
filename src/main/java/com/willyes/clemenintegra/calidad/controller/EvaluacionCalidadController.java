@@ -38,14 +38,14 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("/api/calidad/evaluaciones")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+// TODO(rbac-qc-cut3): retirar fallback por ROL_* cuando todos los perfiles usen permisos QC_* de forma canonica.
 public class EvaluacionCalidadController {
 
     private final EvaluacionCalidadService service;
     private final ResultadoAnalisisMicroService resultadoAnalisisMicroService;
     private final PlantillaAnalisisMicroService plantillaAnalisisMicroService;
 
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_EXPORT','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping("/consolidadas")
     public ResponseEntity<Page<ConsolidadoPorLoteDTO>> getEvaluacionesConsolidadas(
             @RequestParam("fechaInicio") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
@@ -57,6 +57,7 @@ public class EvaluacionCalidadController {
         return ResponseEntity.ok(service.obtenerEvaluacionesConsolidadas(fechaInicio, fechaFin, filtro, pageable));
     }
 
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_EXPORT','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping
     public ResponseEntity<Page<EvaluacionCalidadResponseDTO>> listar(
             @RequestParam(required = false) ResultadoEvaluacion resultado,
@@ -64,6 +65,7 @@ public class EvaluacionCalidadController {
         return ResponseEntity.ok(service.listar(resultado, pageable));
     }
 
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_EXPORT','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping("/evaluaciones")
     public ResponseEntity<Page<EvaluacionCalidadResponseDTO>> listarPorFecha(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
@@ -72,19 +74,20 @@ public class EvaluacionCalidadController {
         return ResponseEntity.ok(service.listarPorFecha(fechaInicio, fechaFin, pageable));
     }
 
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_EXPORT','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<EvaluacionCalidadResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
     @GetMapping("/{id}/detalle")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_EXPORT','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public ResponseEntity<EvaluacionCalidadDetalleDTO> obtenerDetalle(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerDetalle(id));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<EvaluacionCalidadResponseDTO> crear(
             @ModelAttribute @Valid EvaluacionCalidadRequestDTO dto,
             @RequestPart(value = "archivos", required = false) java.util.List<MultipartFile> archivos) {
@@ -92,12 +95,13 @@ public class EvaluacionCalidadController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<EvaluacionCalidadResponseDTO> actualizar(@PathVariable Long id,
                                                                    @RequestBody EvaluacionCalidadRequestDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
@@ -105,7 +109,7 @@ public class EvaluacionCalidadController {
     }
 
     @GetMapping("/archivo/{nombreArchivo:.+}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_EXPORT','QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public ResponseEntity<Resource> verArchivo(@PathVariable String nombreArchivo) {
         try {
             Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "evaluaciones")
@@ -142,7 +146,7 @@ public class EvaluacionCalidadController {
      * </ul>
      */
     @PostMapping(path = "/{evaluacionId}/resultados-micro")
-    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<java.util.List<ResultadoAnalisisMicroResponseDTO>> guardarResultadosMicro(
             @PathVariable Long evaluacionId,
             @RequestBody java.util.List<ResultadoAnalisisMicroRequestDTO> resultados) {
@@ -154,7 +158,7 @@ public class EvaluacionCalidadController {
      * se debe renderizar la tabla de parámetros microbiológicos.
     */
     @GetMapping("/plantillas/micro/producto/{productoId}")
-    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<PlantillaAnalisisMicroDTO> obtenerPlantillaMicro(@PathVariable Long productoId) {
         PlantillaAnalisisMicroDTO dto = plantillaAnalisisMicroService.obtenerPorProducto(productoId);
         if (dto == null || !dto.isRequiereAnalisisMicro()) {
@@ -164,13 +168,13 @@ public class EvaluacionCalidadController {
     }
 
     @GetMapping(path = "/{evaluacionId}/resultados-micro")
-    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<java.util.List<ResultadoAnalisisMicroResponseDTO>> obtenerResultadosMicro(@PathVariable Long evaluacionId) {
         return ResponseEntity.ok(resultadoAnalisisMicroService.obtenerPorEvaluacion(evaluacionId));
     }
 
     @GetMapping(path = "/{evaluacionId}/micro/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_EXPORT','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     // Reporte: PDF de análisis microbiológico asociado a una evaluación de calidad.
     public ResponseEntity<byte[]> descargarPdfMicro(@PathVariable Long evaluacionId) {
         byte[] pdf = resultadoAnalisisMicroService.obtenerPdfMicro(evaluacionId);

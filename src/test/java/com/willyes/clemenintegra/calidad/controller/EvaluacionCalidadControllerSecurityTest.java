@@ -19,6 +19,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
@@ -86,6 +88,49 @@ class EvaluacionCalidadControllerSecurityTest {
         }).when(usuarioInactivoFilter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
     }
 
+
+    @Test
+    void permiteListarConPermisoCanonicoQcRead() throws Exception {
+        when(evaluacionCalidadService.listar(org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0));
+
+        mockMvc.perform(get("/api/calidad/evaluaciones")
+                        .with(SecurityMockMvcRequestPostProcessors.user("reader")
+                                .authorities(() -> "QC_READ")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void rechazaCrearConSoloPermisoCanonicoQcRead() throws Exception {
+        mockMvc.perform(multipart("/api/calidad/evaluaciones")
+                        .param("tipoEvaluacion", "FISICO")
+                        .param("observaciones", "OK")
+                        .param("loteProductoId", "10")
+                        .with(SecurityMockMvcRequestPostProcessors.user("reader")
+                                .authorities(() -> "QC_READ")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void permiteCrearConPermisoCanonicoQcWrite() throws Exception {
+        EvaluacionCalidadResponseDTO response = EvaluacionCalidadResponseDTO.builder()
+                .id(3L)
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .nombreLote("LOTE-03")
+                .nombreProducto("Producto Z")
+                .nombreEvaluador("Usuario QC_WRITE")
+                .build();
+        when(evaluacionCalidadService.crear(any(), any())).thenReturn(response);
+
+        mockMvc.perform(multipart("/api/calidad/evaluaciones")
+                        .param("tipoEvaluacion", "FISICO")
+                        .param("observaciones", "OK")
+                        .param("loteProductoId", "10")
+                        .with(SecurityMockMvcRequestPostProcessors.user("writer")
+                                .authorities(() -> "QC_WRITE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(3L));
+    }
     @Test
     void rechazaAnalistaEnPlantillaMicroDesdeEvaluaciones() throws Exception {
         mockMvc.perform(get("/api/calidad/evaluaciones/plantillas/micro/producto/1")

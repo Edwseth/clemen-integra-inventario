@@ -49,4 +49,21 @@ class AdminRbacControllerSmokeTest {
                 .andExpect(jsonPath("$[0].activo").value(true));
     }
 
+    @Test
+    void getPermisosQcRetornaCatalogoCanonico() throws Exception {
+        when(rbacAdminService.listarPermisos("QC", true))
+                .thenReturn(List.of(
+                        new PermisoDTO(20L, "QC_READ", "QC", "READ", "Lectura", true),
+                        new PermisoDTO(21L, "QC_WORKFLOW_FINISH", "QC", "WORKFLOW_FINISH", "Cierre", true)
+                ));
+
+        mockMvc.perform(get("/api/admin/rbac/permisos")
+                        .param("modulo", "QC")
+                        .param("activo", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].codigo").value("QC_READ"))
+                .andExpect(jsonPath("$[0].modulo").value("QC"))
+                .andExpect(jsonPath("$[1].codigo").value("QC_WORKFLOW_FINISH"));
+    }
+
 }
