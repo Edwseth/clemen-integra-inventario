@@ -14,12 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/inventario/disponibilidad")
 @RequiredArgsConstructor
+// TODO(RBAC-INV): Retirar fallback por roles cuando la migracion a permisos INV_* este completa.
 public class InventarioConsultaController {
 
     private final InventarioConsultaService inventarioConsultaService;
 
     @GetMapping("/producto/{productoId}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_PRODUCT_READ','ROL_JEFE_PRODUCCION','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<DisponibilidadProductoResponseDTO> obtenerDisponibilidadPorProducto(@PathVariable Long productoId) {
         try {
             DisponibilidadProductoResponseDTO dto = inventarioConsultaService.obtenerDisponibilidadPorProducto(productoId);

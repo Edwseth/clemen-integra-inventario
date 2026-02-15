@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.willyes.clemenintegra.shared.security.dto.rbac.PermisoDTO;
 import com.willyes.clemenintegra.shared.security.dto.rbac.RolDTO;
 import com.willyes.clemenintegra.shared.security.service.RbacAdminService;
 import java.util.List;
@@ -33,4 +34,19 @@ class AdminRbacControllerSmokeTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].codigo").value("ROL_SUPER_ADMIN"));
     }
+
+    @Test
+    void getPermisosInvRetornaCatalogoCanonico() throws Exception {
+        when(rbacAdminService.listarPermisos("INV", true))
+                .thenReturn(List.of(new PermisoDTO(10L, "INV_READ", "INV", "READ", "Lectura", true)));
+
+        mockMvc.perform(get("/api/admin/rbac/permisos")
+                        .param("modulo", "INV")
+                        .param("activo", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].codigo").value("INV_READ"))
+                .andExpect(jsonPath("$[0].modulo").value("INV"))
+                .andExpect(jsonPath("$[0].activo").value(true));
+    }
+
 }

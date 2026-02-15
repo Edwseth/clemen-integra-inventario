@@ -162,6 +162,20 @@ class SolicitudMovimientoControllerSecurityTest {
                 .andExpect(status().isOk());
     }
 
+
+    @Test
+    void permisoDecidePuedeAprobarSolicitudes() throws Exception {
+        when(usuarioService.buscarPorNombreUsuario("decisor"))
+                .thenReturn(com.willyes.clemenintegra.shared.model.Usuario.builder().id(99L).nombreUsuario("decisor").build());
+        when(solicitudMovimientoService.aprobarSolicitud(1L, 99L))
+                .thenReturn(SolicitudMovimientoResponseDTO.builder().id(1L).build());
+
+        mockMvc.perform(put("/api/inventario/solicitudes/1/aprobar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("decisor")
+                                .authorities(() -> "INV_DECIDE")))
+                .andExpect(status().isOk());
+    }
+
     @Test
     void planeadorNoPuedeAprobarSolicitudes() throws Exception {
         mockMvc.perform(put("/api/inventario/solicitudes/1/aprobar")

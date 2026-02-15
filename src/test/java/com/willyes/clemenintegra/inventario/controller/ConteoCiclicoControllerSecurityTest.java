@@ -111,7 +111,7 @@ class ConteoCiclicoControllerSecurityTest {
     }
 
     @Test
-    void permiteListarConteosConPermisoLectura() throws Exception {
+    void permiteListarConteosConPermisoCanonicoRead() throws Exception {
         ConteoCiclicoResumenResponseDTO response = ConteoCiclicoResumenResponseDTO.builder()
                 .id(1L)
                 .estado(EstadoConteoCiclico.BORRADOR)
@@ -123,7 +123,7 @@ class ConteoCiclicoControllerSecurityTest {
                         .param("page", "0")
                         .param("size", "10")
                         .with(SecurityMockMvcRequestPostProcessors.user("contador-permiso")
-                                .authorities(() -> "INV_CONTEOS_READ")))
+                                .authorities(() -> "INV_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -148,7 +148,7 @@ class ConteoCiclicoControllerSecurityTest {
     }
 
     @Test
-    void rechazaCrearConteoSinPermisoEscritura() throws Exception {
+    void rechazaCrearConteoSoloConPermisoRead() throws Exception {
         ConteoCiclicoRequestDTO request = new ConteoCiclicoRequestDTO();
         request.setAlmacenId(1);
 
@@ -156,12 +156,12 @@ class ConteoCiclicoControllerSecurityTest {
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request))
                         .with(SecurityMockMvcRequestPostProcessors.user("contador-read")
-                                .authorities(() -> "INV_CONTEOS_READ")))
+                                .authorities(() -> "INV_READ")))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void permiteAplicarConteoConRolContador() throws Exception {
+    void permiteAplicarConteoConPermisoWorkflowFinish() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(77L)
                 .estado(EstadoConteoCiclico.APLICADO)
@@ -171,7 +171,7 @@ class ConteoCiclicoControllerSecurityTest {
         mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
                         .header("Idempotency-Key", "k1")
                         .with(SecurityMockMvcRequestPostProcessors.user("contador")
-                                .authorities(() -> "ROL_CONTADOR")))
+                                .authorities(() -> "INV_WORKFLOW_FINISH")))
                 .andExpect(status().isOk());
     }
 

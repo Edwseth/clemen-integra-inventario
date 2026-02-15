@@ -46,6 +46,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/movimientos")
 @RequiredArgsConstructor
+// TODO(RBAC-INV): Retirar fallback por roles cuando la migracion a permisos INV_* este completa.
 public class MovimientoInventarioController {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MovimientoInventarioController.class);
@@ -62,7 +63,7 @@ public class MovimientoInventarioController {
     @ApiResponse(responseCode = "404", description = "Producto o lote no encontrado")
     @ApiResponse(responseCode = "409", description = "Conflictos funcionales (p. ej. BLOQUEO_RETENCION_NC, NC_ABIERTA, stock insuficiente)")
     @ApiResponse(responseCode = "500", description = "Error interno del servidor")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_SUPER_ADMIN')")
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody @Valid MovimientoInventarioDTO dto,
                                        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
@@ -276,7 +277,7 @@ public class MovimientoInventarioController {
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
-    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
             " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> filtrar(
             @RequestParam(required = false) Long productoId,
@@ -307,7 +308,7 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
             " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
     public ResponseEntity<List<MovimientoInventarioResponseDTO>> consultar(
             @RequestParam(required = false) Long productoId,
@@ -337,7 +338,7 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ','ROL_JEFE_ALMACENES', 'ROL_ALMACENISTA', 'ROL_JEFE_PRODUCCION'," +
             " 'ROL_CONTADOR', 'ROL_SUPER_ADMIN', 'ROL_JEFE_CALIDAD', 'ROL_PLANEADOR')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> listarTodos(
             @RequestParam(required = false) String codigoRecepcion,
