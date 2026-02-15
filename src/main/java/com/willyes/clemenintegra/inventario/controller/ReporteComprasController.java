@@ -28,7 +28,7 @@ public class ReporteComprasController {
 
     @GetMapping
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_COMPRADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public List<ReporteComprasRowDTO> obtenerReporte(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
@@ -37,7 +37,7 @@ public class ReporteComprasController {
 
     @GetMapping("/excel")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_COMPRADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<byte[]> exportarExcel(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {

@@ -37,7 +37,7 @@ public class TipoMovimientoDetalleController {
 
     @DeleteMapping("/{id}")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminarPorId(id);
         return ResponseEntity.noContent().build();

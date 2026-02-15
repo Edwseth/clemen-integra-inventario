@@ -29,7 +29,7 @@ public class ConteoCiclicoController {
     private final ConteoCiclicoService conteoCiclicoService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_CONTEOS_READ')")
     public ResponseEntity<Page<ConteoCiclicoResumenResponseDTO>> listar(
             @RequestParam(required = false) Integer almacenId,
             @RequestParam(required = false) String estado,
@@ -43,14 +43,14 @@ public class ConteoCiclicoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_CONTEOS_READ')")
     public ResponseEntity<ConteoCiclicoResponseDTO> obtenerPorId(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.obtenerPorId(id);
         return ResponseEntity.ok(respuesta);
     }
 
     @GetMapping("/{id}/lotes")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_CONTEOS_READ')")
     public ResponseEntity<List<ConteoCiclicoLoteResponseDTO>> listarLotes(
             @PathVariable Long id,
             @RequestParam Long productoId,
@@ -63,7 +63,7 @@ public class ConteoCiclicoController {
 
 
     @GetMapping("/lotes")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_CONTEOS_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_CONTADOR')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_CONTEOS_READ')")
     public ResponseEntity<List<ConteoCiclicoLoteResponseDTO>> listarLotesPorProductoYAlmacen(
             @RequestParam Long productoId,
             @RequestParam Integer almacenId) {
@@ -72,14 +72,14 @@ public class ConteoCiclicoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
     public ResponseEntity<ConteoCiclicoResponseDTO> crear(@Valid @RequestBody ConteoCiclicoRequestDTO request) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.crearConteo(request);
         return ResponseEntity.status(201).body(respuesta);
     }
 
     @PostMapping("/{id}/detalles")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
     public ResponseEntity<ConteoCiclicoResponseDTO> agregarDetalles(@PathVariable Long id,
                                                                     @Valid @RequestBody List<ConteoCiclicoDetalleRequestDTO> detalles) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.agregarDetalles(id, detalles);
@@ -87,7 +87,7 @@ public class ConteoCiclicoController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
     public ResponseEntity<ConteoCiclicoResponseDTO> actualizar(@PathVariable Long id,
                                                                @Valid @RequestBody ConteoCiclicoUpdateRequestDTO request) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.actualizarConteo(id, request != null ? request.getDetalles() : null);
@@ -95,28 +95,28 @@ public class ConteoCiclicoController {
     }
 
     @PostMapping("/{id}/iniciar")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
     public ResponseEntity<ConteoCiclicoResponseDTO> iniciar(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.marcarEnConteo(id);
         return ResponseEntity.ok(respuesta);
     }
 
     @PostMapping("/{id}/en-conteo")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
     public ResponseEntity<ConteoCiclicoResponseDTO> marcarEnConteo(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.marcarEnConteo(id);
         return ResponseEntity.ok(respuesta);
     }
 
     @PostMapping("/{id}/cerrar")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
     public ResponseEntity<ConteoCiclicoResponseDTO> cerrar(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.cerrar(id);
         return ResponseEntity.ok(respuesta);
     }
 
     @PostMapping("/{id}/aplicar")
-    @PreAuthorize("hasAnyAuthority('INV_WORKFLOW_FINISH','INV_WORKFLOW','INV_DECIDE','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WORKFLOW_FINISH','INV_WORKFLOW','INV_DECIDE')")
     public ResponseEntity<ConteoCiclicoResponseDTO> aplicar(@PathVariable Long id,
                                                             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.aplicar(id, idempotencyKey);

@@ -12,7 +12,7 @@ import java.util.List;
 @RequestMapping("/api/inventario/bitacora")
 @RequiredArgsConstructor
 // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-@org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('INV_READ','INV_WRITE','INV_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyAuthority('INV_READ','INV_WRITE','INV_DECIDE')")
 public class BitacoraCambiosInventarioController {
 
     private final BitacoraCambiosInventarioService service;

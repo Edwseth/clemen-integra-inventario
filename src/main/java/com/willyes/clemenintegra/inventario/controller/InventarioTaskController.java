@@ -21,7 +21,7 @@ public class InventarioTaskController {
 
     @PostMapping("/expirar-lotes")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_SUPER_ADMIN','ROL_JEFE_CALIDAD')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<?> expirarLotes(@RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun) {
         try {
             if (dryRun) {

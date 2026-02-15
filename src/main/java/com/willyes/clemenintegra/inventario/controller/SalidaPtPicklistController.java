@@ -20,21 +20,21 @@ public class SalidaPtPicklistController {
 
     @PostMapping
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<PicklistPtResponse> generar(@Valid @RequestBody PicklistPtCreateRequest request) {
         return ResponseEntity.ok(picklistPtService.crear(request));
     }
 
     @GetMapping("/{id}")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<PicklistPtResponse> detalle(@PathVariable Long id) {
         return ResponseEntity.ok(picklistPtService.obtener(id));
     }
 
     @GetMapping("/{id}/pdf")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
         byte[] pdf = picklistPtService.generarPdf(id);
         return ResponseEntity.ok()
@@ -45,7 +45,7 @@ public class SalidaPtPicklistController {
 
     @PostMapping("/{id}/ejecutar")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<PicklistPtResponse> ejecutar(@PathVariable Long id) {
         return ResponseEntity.ok(picklistPtService.ejecutar(id));
     }

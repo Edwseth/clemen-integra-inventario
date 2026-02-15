@@ -18,17 +18,7 @@ public class LoteResolverController {
     private final LoteProductoService loteProductoService;
 
     @GetMapping("/resolver-producto")
-    @PreAuthorize("hasAnyAuthority(" +
-            "'INV_LOTES_READ'," +
-            "'ROL_JEFE_ALMACENES'," +
-            "'ROL_ALMACENISTA'," +
-            "'ROL_JEFE_PRODUCCION'," +
-            "'ROL_LIDER_ALIMENTOS'," +
-            "'ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_JEFE_CALIDAD'," +
-            "'ROL_CONTADOR'," +
-            "'ROL_SUPER_ADMIN'" +
-            ")")
+    @PreAuthorize("hasAnyAuthority('INV_LOTES_READ')")
     public ResponseEntity<ProductoPorLoteDTO> resolverProducto(@RequestParam String codigoLote,
                                                                @RequestParam Long ordenProduccionId) {
         ProductoPorLoteDTO dto = loteProductoService.resolverProductoPorLote(codigoLote, ordenProduccionId);

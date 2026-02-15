@@ -35,7 +35,7 @@ public class SalidaPtController {
 
     @GetMapping("/salida-pt/config")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<SalidaPtConfigResponse> obtenerConfigSalidaPt() {
         return ResponseEntity.ok(new SalidaPtConfigResponse(
                 catalogResolver.isSalidaPtEnabled(),
@@ -46,7 +46,7 @@ public class SalidaPtController {
 
     @GetMapping("/lotes/pt-disponibles")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<List<LotePtDisponibleDTO>> listarLotesDisponiblesPt(
             @RequestParam("productoId") Long productoId,
             @RequestParam(value = "minCantidad", required = false) BigDecimal minCantidad

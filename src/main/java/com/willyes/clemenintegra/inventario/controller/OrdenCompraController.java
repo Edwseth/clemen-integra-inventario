@@ -55,7 +55,7 @@ public class OrdenCompraController {
 
     @PostMapping
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE')")
     @Transactional
     public ResponseEntity<OrdenCompra> crear(@RequestBody OrdenCompraRequestDTO dto) {
         // 1. Validar proveedor
@@ -122,7 +122,7 @@ public class OrdenCompraController {
 
     @PutMapping("/{id}")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE')")
     public ResponseEntity<OrdenCompra> actualizar(@PathVariable Long id,
                                                   @RequestBody OrdenCompraRequestDTO dto) {
         OrdenCompra orden = ordenCompraRepository.findById(id)
@@ -192,7 +192,7 @@ public class OrdenCompraController {
 
     @PutMapping("/{id}/estado")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE')")
     public ResponseEntity<HistorialEstadoOrdenResponse> cambiarEstado(
             @PathVariable Long id,
             @RequestBody CambioEstadoOrdenRequest request,
@@ -207,7 +207,7 @@ public class OrdenCompraController {
 
     @GetMapping("/{id}/transiciones")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_WORKFLOW','ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_WORKFLOW')")
     public ResponseEntity<List<String>> obtenerTransiciones(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
@@ -232,7 +232,7 @@ public class OrdenCompraController {
 
     @GetMapping("/{id}/pdf")
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_EXPORT','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT')")
     public ResponseEntity<byte[]> pdf(@PathVariable("id") Long id) {   // <-- Long
         // 1) Cargar OC con detalles
         var ocOpt = ordenCompraService.buscarPorIdConDetalles(id);
