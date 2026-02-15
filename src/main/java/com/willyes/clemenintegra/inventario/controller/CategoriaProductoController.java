@@ -31,14 +31,16 @@ public class CategoriaProductoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<CategoriaProductoResponseDTO> crear(@Valid @RequestBody CategoriaProductoRequestDTO dto) {
         var creado = categoriaProductoService.crear(dto);
         return ResponseEntity.status(201).body(creado);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<CategoriaProductoResponseDTO> actualizar(@PathVariable Long id,
                                                                    @Valid @RequestBody CategoriaProductoRequestDTO dto) {
         var actualizado = categoriaProductoService.actualizar(id, dto);
@@ -46,7 +48,8 @@ public class CategoriaProductoController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         categoriaProductoService.eliminar(id);
         return ResponseEntity.noContent().build();

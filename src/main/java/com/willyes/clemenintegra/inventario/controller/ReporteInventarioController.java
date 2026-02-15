@@ -73,7 +73,8 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/mas-costosos")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public ResponseEntity<byte[]> productosMasCostosos(
             @RequestParam(required = false) String categoria
     ) throws IOException {
@@ -88,7 +89,8 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/trazabilidad-lote")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT','ROL_ALMACENISTA','ROL_ANALISTA_CALIDAD','ROL_SUPER_ADMIN','ROL_PLANEADOR')")
     public ResponseEntity<byte[]> exportarTrazabilidadPorLote(@RequestParam String codigoLote) throws IOException {
         Workbook workbook = service.generarReporteTrazabilidadLote(codigoLote);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -101,7 +103,8 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/productos-retencion-liberacion")
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarProductosRetencionLiberacion(
             @RequestParam(required = false) String estadoLote,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
@@ -118,7 +121,8 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/no-conformidades")
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarNoConformidades(
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String area,
@@ -136,7 +140,8 @@ public class ReporteInventarioController {
     }
 
     @GetMapping("/capas")
-    @PreAuthorize("hasAnyAuthority('ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT','ROL_ANALISTA_CALIDAD','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportarCapas(
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,

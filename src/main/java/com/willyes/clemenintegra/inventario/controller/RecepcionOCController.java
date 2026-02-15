@@ -23,7 +23,8 @@ public class RecepcionOCController {
 
     @Operation(summary = "Obtener una recepción por código (parámetro de consulta)")
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<RecepcionOCResponseDTO> obtenerPorCodigoQuery(@RequestParam(name = "codigo") String codigo) {
         if (codigo == null || codigo.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CODIGO_RECEPCION_REQUERIDO");
@@ -33,7 +34,8 @@ public class RecepcionOCController {
 
     @Operation(summary = "Obtener una recepción por código (segmento en la ruta)")
     @GetMapping("/{codigo}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<RecepcionOCResponseDTO> obtenerPorCodigo(@PathVariable String codigo) {
         return ResponseEntity.ok(recepcionOCService.obtenerRecepcionPorCodigo(codigo));
     }

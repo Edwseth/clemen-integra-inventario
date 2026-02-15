@@ -18,7 +18,8 @@ public class TrazabilidadLoteController {
     private final AuditoriaLoteService auditoriaLoteService;
 
     @GetMapping("/lote/{loteId}")
-    @PreAuthorize("hasAnyAuthority(" +
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ'," +
             "'ROL_JEFE_ALMACENES'," +
             "'ROL_ALMACENISTA'," +
             "'ROL_JEFE_PRODUCCION'," +

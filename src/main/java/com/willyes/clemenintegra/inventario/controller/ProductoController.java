@@ -41,7 +41,8 @@ public class ProductoController {
     private final UsuarioRepository usuarioRepository;
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyAuthority('ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_CONTADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN','ROL_COMPRADOR')")
     public ResponseEntity<Page<ProductoAutocompleteDTO>> buscarProductosParaAjustes(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "term", required = false) String term,
@@ -134,7 +135,8 @@ public class ProductoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<?> crear(@Valid @RequestBody ProductoRequestDTO dto,
                                    @AuthenticationPrincipal CustomUserDetails principal) {
         if (principal == null) {
@@ -162,7 +164,8 @@ public class ProductoController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<ProductoResponseDTO> actualizar(@PathVariable Long id,
                                                           @Valid @RequestBody ProductoRequestDTO dto,
                                                           @AuthenticationPrincipal CustomUserDetails principal) {
@@ -175,7 +178,8 @@ public class ProductoController {
 
     // PROD-INACTIVAR BEGIN
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
         try {
             productoService.eliminarProducto(id);
@@ -187,7 +191,8 @@ public class ProductoController {
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_DECIDE','INV_WORKFLOW','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<ProductoResponseDTO> cambiarEstado(@PathVariable Long id,
                                                              @RequestBody ProductoEstadoRequestDTO body) {
         ProductoResponseDTO dto = productoService.actualizarEstado(id, body.activo());
@@ -196,7 +201,8 @@ public class ProductoController {
     // PROD-INACTIVAR END
 
     @PutMapping("/{id}/unidad-medida")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<?> cambiarUnidadMedida(
             @PathVariable Long id,
             @RequestBody @Valid UnidadMedidaRequestDTO dto) {

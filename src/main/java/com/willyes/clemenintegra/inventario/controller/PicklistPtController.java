@@ -29,13 +29,15 @@ public class PicklistPtController {
     private final PicklistPtService picklistPtService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<PicklistPtResponse> crear(@Valid @RequestBody PicklistPtCreateRequest request) {
         return ResponseEntity.ok(picklistPtService.crear(request));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<PicklistPtResumenDTO>> listar(
             @PageableDefault(size = 10, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(required = false) PicklistPtEstado estado,
@@ -61,13 +63,15 @@ public class PicklistPtController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<PicklistPtResponse> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(picklistPtService.obtener(id));
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
         byte[] pdf = picklistPtService.generarPdf(id);
         return ResponseEntity.ok()
@@ -77,19 +81,22 @@ public class PicklistPtController {
     }
 
     @PostMapping("/{id}/confirmar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WORKFLOW','INV_DECIDE','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<PicklistPtResponse> confirmar(@PathVariable Long id) {
         return ResponseEntity.ok(picklistPtService.confirmar(id));
     }
 
     @PostMapping("/{id}/ejecutar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WORKFLOW','INV_DECIDE','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<PicklistPtResponse> ejecutar(@PathVariable Long id) {
         return ResponseEntity.ok(picklistPtService.ejecutar(id));
     }
 
     @PostMapping("/{id}/cancelar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WORKFLOW','INV_DECIDE','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<PicklistPtResponse> cancelar(@PathVariable Long id) {
         return ResponseEntity.ok(picklistPtService.cancelar(id));
     }

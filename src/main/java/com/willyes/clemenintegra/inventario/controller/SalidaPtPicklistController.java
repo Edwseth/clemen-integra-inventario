@@ -19,19 +19,22 @@ public class SalidaPtPicklistController {
     private final PicklistPtService picklistPtService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<PicklistPtResponse> generar(@Valid @RequestBody PicklistPtCreateRequest request) {
         return ResponseEntity.ok(picklistPtService.crear(request));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<PicklistPtResponse> detalle(@PathVariable Long id) {
         return ResponseEntity.ok(picklistPtService.obtener(id));
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
         byte[] pdf = picklistPtService.generarPdf(id);
         return ResponseEntity.ok()
@@ -41,7 +44,8 @@ public class SalidaPtPicklistController {
     }
 
     @PostMapping("/{id}/ejecutar")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_SUPER_ADMIN')")
     public ResponseEntity<PicklistPtResponse> ejecutar(@PathVariable Long id) {
         return ResponseEntity.ok(picklistPtService.ejecutar(id));
     }
