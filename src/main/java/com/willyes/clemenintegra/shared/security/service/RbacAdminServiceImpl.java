@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -82,14 +83,18 @@ public class RbacAdminServiceImpl implements RbacAdminService {
             throw new IllegalArgumentException("No existen permisos para ids: " + faltantes);
         }
 
-        List<String> permisosOtroModulo = permisos.stream()
+        List<PermisoModuloInvalido> permisosOtroModulo = permisos.stream()
                 .filter(permiso -> permiso.getModulo() == null || !moduloNormalizado.equalsIgnoreCase(permiso.getModulo()))
-                .map(PermisoEntity::getCodigo)
+                .map(permiso -> new PermisoModuloInvalido(permiso.getId(), permiso.getCodigo(), permiso.getModulo()))
                 .toList();
 
         if (!permisosOtroModulo.isEmpty()) {
+            log.warn("RBAC_VALIDATION permisos_fuera_de_modulo rolId={} moduloSolicitado={} invalidos={} ",
+                    rolId, moduloNormalizado, permisosOtroModulo);
             throw new IllegalArgumentException("Todos los permisos deben pertenecer al módulo "
-                    + moduloNormalizado + ". Inválidos: " + permisosOtroModulo);
+                    + moduloNormalizado + ". Inválidos: " + permisosOtroModulo.stream()
+                    .map(PermisoModuloInvalido::idYCodigo)
+                    .toList());
         }
 
         rolPermisoRepository.deleteByRolId(rolId);
@@ -138,5 +143,11 @@ public class RbacAdminServiceImpl implements RbacAdminService {
                 permiso.isActivo(),
                 permiso.getAccion()
         );
+    }
+
+    private record PermisoModuloInvalido(Long id, String codigo, String moduloReal) {
+        String idYCodigo() {
+            return Objects.toString(id, "null") + ":" + Objects.toString(codigo, "SIN_CODIGO");
+        }
     }
 }
