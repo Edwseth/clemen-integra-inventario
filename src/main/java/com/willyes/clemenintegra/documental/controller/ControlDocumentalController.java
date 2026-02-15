@@ -34,11 +34,14 @@ public class ControlDocumentalController {
 
     private static final String DOC_READ_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
     private static final String DOC_WRITE_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
+    private static final String DOC_EXPORT_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
+    private static final String DOC_DELETE_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
+    private static final String DOC_STATE_ROLE_FALLBACK = "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN'";
 
     private final ControlDocumentalService service;
 
     @GetMapping
-    // TODO(rbac): retirar fallback CONTROL_DOCUMENTAL_WRITE cuando DOC tenga cobertura completa en todos los roles.
+    // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('DOC_READ'," + DOC_READ_FALLBACK + ")")
     public ResponseEntity<Page<DocumentoDTO>> buscar(
             @RequestParam(required = false) TipoDocumento tipo,
@@ -50,12 +53,14 @@ public class ControlDocumentalController {
     }
 
     @GetMapping("/{id}")
+    // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('DOC_READ'," + DOC_READ_FALLBACK + ")")
     public ResponseEntity<DocumentoDetalleDTO> obtenerDetalle(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerDetalleDocumento(id));
     }
 
     @PostMapping
+    // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('DOC_WRITE'," + DOC_WRITE_FALLBACK + ")")
     public ResponseEntity<DocumentoDTO> crear(
             @Valid @RequestBody DocumentoCreateRequest request,
@@ -65,6 +70,7 @@ public class ControlDocumentalController {
     }
 
     @PostMapping(path = "/{id}/versiones", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('DOC_WRITE'," + DOC_WRITE_FALLBACK + ")")
     public ResponseEntity<DocumentoVersionDTO> agregarVersion(
             @PathVariable Long id,
@@ -76,7 +82,8 @@ public class ControlDocumentalController {
     }
 
     @GetMapping("/{id}/versiones/{versionId}/archivo")
-    @PreAuthorize("hasAuthority('DOC_EXPORT')")
+    // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('DOC_EXPORT'," + DOC_EXPORT_FALLBACK + ")")
     public ResponseEntity<Resource> descargarArchivo(
             @PathVariable Long id,
             @PathVariable Long versionId) {
@@ -91,14 +98,16 @@ public class ControlDocumentalController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('DOC_DELETE')")
+    // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('DOC_DELETE'," + DOC_DELETE_FALLBACK + ")")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminarDocumento(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/estado")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('DOC_WRITE'," + DOC_WRITE_FALLBACK + "," + DOC_STATE_ROLE_FALLBACK + ")")
     public ResponseEntity<Void> cambiarEstado(
             @PathVariable Long id,
             @Valid @RequestBody DocumentoEstadoRequest request) {

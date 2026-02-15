@@ -96,6 +96,24 @@ class AdminRbacIntegrationTest extends IntegrationTestH2 {
                 .andExpect(jsonPath("$[?(@.codigo=='QC_SMOKE_ACTIVE')]").isEmpty());
     }
 
+
+    @Test
+    void listarPermisosDocActivoTrueDevuelveSoloCodigosDoc() throws Exception {
+        crearPermisoSiNoExiste("DOC_SMOKE_ACTIVE", "DOC", "READ", true);
+        crearPermisoSiNoExiste("DOC_SMOKE_INACTIVE", "DOC", "WRITE", false);
+        crearPermisoSiNoExiste("INV_SMOKE_DOC_FILTER", "INV", "READ", true);
+
+        mockMvc.perform(get("/api/admin/rbac/permisos")
+                        .param("modulo", "DOC")
+                        .param("activo", "true")
+                        .with(authentication(superAdminAuth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].codigo", hasItem("DOC_SMOKE_ACTIVE")))
+                .andExpect(jsonPath("$[*].codigo", everyItem(startsWith("DOC"))))
+                .andExpect(jsonPath("$[?(@.codigo=='DOC_SMOKE_INACTIVE')]").isEmpty())
+                .andExpect(jsonPath("$[?(@.codigo=='INV_SMOKE_DOC_FILTER')]").isEmpty());
+    }
+
     @Test
     void asignarPermisosRolSeReflejaEnAuthMe() throws Exception {
         PermisoEntity permiso = crearPermisoSiNoExiste("INV_RBAC_ASSIGN", "INV", "WRITE", true);
