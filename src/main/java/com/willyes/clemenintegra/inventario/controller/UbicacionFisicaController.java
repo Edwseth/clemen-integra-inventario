@@ -27,14 +27,16 @@ public class UbicacionFisicaController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
     public ResponseEntity<UbicacionFisicaResponseDTO> crear(@Valid @RequestBody UbicacionFisicaRequestDTO dto) {
         UbicacionFisicaResponseDTO creada = ubicacionFisicaService.crear(dto);
         return ResponseEntity.status(201).body(creada);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','ROL_ALMACENISTA','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
     public ResponseEntity<UbicacionFisicaResponseDTO> actualizar(@PathVariable Long id,
                                                                  @Valid @RequestBody UbicacionFisicaRequestDTO dto) {
         return ResponseEntity.ok(ubicacionFisicaService.actualizar(id, dto));

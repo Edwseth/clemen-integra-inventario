@@ -54,7 +54,8 @@ public class OrdenCompraController {
     private final OrdenCompraMapper mapper;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     @Transactional
     public ResponseEntity<OrdenCompra> crear(@RequestBody OrdenCompraRequestDTO dto) {
         // 1. Validar proveedor
@@ -120,7 +121,8 @@ public class OrdenCompraController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE','ROL_JEFE_ALMACENES', 'ROL_SUPER_ADMIN')")
     public ResponseEntity<OrdenCompra> actualizar(@PathVariable Long id,
                                                   @RequestBody OrdenCompraRequestDTO dto) {
         OrdenCompra orden = ordenCompraRepository.findById(id)
@@ -189,7 +191,8 @@ public class OrdenCompraController {
     }
 
     @PutMapping("/{id}/estado")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<HistorialEstadoOrdenResponse> cambiarEstado(
             @PathVariable Long id,
             @RequestBody CambioEstadoOrdenRequest request,
@@ -203,7 +206,8 @@ public class OrdenCompraController {
     }
 
     @GetMapping("/{id}/transiciones")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','INV_WORKFLOW','ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
     public ResponseEntity<List<String>> obtenerTransiciones(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
@@ -227,7 +231,8 @@ public class OrdenCompraController {
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<byte[]> pdf(@PathVariable("id") Long id) {   // <-- Long
         // 1) Cargar OC con detalles
         var ocOpt = ordenCompraService.buscarPorIdConDetalles(id);

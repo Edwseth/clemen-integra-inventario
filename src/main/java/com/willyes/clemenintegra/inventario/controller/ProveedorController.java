@@ -62,7 +62,8 @@ public class ProveedorController {
     }
 
     @GetMapping("/autocomplete")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<ProveedorAutocompleteDTO>> autocomplete(
             @RequestParam("term") String term,
             @RequestParam(value = "page", defaultValue = "0") int page,

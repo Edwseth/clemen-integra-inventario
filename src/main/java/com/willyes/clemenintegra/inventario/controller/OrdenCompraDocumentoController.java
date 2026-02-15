@@ -30,7 +30,8 @@ public class OrdenCompraDocumentoController {
     private final OrdenCompraDocumentoService documentoService;
 
     @PostMapping(value = "/{ordenCompraId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_COMPRADOR','ROL_SUPER_ADMIN')")
     public List<OrdenCompraDocumentoResponseDTO> subirDocumentos(
             @PathVariable Long ordenCompraId,
             @RequestPart("archivos") List<MultipartFile> archivos,
@@ -44,13 +45,15 @@ public class OrdenCompraDocumentoController {
     }
 
     @GetMapping("/{ordenCompraId}/documentos")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
     public List<OrdenCompraDocumentoResponseDTO> listarDocumentos(@PathVariable Long ordenCompraId) {
         return documentoService.listar(ordenCompraId);
     }
 
     @GetMapping("/documentos/{documentoId}/download")
-    @PreAuthorize("hasAnyAuthority('ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_READ','ROL_COMPRADOR','ROL_JEFE_ALMACENES','ROL_SUPER_ADMIN')")
     public ResponseEntity<Resource> descargar(@PathVariable Long documentoId) {
         OrdenCompraDocumentoDescargaDTO descarga = documentoService.descargar(documentoId);
         return ResponseEntity.ok()
