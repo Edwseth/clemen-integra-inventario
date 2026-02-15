@@ -23,7 +23,8 @@ public class ControlCalidadProcesoController {
     private final ControlCalidadProcesoService service;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public List<ControlCalidadProcesoResponse> listarTodas() {
         return service.listarTodas()
                 .stream()
@@ -32,7 +33,8 @@ public class ControlCalidadProcesoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public ResponseEntity<ControlCalidadProcesoResponse> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
                 .map(ControlCalidadProcesoMapper::toResponse)
@@ -41,7 +43,8 @@ public class ControlCalidadProcesoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
     public ResponseEntity<ControlCalidadProcesoResponse> crear(@RequestBody ControlCalidadProcesoRequest request) {
         DetalleEtapa detalle = new DetalleEtapa();
         detalle.setId(request.detalleEtapaId);
@@ -53,7 +56,8 @@ public class ControlCalidadProcesoController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<ControlCalidadProcesoResponse> actualizar(@PathVariable Long id, @RequestBody ControlCalidadProcesoRequest request) {
         return service.buscarPorId(id)
                 .map(existente -> {
@@ -70,7 +74,8 @@ public class ControlCalidadProcesoController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
