@@ -32,10 +32,14 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class ControlDocumentalController {
 
+    private static final String DOC_READ_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
+    private static final String DOC_WRITE_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
+
     private final ControlDocumentalService service;
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    // TODO(rbac): retirar fallback CONTROL_DOCUMENTAL_WRITE cuando DOC tenga cobertura completa en todos los roles.
+    @PreAuthorize("hasAnyAuthority('DOC_READ'," + DOC_READ_FALLBACK + ")")
     public ResponseEntity<Page<DocumentoDTO>> buscar(
             @RequestParam(required = false) TipoDocumento tipo,
             @RequestParam(required = false) AreaDocumento area,
@@ -46,13 +50,13 @@ public class ControlDocumentalController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('DOC_READ'," + DOC_READ_FALLBACK + ")")
     public ResponseEntity<DocumentoDetalleDTO> obtenerDetalle(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerDetalleDocumento(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','CONTROL_DOCUMENTAL_WRITE')")
+    @PreAuthorize("hasAnyAuthority('DOC_WRITE'," + DOC_WRITE_FALLBACK + ")")
     public ResponseEntity<DocumentoDTO> crear(
             @Valid @RequestBody DocumentoCreateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -61,7 +65,7 @@ public class ControlDocumentalController {
     }
 
     @PostMapping(path = "/{id}/versiones", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','CONTROL_DOCUMENTAL_WRITE')")
+    @PreAuthorize("hasAnyAuthority('DOC_WRITE'," + DOC_WRITE_FALLBACK + ")")
     public ResponseEntity<DocumentoVersionDTO> agregarVersion(
             @PathVariable Long id,
             @RequestPart("archivo") MultipartFile archivo,
@@ -72,7 +76,7 @@ public class ControlDocumentalController {
     }
 
     @GetMapping("/{id}/versiones/{versionId}/archivo")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('DOC_EXPORT')")
     public ResponseEntity<Resource> descargarArchivo(
             @PathVariable Long id,
             @PathVariable Long versionId) {
@@ -84,6 +88,13 @@ public class ControlDocumentalController {
                 .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + descarga.nombreArchivo() + "\"")
                 .body(descarga.recurso());
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DOC_DELETE')")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        service.eliminarDocumento(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/estado")
