@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/rbac")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ROL_SUPER_ADMIN')")
+@PreAuthorize("hasAnyAuthority('ROL_SUPER_ADMIN','ADMIN_RBAC_WRITE')")
 public class AdminRbacController {
 
     private final RbacAdminService rbacAdminService;
@@ -30,8 +30,8 @@ public class AdminRbacController {
     }
 
     @GetMapping("/permisos")
-    public List<PermisoDTO> listarPermisos(@RequestParam(required = false) String modulo,
-                                           @RequestParam(required = false) Boolean activo) {
+    public List<PermisoDTO> listarPermisos(@RequestParam String modulo,
+                                           @RequestParam(required = false, defaultValue = "true") Boolean activo) {
         return rbacAdminService.listarPermisos(modulo, activo);
     }
 
@@ -43,6 +43,6 @@ public class AdminRbacController {
     @PutMapping("/roles/{rolId}/permisos")
     public List<PermisoDTO> actualizarPermisosRol(@PathVariable Long rolId,
                                                   @Valid @RequestBody UpdateRolPermisosRequest request) {
-        return rbacAdminService.actualizarPermisosRol(rolId, request.permisoIds());
+        return rbacAdminService.actualizarPermisosRol(rolId, request.permisoIds(), request.modulo());
     }
 }

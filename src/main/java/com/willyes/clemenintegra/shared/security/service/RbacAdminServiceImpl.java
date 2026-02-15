@@ -11,13 +11,18 @@ import jakarta.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RbacAdminServiceImpl implements RbacAdminService {
 
     private final RolRepository rolRepository;
@@ -37,20 +42,16 @@ public class RbacAdminServiceImpl implements RbacAdminService {
     @Override
     @Transactional(readOnly = true)
     public List<PermisoDTO> listarPermisos(String modulo, Boolean activo) {
-        boolean hasModulo = modulo != null && !modulo.isBlank();
-        List<PermisoEntity> permisos;
-
-        if (hasModulo && activo != null) {
-            permisos = permisoRepository.findByModuloIgnoreCaseAndActivoOrderByModuloAscCodigoAsc(modulo.trim(), activo);
-        } else if (hasModulo) {
-            permisos = permisoRepository.findByModuloIgnoreCaseOrderByModuloAscCodigoAsc(modulo.trim());
-        } else if (activo != null) {
-            permisos = permisoRepository.findByActivoOrderByModuloAscCodigoAsc(activo);
-        } else {
-            permisos = permisoRepository.findAllByOrderByModuloAscCodigoAsc();
+        if (modulo == null || modulo.isBlank()) {
+            throw new IllegalArgumentException("El parámetro modulo es obligatorio");
         }
 
-        return permisos.stream().map(this::toPermisoDTO).toList();
+        String moduloNormalizado = modulo.trim().toUpperCase(Locale.ROOT);
+        boolean activoFiltro = activo == null || activo;
+
+        return permisoRepository.findByModuloIgnoreCaseAndActivoOrderByCodigoAsc(moduloNormalizado, activoFiltro).stream()
+                .map(this::toPermisoDTO)
+                .toList();
     }
 
     @Override
@@ -64,8 +65,9 @@ public class RbacAdminServiceImpl implements RbacAdminService {
 
     @Override
     @Transactional
-    public List<PermisoDTO> actualizarPermisosRol(Long rolId, List<Long> permisoIds) {
+    public List<PermisoDTO> actualizarPermisosRol(Long rolId, List<Long> permisoIds, String modulo) {
         validarRolExiste(rolId);
+        String moduloNormalizado = normalizarModulo(modulo);
 
         List<Long> idsNormalizados = permisoIds == null ? List.of() : permisoIds;
         Set<Long> idsUnicos = new LinkedHashSet<>(idsNormalizados);
@@ -80,15 +82,41 @@ public class RbacAdminServiceImpl implements RbacAdminService {
             throw new IllegalArgumentException("No existen permisos para ids: " + faltantes);
         }
 
+        List<String> permisosOtroModulo = permisos.stream()
+                .filter(permiso -> permiso.getModulo() == null || !moduloNormalizado.equalsIgnoreCase(permiso.getModulo()))
+                .map(PermisoEntity::getCodigo)
+                .toList();
+
+        if (!permisosOtroModulo.isEmpty()) {
+            throw new IllegalArgumentException("Todos los permisos deben pertenecer al módulo "
+                    + moduloNormalizado + ". Inválidos: " + permisosOtroModulo);
+        }
+
         rolPermisoRepository.deleteByRolId(rolId);
 
         if (!idsUnicos.isEmpty()) {
             rolPermisoRepository.insertBatch(rolId, new ArrayList<>(idsUnicos));
         }
 
+        auditarCambioPermisosRol(rolId, moduloNormalizado, idsUnicos);
+
         return permisoRepository.findByRolesIdOrderByCodigoAsc(rolId).stream()
                 .map(this::toPermisoDTO)
                 .toList();
+    }
+
+    private void auditarCambioPermisosRol(Long rolId, String modulo, Set<Long> permisosIds) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String actor = authentication != null ? authentication.getName() : "sistema";
+        log.info("RBAC_AUDIT actor={} action=UPDATE_ROLE_PERMISSIONS rolId={} modulo={} permisosCount={} permisosIds={}",
+                actor, rolId, modulo, permisosIds.size(), permisosIds);
+    }
+
+    private String normalizarModulo(String modulo) {
+        if (modulo == null || modulo.isBlank()) {
+            throw new IllegalArgumentException("El módulo es obligatorio para actualizar permisos de rol");
+        }
+        return modulo.trim().toUpperCase(Locale.ROOT);
     }
 
     private void validarRolExiste(Long rolId) {
@@ -105,10 +133,10 @@ public class RbacAdminServiceImpl implements RbacAdminService {
         return new PermisoDTO(
                 permiso.getId(),
                 permiso.getCodigo(),
-                permiso.getModulo(),
-                permiso.getAccion(),
                 permiso.getDescripcion(),
-                permiso.isActivo()
+                permiso.getModulo(),
+                permiso.isActivo(),
+                permiso.getAccion()
         );
     }
 }

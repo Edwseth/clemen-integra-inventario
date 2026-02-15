@@ -9,13 +9,10 @@ import org.springframework.data.repository.query.Param;
 public interface PermisoRepository extends JpaRepository<PermisoEntity, Long> {
 
     List<PermisoEntity> findByRolesCodigoAndActivoTrue(String codigo);
-    List<PermisoEntity> findByModuloIgnoreCaseOrderByModuloAscCodigoAsc(String modulo);
 
-    List<PermisoEntity> findByActivoOrderByModuloAscCodigoAsc(Boolean activo);
+    List<PermisoEntity> findByModuloIgnoreCaseOrderByCodigoAsc(String modulo);
 
-    List<PermisoEntity> findByModuloIgnoreCaseAndActivoOrderByModuloAscCodigoAsc(String modulo, Boolean activo);
-
-    List<PermisoEntity> findAllByOrderByModuloAscCodigoAsc();
+    List<PermisoEntity> findByModuloIgnoreCaseAndActivoOrderByCodigoAsc(String modulo, Boolean activo);
 
     List<PermisoEntity> findByRolesIdOrderByCodigoAsc(Long rolId);
 
