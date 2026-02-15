@@ -21,6 +21,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -562,6 +564,45 @@ class ConteoCiclicoServiceTest {
         assertThat(respuesta).hasSize(1);
         assertThat(respuesta.getFirst().getEstado()).isEqualTo("EN_CUARENTENA");
         assertThat(respuesta.getFirst().getCodigoLote()).isEqualTo("L-728-01");
+    }
+
+    @Test
+    void cerrarRechazaCuandoUsuarioNoTienePermisoClose() {
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(200L)
+                .estado(EstadoConteoCiclico.EN_CONTEO)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(200L)).thenReturn(Optional.of(conteo));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("jefe", "N/A", List.of(() -> "INV_CONTEOS_WRITE"))
+        );
+
+        assertThatThrownBy(() -> conteoCiclicoService.cerrar(200L))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+
+        verify(conteoCiclicoRepository, never()).save(any(ConteoCiclico.class));
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void cerrarPermiteTransicionCuandoUsuarioTienePermisoClose() {
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(201L)
+                .estado(EstadoConteoCiclico.EN_CONTEO)
+                .detalles(new java.util.ArrayList<>())
+                .build();
+        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(201L)).thenReturn(Optional.of(conteo));
+        when(conteoCiclicoRepository.save(any(ConteoCiclico.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("contador", "N/A", List.of(() -> "INV_CONTEOS_CLOSE"))
+        );
+
+        ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.cerrar(201L);
+
+        assertThat(respuesta.getEstado()).isEqualTo(EstadoConteoCiclico.CERRADO);
+        verify(conteoCiclicoRepository).save(conteo);
+        SecurityContextHolder.clearContext();
     }
 
     @Test

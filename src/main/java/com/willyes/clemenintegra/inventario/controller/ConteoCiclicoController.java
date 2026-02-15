@@ -109,7 +109,7 @@ public class ConteoCiclicoController {
     }
 
     @PostMapping("/{id}/cerrar")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
+    @PreAuthorize("hasAuthority('INV_CONTEOS_CLOSE')")
     public ResponseEntity<ConteoCiclicoResponseDTO> cerrar(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.cerrar(id);
         return ResponseEntity.ok(respuesta);

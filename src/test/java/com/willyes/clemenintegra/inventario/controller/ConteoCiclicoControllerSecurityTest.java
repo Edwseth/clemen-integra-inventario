@@ -160,6 +160,29 @@ class ConteoCiclicoControllerSecurityTest {
                 .andExpect(status().isForbidden());
     }
 
+
+    @Test
+    void rechazaCerrarConteoSinPermisoCloseAunqueTengaWriteYStart() throws Exception {
+        mockMvc.perform(post("/api/inventario/conteos/77/cerrar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-sin-close")
+                                .authorities(() -> "INV_CONTEOS_WRITE", () -> "INV_WORKFLOW_START")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void permiteCerrarConteoConPermisoClose() throws Exception {
+        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
+                .id(77L)
+                .estado(EstadoConteoCiclico.CERRADO)
+                .build();
+        when(conteoCiclicoService.cerrar(77L)).thenReturn(response);
+
+        mockMvc.perform(post("/api/inventario/conteos/77/cerrar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("contador-close")
+                                .authorities(() -> "INV_CONTEOS_CLOSE")))
+                .andExpect(status().isOk());
+    }
+
     @Test
     void permiteAplicarConteoConPermisoWorkflowFinish() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
@@ -172,6 +195,20 @@ class ConteoCiclicoControllerSecurityTest {
                         .header("Idempotency-Key", "k1")
                         .with(SecurityMockMvcRequestPostProcessors.user("contador")
                                 .authorities(() -> "INV_WORKFLOW_FINISH")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void permiteIniciarConteoConPermisoDeJefeAlmacenes() throws Exception {
+        ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
+                .id(55L)
+                .estado(EstadoConteoCiclico.EN_CONTEO)
+                .build();
+        when(conteoCiclicoService.marcarEnConteo(55L)).thenReturn(response);
+
+        mockMvc.perform(post("/api/inventario/conteos/55/iniciar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
+                                .authorities(() -> "INV_CONTEOS_WRITE", () -> "INV_WORKFLOW_START")))
                 .andExpect(status().isOk());
     }
 
