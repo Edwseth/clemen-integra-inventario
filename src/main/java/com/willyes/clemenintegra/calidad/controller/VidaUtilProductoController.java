@@ -22,7 +22,8 @@ public class VidaUtilProductoController {
     private final VidaUtilProductoService vidaUtilProductoService;
 
     @GetMapping("/producto-terminado/{productoId}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
+    // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
             "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<VidaUtilProductoDTO> obtenerPorProducto(@PathVariable Integer productoId) {
         return vidaUtilProductoService.buscarPorProductoId(productoId)
@@ -31,7 +32,8 @@ public class VidaUtilProductoController {
     }
 
     @GetMapping("/productos-terminados")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
+    // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
             "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
     public ResponseEntity<Page<VidaUtilProductoDTO>> listar(
             @RequestParam(required = false) String filtro,
@@ -42,7 +44,8 @@ public class VidaUtilProductoController {
     }
 
     @PostMapping("/producto-terminado/{productoId}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> guardar(
             @PathVariable Integer productoId,
             @RequestBody VidaUtilProductoRequest request) {
@@ -51,7 +54,8 @@ public class VidaUtilProductoController {
     }
 
     @DeleteMapping("/producto-terminado/{productoId}")
-    @PreAuthorize("hasAnyAuthority('ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Integer productoId) {
         vidaUtilProductoService.eliminar(productoId);
         return ResponseEntity.noContent().build();
