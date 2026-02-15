@@ -216,6 +216,28 @@ class AdminRbacIntegrationTest extends IntegrationTestH2 {
                 .andExpect(jsonPath("$.details[0].field").value("modulo"));
     }
 
+
+    @Test
+    void asignarPermisosRolDeOtroModuloIncluyeIdYCodigoEnMensaje() throws Exception {
+        PermisoEntity permisoInv = crearPermisoSiNoExiste("INV_RBAC_OTRO_MODULO", "INV", "READ", true);
+        Long rolPlaneadorId = rolRepository.findByCodigoAndActivoTrue("ROL_PLANEADOR")
+                .orElseThrow()
+                .getId();
+
+        String payload = objectMapper.writeValueAsString(Map.of(
+                "modulo", "DOC",
+                "permisoIds", List.of(permisoInv.getId())
+        ));
+
+        mockMvc.perform(put("/api/admin/rbac/roles/{rolId}/permisos", rolPlaneadorId)
+                        .with(authentication(rbacWriteAuth()))
+                        .contentType("application/json")
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SOLICITUD_INVALIDA"))
+                .andExpect(jsonPath("$.message").value("Todos los permisos deben pertenecer al módulo DOC. Inválidos: [" + permisoInv.getId() + ":INV_RBAC_OTRO_MODULO]"));
+    }
+
     @Test
     void asignarPermisosRolSeReflejaEnAuthMe() throws Exception {
         PermisoEntity permiso = crearPermisoSiNoExiste("INV_RBAC_ASSIGN", "INV", "WRITE", true);
