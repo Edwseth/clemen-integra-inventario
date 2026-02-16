@@ -9,6 +9,7 @@ import com.willyes.clemenintegra.inventario.model.AjusteInventario;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.AjusteInventarioRepository;
+import com.willyes.clemenintegra.inventario.service.spec.AjusteInventarioSpecifications;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
@@ -18,12 +19,14 @@ import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -42,8 +45,17 @@ public class AjusteInventarioServiceImpl implements AjusteInventarioService {
     private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
 
 
-    public Page<AjusteInventarioResponseDTO> listar(Pageable pageable) {
-        Page<AjusteInventario> page = repository.findAll(pageable);
+    public Page<AjusteInventarioResponseDTO> listar(Pageable pageable,
+                                                    LocalDate fechaInicio,
+                                                    LocalDate fechaFin,
+                                                    Long productoId,
+                                                    Long almacenId) {
+        Specification<AjusteInventario> spec = Specification
+                .where(AjusteInventarioSpecifications.hasProductoId(productoId))
+                .and(AjusteInventarioSpecifications.hasAlmacenId(almacenId))
+                .and(AjusteInventarioSpecifications.fechaBetween(fechaInicio, fechaFin));
+
+        Page<AjusteInventario> page = repository.findAll(spec, pageable);
         return page.map(mapper::toResponseDTO);
     }
 

@@ -326,7 +326,7 @@ class ContadorRoleSecurityTest {
     @Test
     @WithMockUser(authorities = "ROL_CONTADOR")
     void contadorPuedeListarYAjustarInventario() throws Exception {
-        when(ajusteInventarioService.listar(any())).thenReturn(new PageImpl<>(List.of()));
+        when(ajusteInventarioService.listar(any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(ajusteInventarioService.crear(any(AjusteInventarioRequestDTO.class))).thenReturn(
                 AjusteInventarioResponseDTO.builder()
                         .id(10L)
