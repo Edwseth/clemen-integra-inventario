@@ -204,17 +204,17 @@ class LoteProductoServiceLazyLoadingTest extends IntegrationTestMySqlContainer {
     }
 
     @Test
-    void listarTodosVencidosFiltraPorTextoProductoComoAntes() {
+    void listarTodosVencidosFiltraPorNombreProductoAlmidon() {
         long sufijo = System.nanoTime();
-        Producto productoA = crearProductoBasico("HARINA-" + sufijo, "Harina especial " + sufijo);
-        Producto productoB = crearProductoBasico("AZUCAR-" + sufijo, "Azucar blanca " + sufijo);
+        Producto productoA = crearProductoBasico("MP0326-" + sufijo, "ALMIDON " + sufijo);
+        Producto productoB = crearProductoBasico("AZUCAR-" + sufijo, "AZUCAR " + sufijo);
         Almacen almacen = crearAlmacenBasico("Almacen Texto " + sufijo);
 
         crearLoteVencido("LOT-T1-" + sufijo, productoA, almacen);
         crearLoteVencido("LOT-T2-" + sufijo, productoB, almacen);
 
         Page<LoteProductoResponseDTO> result = loteProductoService.listarTodos(
-                "harina",
+                "ALMIDON",
                 null,
                 null,
                 null,
@@ -228,6 +228,61 @@ class LoteProductoServiceLazyLoadingTest extends IntegrationTestMySqlContainer {
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent()).extracting(LoteProductoResponseDTO::getCodigoLote)
                 .containsExactly("LOT-T1-" + sufijo);
+    }
+
+
+    @Test
+    void listarTodosVencidosFiltraPorSkuProducto() {
+        long sufijo = System.nanoTime();
+        Producto productoA = crearProductoBasico("MP0326-" + sufijo, "ALMIDON " + sufijo);
+        Producto productoB = crearProductoBasico("OTRO-" + sufijo, "OTRO " + sufijo);
+        Almacen almacen = crearAlmacenBasico("Almacen SKU " + sufijo);
+
+        crearLoteVencido("LOT-SKU1-" + sufijo, productoA, almacen);
+        crearLoteVencido("LOT-SKU2-" + sufijo, productoB, almacen);
+
+        Page<LoteProductoResponseDTO> result = loteProductoService.listarTodos(
+                "MP0326",
+                null,
+                null,
+                null,
+                null,
+                true,
+                null,
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).extracting(LoteProductoResponseDTO::getCodigoLote)
+                .containsExactly("LOT-SKU1-" + sufijo);
+    }
+
+    @Test
+    void listarTodosVencidosFiltraPorFormatoSkuGuionNombre() {
+        long sufijo = System.nanoTime();
+        Producto productoA = crearProductoBasico("MP0326-" + sufijo, "ALMIDON " + sufijo);
+        Producto productoB = crearProductoBasico("OTRO-" + sufijo, "OTRO " + sufijo);
+        Almacen almacen = crearAlmacenBasico("Almacen SKU Nombre " + sufijo);
+
+        crearLoteVencido("LOT-MIX1-" + sufijo, productoA, almacen);
+        crearLoteVencido("LOT-MIX2-" + sufijo, productoB, almacen);
+
+        Page<LoteProductoResponseDTO> result = loteProductoService.listarTodos(
+                "MP0326 - ALMIDON",
+                null,
+                null,
+                null,
+                null,
+                true,
+                null,
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).extracting(LoteProductoResponseDTO::getCodigoLote)
+                .containsExactly("LOT-MIX1-" + sufijo);
     }
 
     @Test

@@ -398,7 +398,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         if (productoId != null) {
             spec = spec.and(conProductoId(productoId));
         } else {
-            spec = spec.and(productoNombreContains(producto));
+            spec = spec.and(conProductoNombreOrSkuLike(producto));
         }
 
         if (almacenId != null) {
