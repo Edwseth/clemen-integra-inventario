@@ -260,9 +260,9 @@ public class ConteoCiclicoService {
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Conteo no encontrado"));
 
-        if (conteo.getEstado() != EstadoConteoCiclico.CERRADO) {
+        if (conteo.getEstado() != EstadoConteoCiclico.EN_CONTEO) {
             throw new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO,
-                    "El conteo debe estar cerrado para aplicarse");
+                    "El conteo debe estar en estado EN_CONTEO para aplicarse");
         }
         if (conteo.getAplicadoEn() != null || conteo.getEstado() == EstadoConteoCiclico.APLICADO) {
             throw new CustomBusinessException(ApiErrorCode.CONTEO_YA_APLICADO,
@@ -278,6 +278,12 @@ public class ConteoCiclicoService {
         if (CollectionUtils.isEmpty(conteo.getDetalles())) {
             throw new CustomBusinessException(ApiErrorCode.CONTEO_SIN_DETALLES,
                     "No hay detalles para aplicar");
+        }
+        boolean tieneDiferenciasCargadas = conteo.getDetalles().stream()
+                .allMatch(detalle -> detalle.getDiferencia() != null);
+        if (!tieneDiferenciasCargadas) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El conteo debe tener diferencias cargadas antes de aplicarse");
         }
 
         Integer almacenId = conteo.getAlmacen() != null ? conteo.getAlmacen().getId() : null;

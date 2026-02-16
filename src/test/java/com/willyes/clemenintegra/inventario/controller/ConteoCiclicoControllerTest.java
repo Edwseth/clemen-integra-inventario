@@ -213,6 +213,13 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    void aplicarConteoSinPermisoApplyResponde403() throws Exception {
+        mockMvc.perform(post("/api/inventario/conteos/7/aplicar"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(authorities = "INV_CONTEOS_START")
     void iniciarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
