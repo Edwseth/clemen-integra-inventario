@@ -374,7 +374,7 @@ class ContadorRoleSecurityTest {
         when(productoService.listarTodos(any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(categoriaProductoService.listarTodas()).thenReturn(List.of());
         when(movimientoInventarioService.filtrar(any(), any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
-        when(loteProductoService.listarTodos(any(), any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
+        when(loteProductoService.listarTodos(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(alertaInventarioService.obtenerAlertasInventario(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/productos"))

@@ -30,9 +30,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mail.javamail.JavaMailSender;
-
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -157,6 +155,8 @@ class LoteProductoServiceLazyLoadingTest extends IntegrationTestMySqlContainer {
                 null,
                 null,
                 null,
+                null,
+                null,
                 false,
                 null,
                 null,
@@ -173,4 +173,146 @@ class LoteProductoServiceLazyLoadingTest extends IntegrationTestMySqlContainer {
         assertThat(dto.getNombreProducto()).isEqualTo("Producto Lote");
         assertThat(dto.getCodigoOrdenProduccion()).isEqualTo("OP-001");
     }
+
+    @Test
+    void listarTodosVencidosFiltraPorProductoIdYAlmacenId() {
+        long sufijo = System.nanoTime();
+        Producto productoA = crearProductoBasico("PROD-A-" + sufijo, "Producto A " + sufijo);
+        Producto productoB = crearProductoBasico("PROD-B-" + sufijo, "Producto B " + sufijo);
+        Almacen almacenA = crearAlmacenBasico("Almacen A " + sufijo);
+        Almacen almacenB = crearAlmacenBasico("Almacen B " + sufijo);
+
+        crearLoteVencido("LOT-A1-" + sufijo, productoA, almacenA);
+        crearLoteVencido("LOT-A2-" + sufijo, productoA, almacenB);
+        crearLoteVencido("LOT-B1-" + sufijo, productoB, almacenA);
+
+        Page<LoteProductoResponseDTO> result = loteProductoService.listarTodos(
+                null,
+                productoA.getId(),
+                null,
+                null,
+                almacenA.getId(),
+                true,
+                null,
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).extracting(LoteProductoResponseDTO::getCodigoLote)
+                .containsExactly("LOT-A1-" + sufijo);
+    }
+
+    @Test
+    void listarTodosVencidosFiltraPorTextoProductoComoAntes() {
+        long sufijo = System.nanoTime();
+        Producto productoA = crearProductoBasico("HARINA-" + sufijo, "Harina especial " + sufijo);
+        Producto productoB = crearProductoBasico("AZUCAR-" + sufijo, "Azucar blanca " + sufijo);
+        Almacen almacen = crearAlmacenBasico("Almacen Texto " + sufijo);
+
+        crearLoteVencido("LOT-T1-" + sufijo, productoA, almacen);
+        crearLoteVencido("LOT-T2-" + sufijo, productoB, almacen);
+
+        Page<LoteProductoResponseDTO> result = loteProductoService.listarTodos(
+                "harina",
+                null,
+                null,
+                null,
+                null,
+                true,
+                null,
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).extracting(LoteProductoResponseDTO::getCodigoLote)
+                .containsExactly("LOT-T1-" + sufijo);
+    }
+
+    @Test
+    void listarTodosPriorizaProductoIdSobreTexto() {
+        long sufijo = System.nanoTime();
+        Producto productoId = crearProductoBasico("ID-" + sufijo, "Producto ID " + sufijo);
+        Producto productoTexto = crearProductoBasico("TXT-" + sufijo, "Texto objetivo " + sufijo);
+        Almacen almacen = crearAlmacenBasico("Almacen Prioridad " + sufijo);
+
+        crearLoteVencido("LOT-P1-" + sufijo, productoId, almacen);
+        crearLoteVencido("LOT-P2-" + sufijo, productoTexto, almacen);
+
+        Page<LoteProductoResponseDTO> result = loteProductoService.listarTodos(
+                "texto",
+                productoId.getId(),
+                null,
+                null,
+                null,
+                true,
+                null,
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).extracting(LoteProductoResponseDTO::getCodigoLote)
+                .containsExactly("LOT-P1-" + sufijo);
+    }
+
+    private Producto crearProductoBasico(String sku, String nombre) {
+        Usuario usuario = usuarioRepository.save(Usuario.builder()
+                .nombreUsuario("user-" + sku)
+                .clave("secret")
+                .nombreCompleto("Usuario " + sku)
+                .correo(sku + "@example.com")
+                .rol(RolUsuario.ROL_JEFE_CALIDAD)
+                .activo(true)
+                .bloqueado(false)
+                .build());
+
+        UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
+                .nombre("Unidad " + sku)
+                .simbolo("UND")
+                .codigo("UND-" + sku)
+                .build());
+
+        CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
+                .nombre("Categoria " + sku)
+                .tipo(TipoCategoria.MATERIA_PRIMA)
+                .build());
+
+        return productoRepository.save(Producto.builder()
+                .codigoSku(sku)
+                .nombre(nombre)
+                .descripcionProducto("Producto " + nombre)
+                .stockMinimo(BigDecimal.ZERO)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .creadoPor(usuario)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .requiereAnalisisFisico(false)
+                .requiereAnalisisQuimico(false)
+                .requiereAnalisisMicrobiologico(false)
+                .activo(true)
+                .build());
+    }
+
+    private Almacen crearAlmacenBasico(String nombre) {
+        return almacenRepository.save(Almacen.builder()
+                .nombre(nombre)
+                .ubicacion("Zona " + nombre)
+                .categoria(TipoCategoria.MATERIA_PRIMA)
+                .tipo(TipoAlmacen.PRINCIPAL)
+                .build());
+    }
+
+    private LoteProducto crearLoteVencido(String codigo, Producto producto, Almacen almacen) {
+        return loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote(codigo)
+                .stockLote(BigDecimal.ONE)
+                .estado(EstadoLote.DISPONIBLE)
+                .fechaVencimiento(LocalDateTime.now().minusDays(1))
+                .producto(producto)
+                .almacen(almacen)
+                .build());
+    }
+
 }

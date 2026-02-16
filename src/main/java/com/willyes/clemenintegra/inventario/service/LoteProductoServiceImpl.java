@@ -389,12 +389,23 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen,
-                                                     Boolean vencidos, LocalDateTime fechaInicio,
-                                                     LocalDateTime fechaFin, Pageable pageable) {
-        Specification<LoteProducto> spec = Specification.where(productoNombreContains(producto))
-                .and(equalsEstado(estado))
-                .and(almacenNombreContains(almacen));
+    public Page<LoteProductoResponseDTO> listarTodos(String producto, Long productoId, EstadoLote estado,
+                                                     String almacen, Long almacenId, Boolean vencidos,
+                                                     LocalDateTime fechaInicio, LocalDateTime fechaFin,
+                                                     Pageable pageable) {
+        Specification<LoteProducto> spec = Specification.where(equalsEstado(estado));
+
+        if (productoId != null) {
+            spec = spec.and(conProductoId(productoId));
+        } else {
+            spec = spec.and(productoNombreContains(producto));
+        }
+
+        if (almacenId != null) {
+            spec = spec.and(conAlmacenId(almacenId));
+        } else {
+            spec = spec.and(almacenNombreContains(almacen));
+        }
 
         if (Boolean.TRUE.equals(vencidos)) {
             spec = spec.and(fechaVencimientoAntesDe(LocalDateTime.now()));

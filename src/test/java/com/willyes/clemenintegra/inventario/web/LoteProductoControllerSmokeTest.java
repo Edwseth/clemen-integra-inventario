@@ -65,7 +65,7 @@ class LoteProductoControllerSmokeTest {
                 .build();
         Pageable pageable = PageRequest.of(0, 10);
         Page<LoteProductoResponseDTO> page = new PageImpl<>(List.of(dto), pageable, 1);
-        when(loteProductoService.listarTodos(any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+        when(loteProductoService.listarTodos(any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(page);
 
         mockMvc.perform(get("/api/lotes")

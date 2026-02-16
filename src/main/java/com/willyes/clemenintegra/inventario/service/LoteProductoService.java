@@ -23,7 +23,7 @@ public interface LoteProductoService {
     org.springframework.data.domain.Page<LoteProductoResponseDTO> obtenerLotesPorEvaluar(org.springframework.data.domain.Pageable pageable);
     Workbook generarReporteLotesPorVencerExcel(LocalDateTime inicio, LocalDateTime fin);
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
-    Page<LoteProductoResponseDTO> listarTodos(String producto, EstadoLote estado, String almacen, Boolean vencidos, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);
+    Page<LoteProductoResponseDTO> listarTodos(String producto, Long productoId, EstadoLote estado, String almacen, Long almacenId, Boolean vencidos, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);
 
     LoteProductoResponseDTO liberarLote(Long id, String observacion);
     LoteProductoResponseDTO rechazarLote(Long id, String observacion);
