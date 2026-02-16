@@ -36,7 +36,7 @@ class UsuarioAuthoritiesServiceTest {
     void noMezclaPermisosCuandoUsuariosRolesApuntaARolDistinto() {
         Usuario usuario = Usuario.builder()
                 .id(10L)
-                .username("usuario.alimentos")
+                .nombreUsuario("usuario.alimentos")
                 .rol(RolUsuario.ROL_LIDER_ALIMENTOS)
                 .build();
 
@@ -58,7 +58,7 @@ class UsuarioAuthoritiesServiceTest {
     void usaPermisosDelRolCuandoUsuariosRolesCoincide() {
         Usuario usuario = Usuario.builder()
                 .id(11L)
-                .username("usuario.jefe")
+                .nombreUsuario("usuario.jefe")
                 .rol(RolUsuario.ROL_JEFE_PRODUCCION)
                 .build();
 
@@ -80,7 +80,7 @@ class UsuarioAuthoritiesServiceTest {
     void usaFallbackPorUsuarioRolCuandoUsuariosRolesEstaVacio() {
         Usuario usuario = Usuario.builder()
                 .id(12L)
-                .username("usuario.contador")
+                .nombreUsuario("usuario.contador")
                 .rol(RolUsuario.ROL_CONTADOR)
                 .build();
 
