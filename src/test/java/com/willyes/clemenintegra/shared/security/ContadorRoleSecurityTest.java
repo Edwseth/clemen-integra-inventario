@@ -305,18 +305,22 @@ class ContadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
-    void contadorPuedeAplicarPeroNoCerrarConteo() throws Exception {
+    @WithMockUser(authorities = {"ROL_CONTADOR", "INV_CONTEOS_APPLY", "INV_CONTEOS_CLOSE"})
+    void contadorPuedeAplicarYCerrarConteo() throws Exception {
         when(conteoCiclicoService.aplicar(any(), any())).thenReturn(ConteoCiclicoResponseDTO.builder()
                 .id(1L)
                 .estado(com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico.APLICADO)
+                .build());
+        when(conteoCiclicoService.cerrar(any())).thenReturn(ConteoCiclicoResponseDTO.builder()
+                .id(1L)
+                .estado(com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico.CERRADO)
                 .build());
 
         mockMvc.perform(post("/api/inventario/conteos/1/aplicar"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/inventario/conteos/1/cerrar"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     @Test
