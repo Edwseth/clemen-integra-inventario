@@ -63,14 +63,14 @@ public class UsuarioAuthoritiesService {
 
         if (rolesEnJoin.size() > 1) {
             log.warn("Usuario con más de un rol en usuarios_roles; se usa usuarios.rol. usuarioId={}, username={}, rolEnUsuario={}, rolesEnJoin={}",
-                    usuario.getId(), usuario.getUsername(), rolEnUsuario.name(), rolesEnJoin);
+                    usuario.getId(), usuario.getNombreUsuario(), rolEnUsuario.name(), rolesEnJoin);
             return rolEnUsuario;
         }
 
         String rolJoin = rolesEnJoin.get(0);
         if (!rolEnUsuario.name().equals(rolJoin)) {
             log.warn("Mismatch entre usuarios.rol y usuarios_roles; se usa usuarios.rol. usuarioId={}, username={}, rolEnUsuario={}, rolJoin={}",
-                    usuario.getId(), usuario.getUsername(), rolEnUsuario.name(), rolJoin);
+                    usuario.getId(), usuario.getNombreUsuario(), rolEnUsuario.name(), rolJoin);
             return rolEnUsuario;
         }
 
