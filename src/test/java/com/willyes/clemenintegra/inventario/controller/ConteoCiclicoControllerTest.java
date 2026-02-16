@@ -195,7 +195,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "INV_CONTEOS_APPLY")
     void aplicarConteoRespondeOk() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(7L)
@@ -213,7 +213,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_START")
     void iniciarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(3L)
@@ -228,7 +228,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_CLOSE")
     void cerrarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(4L)
@@ -243,7 +243,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_CLOSE")
     void transicionInvalidaDevuelve409() throws Exception {
         when(conteoCiclicoService.cerrar(21L))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO, "Transición de estado no permitida"));
@@ -251,6 +251,46 @@ class ConteoCiclicoControllerTest {
         mockMvc.perform(post("/api/inventario/conteos/21/cerrar"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.CONTEO_ESTADO_INVALIDO.name()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void jefeAlmacenesNoPuedeAplicarConteoDevuelve403() throws Exception {
+        mockMvc.perform(post("/api/inventario/conteos/7/aplicar"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    void jefeAlmacenesNoPuedeCerrarConteoDevuelve403() throws Exception {
+        mockMvc.perform(post("/api/inventario/conteos/4/cerrar"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_CONTADOR", "INV_CONTEOS_APPLY", "INV_CONTEOS_CLOSE"})
+    void contadorPuedeAplicarYCerrarConteoDevuelve200() throws Exception {
+        ConteoCiclicoResponseDTO aplicado = ConteoCiclicoResponseDTO.builder()
+                .id(7L)
+                .almacenId(2)
+                .estado(EstadoConteoCiclico.APLICADO)
+                .aplicadoEn(LocalDateTime.now())
+                .build();
+        ConteoCiclicoResponseDTO cerrado = ConteoCiclicoResponseDTO.builder()
+                .id(4L)
+                .almacenId(2)
+                .estado(EstadoConteoCiclico.CERRADO)
+                .build();
+        when(conteoCiclicoService.aplicar(7L, null)).thenReturn(aplicado);
+        when(conteoCiclicoService.cerrar(4L)).thenReturn(cerrado);
+
+        mockMvc.perform(post("/api/inventario/conteos/7/aplicar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("APLICADO"));
+
+        mockMvc.perform(post("/api/inventario/conteos/4/cerrar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("CERRADO"));
     }
 
     @Test

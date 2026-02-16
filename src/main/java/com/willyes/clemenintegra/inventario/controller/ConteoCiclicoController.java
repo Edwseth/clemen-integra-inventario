@@ -95,14 +95,14 @@ public class ConteoCiclicoController {
     }
 
     @PostMapping("/{id}/iniciar")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
+    @PreAuthorize("hasAuthority('INV_CONTEOS_START')")
     public ResponseEntity<ConteoCiclicoResponseDTO> iniciar(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.marcarEnConteo(id);
         return ResponseEntity.ok(respuesta);
     }
 
     @PostMapping("/{id}/en-conteo")
-    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW_START','INV_WORKFLOW','INV_CONTEOS_WRITE')")
+    @PreAuthorize("hasAuthority('INV_CONTEOS_START')")
     public ResponseEntity<ConteoCiclicoResponseDTO> marcarEnConteo(@PathVariable Long id) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.marcarEnConteo(id);
         return ResponseEntity.ok(respuesta);
@@ -116,7 +116,7 @@ public class ConteoCiclicoController {
     }
 
     @PostMapping("/{id}/aplicar")
-    @PreAuthorize("hasAnyAuthority('INV_WORKFLOW_FINISH','INV_WORKFLOW','INV_DECIDE')")
+    @PreAuthorize("hasAuthority('INV_CONTEOS_APPLY')")
     public ResponseEntity<ConteoCiclicoResponseDTO> aplicar(@PathVariable Long id,
                                                             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.aplicar(id, idempotencyKey);

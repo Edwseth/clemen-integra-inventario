@@ -165,7 +165,7 @@ class ConteoCiclicoControllerSecurityTest {
     void rechazaCerrarConteoSinPermisoCloseAunqueTengaWriteYStart() throws Exception {
         mockMvc.perform(post("/api/inventario/conteos/77/cerrar")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-sin-close")
-                                .authorities(() -> "INV_CONTEOS_WRITE", () -> "INV_WORKFLOW_START")))
+                                .authorities(() -> "INV_CONTEOS_START")))
                 .andExpect(status().isForbidden());
     }
 
@@ -184,7 +184,7 @@ class ConteoCiclicoControllerSecurityTest {
     }
 
     @Test
-    void permiteAplicarConteoConPermisoWorkflowFinish() throws Exception {
+    void permiteAplicarConteoConPermisoApply() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(77L)
                 .estado(EstadoConteoCiclico.APLICADO)
@@ -194,12 +194,12 @@ class ConteoCiclicoControllerSecurityTest {
         mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
                         .header("Idempotency-Key", "k1")
                         .with(SecurityMockMvcRequestPostProcessors.user("contador")
-                                .authorities(() -> "INV_WORKFLOW_FINISH")))
+                                .authorities(() -> "INV_CONTEOS_APPLY")))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void permiteIniciarConteoConPermisoDeJefeAlmacenes() throws Exception {
+    void permiteIniciarConteoConPermisoStart() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(55L)
                 .estado(EstadoConteoCiclico.EN_CONTEO)
@@ -208,7 +208,7 @@ class ConteoCiclicoControllerSecurityTest {
 
         mockMvc.perform(post("/api/inventario/conteos/55/iniciar")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
-                                .authorities(() -> "INV_CONTEOS_WRITE", () -> "INV_WORKFLOW_START")))
+                                .authorities(() -> "INV_CONTEOS_START")))
                 .andExpect(status().isOk());
     }
 
@@ -221,7 +221,7 @@ class ConteoCiclicoControllerSecurityTest {
     }
 
     @Test
-    void rechazaAplicarConteoConPermisoWriteSinRolContador() throws Exception {
+    void rechazaAplicarConteoConPermisoWriteSinPermisoApply() throws Exception {
         mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
                         .with(SecurityMockMvcRequestPostProcessors.user("perm-write")
                                 .authorities(() -> "INV_CONTEOS_WRITE")))

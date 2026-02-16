@@ -182,8 +182,16 @@ public class SecurityConfig {
                             "INV_CONTEOS_READ"
                     );
 
+                    auth.requestMatchers(HttpMethod.POST, "/api/inventario/conteos/*/iniciar", "/api/inventario/conteos/*/en-conteo").hasAnyAuthority(
+                            "INV_CONTEOS_START"
+                    );
+
                     auth.requestMatchers(HttpMethod.POST, "/api/inventario/conteos/*/aplicar").hasAnyAuthority(
-                            "INV_CONTEOS_WRITE"
+                            "INV_CONTEOS_APPLY"
+                    );
+
+                    auth.requestMatchers(HttpMethod.POST, "/api/inventario/conteos/*/cerrar").hasAnyAuthority(
+                            "INV_CONTEOS_CLOSE"
                     );
 
                     auth.requestMatchers("/api/inventario/conteos/**").hasAnyAuthority(
