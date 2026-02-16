@@ -145,7 +145,7 @@ class RoleJefeAlmacenesSecuritySmokeTest {
 
         when(productoService.listarTodos(any(), any(), any(), any(), any())).thenReturn(Page.empty());
         when(productoService.crearProducto(any(), anyLong())).thenReturn(ProductoResponseDTO.builder().id(1L).build());
-        when(ajusteInventarioService.listar(any())).thenReturn(Page.empty());
+        when(ajusteInventarioService.listar(any(), any(), any(), any(), any())).thenReturn(Page.empty());
 
         Usuario usuario = Usuario.builder()
                 .id(10L)
