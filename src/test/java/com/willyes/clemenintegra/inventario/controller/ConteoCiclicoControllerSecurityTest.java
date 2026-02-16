@@ -228,4 +228,59 @@ class ConteoCiclicoControllerSecurityTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void rolJefeAlmacenesPuedeCrearConteoPeroNoAplicarNiCerrar() throws Exception {
+        ConteoCiclicoResponseDTO creado = ConteoCiclicoResponseDTO.builder()
+                .id(10L)
+                .almacenId(1)
+                .estado(EstadoConteoCiclico.BORRADOR)
+                .build();
+        when(conteoCiclicoService.crearConteo(any(ConteoCiclicoRequestDTO.class))).thenReturn(creado);
+
+        ConteoCiclicoRequestDTO request = new ConteoCiclicoRequestDTO();
+        request.setAlmacenId(1);
+
+        mockMvc.perform(post("/api/inventario/conteos")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
+                                .authorities(() -> "ROL_JEFE_ALMACENES", () -> "INV_CONTEOS_WRITE", () -> "INV_CONTEOS_START")))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/inventario/conteos/10/aplicar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
+                                .authorities(() -> "ROL_JEFE_ALMACENES", () -> "INV_CONTEOS_WRITE", () -> "INV_CONTEOS_START")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/inventario/conteos/10/cerrar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
+                                .authorities(() -> "ROL_JEFE_ALMACENES", () -> "INV_CONTEOS_WRITE", () -> "INV_CONTEOS_START")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void rolContadorPuedeAplicarYCerrarConteo() throws Exception {
+        ConteoCiclicoResponseDTO cerrado = ConteoCiclicoResponseDTO.builder()
+                .id(88L)
+                .estado(EstadoConteoCiclico.CERRADO)
+                .build();
+        ConteoCiclicoResponseDTO aplicado = ConteoCiclicoResponseDTO.builder()
+                .id(88L)
+                .estado(EstadoConteoCiclico.APLICADO)
+                .build();
+        when(conteoCiclicoService.cerrar(88L)).thenReturn(cerrado);
+        when(conteoCiclicoService.aplicar(88L, "k-contador")).thenReturn(aplicado);
+
+        mockMvc.perform(post("/api/inventario/conteos/88/cerrar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("contador")
+                                .authorities(() -> "ROL_CONTADOR", () -> "INV_CONTEOS_CLOSE", () -> "INV_CONTEOS_APPLY")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/inventario/conteos/88/aplicar")
+                        .header("Idempotency-Key", "k-contador")
+                        .with(SecurityMockMvcRequestPostProcessors.user("contador")
+                                .authorities(() -> "ROL_CONTADOR", () -> "INV_CONTEOS_CLOSE", () -> "INV_CONTEOS_APPLY")))
+                .andExpect(status().isOk());
+    }
+
 }
