@@ -5,20 +5,29 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public final class AjusteInventarioSpecifications {
-    private AjusteInventarioSpecifications() {}
+
+    private AjusteInventarioSpecifications() {
+    }
 
     public static Specification<AjusteInventario> hasProductoId(Long productoId) {
-        return (root, query, cb) -> (productoId == null)
-                ? cb.conjunction()
-                : cb.equal(root.get("producto").get("id"), productoId.intValue());
+        return (root, query, cb) -> {
+            if (productoId == null) {
+                return cb.conjunction();
+            }
+            return cb.equal(root.get("producto").get("id"), productoId);
+        };
     }
 
     public static Specification<AjusteInventario> hasAlmacenId(Long almacenId) {
-        return (root, query, cb) -> (almacenId == null)
-                ? cb.conjunction()
-                : cb.equal(root.get("almacen").get("id"), almacenId.intValue());
+        return (root, query, cb) -> {
+            if (almacenId == null) {
+                return cb.conjunction();
+            }
+            return cb.equal(root.get("almacen").get("id"), almacenId);
+        };
     }
 
     public static Specification<AjusteInventario> fechaBetween(LocalDate fechaInicio, LocalDate fechaFin) {
@@ -27,11 +36,15 @@ public final class AjusteInventarioSpecifications {
                 return cb.conjunction();
             }
 
-            LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
-            codex/analyze-inventory-adjustments-endpoint-7xb9yv
-            LocalDateTime fin = fechaFin != null ? fechaFin.atTime(23, 59, 59, 999_999_999) : null;
+            LocalDateTime inicio = null;
+            if (fechaInicio != null) {
+                inicio = fechaInicio.atStartOfDay();
+            }
 
-
+            LocalDateTime fin = null;
+            if (fechaFin != null) {
+                fin = fechaFin.atTime(LocalTime.MAX);
+            }
 
             if (inicio != null && fin != null) {
                 return cb.between(root.get("fecha"), inicio, fin);
