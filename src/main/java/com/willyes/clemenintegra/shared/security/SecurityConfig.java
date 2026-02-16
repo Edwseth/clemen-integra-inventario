@@ -194,11 +194,7 @@ public class SecurityConfig {
                             "INV_CONTEOS_CLOSE"
                     );
 
-                    auth.requestMatchers("/api/inventario/conteos/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name(),
-                            "INV_CONTEOS_WRITE"
-                    );
+                    auth.requestMatchers("/api/inventario/conteos/**").hasAnyAuthority("INV_CONTEOS_WRITE");
 
 
                     auth.requestMatchers(HttpMethod.GET,
