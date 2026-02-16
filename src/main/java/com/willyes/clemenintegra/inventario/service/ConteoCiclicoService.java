@@ -22,9 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -249,7 +247,6 @@ public class ConteoCiclicoService {
 
     @Transactional
     public ConteoCiclicoResponseDTO cerrar(Long conteoId) {
-        validarPermisoCerrarConteo();
         ConteoCiclico conteo = cambiarEstado(conteoId, EstadoConteoCiclico.CERRADO);
         return mapper.toResponseCompleto(conteo);
     }
@@ -314,21 +311,6 @@ public class ConteoCiclicoService {
         ConteoCiclico aplicado = conteoRepository.save(conteo);
         return mapper.toResponseCompleto(aplicado);
     }
-
-
-    private void validarPermisoCerrarConteo() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getAuthorities() == null) {
-            throw new AccessDeniedException("No autorizado para cerrar conteos cíclicos");
-        }
-        boolean tienePermisoCerrar = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch("INV_CONTEOS_CLOSE"::equals);
-        if (!tienePermisoCerrar) {
-            throw new AccessDeniedException("No autorizado para cerrar conteos cíclicos");
-        }
-    }
-
     private ConteoCiclico cambiarEstado(Long conteoId, EstadoConteoCiclico destino) {
         ConteoCiclico conteo = conteoRepository.findByIdWithDetallesForUpdate(conteoId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
