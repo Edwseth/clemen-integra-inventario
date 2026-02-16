@@ -56,7 +56,9 @@ public class LoteProductoController {
     public ResponseEntity<Page<LoteProductoResponseDTO>> listar(
             @RequestParam(required = false) String producto,
             @RequestParam(required = false) String estado,
+            @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) String almacen,
+            @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false, defaultValue = "false") Boolean vencidos,
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
@@ -110,7 +112,7 @@ public class LoteProductoController {
         }
 
         Page<LoteProductoResponseDTO> lotes =
-                service.listarTodos(producto, enumEstado, almacen, vencidos, inicio, fin, sanitized);
+                service.listarTodos(producto, productoId, enumEstado, almacen, almacenId, vencidos, inicio, fin, sanitized);
 
         return ResponseEntity.ok(lotes);
     }
