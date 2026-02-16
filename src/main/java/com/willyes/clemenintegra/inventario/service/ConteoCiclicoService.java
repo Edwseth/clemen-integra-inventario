@@ -256,6 +256,10 @@ public class ConteoCiclicoService {
 
     @Transactional
     public ConteoCiclicoResponseDTO aplicar(Long conteoId, String idempotencyKey) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        log.info("ConteoCiclicoService.aplicar authorities={}",
+                authentication != null ? authentication.getAuthorities() : "sin-autenticacion");
+
         ConteoCiclico conteo = conteoRepository.findByIdWithDetallesForUpdate(conteoId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
                         "Conteo no encontrado"));

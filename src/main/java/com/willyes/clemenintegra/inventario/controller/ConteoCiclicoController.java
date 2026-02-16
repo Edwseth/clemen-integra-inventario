@@ -10,12 +10,15 @@ import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
 import com.willyes.clemenintegra.shared.util.PaginationUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +26,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/inventario/conteos")
 @RequiredArgsConstructor
+@Slf4j
 // TODO(RBAC-INV): Retirar fallback por roles cuando la migracion a permisos INV_* este completa.
 public class ConteoCiclicoController {
 
@@ -119,6 +123,9 @@ public class ConteoCiclicoController {
     @PreAuthorize("hasAuthority('INV_CONTEOS_APPLY')")
     public ResponseEntity<ConteoCiclicoResponseDTO> aplicar(@PathVariable Long id,
                                                             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        log.info("ConteoCiclicoController.aplicar authorities={}",
+                authentication != null ? authentication.getAuthorities() : "sin-autenticacion");
         ConteoCiclicoResponseDTO respuesta = conteoCiclicoService.aplicar(id, idempotencyKey);
         return ResponseEntity.ok(respuesta);
     }
