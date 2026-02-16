@@ -188,10 +188,10 @@ class LoteProductoServiceLazyLoadingTest extends IntegrationTestMySqlContainer {
 
         Page<LoteProductoResponseDTO> result = loteProductoService.listarTodos(
                 null,
-                productoA.getId(),
+                productoA.getId().longValue(),
                 null,
                 null,
-                almacenA.getId(),
+                almacenA.getId().longValue(),
                 true,
                 null,
                 null,
@@ -242,7 +242,7 @@ class LoteProductoServiceLazyLoadingTest extends IntegrationTestMySqlContainer {
 
         Page<LoteProductoResponseDTO> result = loteProductoService.listarTodos(
                 "texto",
-                productoId.getId(),
+                productoId.getId().longValue(),
                 null,
                 null,
                 null,
