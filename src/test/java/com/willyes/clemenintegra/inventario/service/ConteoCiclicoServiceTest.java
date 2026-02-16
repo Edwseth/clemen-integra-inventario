@@ -132,7 +132,7 @@ class ConteoCiclicoServiceTest {
         ConteoCiclico conteo = ConteoCiclico.builder()
                 .id(50L)
                 .almacen(almacen)
-                .estado(EstadoConteoCiclico.CERRADO)
+                .estado(EstadoConteoCiclico.EN_CONTEO)
                 .detalles(new java.util.ArrayList<>(List.of(detallePositivo, detalleNegativo)))
                 .build();
         detallePositivo.setConteo(conteo);
@@ -192,6 +192,36 @@ class ConteoCiclicoServiceTest {
 
         assertThatThrownBy(() -> conteoCiclicoService.aplicar(99L, null))
                 .isInstanceOf(CustomBusinessException.class);
+    }
+
+    @Test
+    void aplicarRechazaSiNoHayDiferenciasCargadas() {
+        Almacen almacen = new Almacen(1);
+        Producto producto = new Producto();
+        producto.setId(5);
+        ConteoCiclicoDetalle detalleSinDiferencia = ConteoCiclicoDetalle.builder()
+                .id(3L)
+                .producto(producto)
+                .stockSistema(new BigDecimal("5.00"))
+                .conteoFisico(new BigDecimal("8.00"))
+                .diferencia(null)
+                .build();
+
+        ConteoCiclico conteo = ConteoCiclico.builder()
+                .id(51L)
+                .almacen(almacen)
+                .estado(EstadoConteoCiclico.EN_CONTEO)
+                .detalles(new java.util.ArrayList<>(List.of(detalleSinDiferencia)))
+                .build();
+        detalleSinDiferencia.setConteo(conteo);
+
+        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(51L)).thenReturn(Optional.of(conteo));
+
+        assertThatThrownBy(() -> conteoCiclicoService.aplicar(51L, "key-2"))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
+
+        verify(movimientoInventarioService, never()).registrarMovimiento(any(), any());
     }
 
     @Test
