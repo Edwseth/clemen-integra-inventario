@@ -28,7 +28,10 @@ public final class AjusteInventarioSpecifications {
             }
 
             LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
-            LocalDateTime fin = fechaFin != null ? fechaFin.atTime(23, 59, 59, 999_999_999);
+            codex/analyze-inventory-adjustments-endpoint-7xb9yv
+            LocalDateTime fin = fechaFin != null ? fechaFin.atTime(23, 59, 59, 999_999_999) : null;
+
+
 
             if (inicio != null && fin != null) {
                 return cb.between(root.get("fecha"), inicio, fin);
