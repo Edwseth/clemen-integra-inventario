@@ -14,7 +14,8 @@ VALUES ('PROD_OP_CREATE', 'PRODUCCION', 'CREATE', 'Crear orden de producción', 
        ('PROD_INDICADORES_READ', 'PRODUCCION', 'READ', 'Leer indicadores de producción', TRUE),
        ('PROD_INDICADORES_EXPORT', 'PRODUCCION', 'EXPORT', 'Exportar indicadores de producción', TRUE),
        ('PROD_ALERTAS_READ', 'PRODUCCION', 'READ', 'Leer alertas de producción', TRUE),
-       ('INV_READ', 'INV', 'READ', 'Lectura general de inventario', TRUE);
+       ('INV_READ', 'INV', 'READ', 'Lectura general de inventario', TRUE),
+       ('MENU_PROD', 'MENU', 'NAV', 'Visibilidad y navegación del módulo de producción', TRUE);
 
 INSERT INTO roles_permisos (rol_id, permiso_id)
 SELECT r.id, p.id
@@ -30,7 +31,8 @@ JOIN permisos p ON p.codigo in (
     'PROD_INDICADORES_READ',
     'PROD_INDICADORES_EXPORT',
     'PROD_ALERTAS_READ',
-    'INV_READ'
+    'INV_READ',
+    'MENU_PROD'
 )
 WHERE r.codigo = 'ROL_PLANEADOR'
   AND NOT EXISTS (
