@@ -121,6 +121,32 @@ class AdminRbacIntegrationTest extends IntegrationTestH2 {
     }
 
 
+
+    @Test
+    void listarPermisosMenuDevuelvePermisosMenu() throws Exception {
+        crearPermisoSiNoExiste("MENU_PROD", "MENU", "READ", true);
+        crearPermisoSiNoExiste("MENU_INV", "MENU", "READ", true);
+        crearPermisoSiNoExiste("INV_MENU_FILTER_CHECK", "INV", "READ", true);
+
+        mockMvc.perform(get("/api/admin/rbac/permisos")
+                        .param("modulo", "MENU")
+                        .with(authentication(rbacWriteAuth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].codigo", hasItem("MENU_PROD")))
+                .andExpect(jsonPath("$[*].codigo", everyItem(startsWith("MENU"))))
+                .andExpect(jsonPath("$[?(@.codigo=='INV_MENU_FILTER_CHECK')]").isEmpty());
+    }
+
+    @Test
+    void listarModulosIncluyeMenu() throws Exception {
+        crearPermisoSiNoExiste("MENU_DOC", "MENU", "READ", true);
+
+        mockMvc.perform(get("/api/admin/rbac/modulos")
+                        .with(authentication(rbacReadAuth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasItem("MENU")));
+    }
+
     @Test
     void listarPermisosDocActivoTrueDevuelveSoloCodigosDoc() throws Exception {
         crearPermisoSiNoExiste("DOC_SMOKE_ACTIVE", "DOC", "READ", true);

@@ -16,6 +16,16 @@ public interface PermisoRepository extends JpaRepository<PermisoEntity, Long> {
 
     List<PermisoEntity> findByRolesIdOrderByCodigoAsc(Long rolId);
 
+    @Query("""
+            select distinct upper(p.modulo)
+            from PermisoEntity p
+            where p.activo = true
+              and p.modulo is not null
+              and trim(p.modulo) <> ''
+            order by upper(p.modulo)
+            """)
+    List<String> findDistinctModulosActivosOrderByModuloAsc();
+
     @Query(value = """
             select distinct p.codigo
             from usuarios_roles ur
