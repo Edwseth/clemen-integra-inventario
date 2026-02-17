@@ -25,7 +25,7 @@ public class RetencionLoteController {
     private final RetencionLoteMapper mapper;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<Page<RetencionLoteDTO>> listar(
             @RequestParam(required = false) EstadoRetencion estado,
             @PageableDefault(size = 10) Pageable pageable) {
@@ -33,13 +33,13 @@ public class RetencionLoteController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<RetencionLoteDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<RetencionLoteDTO> crear(
             @RequestBody RetencionLoteDTO dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -50,7 +50,7 @@ public class RetencionLoteController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<RetencionLoteDTO> actualizar(
             @PathVariable Long id,
             @RequestBody RetencionLoteDTO dto,
@@ -62,14 +62,14 @@ public class RetencionLoteController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/levantar")
-    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<RetencionLoteDTO> levantarRetencion(
             @PathVariable Long id,
             @RequestBody(required = false) com.willyes.clemenintegra.calidad.dto.LevantarRetencionRequestDTO request,

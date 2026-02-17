@@ -39,7 +39,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @RestController
 @RequestMapping("/api/calidad/reportes")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('QC_EXPORT','QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+@PreAuthorize("hasAnyAuthority('QC_EXPORT','QC_READ')")
 // TODO(rbac-qc-cut3): retirar fallback por ROL_* cuando todos los perfiles usen permisos QC_* de forma canonica.
 public class ReportesCalidadController {
 

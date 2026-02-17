@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/calidad/plantillas-micro")
 @RequiredArgsConstructor
 // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-@PreAuthorize("hasAnyAuthority('QC_READ','ROL_MICROBIOLOGO','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+@PreAuthorize("hasAnyAuthority('QC_READ')")
 public class PlantillaAnalisisMicroController {
 
     private final PlantillaAnalisisMicroService plantillaAnalisisMicroService;

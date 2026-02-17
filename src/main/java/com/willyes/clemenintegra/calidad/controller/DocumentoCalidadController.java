@@ -33,7 +33,7 @@ public class DocumentoCalidadController {
 
     @GetMapping
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
     public ResponseEntity<Page<DocumentoCalidadDTO>> listar(
             @RequestParam(required = false) DocumentoCalidadTipo tipo,
             @RequestParam(required = false) DocumentoCalidadEstado estado,
@@ -44,7 +44,7 @@ public class DocumentoCalidadController {
 
     @PostMapping
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<DocumentoCalidadDTO> crear(
             @Valid @RequestBody DocumentoCalidadCreateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -54,7 +54,7 @@ public class DocumentoCalidadController {
 
     @PostMapping(path = "/{id}/versiones", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<DocumentoCalidadVersionDTO> subirVersion(
             @PathVariable Long id,
             @RequestPart("archivo") MultipartFile archivo,
@@ -66,14 +66,14 @@ public class DocumentoCalidadController {
 
     @GetMapping("/{id}/versiones")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
     public ResponseEntity<List<DocumentoCalidadVersionDTO>> listarVersiones(@PathVariable Long id) {
         return ResponseEntity.ok(service.listarVersiones(id));
     }
 
     @GetMapping("/versiones/{versionId}/download")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_EXPORT','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_EXPORT')")
     public ResponseEntity<ByteArrayResource> descargarVersion(@PathVariable Long versionId) {
         DocumentoCalidadVersionDownloadDTO descarga = service.descargarVersion(versionId);
         MediaType mediaType = descarga.getContentType() != null
@@ -87,7 +87,7 @@ public class DocumentoCalidadController {
 
     @PatchMapping("/{id}/obsoletar")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_DECIDE')")
     public ResponseEntity<DocumentoCalidadDTO> obsoletar(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
