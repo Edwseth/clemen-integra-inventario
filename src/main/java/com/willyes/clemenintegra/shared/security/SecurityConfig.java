@@ -88,7 +88,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationManager(authenticationManager)
                 .authorizeHttpRequests(auth -> {
-                    // Mapa RBAC por permisos (sin roles legacy como autoridad en endpoints):
+                    // Mapa de autorización canónica por módulo (solo permisos, sin roles legacy en endpoints):
                     // Calidad: GET=QC_READ (o QC_WRITE), escrituras=QC_WRITE, workflow/decide/export=QC_WORKFLOW*/QC_DECIDE/QC_EXPORT.
                     // Inventario: GET=INV_*_READ, escrituras=INV_WRITE, workflow/decide/export=INV_WORKFLOW*/INV_DECIDE/INV_EXPORT.
                     // Producción: GET=PROD_READ/PROD_*_READ, escrituras=PROD_WRITE/PROD_*_WRITE, workflow=PROD_WORKFLOW*.

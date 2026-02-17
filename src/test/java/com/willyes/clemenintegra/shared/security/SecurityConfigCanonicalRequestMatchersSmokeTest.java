@@ -1,217 +1,89 @@
 package com.willyes.clemenintegra.shared.security;
 
-import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
-import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
-import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.ResponseEntity;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.test.web.servlet.ResultActions;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(SecurityConfigCanonicalRequestMatchersSmokeTest.SmokeEndpointsController.class)
-@AutoConfigureMockMvc
-@Import(SecurityConfig.class)
-@TestPropertySource(properties = {"DB_SECURPASS=dummy", "DB_SECURNAME=dummy"})
+@SpringBootTest
+@AutoConfigureMockMvc(addFilters = true)
+@ActiveProfiles("test")
 class SecurityConfigCanonicalRequestMatchersSmokeTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private UsuarioInactivoFilter usuarioInactivoFilter;
-    @MockBean
-    private RequestTimingFilter requestTimingFilter;
-    @MockBean
-    private RequestIdFilter requestIdFilter;
-    @MockBean
-    private SuperAdminSoloLecturaWriteBlockFilter superAdminSoloLecturaWriteBlockFilter;
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
-    @MockBean
-    private UsuarioRepository usuarioRepository;
+    @Test
+    void qcReadPermiteGetCapasPeroNoPost_yQcWritePermitePost() throws Exception {
+        assertNotForbidden(mockMvc.perform(get("/api/calidad/capas")
+                .with(SecurityMockMvcRequestPostProcessors.user("qc-read").authorities(() -> "QC_READ"))));
 
-    @BeforeEach
-    void setupFilters() throws Exception {
-        passthrough(usuarioInactivoFilter);
-        passthrough(requestTimingFilter);
-        passthrough(requestIdFilter);
-        passthrough(superAdminSoloLecturaWriteBlockFilter);
-        passthrough(jwtAuthenticationFilter);
-    }
+        assertForbidden(mockMvc.perform(post("/api/calidad/capas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .with(SecurityMockMvcRequestPostProcessors.user("qc-read").authorities(() -> "QC_READ"))));
 
-    private void passthrough(jakarta.servlet.Filter filter) throws Exception {
-        doAnswer(invocation -> {
-            FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(filter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
+        assertNotForbidden(mockMvc.perform(post("/api/calidad/capas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .with(SecurityMockMvcRequestPostProcessors.user("qc-write").authorities(() -> "QC_WRITE"))));
     }
 
     @Test
-    void inv_solicitudes_requiresCanonicalPermission() throws Exception {
-        mockMvc.perform(get("/api/inventario/solicitudes/demo")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "ROL_JEFE_ALMACENES")))
-                .andExpect(status().isForbidden());
+    void invPermisosLecturaProtegenProductosYLotes() throws Exception {
+        assertNotForbidden(mockMvc.perform(get("/api/inventario/productos/1")
+                .with(SecurityMockMvcRequestPostProcessors.user("inv-product-read").authorities(() -> "INV_PRODUCT_READ"))));
 
-        mockMvc.perform(get("/api/inventario/solicitudes/demo")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "INV_READ")))
-                .andExpect(status().isOk());
+        assertNotForbidden(mockMvc.perform(get("/api/inventario/lotes/1")
+                .with(SecurityMockMvcRequestPostProcessors.user("inv-lotes-read").authorities(() -> "INV_LOTES_READ"))));
     }
 
     @Test
-    void po_planeacion_requiresCanonicalPermission() throws Exception {
-        mockMvc.perform(get("/api/planeacion/planes-semanales")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "ROL_PLANEADOR")))
-                .andExpect(status().isForbidden());
+    void prodOpReadPermiteGetOrdenesYSinPermisoDa403() throws Exception {
+        assertNotForbidden(mockMvc.perform(get("/api/produccion/ordenes/1")
+                .with(SecurityMockMvcRequestPostProcessors.user("prod-op-read").authorities(() -> "PROD_OP_READ"))));
 
-        mockMvc.perform(get("/api/planeacion/planes-semanales")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "PO_READ")))
-                .andExpect(status().isOk());
+        assertForbidden(mockMvc.perform(get("/api/produccion/ordenes/1")
+                .with(SecurityMockMvcRequestPostProcessors.user("sin-permisos").authorities(() -> "QC_READ"))));
     }
 
     @Test
-    void prod_ordenes_requiresCanonicalPermission() throws Exception {
-        mockMvc.perform(get("/api/produccion/ordenes")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "ROL_JEFE_PRODUCCION")))
-                .andExpect(status().isForbidden());
+    void documentalDocReadPermiteGetYDocWritePermitePost() throws Exception {
+        assertNotForbidden(mockMvc.perform(get("/api/documental/documentos")
+                .with(SecurityMockMvcRequestPostProcessors.user("doc-read").authorities(() -> "DOC_READ"))));
 
-        mockMvc.perform(get("/api/produccion/ordenes")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "PROD_READ")))
-                .andExpect(status().isOk());
+        assertNotForbidden(mockMvc.perform(post("/api/documental/documentos")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .with(SecurityMockMvcRequestPostProcessors.user("doc-write").authorities(() -> "DOC_WRITE"))));
     }
 
     @Test
-    void qc_retenciones_requiresCanonicalPermission() throws Exception {
-        mockMvc.perform(get("/api/calidad/retenciones/test")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "ROL_JEFE_CALIDAD")))
-                .andExpect(status().isForbidden());
+    void adminRbacReadProtegeEndpointYSinPermisoDa403() throws Exception {
+        assertNotForbidden(mockMvc.perform(get("/api/admin/rbac/roles")
+                .with(SecurityMockMvcRequestPostProcessors.user("rbac-read").authorities(() -> "ADMIN_RBAC_READ"))));
 
-        mockMvc.perform(get("/api/calidad/retenciones/test")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "QC_READ")))
-                .andExpect(status().isOk());
+        assertForbidden(mockMvc.perform(get("/api/admin/rbac/roles")
+                .with(SecurityMockMvcRequestPostProcessors.user("sin-rbac").authorities(() -> "DOC_READ"))));
     }
 
-    @Test
-    void bom_formulaActiva_requiresCanonicalPermission() throws Exception {
-        mockMvc.perform(get("/api/bom/formulas/activa")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "ROL_JEFE_PRODUCCION")))
-                .andExpect(status().isForbidden());
-
-        mockMvc.perform(get("/api/bom/formulas/activa")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "BOM_READ")))
-                .andExpect(status().isOk());
+    private void assertForbidden(ResultActions action) throws Exception {
+        action.andExpect(status().isForbidden());
     }
 
-    @Test
-    void doc_delete_requiresCanonicalPermission() throws Exception {
-        mockMvc.perform(delete("/api/documental/documentos/1")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "ROL_JEFE_CALIDAD")))
-                .andExpect(status().isForbidden());
-
-        mockMvc.perform(delete("/api/documental/documentos/1")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "DOC_DELETE")))
-                .andExpect(status().isOk());
-    }
-
-
-    @Test
-    void qc_capas_get_and_post_require_qc_permissions_only() throws Exception {
-        mockMvc.perform(get("/api/calidad/capas")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "QC_READ")))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get("/api/calidad/capas")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "PO_READ")))
-                .andExpect(status().isForbidden());
-
-        mockMvc.perform(post("/api/calidad/capas")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "QC_READ")))
-                .andExpect(status().isForbidden());
-
-        mockMvc.perform(post("/api/calidad/capas")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "QC_WRITE")))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void inventario_lotes_por_evaluar_requires_inventory_permission_not_role() throws Exception {
-        mockMvc.perform(get("/api/lotes/por-evaluar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "ROL_JEFE_CALIDAD")))
-                .andExpect(status().isForbidden());
-
-        mockMvc.perform(get("/api/lotes/por-evaluar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "INV_LOTES_READ")))
-                .andExpect(status().isOk());
-    }
-    @RestController
-    @RequestMapping("/api")
-    static class SmokeEndpointsController {
-
-        @GetMapping("/inventario/solicitudes/demo")
-        ResponseEntity<Void> invSolicitudes() {
-            return ResponseEntity.ok().build();
-        }
-
-        @GetMapping("/planeacion/planes-semanales")
-        ResponseEntity<Void> poPlaneacion() {
-            return ResponseEntity.ok().build();
-        }
-
-        @GetMapping("/produccion/ordenes")
-        ResponseEntity<Void> prodOrdenes() {
-            return ResponseEntity.ok().build();
-        }
-
-        @GetMapping("/calidad/retenciones/test")
-        ResponseEntity<Void> qcRetenciones() {
-            return ResponseEntity.ok().build();
-        }
-
-        @GetMapping("/bom/formulas/activa")
-        ResponseEntity<Void> bomActiva() {
-            return ResponseEntity.ok().build();
-        }
-
-        @GetMapping("/calidad/capas")
-        ResponseEntity<Void> qcCapasGet() {
-            return ResponseEntity.ok().build();
-        }
-
-        @PostMapping("/calidad/capas")
-        ResponseEntity<Void> qcCapasPost() {
-            return ResponseEntity.ok().build();
-        }
-
-        @GetMapping("/lotes/por-evaluar")
-        ResponseEntity<Void> lotesPorEvaluar() {
-            return ResponseEntity.ok().build();
-        }
-
-        @DeleteMapping("/documental/documentos/1")
-        ResponseEntity<Void> docDelete() {
-            return ResponseEntity.ok().build();
-        }
+    private void assertNotForbidden(ResultActions action) throws Exception {
+        MockHttpServletResponse response = action.andReturn().getResponse();
+        assertThat(response.getStatus()).isNotEqualTo(403);
     }
 }

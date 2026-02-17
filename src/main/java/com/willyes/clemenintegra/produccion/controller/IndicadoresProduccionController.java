@@ -28,8 +28,7 @@ public class IndicadoresProduccionController {
     // TODO(rbac-prod-cut2): retirar fallback por roles y permisos granulares PROD_* legacy al finalizar migracion canónica.
 
     @GetMapping("/indicadores")
-    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_INDICADORES_READ','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS'," +
-            "'ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_INDICADORES_READ')")
     public ResponseEntity<IndicadoresProduccionResponseDTO> obtenerIndicadores(
             @RequestParam LocalDate fechaInicio,
             @RequestParam LocalDate fechaFin,
@@ -38,8 +37,7 @@ public class IndicadoresProduccionController {
     }
 
     @GetMapping("/ordenes/alertas")
-    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_ALERTAS_READ','ROL_JEFE_CALIDAD','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION'," +
-            "'ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_ALERTAS_READ')")
     public ResponseEntity<List<AlertaOrdenProduccionDTO>> obtenerAlertas(
             @RequestParam(required = false) LocalDate fechaReferencia,
             @RequestParam(required = false, defaultValue = "3") Integer diasVentana) {
@@ -47,8 +45,7 @@ public class IndicadoresProduccionController {
     }
 
     @GetMapping(value = "/indicadores/export/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    @PreAuthorize("hasAnyAuthority('PROD_EXPORT','PROD_INDICADORES_EXPORT','ROL_JEFE_PRODUCCION','ROL_AUXILIAR_PRODUCCION','ROL_LIDER_ALIMENTOS'," +
-            "'ROL_LIDER_HOMEOPATICOS','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_EXPORT','PROD_INDICADORES_EXPORT')")
     public ResponseEntity<byte[]> exportarIndicadoresExcel(
             @RequestParam LocalDate fechaInicio,
             @RequestParam LocalDate fechaFin,

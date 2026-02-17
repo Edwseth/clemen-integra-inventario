@@ -1,5 +1,4 @@
 package com.willyes.clemenintegra.documental.controller;
-
 import com.willyes.clemenintegra.documental.dto.DocumentoCreateRequest;
 import com.willyes.clemenintegra.documental.dto.DocumentoDTO;
 import com.willyes.clemenintegra.documental.dto.DocumentoDetalleDTO;
@@ -32,17 +31,12 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class ControlDocumentalController {
 
-    private static final String DOC_READ_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
-    private static final String DOC_WRITE_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
-    private static final String DOC_EXPORT_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
-    private static final String DOC_DELETE_FALLBACK = "'CONTROL_DOCUMENTAL_WRITE'";
-    private static final String DOC_STATE_ROLE_FALLBACK = "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN'";
 
     private final ControlDocumentalService service;
 
     @GetMapping
     // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('DOC_READ'," + DOC_READ_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('DOC_READ')")
     public ResponseEntity<Page<DocumentoDTO>> buscar(
             @RequestParam(required = false) TipoDocumento tipo,
             @RequestParam(required = false) AreaDocumento area,
@@ -54,14 +48,14 @@ public class ControlDocumentalController {
 
     @GetMapping("/{id}")
     // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('DOC_READ'," + DOC_READ_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('DOC_READ')")
     public ResponseEntity<DocumentoDetalleDTO> obtenerDetalle(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerDetalleDocumento(id));
     }
 
     @PostMapping
     // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('DOC_WRITE'," + DOC_WRITE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('DOC_WRITE')")
     public ResponseEntity<DocumentoDTO> crear(
             @Valid @RequestBody DocumentoCreateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -71,7 +65,7 @@ public class ControlDocumentalController {
 
     @PostMapping(path = "/{id}/versiones", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('DOC_WRITE'," + DOC_WRITE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('DOC_WRITE')")
     public ResponseEntity<DocumentoVersionDTO> agregarVersion(
             @PathVariable Long id,
             @RequestPart("archivo") MultipartFile archivo,
@@ -83,7 +77,7 @@ public class ControlDocumentalController {
 
     @GetMapping("/{id}/versiones/{versionId}/archivo")
     // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('DOC_EXPORT'," + DOC_EXPORT_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('DOC_EXPORT')")
     public ResponseEntity<Resource> descargarArchivo(
             @PathVariable Long id,
             @PathVariable Long versionId) {
@@ -99,7 +93,7 @@ public class ControlDocumentalController {
 
     @DeleteMapping("/{id}")
     // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('DOC_DELETE'," + DOC_DELETE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('DOC_DELETE')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminarDocumento(id);
         return ResponseEntity.noContent().build();
@@ -107,7 +101,7 @@ public class ControlDocumentalController {
 
     @PutMapping("/{id}/estado")
     // TODO:REMOVE_AFTER_DOC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('DOC_WRITE'," + DOC_WRITE_FALLBACK + "," + DOC_STATE_ROLE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('DOC_WRITE')")
     public ResponseEntity<Void> cambiarEstado(
             @PathVariable Long id,
             @Valid @RequestBody DocumentoEstadoRequest request) {

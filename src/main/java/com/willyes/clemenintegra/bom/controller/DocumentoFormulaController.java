@@ -27,21 +27,18 @@ import java.util.List;
 @RequestMapping("/api/bom/formulas")
 @RequiredArgsConstructor
 public class DocumentoFormulaController {
-
-    private static final String BOM_READ_ROLE_FALLBACK = "'ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN'";
-    private static final String BOM_WRITE_ROLE_FALLBACK = "'ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN'";
     // TODO(rbac-bom-cut1): retirar fallback por roles y permisos granulares BOM_* legacy al finalizar migracion canonica.
 
     private final DocumentoFormulaService documentoService;
 
     @GetMapping("/{formulaId}/documentos")
-    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ')")
     public List<DocumentoFormulaResponseDTO> listarDocumentos(@PathVariable Long formulaId) {
         return documentoService.listarDocumentos(formulaId);
     }
 
     @PostMapping(value = "/{formulaId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE')")
     public ResponseEntity<DocumentoFormulaResponseDTO> subirDocumento(
             @PathVariable Long formulaId,
             @RequestPart("archivo") MultipartFile archivo,
@@ -56,7 +53,7 @@ public class DocumentoFormulaController {
     }
 
     @GetMapping("/documentos/{documentoId}/descargar")
-    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ'," + BOM_READ_ROLE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ')")
     public ResponseEntity<Resource> descargarDocumento(@PathVariable Long documentoId) {
         DocumentoFormulaDescargaDTO descarga = documentoService.descargarDocumento(documentoId);
         return ResponseEntity.ok()
@@ -66,7 +63,7 @@ public class DocumentoFormulaController {
     }
 
     @DeleteMapping("/documentos/{documentoId}")
-    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE'," + BOM_WRITE_ROLE_FALLBACK + ")")
+    @PreAuthorize("hasAnyAuthority('BOM_WRITE','BOM_FORMULA_WRITE')")
     public ResponseEntity<Void> eliminarDocumento(
             @PathVariable Long documentoId,
             @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {

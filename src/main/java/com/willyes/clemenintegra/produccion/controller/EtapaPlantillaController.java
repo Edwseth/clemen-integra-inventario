@@ -23,7 +23,7 @@ public class EtapaPlantillaController {
     // TODO(rbac-prod-cut2): retirar fallback por roles legacy al finalizar migracion canónica.
 
     @GetMapping("/{productoId}")
-    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_READ')")
     public List<EtapaPlantillaResponse> listar(@PathVariable Integer productoId) {
         return service.listarPorProducto(productoId).stream()
                 .map(mapper::toResponse)
@@ -31,7 +31,7 @@ public class EtapaPlantillaController {
     }
 
     @PostMapping("/{productoId}")
-    @PreAuthorize("hasAnyAuthority('PROD_WRITE','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE')")
     public ResponseEntity<EtapaPlantillaResponse> crear(@PathVariable Integer productoId,
                                                          @RequestBody EtapaPlantillaRequest request) {
         Producto producto = new Producto();
@@ -42,7 +42,7 @@ public class EtapaPlantillaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_WRITE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE')")
     public ResponseEntity<EtapaPlantillaResponse> actualizar(@PathVariable Long id,
                                                              @RequestBody EtapaPlantillaRequest request) {
         EtapaPlantilla entidad = mapper.toEntity(request);
@@ -50,14 +50,14 @@ public class EtapaPlantillaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_WRITE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{productoId}/reordenar")
-    @PreAuthorize("hasAnyAuthority('PROD_WRITE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE')")
     public ResponseEntity<Void> reordenar(@PathVariable Integer productoId,
                                           @RequestBody List<EtapaPlantillaReordenRequest> cambios) {
         service.reordenar(productoId, cambios);
@@ -65,7 +65,7 @@ public class EtapaPlantillaController {
     }
 
     @GetMapping("/{productoId}/preview")
-    @PreAuthorize("hasAnyAuthority('PROD_READ','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_READ')")
     public List<EtapaPlantillaResponse> preview(@PathVariable Integer productoId) {
         return service.preview(productoId).stream()
                 .map(mapper::toResponse)

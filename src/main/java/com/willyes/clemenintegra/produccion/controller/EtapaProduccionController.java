@@ -21,8 +21,7 @@ public class EtapaProduccionController {
     private final OrdenProduccionService ordenService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_OP_READ')")
     public List<EtapaProduccionResponse> listarTodas() {
         return service.listarTodas().stream()
                 .map(ProduccionMapper::toResponse)
@@ -30,8 +29,7 @@ public class EtapaProduccionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_OP_READ')")
     public ResponseEntity<EtapaProduccionResponse> obtenerPorId(@PathVariable Long id) {
         return service.buscarPorId(id)
                 .map(ProduccionMapper::toResponse)
@@ -40,8 +38,7 @@ public class EtapaProduccionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT')")
     public ResponseEntity<EtapaProduccionResponse> crear(@RequestBody EtapaProduccionRequest request) {
         OrdenProduccion orden = new OrdenProduccion(); orden.setId(request.ordenProduccionId);
         EtapaProduccion entidad = ProduccionMapper.toEntity(request, orden);
@@ -49,7 +46,7 @@ public class EtapaProduccionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT')")
     public ResponseEntity<EtapaProduccionResponse> actualizar(@PathVariable Long id, @RequestBody EtapaProduccionRequest request) {
         return service.buscarPorId(id)
                 .map(existente -> {
@@ -62,7 +59,7 @@ public class EtapaProduccionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_OP_EDIT')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();

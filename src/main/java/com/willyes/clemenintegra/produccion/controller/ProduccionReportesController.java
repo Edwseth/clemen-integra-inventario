@@ -23,15 +23,13 @@ public class ProduccionReportesController {
     private final ReportesProduccionService reportesProduccionService;
 
     @GetMapping("/{id}/consumo-real-vs-teorico")
-    @PreAuthorize("hasAnyAuthority('PROD_REPORTS_READ','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_REPORTS_READ')")
     public ResponseEntity<ConsumoTeoricoRealResponseDTO> consumoRealVsTeorico(@PathVariable Long id) {
         return ResponseEntity.ok(consumoTeoricoRealService.obtenerConsumo(id));
     }
 
     @GetMapping(value = "/{id}/batch-record/excel", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_EXPORT','ROL_JEFE_PRODUCCION','ROL_LIDER_ALIMENTOS','ROL_LIDER_HOMEOPATICOS'," +
-            "'ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_EXPORT')")
     public ResponseEntity<byte[]> descargarBatchRecordExcel(@PathVariable Long id) {
         byte[] excel = reportesProduccionService.generarBatchRecordExcel(id);
         HttpHeaders headers = new HttpHeaders();
@@ -41,7 +39,7 @@ public class ProduccionReportesController {
     }
 
     @GetMapping(value = "/{id}/batch-record/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_EXPORT','ROL_JEFE_PRODUCCION','ROL_JEFE_CALIDAD','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_BATCH_RECORD_EXPORT')")
     public ResponseEntity<byte[]> descargarBatchRecordPdf(@PathVariable Long id) {
         byte[] pdf = reportesProduccionService.generarBatchRecordPdf(id);
         HttpHeaders headers = new HttpHeaders();
