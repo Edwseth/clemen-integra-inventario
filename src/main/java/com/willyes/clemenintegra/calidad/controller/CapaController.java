@@ -33,7 +33,7 @@ public class CapaController {
     private final CapaService service;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<Page<CapaDTO>> listar(
             @RequestParam(required = false) EstadoCapa estado,
             @RequestParam(required = false) SeveridadNoConformidad severidad,
@@ -42,31 +42,31 @@ public class CapaController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<CapaDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<CapaDTO> crear(@Valid @RequestBody CapaDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.crear(dto));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<CapaDTO> actualizar(@PathVariable Long id, @Valid @RequestBody CapaDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
     @PatchMapping("/{id}/cerrar")
-    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<CapaDTO> cerrar(@PathVariable Long id) {
         return ResponseEntity.ok(service.cerrar(id));
     }
 
     @PostMapping(path = "/{id}/archivos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<CapaArchivoDTO> adjuntarArchivo(@PathVariable Long id,
                                                           @RequestPart("archivo") MultipartFile archivo,
                                                           @RequestPart(value = "nombreVisible", required = false) String nombreVisible,
@@ -77,13 +77,13 @@ public class CapaController {
     }
 
     @GetMapping("/{id}/archivos")
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<List<CapaArchivoDTO>> listarArchivos(@PathVariable Long id) {
         return ResponseEntity.ok(service.listarArchivos(id));
     }
 
     @GetMapping({"/{capaId}/archivos/{archivoId}/descargar", "/{capaId}/archivos/{archivoId}"})
-    @PreAuthorize("hasAnyAuthority('QC_EXPORT','QC_READ','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_EXPORT','QC_READ')")
     public ResponseEntity<ByteArrayResource> descargarArchivo(@PathVariable Long capaId, @PathVariable Long archivoId) {
         CapaArchivoDescargaDTO archivo = service.descargarArchivo(capaId, archivoId);
         MediaType mediaType = archivo.getContentType() != null
@@ -96,7 +96,7 @@ public class CapaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();

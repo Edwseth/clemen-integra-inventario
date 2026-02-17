@@ -28,7 +28,7 @@ public class NoConformidadController {
     private final UsuarioRepository usuarioRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<Page<NoConformidadDTO>> listar(
             @RequestParam(required = false) SeveridadNoConformidad severidad,
             @RequestParam(required = false) OrigenNoConformidad origen,
@@ -38,13 +38,13 @@ public class NoConformidadController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<NoConformidadDetalleDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<NoConformidadDTO> crear(
             @RequestBody NoConformidadDTO dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -57,7 +57,7 @@ public class NoConformidadController {
     }
 
     @PatchMapping("/{id}/cerrar")
-    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<NoConformidadDTO> cerrar(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -69,7 +69,7 @@ public class NoConformidadController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<NoConformidadDTO> actualizar(
             @PathVariable Long id,
             @RequestBody NoConformidadDTO dto,
@@ -81,7 +81,7 @@ public class NoConformidadController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();

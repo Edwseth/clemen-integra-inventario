@@ -19,8 +19,7 @@ public class AlertasCalidadController {
 
     @GetMapping("/resumen")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
-            "'ROL_JEFE_ALMACENES','ROL_ALMACENISTA','ROL_PLANEADOR','ROL_CONTADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
     public ResponseEntity<ResumenAlertasCalidadDTO> obtenerResumen(@RequestParam(defaultValue = "30") int diasUmbral) {
         return ResponseEntity.ok(alertasCalidadService.obtenerAlertas(diasUmbral));
     }

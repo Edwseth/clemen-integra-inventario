@@ -23,8 +23,7 @@ public class VidaUtilProductoController {
 
     @GetMapping("/producto-terminado/{productoId}")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
-            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
     public ResponseEntity<VidaUtilProductoDTO> obtenerPorProducto(@PathVariable Integer productoId) {
         return vidaUtilProductoService.buscarPorProductoId(productoId)
                 .map(vida -> ResponseEntity.ok(mapToDto(vida)))
@@ -33,8 +32,7 @@ public class VidaUtilProductoController {
 
     @GetMapping("/productos-terminados")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO'," +
-            "'ROL_JEFE_PRODUCCION','ROL_PLANEADOR','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
     public ResponseEntity<Page<VidaUtilProductoDTO>> listar(
             @RequestParam(required = false) String filtro,
             @RequestParam(name = "search", required = false) String search,
@@ -45,7 +43,7 @@ public class VidaUtilProductoController {
 
     @PostMapping("/producto-terminado/{productoId}")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<Void> guardar(
             @PathVariable Integer productoId,
             @RequestBody VidaUtilProductoRequest request) {
@@ -55,7 +53,7 @@ public class VidaUtilProductoController {
 
     @DeleteMapping("/producto-terminado/{productoId}")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<Void> eliminar(@PathVariable Integer productoId) {
         vidaUtilProductoService.eliminar(productoId);
         return ResponseEntity.noContent().build();

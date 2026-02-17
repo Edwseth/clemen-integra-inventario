@@ -334,12 +334,18 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/documental/documentos/**").authenticated();
 
                     auth.requestMatchers(HttpMethod.GET, "/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name(),
-                            "CONTROL_DOCUMENTAL_WRITE"
+                            "QC_READ",
+                            "QC_WRITE",
+                            "QC_WORKFLOW",
+                            "QC_WORKFLOW_FINISH",
+                            "QC_DECIDE",
+                            "QC_EXPORT"
                     );
                     auth.requestMatchers("/api/calidad/capas", "/api/calidad/capas/**").hasAnyAuthority(
-                            "QC_WRITE"
+                            "QC_WRITE",
+                            "QC_WORKFLOW",
+                            "QC_WORKFLOW_FINISH",
+                            "QC_DECIDE"
                     );
 
                     auth.requestMatchers(

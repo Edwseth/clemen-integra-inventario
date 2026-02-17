@@ -95,7 +95,7 @@ Los antiguos endpoints `/api/productos/reporte-stock`, `/api/lotes/reporte-venci
 - **Fórmulas de producto** `/api/bom/formulas` – CRUD de recetas.
 
 ## Seguridad
-Se utiliza Spring Security con autenticación JWT y verificación 2FA. Los roles se gestionan mediante anotaciones `@PreAuthorize` en los controladores y la configuración de `SecurityConfig`. Todas las acciones registran el `usuarioId` y la `fechaIngreso` (por ejemplo en `MovimientoInventario`) para trazabilidad.
+Se utiliza Spring Security con autenticación JWT y verificación 2FA. La autorización de endpoints se realiza 100% por permisos (`QC_*`, `INV_*`, `PROD_*`, `PO_*`, `BOM_*`, `DOC_*`, `ADMIN_*`) definidos en `@PreAuthorize` y `SecurityConfig`; los roles en RBAC solo agrupan permisos y no conceden acceso directo por sí mismos. Todas las acciones registran el `usuarioId` y la `fechaIngreso` (por ejemplo en `MovimientoInventario`) para trazabilidad.
 
 ## Trazabilidad temporal y uso de LocalDateTime
 Para asegurar una trazabilidad precisa de los eventos, los campos `fechaFabricacion`, `fechaVencimiento`, `fechaLiberacion` y `fechaEvaluacion` fueron migrados de `LocalDate` a `LocalDateTime` en las entidades y DTOs. Esto permite almacenar también la hora exacta en la que ocurrió cada acción.

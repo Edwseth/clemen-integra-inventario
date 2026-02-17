@@ -92,44 +92,37 @@ class CapaControllerSecurityTest {
     }
 
     @Test
-    void rechazaAccesoCuandoRolNoAutorizado() throws Exception {
-        MockMvc localMvc = MockMvcBuilders.standaloneSetup(controller)
-                .addFilters((jakarta.servlet.Filter) (request, response, chain) -> {
-                    ((jakarta.servlet.http.HttpServletResponse) response)
-                            .sendError(org.springframework.http.HttpStatus.FORBIDDEN.value());
-                })
-                .build();
-
-        localMvc.perform(get("/api/calidad/capas")
-                        .with(SecurityMockMvcRequestPostProcessors.user("almacenista")
-                                .authorities(new SimpleGrantedAuthority("ROL_ALMACENISTA"))))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void permiteAccesoConRolValido() throws Exception {
+    void permiteGetConPermisoQcRead() throws Exception {
         Page<CapaDTO> page = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
         when(capaService.listar(null, null, PageRequest.of(0, 20))).thenReturn(page);
 
         mockMvc.perform(get("/api/calidad/capas?page=0&size=20")
-                        .with(SecurityMockMvcRequestPostProcessors.user("jefe")
-                                .authorities(new SimpleGrantedAuthority("ROL_JEFE_CALIDAD")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("analista")
+                                .authorities(new SimpleGrantedAuthority("QC_READ")))
                         .header("X-Test-Allow", "true")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void permiteCrearConRolSuperAdmin() throws Exception {
-        when(capaService.crear(org.mockito.ArgumentMatchers.any())).thenReturn(new CapaDTO());
+    void rechazaGetSinPermisoQcRead() throws Exception {
+        mockMvc.perform(get("/api/calidad/capas")
+                        .with(SecurityMockMvcRequestPostProcessors.user("sin-qc")
+                                .authorities(new SimpleGrantedAuthority("INV_READ")))
+                        .header("X-Test-Allow", "true")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
 
+    @Test
+    void rechazaPostSinPermisoQcWriteAunqueTengaQcRead() throws Exception {
         mockMvc.perform(post("/api/calidad/capas")
-                        .with(SecurityMockMvcRequestPostProcessors.user("sa")
-                                .authorities(new SimpleGrantedAuthority("ROL_SUPER_ADMIN")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("lector")
+                                .authorities(new SimpleGrantedAuthority("QC_READ")))
                         .header("X-Test-Allow", "true")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 
     @Test

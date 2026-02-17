@@ -18,14 +18,14 @@ public class EspecificacionesCalidadController {
 
     @GetMapping("/producto/{productoId}/fisico-quimicas")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
     public ResponseEntity<EspecificacionesFisicoQuimicasProductoDTO> listarFisicoQuimicas(@PathVariable Long productoId) {
         return ResponseEntity.ok(service.listarFisicoQuimicasPorProducto(productoId));
     }
 
     @PostMapping("/producto/{productoId}/fisico-quimicas")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<List<EspecificacionFisicoQuimicaDTO>> crearFisicoQuimicas(
             @PathVariable Long productoId,
             @RequestBody List<EspecificacionFisicoQuimicaRequest> request) {
@@ -34,7 +34,7 @@ public class EspecificacionesCalidadController {
 
     @PutMapping("/fisico-quimicas/{id}")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<EspecificacionFisicoQuimicaDTO> actualizarFisicoQuimica(
             @PathVariable Long id,
             @RequestBody EspecificacionFisicoQuimicaRequest request) {
@@ -43,7 +43,7 @@ public class EspecificacionesCalidadController {
 
     @DeleteMapping("/fisico-quimicas/{id}")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<Void> eliminarFisicoQuimica(@PathVariable Long id) {
         service.eliminarFisicoQuimica(id);
         return ResponseEntity.noContent().build();
@@ -51,21 +51,21 @@ public class EspecificacionesCalidadController {
 
     @GetMapping("/producto/{productoId}/micro")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
     public ResponseEntity<List<PlantillaAnalisisMicrobiologicoResumenDTO>> listarPlantillasMicro(@PathVariable Long productoId) {
         return ResponseEntity.ok(service.listarPlantillasMicroPorProducto(productoId));
     }
 
     @GetMapping("/micro/{plantillaId}")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_READ','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
     public ResponseEntity<PlantillaAnalisisMicrobiologicoDetalleDTO> obtenerDetalleMicro(@PathVariable Long plantillaId) {
         return ResponseEntity.ok(service.obtenerDetallePlantillaMicro(plantillaId));
     }
 
     @PostMapping("/producto/{productoId}/micro")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<PlantillaAnalisisMicrobiologicoDetalleDTO> crearPlantillaMicro(
             @PathVariable Long productoId,
             @RequestBody PlantillaAnalisisMicrobiologicoRequest request) {
@@ -74,7 +74,7 @@ public class EspecificacionesCalidadController {
 
     @PostMapping("/micro/{plantillaId}/clonar-como-nueva-version")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
     public ResponseEntity<PlantillaAnalisisMicrobiologicoDetalleDTO> clonarPlantillaMicro(@PathVariable Long plantillaId) {
         return ResponseEntity.ok(service.clonarPlantillaMicroComoNuevaVersion(plantillaId));
     }

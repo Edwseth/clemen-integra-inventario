@@ -19,7 +19,7 @@ public class ChecklistCalidadController {
 
     private final ChecklistCalidadService service;
 
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     @GetMapping
     public ResponseEntity<Page<ChecklistCalidadDTO>> listar(
             @RequestParam(required = false) TipoChecklist tipo,
@@ -27,25 +27,25 @@ public class ChecklistCalidadController {
         return ResponseEntity.ok(service.listar(tipo, pageable));
     }
 
-    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_READ','QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     @GetMapping("/{id}")
     public ResponseEntity<ChecklistCalidadDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPorId(id));
     }
 
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     @PostMapping
     public ResponseEntity<ChecklistCalidadDTO> crear(@RequestBody ChecklistCalidadDTO dto) {
         return ResponseEntity.ok(service.crear(dto));
     }
 
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     @PutMapping("/{id}")
     public ResponseEntity<ChecklistCalidadDTO> actualizar(@PathVariable Long id, @RequestBody ChecklistCalidadDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
-    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE','ROL_JEFE_CALIDAD','ROL_ANALISTA_CALIDAD','ROL_MICROBIOLOGO','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('QC_WRITE','QC_WORKFLOW','QC_WORKFLOW_FINISH','QC_DECIDE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
