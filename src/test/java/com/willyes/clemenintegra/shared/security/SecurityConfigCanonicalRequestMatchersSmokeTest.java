@@ -19,6 +19,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(SecurityConfigCanonicalRequestMatchersSmokeTest.SmokeEndpointsController.class)
@@ -133,6 +135,36 @@ class SecurityConfigCanonicalRequestMatchersSmokeTest {
                 .andExpect(status().isOk());
     }
 
+
+    @Test
+    void qc_capas_get_and_post_require_qc_permissions_only() throws Exception {
+        mockMvc.perform(get("/api/calidad/capas")
+                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "QC_READ")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/calidad/capas")
+                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "PO_READ")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/calidad/capas")
+                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "QC_READ")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/calidad/capas")
+                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "QC_WRITE")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void inventario_lotes_por_evaluar_requires_inventory_permission_not_role() throws Exception {
+        mockMvc.perform(get("/api/lotes/por-evaluar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "ROL_JEFE_CALIDAD")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/lotes/por-evaluar")
+                        .with(SecurityMockMvcRequestPostProcessors.user("u").authorities(() -> "INV_LOTES_READ")))
+                .andExpect(status().isOk());
+    }
     @RestController
     @RequestMapping("/api")
     static class SmokeEndpointsController {
@@ -159,6 +191,21 @@ class SecurityConfigCanonicalRequestMatchersSmokeTest {
 
         @GetMapping("/bom/formulas/activa")
         ResponseEntity<Void> bomActiva() {
+            return ResponseEntity.ok().build();
+        }
+
+        @GetMapping("/calidad/capas")
+        ResponseEntity<Void> qcCapasGet() {
+            return ResponseEntity.ok().build();
+        }
+
+        @PostMapping("/calidad/capas")
+        ResponseEntity<Void> qcCapasPost() {
+            return ResponseEntity.ok().build();
+        }
+
+        @GetMapping("/lotes/por-evaluar")
+        ResponseEntity<Void> lotesPorEvaluar() {
             return ResponseEntity.ok().build();
         }
 

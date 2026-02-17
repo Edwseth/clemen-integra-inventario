@@ -1,6 +1,5 @@
 package com.willyes.clemenintegra.shared.security;
 
-import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -89,6 +88,14 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationManager(authenticationManager)
                 .authorizeHttpRequests(auth -> {
+                    // Mapa RBAC por permisos (sin roles legacy como autoridad en endpoints):
+                    // Calidad: GET=QC_READ (o QC_WRITE), escrituras=QC_WRITE, workflow/decide/export=QC_WORKFLOW*/QC_DECIDE/QC_EXPORT.
+                    // Inventario: GET=INV_*_READ, escrituras=INV_WRITE, workflow/decide/export=INV_WORKFLOW*/INV_DECIDE/INV_EXPORT.
+                    // Producción: GET=PROD_READ/PROD_*_READ, escrituras=PROD_WRITE/PROD_*_WRITE, workflow=PROD_WORKFLOW*.
+                    // BOM: GET=BOM_READ/BOM_FORMULA_READ, escrituras/workflow=BOM_WRITE/BOM_WORKFLOW*/BOM_DECIDE/BOM_EXPORT.
+                    // Compras/PO: GET=PO_READ/PO_MRP_READ, escrituras/workflow=PO_WRITE/PO_WORKFLOW*/PO_DECIDE/PO_EXPORT.
+                    // Documental: GET=DOC_READ, escrituras=DOC_WRITE, export/delete=DOC_EXPORT/DOC_DELETE.
+                    // Admin RBAC: GET=ADMIN_RBAC_READ, escrituras=ADMIN_RBAC_WRITE. MENU_* solo navegación/UI.
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
                     auth.requestMatchers(
@@ -118,19 +125,11 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/productos/**").hasAnyAuthority(
-                            "INV_PRODUCT_READ",
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_PRODUCT_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").hasAnyAuthority(
-                            "INV_CATEGORIAS_READ",
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_CATEGORIAS_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET,
@@ -140,17 +139,7 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/productos/**").hasAnyAuthority(
-                            "INV_PRODUCT_READ",
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_COMPRADOR.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_ANALISTA_CALIDAD.name(),
-                            RolUsuario.ROL_MICROBIOLOGO.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_PRODUCT_READ"
                     );
 
                     auth.requestMatchers(
@@ -175,10 +164,6 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/conteos/**").hasAnyAuthority(
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name(),
                             "INV_CONTEOS_READ"
                     );
 
@@ -215,57 +200,24 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/ajustes/**").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name(),
                             "INV_AJUSTES_READ",
                             "INV_AJUSTES_WRITE"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyAuthority(
-                            "INV_MOV_READ",
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_MOV_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/alertas/**").hasAnyAuthority(
-                            "INV_ALERTAS_READ",
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_ALERTAS_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/lotes/**", "/api/inventario/lotes/**").hasAnyAuthority(
-                            "INV_LOTES_READ",
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_LOTES_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/kardex/**").hasAnyAuthority(
-                            "INV_KARDEX_READ",
-                            RolUsuario.ROL_JEFE_ALMACENES.name(),
-                            RolUsuario.ROL_ALMACENISTA.name(),
-                            RolUsuario.ROL_JEFE_PRODUCCION.name(),
-                            RolUsuario.ROL_LIDER_ALIMENTOS.name(),
-                            RolUsuario.ROL_LIDER_HOMEOPATICOS.name(),
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_PLANEADOR.name(),
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name()
+                            "INV_KARDEX_READ"
                     );
 
                     auth.requestMatchers("/api/movimientos/**", "/api/categorias/**",
@@ -321,9 +273,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.POST,
                             "/api/documental/documentos",
                             "/api/documental/documentos/*/versiones").hasAnyAuthority(
-                            RolUsuario.ROL_JEFE_CALIDAD.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name(),
-                            "CONTROL_DOCUMENTAL_WRITE"
+                            "DOC_WRITE"
                     );
 
                     auth.requestMatchers(HttpMethod.DELETE,
@@ -453,8 +403,6 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers("/api/inventario/ajustes/**").hasAnyAuthority(
-                            RolUsuario.ROL_CONTADOR.name(),
-                            RolUsuario.ROL_SUPER_ADMIN.name(),
                             "INV_AJUSTES_WRITE"
                     );
 
@@ -466,9 +414,7 @@ public class SecurityConfig {
                             "PROD_EXPORT"
                     );
 
-                    auth.requestMatchers("/actuator/metrics/**").hasAnyAuthority(
-                            RolUsuario.ROL_SUPER_ADMIN.name()
-                    );
+                    auth.requestMatchers("/actuator/metrics/**").hasAuthority("ADMIN_RBAC_WRITE");
 
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/inventario/solicitudes/**"
