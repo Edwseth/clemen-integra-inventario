@@ -30,7 +30,7 @@ public class ProduccionController {
 
     @PostMapping
     // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('PROD_WRITE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE')")
     public ResponseEntity<ProduccionResponse> crear(@RequestBody ProduccionRequest request) {
         Usuario usuario = new Usuario(); usuario.setId(request.usuarioId);
         Producto producto = new Producto(); producto.setId(request.productoId.intValue());
@@ -48,7 +48,7 @@ public class ProduccionController {
 
     @DeleteMapping("/{id}")
     // TODO:REMOVE_AFTER_PROD_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('PROD_WRITE','ROL_JEFE_PRODUCCION','ROL_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PROD_WRITE')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
