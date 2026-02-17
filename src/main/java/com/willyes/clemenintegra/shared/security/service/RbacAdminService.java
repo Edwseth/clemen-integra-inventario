@@ -10,6 +10,8 @@ public interface RbacAdminService {
 
     List<PermisoDTO> listarPermisos(String modulo, Boolean activo);
 
+    List<String> listarModulosPermisosActivos();
+
     List<PermisoDTO> obtenerPermisosPorRol(Long rolId);
 
     List<PermisoDTO> actualizarPermisosRol(Long rolId, List<Long> permisoIds, String modulo);

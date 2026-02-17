@@ -56,6 +56,12 @@ public class RbacAdminServiceImpl implements RbacAdminService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<String> listarModulosPermisosActivos() {
+        return permisoRepository.findDistinctModulosActivosOrderByModuloAsc();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PermisoDTO> obtenerPermisosPorRol(Long rolId) {
         validarRolExiste(rolId);
         return permisoRepository.findByRolesIdOrderByCodigoAsc(rolId).stream()

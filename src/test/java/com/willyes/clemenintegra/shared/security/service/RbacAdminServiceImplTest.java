@@ -53,6 +53,18 @@ class RbacAdminServiceImplTest {
                 .hasMessageContaining("modulo");
     }
 
+
+    @Test
+    void listarModulosPermisosActivosIncluyeMenuCuandoExiste() {
+        when(permisoRepository.findDistinctModulosActivosOrderByModuloAsc())
+                .thenReturn(List.of("DOC", "INV", "MENU"));
+
+        var resultado = service.listarModulosPermisosActivos();
+
+        verify(permisoRepository).findDistinctModulosActivosOrderByModuloAsc();
+        assertThat(resultado).contains("MENU");
+    }
+
     @Test
     void actualizarPermisosRolReemplazaSoloElModuloSolicitado() {
         Long rolId = 10L;

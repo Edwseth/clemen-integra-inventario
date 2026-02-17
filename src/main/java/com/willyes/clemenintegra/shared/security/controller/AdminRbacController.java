@@ -36,6 +36,12 @@ public class AdminRbacController {
         return rbacAdminService.listarPermisos(modulo, activo);
     }
 
+    @GetMapping("/modulos")
+    @PreAuthorize("hasAnyAuthority('ADMIN_RBAC_READ','ADMIN_RBAC_WRITE')")
+    public List<String> listarModulos() {
+        return rbacAdminService.listarModulosPermisosActivos();
+    }
+
     @GetMapping("/roles/{rolId}/permisos")
     @PreAuthorize("hasAnyAuthority('ADMIN_RBAC_READ','ADMIN_RBAC_WRITE')")
     public List<PermisoDTO> obtenerPermisosPorRol(@PathVariable Long rolId) {
