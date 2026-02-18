@@ -24,8 +24,11 @@ public class DetalleFormulaController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ')")
-    public List<DetalleFormulaResponse> listarTodas() {
-        return detalleService.listarTodas().stream()
+    public List<DetalleFormulaResponse> listarTodas(
+            @RequestParam(required = false) Long formulaId,
+            @RequestParam(required = false) String insumo
+    ) {
+        return detalleService.listarTodas(formulaId, insumo).stream()
                 .map(detalle -> bomMapper.toResponseDTO(detalle))
                 .collect(Collectors.toList());
     }
