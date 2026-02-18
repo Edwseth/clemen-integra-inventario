@@ -28,8 +28,7 @@ public class RegularizacionTrazabilidadController {
     private final RegularizacionTrazabilidadService regularizacionTrazabilidadService;
 
     @PostMapping("/op")
-    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
-    @PreAuthorize("hasAnyAuthority('INV_READ')")
+    @PreAuthorize("hasAnyAuthority('PROD_TRAZABILIDAD_REGULARIZACION')")
     public ResponseEntity<RegularizacionTrazabilidadResponseDTO> regularizarPorOp(
             @RequestBody @Valid RegularizacionTrazabilidadRequestDTO request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,

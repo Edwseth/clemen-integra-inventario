@@ -47,6 +47,8 @@ class AuthControllerTest extends IntegrationTestH2 {
     private JavaMailSender javaMailSender;
 
     private Usuario usuarioPlaneador;
+    private Usuario usuarioContador;
+    private Usuario usuarioJefeProduccion;
 
     @BeforeEach
     void setUp() {
@@ -57,6 +59,28 @@ class AuthControllerTest extends IntegrationTestH2 {
                         .nombreCompleto("Planeador Test")
                         .correo("planeador@test.local")
                         .rol(RolUsuario.ROL_PLANEADOR)
+                        .activo(true)
+                        .bloqueado(false)
+                        .build()));
+
+        usuarioContador = usuarioRepository.findByNombreUsuario("contador")
+                .orElseGet(() -> usuarioRepository.save(Usuario.builder()
+                        .nombreUsuario("contador")
+                        .clave("secret")
+                        .nombreCompleto("Contador Test")
+                        .correo("contador@test.local")
+                        .rol(RolUsuario.ROL_CONTADOR)
+                        .activo(true)
+                        .bloqueado(false)
+                        .build()));
+
+        usuarioJefeProduccion = usuarioRepository.findByNombreUsuario("jefeprod")
+                .orElseGet(() -> usuarioRepository.save(Usuario.builder()
+                        .nombreUsuario("jefeprod")
+                        .clave("secret")
+                        .nombreCompleto("Jefe Producción Test")
+                        .correo("jefeprod@test.local")
+                        .rol(RolUsuario.ROL_JEFE_PRODUCCION)
                         .activo(true)
                         .bloqueado(false)
                         .build()));
@@ -93,4 +117,42 @@ class AuthControllerTest extends IntegrationTestH2 {
                 .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_OP_WORKFLOW_CANCEL"))))
                 .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_OP_WORKFLOW_FINALIZE"))));
     }
+
+
+    @Test
+    void meIncluyePermisoRegularizacionSoloParaContador() throws Exception {
+        CustomUserDetails principal = new CustomUserDetails(
+                usuarioContador,
+                usuarioAuthoritiesService.buildAuthorities(usuarioContador)
+        );
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                principal,
+                "N/A",
+                principal.getAuthorities()
+        );
+
+        mockMvc.perform(get("/api/auth/me").with(authentication(authentication)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rol").value("ROL_CONTADOR"))
+                .andExpect(jsonPath("$.permisos").value(hasItem("PROD_TRAZABILIDAD_REGULARIZACION")));
+    }
+
+    @Test
+    void meNoIncluyePermisoRegularizacionParaNoContador() throws Exception {
+        CustomUserDetails principal = new CustomUserDetails(
+                usuarioJefeProduccion,
+                usuarioAuthoritiesService.buildAuthorities(usuarioJefeProduccion)
+        );
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                principal,
+                "N/A",
+                principal.getAuthorities()
+        );
+
+        mockMvc.perform(get("/api/auth/me").with(authentication(authentication)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rol").value("ROL_JEFE_PRODUCCION"))
+                .andExpect(jsonPath("$.permisos").value(not(hasItem("PROD_TRAZABILIDAD_REGULARIZACION"))));
+    }
+
 }

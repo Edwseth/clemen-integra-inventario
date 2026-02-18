@@ -1,6 +1,8 @@
 MERGE INTO roles (codigo, nombre, activo)
 KEY (codigo)
-VALUES ('ROL_PLANEADOR', 'Planeador', TRUE);
+VALUES ('ROL_PLANEADOR', 'Planeador', TRUE),
+       ('ROL_CONTADOR', 'Contador', TRUE),
+       ('ROL_JEFE_PRODUCCION', 'Jefe Producción', TRUE);
 
 MERGE INTO permisos (codigo, modulo, accion, descripcion, activo)
 KEY (codigo)
@@ -15,7 +17,8 @@ VALUES ('PROD_OP_CREATE', 'PRODUCCION', 'CREATE', 'Crear orden de producción', 
        ('PROD_INDICADORES_EXPORT', 'PRODUCCION', 'EXPORT', 'Exportar indicadores de producción', TRUE),
        ('PROD_ALERTAS_READ', 'PRODUCCION', 'READ', 'Leer alertas de producción', TRUE),
        ('INV_READ', 'INV', 'READ', 'Lectura general de inventario', TRUE),
-       ('MENU_PROD', 'MENU', 'NAV', 'Visibilidad y navegación del módulo de producción', TRUE);
+       ('MENU_PROD', 'MENU', 'NAV', 'Visibilidad y navegación del módulo de producción', TRUE),
+       ('PROD_TRAZABILIDAD_REGULARIZACION', 'PROD', 'WRITE', 'Regularización de trazabilidad', TRUE);
 
 INSERT INTO roles_permisos (rol_id, permiso_id)
 SELECT r.id, p.id
@@ -35,6 +38,18 @@ JOIN permisos p ON p.codigo in (
     'MENU_PROD'
 )
 WHERE r.codigo = 'ROL_PLANEADOR'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM roles_permisos rp
+      WHERE rp.rol_id = r.id
+        AND rp.permiso_id = p.id
+  );
+
+INSERT INTO roles_permisos (rol_id, permiso_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permisos p ON p.codigo = 'PROD_TRAZABILIDAD_REGULARIZACION'
+WHERE r.codigo = 'ROL_CONTADOR'
   AND NOT EXISTS (
       SELECT 1
       FROM roles_permisos rp
