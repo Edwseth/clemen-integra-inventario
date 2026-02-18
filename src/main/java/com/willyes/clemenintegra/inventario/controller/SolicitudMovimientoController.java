@@ -42,7 +42,7 @@ public class SolicitudMovimientoController {
 
     @GetMapping
     // endpoint que lista las solicitudes de movimiento con paginación
-    @PreAuthorize("hasAnyAuthority('INV_READ')")
+    @PreAuthorize("hasAuthority('INV_SOLICITUDES_READ')")
     public ResponseEntity<Page<SolicitudMovimientoListadoDTO>> listar(
             @PageableDefault(size = 10, sort = "fechaSolicitud", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(required = false) EstadoSolicitudMovimiento estado,
@@ -83,7 +83,7 @@ public class SolicitudMovimientoController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('INV_READ')")
+    @PreAuthorize("hasAuthority('INV_SOLICITUDES_READ')")
     public ResponseEntity<SolicitudMovimientoResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerSolicitud(id));
     }

@@ -205,7 +205,11 @@ public class SecurityConfig {
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyAuthority(
-                            "INV_MOV_READ"
+                            "INV_MOVIMIENTOS_READ"
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/solicitudes/**", "/api/inventarios/solicitudes/**").hasAnyAuthority(
+                            "INV_SOLICITUDES_READ"
                     );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/inventario/alertas/**").hasAnyAuthority(

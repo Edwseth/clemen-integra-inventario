@@ -370,10 +370,9 @@ class ContadorRoleSecurityTest {
 
     @Test
     @WithMockUser(authorities = "ROL_CONTADOR")
-    void contadorPuedeLeerModulosInventarioPermitidos() throws Exception {
+    void contadorNoPuedeLeerMovimientosSinPermisoDedicado() throws Exception {
         when(productoService.listarTodos(any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(categoriaProductoService.listarTodas()).thenReturn(List.of());
-        when(movimientoInventarioService.filtrar(any(), any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(loteProductoService.listarTodos(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(alertaInventarioService.obtenerAlertasInventario(any())).thenReturn(List.of());
 
@@ -386,7 +385,7 @@ class ContadorRoleSecurityTest {
         mockMvc.perform(get("/api/movimientos/filtrar")
                         .param("fechaInicio", "2026-01-01")
                         .param("fechaFin", "2026-01-31"))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/lotes").param("vencidos", "true"))
                 .andExpect(status().isOk());
@@ -493,6 +492,28 @@ class ContadorRoleSecurityTest {
 
         mockMvc.perform(get("/api/calidad/vida-util/productos-terminados"))
                 .andExpect(status().isForbidden());
+    }
+
+
+    @Test
+    @WithMockUser(authorities = {"ROL_CONTADOR", "INV_MOVIMIENTOS_READ"})
+    void contadorConPermisoDedicadoPuedeListarMovimientos() throws Exception {
+        when(movimientoInventarioService.filtrar(any(), any(), any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/movimientos/filtrar")
+                        .param("fechaInicio", "2026-01-01")
+                        .param("fechaFin", "2026-01-31"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"ROL_CONTADOR", "INV_SOLICITUDES_READ"})
+    void contadorConPermisoDedicadoPuedeListarSolicitudes() throws Exception {
+        when(solicitudMovimientoService.listarSolicitudes(any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/inventario/solicitudes"))
+                .andExpect(status().isOk());
     }
 
     @Test

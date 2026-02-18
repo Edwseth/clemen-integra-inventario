@@ -72,7 +72,7 @@ class MovimientoInventarioControllerFechaWebMvcTest {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "INV_MOVIMIENTOS_READ")
     @DisplayName("/filtrar parsea fechas y devuelve resultados ordenados por fechaIngreso desc")
     void filtrarDebeRetornarOrdenDescPorFechaIngreso() throws Exception {
         MovimientoInventarioResponseDTO masReciente = MovimientoInventarioResponseDTO.builder()
@@ -128,7 +128,7 @@ class MovimientoInventarioControllerFechaWebMvcTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "INV_MOVIMIENTOS_READ")
     @DisplayName("/filtrar propaga productoId al servicio")
     void filtrarDebePropagarProductoId() throws Exception {
         given(movimientoInventarioService.filtrar(any(), any(), any(), any(), any(), any(), any(Pageable.class)))

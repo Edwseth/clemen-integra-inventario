@@ -277,7 +277,7 @@ public class MovimientoInventarioController {
     @Operation(summary = "Consultar movimientos de inventario con filtros opcionales")
     @ApiResponse(responseCode = "200", description = "Consulta exitosa")
     @GetMapping("/filtrar")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ')")
+    @PreAuthorize("hasAuthority('INV_MOVIMIENTOS_READ')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> filtrar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
@@ -307,7 +307,7 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ')")
+    @PreAuthorize("hasAuthority('INV_MOVIMIENTOS_READ')")
     public ResponseEntity<List<MovimientoInventarioResponseDTO>> consultar(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) Long almacenId,
@@ -336,7 +336,7 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_MOV_READ')")
+    @PreAuthorize("hasAuthority('INV_MOVIMIENTOS_READ')")
     public ResponseEntity<Page<MovimientoInventarioResponseDTO>> listarTodos(
             @RequestParam(required = false) String codigoRecepcion,
             @RequestParam(required = false, name = "tipoMovimiento") TipoMovimiento tipoMovimiento,

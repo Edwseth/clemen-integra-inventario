@@ -115,7 +115,7 @@ class SolicitudMovimientoControllerSecurityTest {
                         .param("page", "0")
                         .param("size", "10")
                         .with(SecurityMockMvcRequestPostProcessors.user("planeador")
-                                .authorities(() -> "ROL_PLANEADOR")))
+                                .authorities(() -> "INV_SOLICITUDES_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -127,7 +127,7 @@ class SolicitudMovimientoControllerSecurityTest {
 
         mockMvc.perform(get("/api/inventario/solicitudes/1")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
-                                .authorities(() -> "ROL_JEFE_PRODUCCION")))
+                                .authorities(() -> "INV_SOLICITUDES_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -138,7 +138,7 @@ class SolicitudMovimientoControllerSecurityTest {
 
         mockMvc.perform(get("/api/inventario/solicitudes/999")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
-                                .authorities(() -> "ROL_JEFE_PRODUCCION")))
+                                .authorities(() -> "INV_SOLICITUDES_READ")))
                 .andExpect(status().isNotFound());
     }
 
@@ -153,12 +153,12 @@ class SolicitudMovimientoControllerSecurityTest {
                         .param("page", "0")
                         .param("size", "10")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
-                                .authorities(() -> "ROL_JEFE_PRODUCCION")))
+                                .authorities(() -> "INV_SOLICITUDES_READ")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/inventarios/solicitudes/321")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
-                                .authorities(() -> "ROL_JEFE_PRODUCCION")))
+                                .authorities(() -> "INV_SOLICITUDES_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -180,7 +180,7 @@ class SolicitudMovimientoControllerSecurityTest {
     void planeadorNoPuedeAprobarSolicitudes() throws Exception {
         mockMvc.perform(put("/api/inventario/solicitudes/1/aprobar")
                         .with(SecurityMockMvcRequestPostProcessors.user("planeador")
-                                .authorities(() -> "ROL_PLANEADOR")))
+                                .authorities(() -> "INV_SOLICITUDES_READ")))
                 .andExpect(status().isForbidden());
     }
 }
