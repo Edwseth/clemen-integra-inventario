@@ -158,7 +158,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponseDTO> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
                                                                HttpServletRequest request) {
-        String message = "Valor inválido para el parámetro '" + ex.getName() + "'";
+        String parameter = ex.getName();
+        if ("estado".equals(parameter) && ex.getRequiredType() != null && ex.getRequiredType().isEnum()) {
+            Object rejectedValue = ex.getValue();
+            String message = "estado inválido: " + (rejectedValue != null ? rejectedValue : "null");
+            return buildResponse(HttpStatus.BAD_REQUEST, "PARAMETRO_INVALIDO", message, null);
+        }
+
+        String message = "Valor inválido para el parámetro '" + parameter + "'";
         return buildResponse(ApiErrorCode.SOLICITUD_INVALIDA, message, null);
     }
 

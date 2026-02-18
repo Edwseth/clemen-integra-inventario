@@ -475,16 +475,16 @@ class LoteProductoServiceImplTest {
                 .build());
         when(plantillaAnalisisMicroService.obtenerPorProducto(anyLong())).thenReturn(null);
 
-        Page<LoteProductoResponseDTO> sinEvaluaciones = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        Page<LoteProductoResponseDTO> sinEvaluaciones = service.obtenerLotesPorEvaluar(null, PageRequest.of(0, 10));
         assertThat(sinEvaluaciones.getContent()).hasSize(1);
         assertThat(sinEvaluaciones.getContent().get(0).isPendienteMicro()).isTrue();
         assertThat(sinEvaluaciones.getContent().get(0).getEstadoCalidadResumen()).isEqualTo("EN_CUARENTENA");
 
-        Page<LoteProductoResponseDTO> conFisico = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        Page<LoteProductoResponseDTO> conFisico = service.obtenerLotesPorEvaluar(null, PageRequest.of(0, 10));
         assertThat(conFisico.getContent()).hasSize(1);
         assertThat(conFisico.getContent().get(0).isPendienteMicro()).isTrue();
 
-        Page<LoteProductoResponseDTO> completo = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        Page<LoteProductoResponseDTO> completo = service.obtenerLotesPorEvaluar(null, PageRequest.of(0, 10));
         assertThat(completo.getContent()).isEmpty();
     }
 
@@ -516,12 +516,12 @@ class LoteProductoServiceImplTest {
                 .build());
         when(plantillaAnalisisMicroService.obtenerPorProducto(anyLong())).thenReturn(null);
 
-        Page<LoteProductoResponseDTO> sinResultados = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        Page<LoteProductoResponseDTO> sinResultados = service.obtenerLotesPorEvaluar(null, PageRequest.of(0, 10));
         assertThat(sinResultados.getContent()).hasSize(1);
         assertThat(sinResultados.getContent().get(0).isPendienteMicro()).isTrue();
         assertThat(sinResultados.getContent().get(0).getEstadoCalidadResumen()).isEqualTo("EN_CUARENTENA");
 
-        Page<LoteProductoResponseDTO> conResultados = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        Page<LoteProductoResponseDTO> conResultados = service.obtenerLotesPorEvaluar(null, PageRequest.of(0, 10));
         assertThat(conResultados.getContent()).isEmpty();
     }
 
@@ -548,7 +548,7 @@ class LoteProductoServiceImplTest {
                 .build());
         when(plantillaAnalisisMicroService.obtenerPorProducto(anyLong())).thenReturn(null);
 
-        Page<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar(PageRequest.of(0, 10));
+        Page<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar(null, PageRequest.of(0, 10));
         assertThat(resultado.getContent()).isEmpty();
     }
 

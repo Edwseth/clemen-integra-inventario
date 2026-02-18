@@ -121,9 +121,10 @@ public class LoteProductoController {
     @PreAuthorize("hasAnyAuthority('INV_READ')")
     @GetMapping("/por-evaluar")
     public ResponseEntity<Page<LoteProductoResponseDTO>> obtenerLotesPorEvaluar(
+            @RequestParam(name = "estado", required = false) EstadoLote estado,
             @org.springframework.data.web.PageableDefault(size = 10, sort = "fechaFabricacion",
                     direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        Page<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar(pageable);
+        Page<LoteProductoResponseDTO> resultado = service.obtenerLotesPorEvaluar(estado, pageable);
         return ResponseEntity.ok(resultado);
     }
 
