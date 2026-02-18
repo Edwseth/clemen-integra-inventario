@@ -46,7 +46,7 @@ public class ReporteComprasServiceImpl implements ReporteComprasService {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("ReporteCompras");
             String[] headers = {
-                    "OC", "Código", "Nombre", "UDM", "Cantidad", "Fecha OC", "Fecha pactada", "Fecha recepción",
+                    "OC", "Estado", "Código", "Nombre", "UDM", "Cantidad", "Fecha OC", "Fecha pactada", "Fecha recepción",
                     "Proveedor", "Condiciones de pago", "Precio unitario", "IVA"
             };
 
@@ -59,17 +59,18 @@ public class ReporteComprasServiceImpl implements ReporteComprasService {
             for (ReporteComprasRowDTO fila : filas) {
                 Row row = sheet.createRow(rowIndex++);
                 row.createCell(0).setCellValue(valorTexto(fila.getOcCodigo()));
-                row.createCell(1).setCellValue(valorTexto(fila.getProductoCodigo()));
-                row.createCell(2).setCellValue(valorTexto(fila.getProductoNombre()));
-                row.createCell(3).setCellValue(valorTexto(fila.getUdm()));
-                row.createCell(4).setCellValue(valorDecimal(fila.getCantidad()));
-                row.createCell(5).setCellValue(fila.getFechaOc() != null ? fila.getFechaOc().format(FECHA_HORA_FORMAT) : "");
-                row.createCell(6).setCellValue(fila.getFechaPactada() != null ? fila.getFechaPactada().format(FECHA_FORMAT) : "");
-                row.createCell(7).setCellValue(fila.getFechaRecepcion() != null ? fila.getFechaRecepcion().format(FECHA_FORMAT) : "");
-                row.createCell(8).setCellValue(valorTexto(fila.getProveedorNombre()));
-                row.createCell(9).setCellValue(valorTexto(fila.getCondicionesPago()));
-                row.createCell(10).setCellValue(valorDecimal(fila.getPrecioUnitario()));
-                row.createCell(11).setCellValue(valorDecimal(fila.getIva()));
+                row.createCell(1).setCellValue(valorTexto(fila.getEstado()));
+                row.createCell(2).setCellValue(valorTexto(fila.getProductoCodigo()));
+                row.createCell(3).setCellValue(valorTexto(fila.getProductoNombre()));
+                row.createCell(4).setCellValue(valorTexto(fila.getUdm()));
+                row.createCell(5).setCellValue(valorDecimal(fila.getCantidad()));
+                row.createCell(6).setCellValue(fila.getFechaOc() != null ? fila.getFechaOc().format(FECHA_HORA_FORMAT) : "");
+                row.createCell(7).setCellValue(fila.getFechaPactada() != null ? fila.getFechaPactada().format(FECHA_FORMAT) : "");
+                row.createCell(8).setCellValue(fila.getFechaRecepcion() != null ? fila.getFechaRecepcion().format(FECHA_FORMAT) : "");
+                row.createCell(9).setCellValue(valorTexto(fila.getProveedorNombre()));
+                row.createCell(10).setCellValue(valorTexto(fila.getCondicionesPago()));
+                row.createCell(11).setCellValue(valorDecimal(fila.getPrecioUnitario()));
+                row.createCell(12).setCellValue(valorDecimal(fila.getIva()));
             }
 
             for (int i = 0; i < headers.length; i++) {
@@ -86,6 +87,7 @@ public class ReporteComprasServiceImpl implements ReporteComprasService {
     private ReporteComprasRowDTO toDto(ReporteComprasRowProjection projection) {
         return ReporteComprasRowDTO.builder()
                 .ocCodigo(projection.getOcCodigo())
+                .estado(projection.getEstado())
                 .productoCodigo(projection.getProductoCodigo())
                 .productoNombre(projection.getProductoNombre())
                 .udm(projection.getUdm())

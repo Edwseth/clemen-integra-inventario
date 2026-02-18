@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class ReporteComprasRowDTO {
 
     private String ocCodigo;
+    private String estado;
     private String productoCodigo;
     private String productoNombre;
     private String udm;
