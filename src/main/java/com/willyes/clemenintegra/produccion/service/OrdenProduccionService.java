@@ -58,6 +58,7 @@ public interface OrdenProduccionService {
                                                                     @Nullable ClasificacionMovimientoInventario clasificacion);
 
     Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
+                                                    String producto,
                                                     EstadoProduccion estado,
                                                     String responsable,
                                                     LocalDateTime fechaInicio,
@@ -65,6 +66,7 @@ public interface OrdenProduccionService {
                                                     Pageable pageable);
 
     List<OrdenProduccion> listar(String codigo,
+                                 String producto,
                                  EstadoProduccion estado,
                                  String responsable,
                                  LocalDateTime fechaInicio,

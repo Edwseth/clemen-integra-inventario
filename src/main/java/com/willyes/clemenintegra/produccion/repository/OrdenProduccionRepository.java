@@ -23,6 +23,7 @@ import org.springframework.data.domain.Sort;
 public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion, Long>, JpaSpecificationExecutor<OrdenProduccion> {
 
     @EntityGraph(attributePaths = {"producto", "producto.categoriaProducto", "unidadMedida", "responsable"})
+    // Los filtros por relaciones (p. ej. nombre de producto) se resuelven desde Specification.
     Page<OrdenProduccion> findAll(Specification<OrdenProduccion> spec, Pageable pageable);
 
     @EntityGraph(attributePaths = {"producto", "producto.categoriaProducto", "unidadMedida", "responsable"})

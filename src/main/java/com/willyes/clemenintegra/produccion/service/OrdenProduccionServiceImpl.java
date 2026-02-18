@@ -608,6 +608,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Override
     @Transactional(readOnly = true)
     public Page<OrdenProduccionResponseDTO> listarPaginado(String codigo,
+                                                           String producto,
                                                            EstadoProduccion estado,
                                                            String responsable,
                                                            LocalDateTime fechaInicio,
@@ -615,6 +616,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                                                            Pageable pageable) {
         Specification<OrdenProduccion> spec = OrdenProduccionSpecifications.and(
                 OrdenProduccionSpecifications.byCodigo(codigo),
+                OrdenProduccionSpecifications.byProducto(producto),
                 OrdenProduccionSpecifications.byEstado(estado),
                 OrdenProduccionSpecifications.byResponsable(responsable),
                 OrdenProduccionSpecifications.byFechaBetween(fechaInicio, fechaFin)
@@ -625,12 +627,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Override
     @Transactional(readOnly = true)
     public List<OrdenProduccion> listar(String codigo,
+                                        String producto,
                                         EstadoProduccion estado,
                                         String responsable,
                                         LocalDateTime fechaInicio,
                                         LocalDateTime fechaFin) {
         Specification<OrdenProduccion> spec = OrdenProduccionSpecifications.and(
                 OrdenProduccionSpecifications.byCodigo(codigo),
+                OrdenProduccionSpecifications.byProducto(producto),
                 OrdenProduccionSpecifications.byEstado(estado),
                 OrdenProduccionSpecifications.byResponsable(responsable),
                 OrdenProduccionSpecifications.byFechaBetween(fechaInicio, fechaFin)
