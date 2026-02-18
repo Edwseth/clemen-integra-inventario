@@ -55,6 +55,7 @@ class ReporteComprasControllerTest {
     void obtenerReporteRetorna200ConCamposEsperados() throws Exception {
         ReporteComprasRowDTO fila = ReporteComprasRowDTO.builder()
                 .ocCodigo("OC-001")
+                .estado("ABIERTA")
                 .productoCodigo("SKU-001")
                 .productoNombre("Materia Prima")
                 .udm("KG")
@@ -75,6 +76,7 @@ class ReporteComprasControllerTest {
                         .param("hasta", "2026-02-28"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].ocCodigo").value("OC-001"))
+                .andExpect(jsonPath("$[0].estado").value("ABIERTA"))
                 .andExpect(jsonPath("$[0].productoCodigo").value("SKU-001"))
                 .andExpect(jsonPath("$[0].productoNombre").value("Materia Prima"))
                 .andExpect(jsonPath("$[0].udm").value("KG"))

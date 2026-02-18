@@ -13,6 +13,7 @@ public interface ReporteComprasRepository extends Repository<OrdenCompraDetalle,
     @Query(value = """
         SELECT
             oc.codigo_orden                              AS ocCodigo,
+            oc.estado                                   AS estado,
             p.codigo_sku                                 AS productoCodigo,
             p.nombre                                     AS productoNombre,
             COALESCE(um.simbolo_impresion, um.simbolo)  AS udm,
@@ -47,6 +48,7 @@ public interface ReporteComprasRepository extends Repository<OrdenCompraDetalle,
         GROUP BY
             d.id,
             oc.codigo_orden,
+            oc.estado,
             p.codigo_sku,
             p.nombre,
             COALESCE(um.simbolo_impresion, um.simbolo),

@@ -8,6 +8,8 @@ public interface ReporteComprasRowProjection {
 
     String getOcCodigo();
 
+    String getEstado();
+
     String getProductoCodigo();
 
     String getProductoNombre();
