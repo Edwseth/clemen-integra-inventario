@@ -231,19 +231,13 @@ public class SecurityConfig {
                     );
 
                     // 1) Lectura de listado de planes semanales (auditoría para Contador)
-                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales").hasAnyAuthority(
-                            "PO_READ",
+                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales").hasAuthority(
                             "PO_PLAN_SEMANAL_READ"
                     );
-                    // 1.1) Detalle de planes semanales: lectura permitida para Contador
-                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAnyAuthority(
-                            "PO_READ",
+                    auth.requestMatchers(HttpMethod.GET, "/api/planeacion/planes-semanales/**").hasAuthority(
                             "PO_PLAN_SEMANAL_READ"
                     );
-                    // 2) Resto de operaciones de planeación (crear/editar/eliminar):
-                    auth.requestMatchers("/api/planeacion/**").hasAnyAuthority(
-                            "PO_WRITE",
-                            "PO_WORKFLOW",
+                    auth.requestMatchers("/api/planeacion/planes-semanales/**").hasAuthority(
                             "PO_PLAN_SEMANAL_WRITE"
                     );
 

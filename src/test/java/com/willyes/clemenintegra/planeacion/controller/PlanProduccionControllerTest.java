@@ -59,8 +59,8 @@ class PlanProduccionControllerTest {
     private AuthenticationManager authenticationManager;
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
-    void crearPlanPermiteJefeProduccion() throws Exception {
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_WRITE")
+    void crearPlanPermiteWritePlanSemanal() throws Exception {
         PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
                 .id(1L)
                 .detalles(List.of())
@@ -74,8 +74,8 @@ class PlanProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
-    void listarPlanPermiteSuperAdmin() throws Exception {
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
+    void listarPlanPermiteReadPlanSemanal() throws Exception {
         PlanProduccionResumenDTO plan = PlanProduccionResumenDTO.builder()
                 .id(2L)
                 .estado(EstadoPlanProduccion.CONFIRMADO)
@@ -92,7 +92,7 @@ class PlanProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
     void listarConFiltrosPasaParametrosAlServicio() throws Exception {
         when(planProduccionService.listar(any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of()));
@@ -108,8 +108,8 @@ class PlanProduccionControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "PO_READ")
-    void listarPlanPermitePermisoCanonicoPoRead() throws Exception {
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
+    void listarPlanPermitePermisoReadPlanSemanal() throws Exception {
         when(planProduccionService.listar(any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of()));
 
@@ -136,7 +136,7 @@ class PlanProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
     void obtenerDetalleIncluyeProductoYUnidad() throws Exception {
         PlanProduccionDetalle detalle = PlanProduccionDetalle.builder()
                 .id(1L)
@@ -179,8 +179,8 @@ class PlanProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_COMPRADOR")
-    void obtenerPlanPermiteComprador() throws Exception {
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
+    void obtenerPlanPermiteReadPlanSemanal() throws Exception {
         PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
                 .id(10L)
                 .semanaInicio(LocalDate.of(2024, 6, 10))
@@ -195,9 +195,22 @@ class PlanProduccionControllerTest {
                 .andExpect(jsonPath("$.id").value(10));
     }
 
+
     @Test
-    @WithMockUser(authorities = "ROL_COMPRADOR")
-    void confirmarPlanRechazaComprador() throws Exception {
+    @WithMockUser(authorities = "PO_MRP_READ")
+    void rechazaUsuarioSinPermisosReadNiWrite() throws Exception {
+        mockMvc.perform(get("/api/planeacion/planes-semanales"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/planeacion/planes-semanales")
+                        .content("{}")
+                        .contentType(APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
+    void confirmarPlanRechazaSiSoloTieneRead() throws Exception {
         mockMvc.perform(post("/api/planeacion/planes-semanales/99/confirmar"))
                 .andExpect(status().isForbidden());
     }
