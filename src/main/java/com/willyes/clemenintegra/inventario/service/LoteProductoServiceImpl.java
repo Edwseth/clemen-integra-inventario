@@ -219,10 +219,10 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         List<LoteProductoResponseDTO> filtrados = lotesOrdenados.stream()
                 .map(lote -> {
                     List<EvaluacionCalidad> evaluaciones = evaluacionesPorLote.getOrDefault(lote.getId(), List.of());
-                    EstadoEvaluacionPendiente estado = calcularEstadoEvaluacionPendiente(lote.getProducto(),
+                    EstadoEvaluacionPendiente estadoFiltro = calcularEstadoEvaluacionPendiente(lote.getProducto(),
                             evaluaciones, evaluacionesConResultadosMicro);
                     // Criterio "por evaluar": incluir el lote si falta al menos una disciplina requerida.
-                    if (!estado.estaPendiente()) {
+                    if (!estadoFiltro.estaPendiente()) {
                         return null;
                     }
                     LoteProductoResponseDTO dto = loteProductoMapper.toDto(lote);
@@ -230,13 +230,13 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                     dto.setEvaluaciones(evaluaciones.stream()
                             .map(EvaluacionCalidad::getTipoEvaluacion)
                             .toList());
-                    dto.setTieneEvaluacionFisica(estado.tieneEvaluacionFisica);
-                    dto.setTieneEvaluacionQuimicoMicro(estado.tieneEvaluacionQuimicoMicro);
-                    dto.setEvaluacionQuimicoMicroId(estado.evaluacionQuimicoMicroId);
-                    dto.setTieneResultadosMicro(estado.tieneResultadosMicro);
-                    dto.setPendienteFisico(estado.pendienteFisico);
-                    dto.setPendienteQuimico(estado.pendienteQuimico);
-                    dto.setPendienteMicro(estado.pendienteMicro);
+                    dto.setTieneEvaluacionFisica(estadoFiltro.tieneEvaluacionFisica);
+                    dto.setTieneEvaluacionQuimicoMicro(estadoFiltro.tieneEvaluacionQuimicoMicro);
+                    dto.setEvaluacionQuimicoMicroId(estadoFiltro.evaluacionQuimicoMicroId);
+                    dto.setTieneResultadosMicro(estadoFiltro.tieneResultadosMicro);
+                    dto.setPendienteFisico(estadoFiltro.pendienteFisico);
+                    dto.setPendienteQuimico(estadoFiltro.pendienteQuimico);
+                    dto.setPendienteMicro(estadoFiltro.pendienteMicro);
                     if (lote.getProducto() != null) {
                         PlantillaAnalisisMicroDTO plantillaDto = plantillaAnalisisMicroService.obtenerPorProducto(lote.getProducto().getId().longValue());
                         if (plantillaDto != null) {
