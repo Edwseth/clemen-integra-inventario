@@ -95,7 +95,7 @@ class OrdenProduccionControllerSecurityTest {
     @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
     @DisplayName("GET /api/produccion/ordenes permite consulta a jefe de calidad")
     void listarOrdenes_conRolJefeCalidad_devuelve200() throws Exception {
-        when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
+        when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
 
         mockMvc.perform(get("/api/produccion/ordenes"))
                 .andExpect(status().isOk());
@@ -135,7 +135,7 @@ class OrdenProduccionControllerSecurityTest {
     @WithMockUser(authorities = "ROL_PLANEADOR")
     @DisplayName("GET /api/produccion/ordenes permite listar con rol planeador")
     void listarOrdenes_conRolPlaneador_devuelve200() throws Exception {
-        when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
+        when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
 
         mockMvc.perform(get("/api/produccion/ordenes"))
                 .andExpect(status().isOk());

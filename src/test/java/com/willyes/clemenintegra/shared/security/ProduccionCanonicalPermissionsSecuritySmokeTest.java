@@ -104,7 +104,7 @@ class ProduccionCanonicalPermissionsSecuritySmokeTest {
     @Test
     @WithMockUser(authorities = "PROD_READ")
     void prodReadPermiteListarYVerOrdenes() throws Exception {
-        when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
+        when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
         when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/produccion/ordenes"))

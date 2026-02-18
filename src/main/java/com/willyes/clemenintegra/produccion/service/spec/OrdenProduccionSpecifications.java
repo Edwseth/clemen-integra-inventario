@@ -23,6 +23,15 @@ public final class OrdenProduccionSpecifications {
         };
     }
 
+
+    public static Specification<OrdenProduccion> byProducto(String producto) {
+        return (root, query, cb) -> {
+            if (producto == null || producto.isBlank()) return cb.conjunction();
+            var p = root.join("producto", JoinType.LEFT);
+            return cb.like(cb.lower(p.get("nombre")), "%" + producto.trim().toLowerCase() + "%");
+        };
+    }
+
     public static Specification<OrdenProduccion> byEstado(EstadoProduccion estado) {
         return (root, query, cb) -> estado == null ? cb.conjunction() : cb.equal(root.get("estado"), estado);
     }

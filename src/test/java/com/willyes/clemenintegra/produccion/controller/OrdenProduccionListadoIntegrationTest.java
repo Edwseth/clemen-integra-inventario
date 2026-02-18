@@ -88,11 +88,26 @@ class OrdenProduccionListadoIntegrationTest extends IntegrationTestH2 {
                 .tipo(TipoCategoria.PRODUCTO_TERMINADO)
                 .build());
 
-        String nombreProducto = "Producto OP " + uniqueSuffix;
+        String nombreProducto = "Magnesio Supremo " + uniqueSuffix;
         Producto producto = productoRepository.save(Producto.builder()
                 .codigoSku("SKU-" + uniqueSuffix)
                 .nombre(nombreProducto)
                 .descripcionProducto("Producto para orden")
+                .stockMinimo(BigDecimal.ZERO)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .creadoPor(usuario)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .requiereAnalisisFisico(false)
+                .requiereAnalisisQuimico(false)
+                .requiereAnalisisMicrobiologico(false)
+                .activo(true)
+                .build());
+
+        Producto productoNoCoincide = productoRepository.save(Producto.builder()
+                .codigoSku("SKU-ALT-" + uniqueSuffix)
+                .nombre("Vitamina C " + uniqueSuffix)
+                .descripcionProducto("Producto alterno")
                 .stockMinimo(BigDecimal.ZERO)
                 .unidadMedida(unidad)
                 .categoriaProducto(categoria)
@@ -116,10 +131,24 @@ class OrdenProduccionListadoIntegrationTest extends IntegrationTestH2 {
                 .responsable(usuario)
                 .build());
 
+        ordenProduccionRepository.save(OrdenProduccion.builder()
+                .codigoOrden("OP-002")
+                .fechaInicio(LocalDateTime.now().minusHours(2))
+                .cantidadProgramada(BigDecimal.ONE)
+                .cantidadProducida(BigDecimal.ZERO)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .estado(EstadoProduccion.CREADA)
+                .producto(productoNoCoincide)
+                .unidadMedida(unidad)
+                .responsable(usuario)
+                .build());
+
         mockMvc.perform(get("/api/produccion/ordenes")
+                        .param("producto", "magnesio")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].nombreProducto").value(nombreProducto))
                 .andExpect(jsonPath("$.content[0].nombreResponsable").value("Responsable OP"));
     }
