@@ -5,7 +5,7 @@ import com.willyes.clemenintegra.produccion.controller.BatchRecordController;
 import com.willyes.clemenintegra.produccion.controller.OrdenProduccionController;
 import com.willyes.clemenintegra.produccion.dto.BatchRecordDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
-import com.willyes.clemenintegra.produccion.enums.EstadoProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.ControlEmpaqueLoteRepository;
 import com.willyes.clemenintegra.produccion.repository.ControlProcesoProduccionRepository;
