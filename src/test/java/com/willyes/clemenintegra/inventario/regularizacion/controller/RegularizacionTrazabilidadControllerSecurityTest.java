@@ -123,7 +123,7 @@ class RegularizacionTrazabilidadControllerSecurityTest {
                         .header("Idempotency-Key", "k1")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request()))
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador").authorities(() -> "ROL_CONTADOR")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("contador").authorities(() -> "PROD_TRAZABILIDAD_REGULARIZACION")))
                 .andExpect(status().isCreated());
     }
 
