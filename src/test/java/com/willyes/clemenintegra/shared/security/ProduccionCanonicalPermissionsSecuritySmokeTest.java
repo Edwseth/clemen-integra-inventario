@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.produccion.controller.BatchRecordController;
 import com.willyes.clemenintegra.produccion.controller.OrdenProduccionController;
 import com.willyes.clemenintegra.produccion.dto.BatchRecordDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.ControlEmpaqueLoteRepository;
 import com.willyes.clemenintegra.produccion.repository.ControlProcesoProduccionRepository;
@@ -34,10 +35,12 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -149,7 +152,7 @@ class ProduccionCanonicalPermissionsSecuritySmokeTest {
     @Test
     @WithMockUser(authorities = "PROD_EXPORT")
     void prodExportPermiteExportarOrdenes() throws Exception {
-        when(ordenProduccionService.listar(any(), any(), any(), any(), any())).thenReturn(List.of());
+        when(ordenProduccionService.listar(anyString(), anyString(), any(EstadoProduccion.class), anyString(), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(List.of());
         when(reporteOrdenProduccionService.generarPdfOrdenesProduccion(any())).thenReturn("pdf".getBytes());
 
         mockMvc.perform(get("/api/produccion/ordenes/export/pdf"))
