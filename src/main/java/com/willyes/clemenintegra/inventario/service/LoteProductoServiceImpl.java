@@ -143,8 +143,8 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .collect(Collectors.toList());
     }
 
-    public org.springframework.data.domain.Page<LoteProductoResponseDTO> obtenerLotesPorEvaluar(org.springframework.data.domain.Pageable pageable) {
-        List<EstadoLote> estados = List.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO);
+    public org.springframework.data.domain.Page<LoteProductoResponseDTO> obtenerLotesPorEvaluar(EstadoLote estado, org.springframework.data.domain.Pageable pageable) {
+        List<EstadoLote> estadosPorDefecto = List.of(EstadoLote.EN_CUARENTENA, EstadoLote.RETENIDO);
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         java.util.Set<String> authorities = auth != null
@@ -165,7 +165,11 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         org.springframework.data.jpa.domain.Specification<LoteProducto> specification = (root, query, builder) -> {
             var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
-            predicates.add(root.get("estado").in(estados));
+            if (estado != null) {
+                predicates.add(builder.equal(root.get("estado"), estado));
+            } else {
+                predicates.add(root.get("estado").in(estadosPorDefecto));
+            }
             if (!jefe && !superAdmin) {
                 var productoJoin = root.join("producto");
                 if (analista && micro) {
