@@ -21,8 +21,12 @@ public class DetalleFormulaServiceImpl implements DetalleFormulaService {
     private final FormulaProductoRepository formulaRepository;
 
     @Override
-    public List<DetalleFormula> listarTodas() {
-        return detalleRepository.findAll();
+    public List<DetalleFormula> listarTodas(Long formulaId, String insumo) {
+        String insumoNormalizado = insumo != null ? insumo.trim() : null;
+        if (insumoNormalizado != null && insumoNormalizado.isBlank()) {
+            insumoNormalizado = null;
+        }
+        return detalleRepository.findByFiltros(formulaId, insumoNormalizado);
     }
 
     @Override

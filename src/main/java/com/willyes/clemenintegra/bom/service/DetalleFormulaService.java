@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DetalleFormulaService {
-    List<DetalleFormula> listarTodas();
+    List<DetalleFormula> listarTodas(Long formulaId, String insumo);
     Optional<DetalleFormula> buscarPorId(Long id);
     DetalleFormula guardar(DetalleFormula detalle);
     void eliminar(Long id);
