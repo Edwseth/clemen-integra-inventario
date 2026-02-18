@@ -160,7 +160,7 @@ class RoleJefeAlmacenesSecuritySmokeTest {
         when(usuarioService.buscarPorNombreUsuario(anyString())).thenReturn(usuario);
         when(solicitudMovimientoService.aprobarSolicitud(anyLong(), anyLong())).thenReturn(null);
 
-        when(ordenCompraService.listar(any(), any(Boolean.class))).thenReturn(new PageImpl<>(List.of()));
+        when(ordenCompraService.listarFiltrado(any(), any(Boolean.class), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(controlDocumentalService.buscarDocumentos(any(), any(), any(), any(), any())).thenReturn(Page.empty());
     }
 

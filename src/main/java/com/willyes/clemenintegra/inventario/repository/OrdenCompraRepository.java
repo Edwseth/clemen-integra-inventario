@@ -116,4 +116,56 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
               )
             """)
     Page<OrdenCompraResponseDTO> findListadoAtrasadas(Pageable pageable, @Param("estados") Set<EstadoOrdenCompra> estados);
+
+
+    @Query(value = """
+            select new com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO(
+                o.id,
+                o.codigoOrden,
+                o.estado,
+                p.nombre,
+                o.fechaOrden,
+                o.fechaCompromisoEntrega,
+                o.descuento,
+                coalesce(sum(d.cantidad), 0),
+                coalesce(sum(d.cantidadRecibida), 0)
+            )
+            from OrdenCompra o
+            join o.proveedor p
+            left join o.detalles d
+            where (:estado is null or o.estado = :estado)
+              and (:proveedor is null or lower(p.nombre) like lower(concat('%', :proveedor, '%')))
+              and (:atrasadas = false
+                    or (
+                        o.fechaCompromisoEntrega is not null
+                        and o.fechaCompromisoEntrega < current_date
+                        and o.estado in :estadosAtrasadas
+                        and exists (
+                            select 1 from OrdenCompraDetalle d1
+                            where d1.ordenCompra = o and d1.cantidadRecibida < d1.cantidad
+                        )
+                    ))
+            group by o.id, o.codigoOrden, o.estado, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
+            """,
+            countQuery = """
+            select count(o) from OrdenCompra o
+            join o.proveedor p
+            where (:estado is null or o.estado = :estado)
+              and (:proveedor is null or lower(p.nombre) like lower(concat('%', :proveedor, '%')))
+              and (:atrasadas = false
+                    or (
+                        o.fechaCompromisoEntrega is not null
+                        and o.fechaCompromisoEntrega < current_date
+                        and o.estado in :estadosAtrasadas
+                        and exists (
+                            select 1 from OrdenCompraDetalle d1
+                            where d1.ordenCompra = o and d1.cantidadRecibida < d1.cantidad
+                        )
+                    ))
+            """)
+    Page<OrdenCompraResponseDTO> findListadoFiltrado(Pageable pageable,
+                                                     @Param("atrasadas") boolean atrasadas,
+                                                     @Param("estadosAtrasadas") Set<EstadoOrdenCompra> estadosAtrasadas,
+                                                     @Param("estado") EstadoOrdenCompra estado,
+                                                     @Param("proveedor") String proveedor);
 }
