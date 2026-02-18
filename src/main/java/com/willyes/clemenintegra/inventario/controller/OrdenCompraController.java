@@ -169,8 +169,10 @@ public class OrdenCompraController {
     @GetMapping
     public ResponseEntity<Page<OrdenCompraResponseDTO>> listar(
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestParam(name = "estado", required = false) EstadoOrdenCompra estado,
+            @RequestParam(name = "proveedor", required = false) String proveedor,
             @RequestParam(name = "atrasadas", required = false, defaultValue = "false") boolean atrasadas) {
-        Page<OrdenCompraResponseDTO> page = ordenCompraService.listar(pageable, atrasadas);
+        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarFiltrado(pageable, atrasadas, estado, proveedor);
         return ResponseEntity.ok(page);
     }
 
@@ -178,7 +180,7 @@ public class OrdenCompraController {
     public ResponseEntity<Page<OrdenCompraResponseDTO>> listarPorEstado(
             @RequestParam EstadoOrdenCompra estado,
             @PageableDefault(size = 10) Pageable pageable) {
-        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarPorEstado(estado, pageable);
+        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarFiltrado(pageable, false, estado, null);
         return ResponseEntity.ok(page);
     }
 

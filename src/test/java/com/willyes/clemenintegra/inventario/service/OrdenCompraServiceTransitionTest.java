@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.nullable;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -103,11 +105,11 @@ class OrdenCompraServiceTransitionTest {
     @Test
     void atrasadasBranchUsesRepository() {
         Pageable pageable = Pageable.unpaged();
-        when(ordenCompraRepository.findListadoAtrasadas(any(), any(Set.class)))
+        when(ordenCompraRepository.findListadoFiltrado(any(), anyBoolean(), any(Set.class), nullable(EstadoOrdenCompra.class), nullable(String.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         Page<?> result = ordenCompraService.listar(pageable, true);
         assertNotNull(result);
-        verify(ordenCompraRepository).findListadoAtrasadas(eq(pageable), any(Set.class));
+        verify(ordenCompraRepository).findListadoFiltrado(eq(pageable), eq(true), any(Set.class), isNull(), isNull());
     }
 
     @Test

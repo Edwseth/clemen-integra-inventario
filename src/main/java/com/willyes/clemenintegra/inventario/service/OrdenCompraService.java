@@ -45,15 +45,24 @@ public class OrdenCompraService {
     }
 
     public Page<OrdenCompraResponseDTO> listar(Pageable pageable, boolean atrasadas) {
-        if (atrasadas) {
-            return ordenCompraRepository.findListadoAtrasadas(pageable,
-                    EnumSet.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.PARCIALMENTE_RECIBIDA));
-        }
-        return ordenCompraRepository.findListado(pageable);
+        return listarFiltrado(pageable, atrasadas, null, null);
+    }
+
+    public Page<OrdenCompraResponseDTO> listarFiltrado(Pageable pageable,
+                                                       boolean atrasadas,
+                                                       EstadoOrdenCompra estado,
+                                                       String proveedor) {
+        String proveedorNormalizado = (proveedor == null || proveedor.isBlank()) ? null : proveedor.trim();
+        return ordenCompraRepository.findListadoFiltrado(
+                pageable,
+                atrasadas,
+                EnumSet.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.PARCIALMENTE_RECIBIDA),
+                estado,
+                proveedorNormalizado);
     }
 
     public Page<OrdenCompraResponseDTO> listarPorEstado(EstadoOrdenCompra estado, Pageable pageable) {
-        return ordenCompraRepository.findListadoPorEstado(estado, pageable);
+        return listarFiltrado(pageable, false, estado, null);
     }
 
     public String generarCodigoOrdenCompra() {
