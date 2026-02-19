@@ -172,7 +172,7 @@ class SolicitudMovimientoControllerSecurityTest {
 
         mockMvc.perform(put("/api/inventario/solicitudes/1/aprobar")
                         .with(SecurityMockMvcRequestPostProcessors.user("decisor")
-                                .authorities(() -> "INV_DECIDE")))
+                                .authorities(() -> "INV_WORKFLOW")))
                 .andExpect(status().isOk());
     }
 

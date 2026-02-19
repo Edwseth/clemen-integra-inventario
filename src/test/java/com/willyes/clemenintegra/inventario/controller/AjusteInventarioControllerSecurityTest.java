@@ -128,7 +128,7 @@ class AjusteInventarioControllerSecurityTest {
 
         mockMvc.perform(post("/api/inventario/ajustes")
                         .with(SecurityMockMvcRequestPostProcessors.user("contador-permiso")
-                                .authorities(() -> "INV_WRITE"))
+                                .authorities(() -> "INV_AJUSTES_WRITE"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());

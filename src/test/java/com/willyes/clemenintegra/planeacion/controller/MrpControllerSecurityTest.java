@@ -67,7 +67,7 @@ class MrpControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "PO_MRP_WRITE")
+    @WithMockUser(authorities = "PO_MRP_READ")
     void getCorridaPermiteSuperAdmin() throws Exception {
         when(mrpService.obtenerCorrida(9L)).thenReturn(CorridaMrp.builder().id(9L).build());
 
