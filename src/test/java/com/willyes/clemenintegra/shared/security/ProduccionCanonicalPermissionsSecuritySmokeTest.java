@@ -164,8 +164,9 @@ class ProduccionCanonicalPermissionsSecuritySmokeTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"PROD_EXPORT", "PROD_OP_EXPORT"})
+    @WithMockUser(authorities = {"PROD_READ", "PROD_EXPORT", "PROD_OP_EXPORT"})
     void prodExportPermiteExportarOrdenes() throws Exception {
+        // /api/produccion/ordenes/export/pdf requiere PROD_READ por SecurityConfig y PROD_EXPORT|PROD_OP_EXPORT por @PreAuthorize.
         when(ordenProduccionService.listar(anyString(), anyString(), any(EstadoProduccion.class), anyString(), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(List.of());
         when(reporteOrdenProduccionService.generarPdfOrdenesProduccion(any())).thenReturn("pdf".getBytes());
 
@@ -183,8 +184,9 @@ class ProduccionCanonicalPermissionsSecuritySmokeTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"PROD_EXPORT", "PROD_BATCH_RECORD_EXPORT"})
+    @WithMockUser(authorities = {"PROD_READ", "PROD_EXPORT", "PROD_BATCH_RECORD_EXPORT"})
     void prodExportPermiteExportarBatchRecord() throws Exception {
+        // /api/produccion/batch-record/{id}/pdf cae en /api/produccion/** (PROD_READ en SecurityConfig) y además exige export por @PreAuthorize.
         when(batchRecordService.buildByOrdenProduccion(1L)).thenReturn(new BatchRecordDTO());
         when(reporteBatchRecordService.generarPdfBatchRecord(1L)).thenReturn("pdf".getBytes());
 
