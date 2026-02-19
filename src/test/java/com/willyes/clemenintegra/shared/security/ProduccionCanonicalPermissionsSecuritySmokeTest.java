@@ -125,7 +125,18 @@ class ProduccionCanonicalPermissionsSecuritySmokeTest {
 
         mockMvc.perform(post("/api/produccion/ordenes")
                         .contentType("application/json")
-                        .content("{}"))
+                        .content("""
+                                {
+                                  "fechaInicio": "2026-01-29T10:00:00",
+                                  "fechaFin": "2026-01-30T10:00:00",
+                                  "cantidadProgramada": 10,
+                                  "estado": "CREADA",
+                                  "productoId": 1,
+                                  "responsableId": 1,
+                                  "unidadMedidaSimbolo": "kg",
+                                  "confirmacionHomeopatico": false
+                                }
+                                """))
                 .andExpect(status().isCreated());
     }
 
@@ -141,7 +152,11 @@ class ProduccionCanonicalPermissionsSecuritySmokeTest {
     @Test
     @WithMockUser(authorities = "PROD_WORKFLOW_FINISH")
     void prodWorkflowFinishPermiteFinalizarEtapa() throws Exception {
-        when(ordenProduccionService.finalizar(any(), any())).thenReturn(OrdenProduccion.builder().id(1L).codigoOrden("OP-1").build());
+        when(ordenProduccionService.finalizar(any(), any())).thenReturn(OrdenProduccion.builder()
+                .id(1L)
+                .codigoOrden("OP-1")
+                .estado(EstadoProduccion.FINALIZADA)
+                .build());
 
         mockMvc.perform(put("/api/produccion/ordenes/{id}/finalizar", 1L)
                         .contentType("application/json")

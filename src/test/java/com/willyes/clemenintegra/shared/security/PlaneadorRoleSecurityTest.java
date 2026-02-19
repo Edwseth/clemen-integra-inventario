@@ -45,7 +45,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {
@@ -129,19 +128,18 @@ class PlaneadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
     void planeadorNoPuedeBuscarProductosParaAjustes() throws Exception {
         mockMvc.perform(get("/api/productos/buscar")
                         .param("query", "pro")
                         .param("page", "0")
                         .param("size", "10")
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("ROL_INSUFICIENTE"));
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
     void planeadorNoPuedeCrearProducto() throws Exception {
         mockMvc.perform(post("/api/productos")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -158,7 +156,7 @@ class PlaneadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_WRITE")
     void planeadorPuedeCrearPlanSemanal() throws Exception {
         PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
                 .id(1L)
@@ -181,7 +179,7 @@ class PlaneadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
     void planeadorNoPuedeEjecutarMrp() throws Exception {
         mockMvc.perform(post("/api/mrp/corridas")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -257,7 +257,7 @@ class ContadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = {"PROD_INDICADORES_READ", "PROD_ALERTAS_READ"})
     void contadorPuedeConsultarIndicadoresYAlertasPeroNoCapas() throws Exception {
         when(produccionIndicadoresService.calcularIndicadores(any(), any(), org.mockito.ArgumentMatchers.anyInt()))
                 .thenReturn(IndicadoresProduccionResponseDTO.builder().build());
@@ -278,7 +278,7 @@ class ContadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void contadorPuedeListarConteos() throws Exception {
         when(conteoCiclicoService.listar(any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
 
@@ -324,7 +324,7 @@ class ContadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = {"INV_AJUSTES_READ", "INV_AJUSTES_WRITE"})
     void contadorPuedeListarYAjustarInventario() throws Exception {
         when(ajusteInventarioService.listar(any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(ajusteInventarioService.crear(any(AjusteInventarioRequestDTO.class))).thenReturn(
@@ -395,7 +395,7 @@ class ContadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "INV_REPORTES_EXPORT")
     void contadorPuedeExportarReportesInventarioYRotacion() throws Exception {
         when(reporteInventarioService.generarReporteAltaRotacion(any(), any())).thenReturn(new org.apache.poi.xssf.usermodel.XSSFWorkbook());
         when(reporteInventarioService.generarReporteBajaRotacion(any(), any())).thenReturn(new org.apache.poi.xssf.usermodel.XSSFWorkbook());
@@ -422,7 +422,7 @@ class ContadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_READ")
     void contadorPuedeConsultarPlanSemanalPeroNoMutarlo() throws Exception {
         when(planProduccionService.listar(any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(planProduccionService.buscarPorId(1L)).thenReturn(Optional.of(new PlanProduccionSemanal()));
@@ -462,7 +462,7 @@ class ContadorRoleSecurityTest {
 
 
     @Test
-    @WithMockUser(authorities = {"ROL_CONTADOR", "CONTROL_DOCUMENTAL_WRITE"})
+    @WithMockUser(authorities = "DOC_WRITE")
     void contadorPuedeCrearYSubirControlDocumentalPeroNoEliminar() throws Exception {
         when(controlDocumentalService.crearDocumento(any(), any())).thenReturn(DocumentoDTO.builder().build());
         when(controlDocumentalService.agregarVersion(any(), any(), any(), any())).thenReturn(DocumentoVersionDTO.builder().build());

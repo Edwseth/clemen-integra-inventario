@@ -91,7 +91,7 @@ class BitacoraCambiosInventarioControllerSecurityTest {
 
         mockMvc.perform(get("/api/inventario/bitacora")
                         .with(SecurityMockMvcRequestPostProcessors.user("lector")
-                                .authorities(() -> "INV_READ")))
+                                .authorities(() -> "INV_DECIDE")))
                 .andExpect(status().isOk());
 
         verify(bitacoraCambiosInventarioService).listar();

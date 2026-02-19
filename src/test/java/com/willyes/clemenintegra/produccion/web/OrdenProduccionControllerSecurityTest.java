@@ -117,7 +117,18 @@ class OrdenProduccionControllerSecurityTest {
     void crearOrden_conRolJefeCalidad_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/ordenes")
                         .contentType("application/json")
-                        .content("{}"))
+                        .content("""
+                        {
+                          "fechaInicio": "2026-01-29T10:00:00",
+                          "fechaFin": "2026-01-30T10:00:00",
+                          "cantidadProgramada": 10,
+                          "estado": "CREADA",
+                          "productoId": 1,
+                          "responsableId": 1,
+                          "unidadMedidaSimbolo": "kg",
+                          "confirmacionHomeopatico": false
+                        }
+                        """))
                 .andExpect(status().isForbidden());
     }
 
@@ -132,8 +143,8 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "PO_READ")
-    @DisplayName("GET /api/produccion/ordenes permite listar con rol planeador")
+    @WithMockUser(authorities = "PROD_READ")
+    @DisplayName("GET /api/produccion/ordenes permite listar con permiso canónico")
     void listarOrdenes_conRolPlaneador_devuelve200() throws Exception {
         when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
 
@@ -142,8 +153,8 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "PO_READ")
-    @DisplayName("GET /api/produccion/ordenes/{id} permite ver detalle con rol planeador")
+    @WithMockUser(authorities = "PROD_READ")
+    @DisplayName("GET /api/produccion/ordenes/{id} permite ver detalle con permiso canónico")
     void obtenerOrden_conRolPlaneador_devuelve404SiNoExiste() throws Exception {
         when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.empty());
 
@@ -152,7 +163,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"PO_READ", "PROD_WRITE"})
+    @WithMockUser(authorities = "PROD_WRITE")
     @DisplayName("POST /api/produccion/ordenes permite crear con permiso de creación")
     void crearOrden_conRolPlaneador_devuelve201() throws Exception {
         when(ordenProduccionService.crearOrden(any()))
@@ -160,7 +171,18 @@ class OrdenProduccionControllerSecurityTest {
 
         mockMvc.perform(post("/api/produccion/ordenes")
                         .contentType("application/json")
-                        .content("{}"))
+                        .content("""
+                                {
+                                  "fechaInicio": "2026-01-29T10:00:00",
+                                  "fechaFin": "2026-01-30T10:00:00",
+                                  "cantidadProgramada": 10,
+                                  "estado": "CREADA",
+                                  "productoId": 1,
+                                  "responsableId": 1,
+                                  "unidadMedidaSimbolo": "kg",
+                                  "confirmacionHomeopatico": false
+                                }
+                                """))
                 .andExpect(status().isCreated());
     }
 
@@ -251,8 +273,8 @@ class OrdenProduccionControllerSecurityTest {
                 .andExpect(status().isUnauthorized());
     }
     @Test
-    @WithMockUser(authorities = "PROD_OP_READ")
-    @DisplayName("GET /api/produccion/ordenes/lookup permite contador via capa HTTP")
+    @WithMockUser(authorities = "PROD_READ")
+    @DisplayName("GET /api/produccion/ordenes/lookup permite acceso con permiso de lectura")
     void lookup_conRolContador_noDevuelve403() throws Exception {
         when(ordenProduccionRepository.findByCodigoOrdenIgnoreCase("OP-CLEMEN-20260129-05"))
                 .thenReturn(Optional.empty());
@@ -272,7 +294,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"PROD_OP_READ", "PROD_WRITE"})
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/lookup serializa categoriaProducto sin 500")
     void lookup_conSuperAdmin_serializaCategoriaSin500() throws Exception {
         OrdenProduccion orden = OrdenProduccion.builder()

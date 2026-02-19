@@ -31,6 +31,14 @@ class SecurityConfigCanonicalRequestMatchersSmokeTest {
     private JwtAuthenticationProvider jwtAuthenticationProvider;
     @MockBean
     private UsuarioInactivoFilter usuarioInactivoFilter;
+    @MockBean
+    private com.willyes.clemenintegra.shared.repository.UsuarioRepository usuarioRepository;
+    @MockBean
+    private com.willyes.clemenintegra.shared.performance.RequestTimingFilter requestTimingFilter;
+    @MockBean
+    private com.willyes.clemenintegra.shared.logging.RequestIdFilter requestIdFilter;
+    @MockBean
+    private SuperAdminSoloLecturaWriteBlockFilter superAdminSoloLecturaWriteBlockFilter;
 
 
     @Test
