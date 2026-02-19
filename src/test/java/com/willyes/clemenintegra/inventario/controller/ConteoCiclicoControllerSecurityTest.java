@@ -30,9 +30,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.willyes.clemenintegra.support.SecurityTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -122,8 +122,7 @@ class ConteoCiclicoControllerSecurityTest {
         mockMvc.perform(get("/api/inventario/conteos")
                         .param("page", "0")
                         .param("size", "10")
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador-permiso")
-                                .authorities(() -> "INV_READ")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador-permiso", "INV_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -142,8 +141,7 @@ class ConteoCiclicoControllerSecurityTest {
         mockMvc.perform(post("/api/inventario/conteos")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request))
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador-write")
-                                .authorities(() -> "INV_CONTEOS_WRITE")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador-write", "INV_CONTEOS_WRITE")))
                 .andExpect(status().isCreated());
     }
 
@@ -155,8 +153,7 @@ class ConteoCiclicoControllerSecurityTest {
         mockMvc.perform(post("/api/inventario/conteos")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request))
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador-read")
-                                .authorities(() -> "INV_READ")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador-read", "INV_READ")))
                 .andExpect(status().isForbidden());
     }
 
@@ -164,8 +161,7 @@ class ConteoCiclicoControllerSecurityTest {
     @Test
     void rechazaCerrarConteoSinPermisoCloseAunqueTengaWriteYStart() throws Exception {
         mockMvc.perform(post("/api/inventario/conteos/77/cerrar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-sin-close")
-                                .authorities(() -> "INV_CONTEOS_START")))
+                        .with(SecurityTestUtils.userWithAuthorities("jefe-sin-close", "INV_CONTEOS_START")))
                 .andExpect(status().isForbidden());
     }
 
@@ -178,8 +174,7 @@ class ConteoCiclicoControllerSecurityTest {
         when(conteoCiclicoService.cerrar(77L)).thenReturn(response);
 
         mockMvc.perform(post("/api/inventario/conteos/77/cerrar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador-close")
-                                .authorities(() -> "INV_CONTEOS_CLOSE")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador-close", "INV_CONTEOS_CLOSE")))
                 .andExpect(status().isOk());
     }
 
@@ -193,8 +188,7 @@ class ConteoCiclicoControllerSecurityTest {
 
         mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
                         .header("Idempotency-Key", "k1")
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador")
-                                .authorities(() -> "INV_CONTEOS_APPLY")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador", "INV_CONTEOS_APPLY")))
                 .andExpect(status().isOk());
     }
 
@@ -207,24 +201,21 @@ class ConteoCiclicoControllerSecurityTest {
         when(conteoCiclicoService.marcarEnConteo(55L)).thenReturn(response);
 
         mockMvc.perform(post("/api/inventario/conteos/55/iniciar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
-                                .authorities(() -> "INV_CONTEOS_START")))
+                        .with(SecurityTestUtils.userWithAuthorities("jefe-almacen", "INV_CONTEOS_START")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void rechazaAplicarConteoConRolJefeAlmacenes() throws Exception {
         mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("jefe")
-                                .authorities(() -> "ROL_JEFE_ALMACENES")))
+                        .with(SecurityTestUtils.userWithAuthorities("jefe", "ROL_JEFE_ALMACENES")))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void rechazaAplicarConteoConPermisoWriteSinPermisoApply() throws Exception {
         mockMvc.perform(post("/api/inventario/conteos/77/aplicar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("perm-write")
-                                .authorities(() -> "INV_CONTEOS_WRITE")))
+                        .with(SecurityTestUtils.userWithAuthorities("perm-write", "INV_CONTEOS_WRITE")))
                 .andExpect(status().isForbidden());
     }
 
@@ -243,18 +234,15 @@ class ConteoCiclicoControllerSecurityTest {
         mockMvc.perform(post("/api/inventario/conteos")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request))
-                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
-                                .authorities(() -> "ROL_JEFE_ALMACENES", () -> "INV_CONTEOS_WRITE", () -> "INV_CONTEOS_START")))
+                        .with(SecurityTestUtils.userWithAuthorities("jefe-almacen", "ROL_JEFE_ALMACENES", "INV_CONTEOS_WRITE", "INV_CONTEOS_START")))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/inventario/conteos/10/aplicar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
-                                .authorities(() -> "ROL_JEFE_ALMACENES", () -> "INV_CONTEOS_WRITE", () -> "INV_CONTEOS_START")))
+                        .with(SecurityTestUtils.userWithAuthorities("jefe-almacen", "ROL_JEFE_ALMACENES", "INV_CONTEOS_WRITE", "INV_CONTEOS_START")))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/api/inventario/conteos/10/cerrar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-almacen")
-                                .authorities(() -> "ROL_JEFE_ALMACENES", () -> "INV_CONTEOS_WRITE", () -> "INV_CONTEOS_START")))
+                        .with(SecurityTestUtils.userWithAuthorities("jefe-almacen", "ROL_JEFE_ALMACENES", "INV_CONTEOS_WRITE", "INV_CONTEOS_START")))
                 .andExpect(status().isForbidden());
     }
 
@@ -272,14 +260,12 @@ class ConteoCiclicoControllerSecurityTest {
         when(conteoCiclicoService.aplicar(88L, "k-contador")).thenReturn(aplicado);
 
         mockMvc.perform(post("/api/inventario/conteos/88/cerrar")
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador")
-                                .authorities(() -> "ROL_CONTADOR", () -> "INV_CONTEOS_CLOSE", () -> "INV_CONTEOS_APPLY")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador", "ROL_CONTADOR", "INV_CONTEOS_CLOSE", "INV_CONTEOS_APPLY")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/inventario/conteos/88/aplicar")
                         .header("Idempotency-Key", "k-contador")
-                        .with(SecurityMockMvcRequestPostProcessors.user("contador")
-                                .authorities(() -> "ROL_CONTADOR", () -> "INV_CONTEOS_CLOSE", () -> "INV_CONTEOS_APPLY")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador", "ROL_CONTADOR", "INV_CONTEOS_CLOSE", "INV_CONTEOS_APPLY")))
                 .andExpect(status().isOk());
     }
 

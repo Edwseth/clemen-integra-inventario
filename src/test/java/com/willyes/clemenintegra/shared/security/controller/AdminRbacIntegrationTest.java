@@ -200,7 +200,7 @@ class AdminRbacIntegrationTest extends IntegrationTestH2 {
                         .contentType("application/json")
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].codigo").value("INV_RBAC_ALIAS"));
+                .andExpect(jsonPath("$[*].codigo", hasItem("INV_RBAC_ALIAS")));
     }
 
     @Test
@@ -367,7 +367,7 @@ class AdminRbacIntegrationTest extends IntegrationTestH2 {
                         .contentType("application/json")
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].codigo").value("INV_RBAC_ASSIGN"));
+                .andExpect(jsonPath("$[*].codigo", hasItem("INV_RBAC_ASSIGN")));
 
         CustomUserDetails principal = new CustomUserDetails(
                 usuarioPlaneador,

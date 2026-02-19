@@ -25,3 +25,14 @@ CREATE TABLE IF NOT EXISTS roles_permisos (
     CONSTRAINT fk_roles_permisos_permiso FOREIGN KEY (permiso_id) REFERENCES permisos (id),
     CONSTRAINT pk_roles_permisos PRIMARY KEY (rol_id, permiso_id)
 );
+
+CREATE TABLE IF NOT EXISTS usuarios_roles (
+    usuario_id BIGINT NOT NULL,
+    rol_id BIGINT NOT NULL,
+    CONSTRAINT pk_usuarios_roles PRIMARY KEY (usuario_id, rol_id),
+    CONSTRAINT fk_usuarios_roles_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id),
+    CONSTRAINT fk_usuarios_roles_rol FOREIGN KEY (rol_id) REFERENCES roles (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_roles_usuario_id ON usuarios_roles (usuario_id);
+CREATE INDEX IF NOT EXISTS idx_usuarios_roles_rol_id ON usuarios_roles (rol_id);
