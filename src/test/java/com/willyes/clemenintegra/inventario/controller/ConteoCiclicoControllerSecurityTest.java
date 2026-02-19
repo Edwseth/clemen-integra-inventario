@@ -122,7 +122,7 @@ class ConteoCiclicoControllerSecurityTest {
         mockMvc.perform(get("/api/inventario/conteos")
                         .param("page", "0")
                         .param("size", "10")
-                        .with(SecurityTestUtils.userWithAuthorities("contador-permiso", "INV_READ")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador-permiso", "INV_CONTEOS_READ")))
                 .andExpect(status().isOk());
     }
 
@@ -153,7 +153,7 @@ class ConteoCiclicoControllerSecurityTest {
         mockMvc.perform(post("/api/inventario/conteos")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request))
-                        .with(SecurityTestUtils.userWithAuthorities("contador-read", "INV_READ")))
+                        .with(SecurityTestUtils.userWithAuthorities("contador-read", "INV_CONTEOS_READ")))
                 .andExpect(status().isForbidden());
     }
 

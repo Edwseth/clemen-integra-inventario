@@ -127,8 +127,7 @@ class ProduccionCanonicalPermissionsSecuritySmokeTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "fechaInicio": "2026-01-29T10:00:00",
-                                  "fechaFin": "2026-01-30T10:00:00",
+                                  "fechaProgramada": "2099-01-29T10:00:00",
                                   "cantidadProgramada": 10,
                                   "estado": "CREADA",
                                   "productoId": 1,

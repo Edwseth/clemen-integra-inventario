@@ -341,6 +341,8 @@ public class SecurityConfig {
 
                     auth.requestMatchers("/api/produccion/calidad/**").hasAnyAuthority(
                             "PROD_READ",
+                            "PROD_DECIDE",
+                            "PROD_BATCH_RECORD_DECIDE",
                             "QC_READ",
                             "QC_WRITE"
                     );
@@ -359,6 +361,14 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/api/produccion/ordenes/*/insumos").hasAnyAuthority(
                             "PROD_READ",
                             "PROD_OP_READ"
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/produccion/etapas/*/checklist", "/api/produccion/etapas/orden/*/checklist/export").hasAnyAuthority(
+                            "PROD_ETAPA_CHECKLIST_READ"
+                    );
+
+                    auth.requestMatchers(HttpMethod.PUT, "/api/produccion/etapas/*/checklist").hasAnyAuthority(
+                            "PROD_ETAPA_CHECKLIST_WRITE"
                     );
 
                     // Acceso de solo lectura a órdenes de producción y batch record para rol de calidad
@@ -424,7 +434,8 @@ public class SecurityConfig {
                             "/api/inventario/solicitudes/**"
                     ).hasAnyAuthority(
                             "INV_WRITE",
-                            "INV_WORKFLOW"
+                            "INV_WORKFLOW",
+                            "INV_DECIDE"
                     );
 
                     auth.requestMatchers("/api/inventario/bitacora", "/api/inventario/bitacora/**").hasAnyAuthority(

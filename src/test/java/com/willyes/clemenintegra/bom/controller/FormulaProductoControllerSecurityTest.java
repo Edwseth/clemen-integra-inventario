@@ -46,7 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import com.willyes.clemenintegra.support.TestAuth;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -177,23 +177,23 @@ class FormulaProductoControllerSecurityTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/bom/formulas/{id}/clonar", 1L)
-                        .with(user("jefe-produccion").authorities(() -> "BOM_READ")))
+                        .with(TestAuth.auth("jefe-produccion", "BOM_READ")))
                 .andExpect(status().isForbidden());
 
         CambiarEstadoFormulaRequest request = new CambiarEstadoFormulaRequest(EstadoFormula.APROBADA);
         mockMvc.perform(post("/api/bom/formulas/{id}/cambiar-estado", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
-                        .with(user("jefe-produccion").authorities(() -> "BOM_READ")))
+                        .with(TestAuth.auth("jefe-produccion", "BOM_READ")))
                 .andExpect(status().isForbidden());
 
         MockMultipartFile archivo = new MockMultipartFile("archivo", "nota.txt", MediaType.TEXT_PLAIN_VALUE, "demo".getBytes());
         mockMvc.perform(multipart("/api/bom/formulas/{id}/documentos", 1L).file(archivo)
-                        .with(user("jefe-produccion").authorities(() -> "BOM_READ")))
+                        .with(TestAuth.auth("jefe-produccion", "BOM_READ")))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(delete("/api/bom/formulas/documentos/{documentoId}", 5L)
-                        .with(user("jefe-produccion").authorities(() -> "BOM_READ")))
+                        .with(TestAuth.auth("jefe-produccion", "BOM_READ")))
                 .andExpect(status().isForbidden());
     }
 
@@ -214,23 +214,23 @@ class FormulaProductoControllerSecurityTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/bom/formulas/{id}/clonar", 1L)
-                        .with(user("jefe-calidad").authorities(() -> "BOM_WRITE")))
+                        .with(TestAuth.auth("jefe-calidad", "BOM_WRITE")))
                 .andExpect(status().isCreated());
 
         CambiarEstadoFormulaRequest request = new CambiarEstadoFormulaRequest(EstadoFormula.APROBADA);
         mockMvc.perform(post("/api/bom/formulas/{id}/cambiar-estado", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
-                        .with(user("jefe-calidad").authorities(() -> "BOM_WRITE")))
+                        .with(TestAuth.auth("jefe-calidad", "BOM_WRITE")))
                 .andExpect(status().isOk());
 
         MockMultipartFile archivo = new MockMultipartFile("archivo", "nota.txt", MediaType.TEXT_PLAIN_VALUE, "demo".getBytes());
         mockMvc.perform(multipart("/api/bom/formulas/{id}/documentos", 1L).file(archivo)
-                        .with(user("jefe-calidad").authorities(() -> "BOM_WRITE")))
+                        .with(TestAuth.auth("jefe-calidad", "BOM_WRITE")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(delete("/api/bom/formulas/documentos/{documentoId}", 5L)
-                        .with(user("jefe-calidad").authorities(() -> "BOM_WRITE")))
+                        .with(TestAuth.auth("jefe-calidad", "BOM_WRITE")))
                 .andExpect(status().isNoContent());
     }
 
@@ -259,23 +259,23 @@ class FormulaProductoControllerSecurityTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/bom/formulas/{id}/clonar", 1L)
-                        .with(user("super-admin").authorities(() -> "BOM_WRITE")))
+                        .with(TestAuth.auth("super-admin", "BOM_WRITE")))
                 .andExpect(status().isCreated());
 
         CambiarEstadoFormulaRequest request = new CambiarEstadoFormulaRequest(EstadoFormula.APROBADA);
         mockMvc.perform(post("/api/bom/formulas/{id}/cambiar-estado", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
-                        .with(user("super-admin").authorities(() -> "BOM_WRITE")))
+                        .with(TestAuth.auth("super-admin", "BOM_WRITE")))
                 .andExpect(status().isOk());
 
         MockMultipartFile archivo = new MockMultipartFile("archivo", "nota.txt", MediaType.TEXT_PLAIN_VALUE, "demo".getBytes());
         mockMvc.perform(multipart("/api/bom/formulas/{id}/documentos", 1L).file(archivo)
-                        .with(user("super-admin").authorities(() -> "BOM_WRITE")))
+                        .with(TestAuth.auth("super-admin", "BOM_WRITE")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(delete("/api/bom/formulas/documentos/{documentoId}", 5L)
-                        .with(user("super-admin").authorities(() -> "BOM_WRITE")))
+                        .with(TestAuth.auth("super-admin", "BOM_WRITE")))
                 .andExpect(status().isNoContent());
     }
 

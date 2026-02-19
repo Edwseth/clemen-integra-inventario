@@ -139,7 +139,7 @@ class InventarioCriticalEndpointsSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_READ")
     void jefeAlmacenesPuedeEliminarUnidadesYTiposMovimientoDetalle() throws Exception {
         mockMvc.perform(delete("/api/unidades/1"))
                 .andExpect(status().isNoContent());
@@ -149,7 +149,7 @@ class InventarioCriticalEndpointsSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_COMPRADOR")
+    @WithMockUser(authorities = "INV_READ")
     void compradorPuedeEliminarOrdenCompraDetalle() throws Exception {
         mockMvc.perform(delete("/api/inventario/ordenes-compra-detalle/1"))
                 .andExpect(status().isNoContent());
