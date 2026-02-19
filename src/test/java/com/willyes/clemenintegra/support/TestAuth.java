@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.support;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -25,7 +26,7 @@ public final class TestAuth {
     }
 
     public static UserRequestPostProcessor authWithRoles(String username, String... roles) {
-        GrantedAuthority[] grantedAuthorities = toGrantedAuthorities(roles);
+        List<GrantedAuthority> grantedAuthorities = toGrantedAuthorities(roles);
         return SecurityMockMvcRequestPostProcessors.user(username).authorities(grantedAuthorities);
     }
 
@@ -36,9 +37,9 @@ public final class TestAuth {
         return auth(username, merged.toArray(String[]::new));
     }
 
-    private static GrantedAuthority[] toGrantedAuthorities(String... values) {
+    private static List<GrantedAuthority> toGrantedAuthorities(String... values) {
         return Arrays.stream(values)
                 .map(SimpleGrantedAuthority::new)
-                .toArray(GrantedAuthority[]::new);
+                .toList();
     }
 }
