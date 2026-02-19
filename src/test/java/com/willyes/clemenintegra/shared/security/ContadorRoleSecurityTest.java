@@ -371,6 +371,8 @@ class ContadorRoleSecurityTest {
     @Test
     @WithMockUser(authorities = {
             "ROL_CONTADOR",
+            // /api/lotes/** exige INV_READ|INV_WRITE en SecurityConfig antes del matcher específico INV_LOTES_READ.
+            "INV_READ",
             "INV_PRODUCT_READ",
             "INV_CATEGORIAS_READ",
             "INV_LOTES_READ",

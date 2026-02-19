@@ -246,7 +246,7 @@ class RoleJefeAlmacenesSecuritySmokeTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/ordenes-compra")
-                        .with(authentication(jefeAuth()))
+                        .with(authentication(jefeAuthSinInvWrite()))
                         .contentType("application/json")
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -274,6 +274,28 @@ class RoleJefeAlmacenesSecuritySmokeTest {
         mockMvc.perform(get("/api/bom/formulas")
                         .with(authentication(jefeAuth())))
                 .andExpect(status().isForbidden());
+    }
+
+
+
+    private Authentication jefeAuthSinInvWrite() {
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .nombreUsuario("jefe")
+                .correo("jefe@demo.com")
+                .nombreCompleto("Jefe")
+                .clave("x")
+                .rol(RolUsuario.ROL_JEFE_ALMACENES)
+                .activo(true)
+                .bloqueado(false)
+                .build();
+        java.util.List<SimpleGrantedAuthority> authorities = List.of(
+                new SimpleGrantedAuthority(RolUsuario.ROL_JEFE_ALMACENES.name()),
+                // /api/ordenes-compra POST exige INV_WRITE (SecurityConfig + @PreAuthorize), por eso este auth lo omite para validar 403.
+                new SimpleGrantedAuthority("INV_READ"),
+                new SimpleGrantedAuthority("INV_DECIDE")
+        );
+        return new UsernamePasswordAuthenticationToken(new CustomUserDetails(usuario), null, authorities);
     }
 
     private Authentication jefeAuth(String... extraAuthorities) {
