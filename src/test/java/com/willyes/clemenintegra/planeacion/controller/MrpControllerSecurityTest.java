@@ -51,7 +51,7 @@ class MrpControllerSecurityTest {
     private com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider jwtAuthenticationProvider;
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "PO_MRP_WRITE")
     void postCorridaPermiteSuperAdmin() throws Exception {
         PlanProduccionSemanal plan = PlanProduccionSemanal.builder().id(1L).build();
         when(planProduccionService.buscarPorId(1L)).thenReturn(Optional.of(plan));
@@ -67,7 +67,7 @@ class MrpControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "PO_MRP_WRITE")
     void getCorridaPermiteSuperAdmin() throws Exception {
         when(mrpService.obtenerCorrida(9L)).thenReturn(CorridaMrp.builder().id(9L).build());
 

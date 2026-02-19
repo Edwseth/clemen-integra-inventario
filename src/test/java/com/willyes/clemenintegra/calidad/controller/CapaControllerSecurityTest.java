@@ -6,9 +6,7 @@ import com.willyes.clemenintegra.calidad.service.CapaService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
-import jakarta.servlet.Filter;
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -17,15 +15,12 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAut
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 import com.willyes.clemenintegra.support.TestAuth;
 
 import static org.mockito.Mockito.when;
@@ -40,37 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 class CapaControllerSecurityTest {
 
-    @org.springframework.boot.test.context.TestConfiguration
-    @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity(prePostEnabled = true)
-    static class MethodSecurityConfig {
-        @Bean
-        public jakarta.servlet.Filter capaTestGuard() {
-            return new org.springframework.web.filter.OncePerRequestFilter() {
-                @Override
-                protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest request,
-                                                jakarta.servlet.http.HttpServletResponse response,
-                                                jakarta.servlet.FilterChain filterChain)
-                        throws java.io.IOException, jakarta.servlet.ServletException {
-                    if (request.getRequestURI().startsWith("/api/calidad/capas")
-                            && !"true".equalsIgnoreCase(request.getHeader("X-Test-Allow"))) {
-                        response.sendError(org.springframework.http.HttpStatus.FORBIDDEN.value());
-                        return;
-                    }
-                    filterChain.doFilter(request, response);
-                }
-            };
-        }
-    }
-
     @Autowired
     private MockMvc mockMvc;
-    @Autowired
-    private WebApplicationContext context;
-    @Autowired
-    private CapaController controller;
-    @Autowired
-    private Filter springSecurityFilterChain;
-
     @MockBean
     private CapaService capaService;
     @MockBean
@@ -82,13 +48,6 @@ class CapaControllerSecurityTest {
     @MockBean
     private com.willyes.clemenintegra.shared.repository.UsuarioRepository usuarioRepository;
 
-    @BeforeEach
-    void setupMockMvc() {
-        Filter guard = context.getBean("capaTestGuard", Filter.class);
-        this.mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .addFilters(springSecurityFilterChain, guard)
-                .build();
-    }
 
     @Test
     void permiteGetConPermisoQcRead() throws Exception {
@@ -97,7 +56,6 @@ class CapaControllerSecurityTest {
 
         mockMvc.perform(get("/api/calidad/capas?page=0&size=20")
                         .with(TestAuth.auth("analista", "QC_READ"))
-                        .header("X-Test-Allow", "true")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
     }
@@ -106,7 +64,6 @@ class CapaControllerSecurityTest {
     void rechazaGetSinPermisoQcRead() throws Exception {
         mockMvc.perform(get("/api/calidad/capas")
                         .with(TestAuth.auth("sin-qc", "INV_READ"))
-                        .header("X-Test-Allow", "true")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
@@ -115,7 +72,6 @@ class CapaControllerSecurityTest {
     void rechazaPostSinPermisoQcWriteAunqueTengaQcRead() throws Exception {
         mockMvc.perform(post("/api/calidad/capas")
                         .with(TestAuth.auth("lector", "QC_READ"))
-                        .header("X-Test-Allow", "true")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
@@ -126,8 +82,7 @@ class CapaControllerSecurityTest {
         when(capaService.cerrar(5L)).thenReturn(new CapaDTO());
 
         mockMvc.perform(patch("/api/calidad/capas/5/cerrar")
-                        .with(TestAuth.auth("finisher", "QC_WORKFLOW_FINISH"))
-                        .header("X-Test-Allow", "true"))
+                        .with(TestAuth.auth("finisher", "QC_WORKFLOW_FINISH")))
                 .andExpect(status().isOk());
     }
 
@@ -140,8 +95,7 @@ class CapaControllerSecurityTest {
                 .build());
 
         mockMvc.perform(get("/api/calidad/capas/7/archivos/9/descargar")
-                        .with(TestAuth.auth("exporter", "QC_EXPORT"))
-                        .header("X-Test-Allow", "true"))
+                        .with(TestAuth.auth("exporter", "QC_EXPORT")))
                 .andExpect(status().isOk());
     }
 }

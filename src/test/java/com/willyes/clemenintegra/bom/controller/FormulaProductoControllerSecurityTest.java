@@ -13,13 +13,10 @@ import com.willyes.clemenintegra.bom.service.DocumentoFormulaService;
 import com.willyes.clemenintegra.bom.service.FormulaProductoService;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
-import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.SecurityConfig;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
-import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -86,9 +83,6 @@ class FormulaProductoControllerSecurityTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private CustomUserDetails jefeProduccionDetails;
-    private CustomUserDetails jefeCalidadDetails;
-    private CustomUserDetails superAdminDetails;
 
     @BeforeEach
     void setUp() throws ServletException, IOException {
@@ -143,9 +137,6 @@ class FormulaProductoControllerSecurityTest {
         when(documentoFormulaService.descargarDocumento(anyLong()))
                 .thenReturn(new DocumentoFormulaDescargaDTO(new ByteArrayResource("data".getBytes()), "archivo.pdf", MediaType.APPLICATION_PDF_VALUE));
 
-        jefeProduccionDetails = buildUserDetails(10L, RolUsuario.ROL_JEFE_PRODUCCION);
-        jefeCalidadDetails = buildUserDetails(11L, RolUsuario.ROL_JEFE_CALIDAD);
-        superAdminDetails = buildUserDetails(12L, RolUsuario.ROL_SUPER_ADMIN);
     }
 
     @Test
@@ -156,7 +147,7 @@ class FormulaProductoControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_READ")
     @DisplayName("Accesos BOM con rol no autorizado responden 403")
     void accesosConRolNoAutorizado_retorna403() throws Exception {
         mockMvc.perform(get("/api/bom/formulas"))
@@ -170,7 +161,7 @@ class FormulaProductoControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = "BOM_READ")
     @DisplayName("ROL_JEFE_PRODUCCION solo puede realizar operaciones de lectura en BOM")
     void jefeProduccionSoloLectura() throws Exception {
         mockMvc.perform(get("/api/bom/formulas"))
@@ -186,28 +177,28 @@ class FormulaProductoControllerSecurityTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/bom/formulas/{id}/clonar", 1L)
-                        .with(user(jefeProduccionDetails)))
+                        .with(user("jefe-produccion").authorities(() -> "BOM_READ")))
                 .andExpect(status().isForbidden());
 
         CambiarEstadoFormulaRequest request = new CambiarEstadoFormulaRequest(EstadoFormula.APROBADA);
         mockMvc.perform(post("/api/bom/formulas/{id}/cambiar-estado", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
-                        .with(user(jefeProduccionDetails)))
+                        .with(user("jefe-produccion").authorities(() -> "BOM_READ")))
                 .andExpect(status().isForbidden());
 
         MockMultipartFile archivo = new MockMultipartFile("archivo", "nota.txt", MediaType.TEXT_PLAIN_VALUE, "demo".getBytes());
         mockMvc.perform(multipart("/api/bom/formulas/{id}/documentos", 1L).file(archivo)
-                        .with(user(jefeProduccionDetails)))
+                        .with(user("jefe-produccion").authorities(() -> "BOM_READ")))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(delete("/api/bom/formulas/documentos/{documentoId}", 5L)
-                        .with(user(jefeProduccionDetails)))
+                        .with(user("jefe-produccion").authorities(() -> "BOM_READ")))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "BOM_WRITE")
     @DisplayName("ROL_JEFE_CALIDAD tiene acceso completo a BOM")
     void jefeCalidadAccesoCompleto() throws Exception {
         mockMvc.perform(get("/api/bom/formulas"))
@@ -223,28 +214,28 @@ class FormulaProductoControllerSecurityTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/bom/formulas/{id}/clonar", 1L)
-                        .with(user(jefeCalidadDetails)))
+                        .with(user("jefe-calidad").authorities(() -> "BOM_WRITE")))
                 .andExpect(status().isCreated());
 
         CambiarEstadoFormulaRequest request = new CambiarEstadoFormulaRequest(EstadoFormula.APROBADA);
         mockMvc.perform(post("/api/bom/formulas/{id}/cambiar-estado", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
-                        .with(user(jefeCalidadDetails)))
+                        .with(user("jefe-calidad").authorities(() -> "BOM_WRITE")))
                 .andExpect(status().isOk());
 
         MockMultipartFile archivo = new MockMultipartFile("archivo", "nota.txt", MediaType.TEXT_PLAIN_VALUE, "demo".getBytes());
         mockMvc.perform(multipart("/api/bom/formulas/{id}/documentos", 1L).file(archivo)
-                        .with(user(jefeCalidadDetails)))
+                        .with(user("jefe-calidad").authorities(() -> "BOM_WRITE")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(delete("/api/bom/formulas/documentos/{documentoId}", 5L)
-                        .with(user(jefeCalidadDetails)))
+                        .with(user("jefe-calidad").authorities(() -> "BOM_WRITE")))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "BOM_FORMULA_READ")
     @DisplayName("ROL_PLANEADOR puede consultar formula activa de producto")
     void planeadorPuedeConsultarFormulaActivaProducto() throws Exception {
         mockMvc.perform(get("/api/bom/formulas/producto/{productoId}/formula-activa", 10L))
@@ -252,7 +243,7 @@ class FormulaProductoControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "BOM_WRITE")
     @DisplayName("ROL_SUPER_ADMIN puede realizar todas las operaciones BOM")
     void superAdminAccesoCompleto() throws Exception {
         mockMvc.perform(get("/api/bom/formulas"))
@@ -268,37 +259,24 @@ class FormulaProductoControllerSecurityTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/bom/formulas/{id}/clonar", 1L)
-                        .with(user(superAdminDetails)))
+                        .with(user("super-admin").authorities(() -> "BOM_WRITE")))
                 .andExpect(status().isCreated());
 
         CambiarEstadoFormulaRequest request = new CambiarEstadoFormulaRequest(EstadoFormula.APROBADA);
         mockMvc.perform(post("/api/bom/formulas/{id}/cambiar-estado", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
-                        .with(user(superAdminDetails)))
+                        .with(user("super-admin").authorities(() -> "BOM_WRITE")))
                 .andExpect(status().isOk());
 
         MockMultipartFile archivo = new MockMultipartFile("archivo", "nota.txt", MediaType.TEXT_PLAIN_VALUE, "demo".getBytes());
         mockMvc.perform(multipart("/api/bom/formulas/{id}/documentos", 1L).file(archivo)
-                        .with(user(superAdminDetails)))
+                        .with(user("super-admin").authorities(() -> "BOM_WRITE")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(delete("/api/bom/formulas/documentos/{documentoId}", 5L)
-                        .with(user(superAdminDetails)))
+                        .with(user("super-admin").authorities(() -> "BOM_WRITE")))
                 .andExpect(status().isNoContent());
     }
 
-    private CustomUserDetails buildUserDetails(long id, RolUsuario rol) {
-        Usuario usuario = Usuario.builder()
-                .id(id)
-                .nombreUsuario("usuario" + id)
-                .nombreCompleto("Usuario " + id)
-                .correo("usuario" + id + "@test.com")
-                .clave("clave")
-                .rol(rol)
-                .activo(true)
-                .bloqueado(false)
-                .build();
-        return new CustomUserDetails(usuario);
-    }
 }

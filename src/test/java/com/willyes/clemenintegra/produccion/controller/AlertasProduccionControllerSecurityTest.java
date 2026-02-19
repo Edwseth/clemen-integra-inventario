@@ -95,7 +95,7 @@ class AlertasProduccionControllerSecurityTest {
         mockMvc.perform(get("/api/produccion/ordenes/alertas")
                         .param("fechaReferencia", "2026-01-12")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-calidad")
-                                .authorities(() -> "ROL_JEFE_CALIDAD")))
+                                .authorities(() -> "PROD_ALERTAS_READ")))
                 .andExpect(status().isOk());
 
         verify(produccionIndicadoresService).obtenerOrdenesConAlertas(any(java.time.LocalDate.class), org.mockito.ArgumentMatchers.anyInt());
@@ -106,7 +106,7 @@ class AlertasProduccionControllerSecurityTest {
         mockMvc.perform(get("/api/produccion/ordenes/alertas")
                         .param("fechaReferencia", "2026-01-12")
                         .with(SecurityMockMvcRequestPostProcessors.user("almacenista")
-                                .authorities(() -> "ROL_ALMACENISTA")))
+                                .authorities(() -> "INV_READ")))
                 .andExpect(status().isForbidden());
     }
 }

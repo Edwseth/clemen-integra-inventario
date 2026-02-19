@@ -73,7 +73,7 @@ class PlantillaAnalisisMicroControllerSecurityTest {
     void rechazaAnalistaEnPlantillaMicro() throws Exception {
         mockMvc.perform(get("/api/calidad/plantillas-micro/producto/1")
                         .with(SecurityMockMvcRequestPostProcessors.user("analista")
-                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                                .authorities(() -> "INV_READ")))
                 .andExpect(status().isForbidden());
     }
 
@@ -83,7 +83,7 @@ class PlantillaAnalisisMicroControllerSecurityTest {
 
         mockMvc.perform(get("/api/calidad/plantillas-micro/producto/1")
                         .with(SecurityMockMvcRequestPostProcessors.user("micro")
-                                .authorities(() -> "ROL_MICROBIOLOGO")))
+                                .authorities(() -> "QC_READ")))
                 .andExpect(status().isOk());
     }
 }

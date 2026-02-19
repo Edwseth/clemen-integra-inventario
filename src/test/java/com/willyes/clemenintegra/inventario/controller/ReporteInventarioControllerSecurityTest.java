@@ -52,7 +52,7 @@ class ReporteInventarioControllerSecurityTest {
     private com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider jwtAuthenticationProvider;
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "INV_REPORTES_EXPORT")
     void altaRotacionPermiteSuperAdmin() throws Exception {
         when(reporteInventarioService.generarReporteAltaRotacion(any(), any()))
                 .thenReturn(new XSSFWorkbook());
