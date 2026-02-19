@@ -198,7 +198,7 @@ class FormulaProductoControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "BOM_WRITE")
+    @WithMockUser(authorities = {"BOM_READ", "BOM_WRITE"})
     @DisplayName("ROL_JEFE_CALIDAD tiene acceso completo a BOM")
     void jefeCalidadAccesoCompleto() throws Exception {
         mockMvc.perform(get("/api/bom/formulas"))
@@ -243,7 +243,7 @@ class FormulaProductoControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "BOM_WRITE")
+    @WithMockUser(authorities = {"BOM_READ", "BOM_WRITE"})
     @DisplayName("ROL_SUPER_ADMIN puede realizar todas las operaciones BOM")
     void superAdminAccesoCompleto() throws Exception {
         mockMvc.perform(get("/api/bom/formulas"))

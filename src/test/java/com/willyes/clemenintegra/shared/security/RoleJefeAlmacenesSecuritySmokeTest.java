@@ -174,7 +174,7 @@ class RoleJefeAlmacenesSecuritySmokeTest {
     @Test
     void inventarioProductosPostPermitido() throws Exception {
         mockMvc.perform(post("/api/productos")
-                        .with(authentication(jefeAuth()))
+                        .with(authentication(jefeAuth("INV_PRODUCT_WRITE")))
                         .contentType("application/json")
                         .content("""
                                 {
@@ -276,7 +276,7 @@ class RoleJefeAlmacenesSecuritySmokeTest {
                 .andExpect(status().isForbidden());
     }
 
-    private Authentication jefeAuth() {
+    private Authentication jefeAuth(String... extraAuthorities) {
         Usuario usuario = Usuario.builder()
                 .id(10L)
                 .nombreUsuario("jefe")
@@ -287,12 +287,17 @@ class RoleJefeAlmacenesSecuritySmokeTest {
                 .activo(true)
                 .bloqueado(false)
                 .build();
-        CustomUserDetails principal = new CustomUserDetails(
-                usuario,
-                List.of(
-                        new SimpleGrantedAuthority(RolUsuario.ROL_JEFE_ALMACENES.name()),
-                        new SimpleGrantedAuthority("DOC_READ")
-                ));
+        java.util.List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>(List.of(
+                new SimpleGrantedAuthority(RolUsuario.ROL_JEFE_ALMACENES.name()),
+                new SimpleGrantedAuthority("DOC_READ"),
+                new SimpleGrantedAuthority("INV_PRODUCT_READ"),
+                new SimpleGrantedAuthority("INV_READ"),
+                new SimpleGrantedAuthority("INV_DECIDE")
+        ));
+        for (String authority : extraAuthorities) {
+            authorities.add(new SimpleGrantedAuthority(authority));
+        }
+        CustomUserDetails principal = new CustomUserDetails(usuario, authorities);
         return new UsernamePasswordAuthenticationToken(
                 principal,
                 "N/A",

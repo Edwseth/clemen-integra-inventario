@@ -83,7 +83,7 @@ class OrdenCompraControllerSecurityTest {
     private com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider jwtAuthenticationProvider;
 
     @Test
-    @WithMockUser(authorities = "PO_WRITE")
+    @WithMockUser(authorities = "INV_WRITE")
     void crearOrdenCompraPermiteSuperAdmin() throws Exception {
         Proveedor proveedor = new Proveedor();
         proveedor.setId(1);

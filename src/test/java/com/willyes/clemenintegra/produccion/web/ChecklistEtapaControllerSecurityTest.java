@@ -74,8 +74,8 @@ class ChecklistEtapaControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
-    @DisplayName("Checklist etapa permite rol de producción")
+    @WithMockUser(authorities = "PROD_ETAPA_CHECKLIST_READ")
+    @DisplayName("Checklist etapa permite permiso canónico de lectura")
     void obtenerChecklist_conRolProduccion() throws Exception {
         when(checklistEtapaService.obtenerPorEtapa(anyLong())).thenReturn(ChecklistEtapaDTO.builder().etapaId(1L).build());
 
@@ -84,8 +84,8 @@ class ChecklistEtapaControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
-    @DisplayName("Checklist etapa permite lectura para planeador")
+    @WithMockUser(authorities = "PROD_ETAPA_CHECKLIST_READ")
+    @DisplayName("Checklist etapa permite lectura con permiso canónico")
     void obtenerChecklist_conRolPlaneador() throws Exception {
         when(checklistEtapaService.obtenerPorEtapa(anyLong())).thenReturn(ChecklistEtapaDTO.builder().etapaId(2L).build());
 
@@ -94,8 +94,8 @@ class ChecklistEtapaControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
-    @DisplayName("Actualizar checklist permite rol de producción")
+    @WithMockUser(authorities = "PROD_ETAPA_CHECKLIST_WRITE")
+    @DisplayName("Actualizar checklist permite permiso canónico de escritura")
     void actualizarChecklist_conPermisoEscritura() throws Exception {
         when(checklistEtapaService.actualizar(anyLong(), org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(ChecklistEtapaDTO.builder().etapaId(1L).build());
@@ -108,7 +108,7 @@ class ChecklistEtapaControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PROD_ETAPA_CHECKLIST_READ")
     @DisplayName("Actualizar checklist rechaza rol planeador")
     void actualizarChecklist_conRolPlaneador_devuelve403() throws Exception {
         mockMvc.perform(put("/api/produccion/etapas/{id}/checklist", 1L)

@@ -63,7 +63,7 @@ class CapaControllerSecurityTest {
     @Test
     void rechazaGetSinPermisoQcRead() throws Exception {
         mockMvc.perform(get("/api/calidad/capas")
-                        .with(TestAuth.auth("sin-qc", "INV_READ"))
+                        .with(TestAuth.auth("sin-qc", "DOC_READ"))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
@@ -71,7 +71,7 @@ class CapaControllerSecurityTest {
     @Test
     void rechazaPostSinPermisoQcWriteAunqueTengaQcRead() throws Exception {
         mockMvc.perform(post("/api/calidad/capas")
-                        .with(TestAuth.auth("lector", "QC_READ"))
+                        .with(TestAuth.auth("lector", "QC_READ", "DOC_READ"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
