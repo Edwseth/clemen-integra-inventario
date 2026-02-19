@@ -39,7 +39,7 @@ public final class TestAuth {
 
     private static List<GrantedAuthority> toGrantedAuthorities(String... values) {
         return Arrays.stream(values)
-                .map(SimpleGrantedAuthority::new)
+                .map(v -> (GrantedAuthority) new SimpleGrantedAuthority(v))
                 .toList();
     }
 }
