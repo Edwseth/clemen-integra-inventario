@@ -26,7 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import com.willyes.clemenintegra.support.SecurityTestUtils;
+import com.willyes.clemenintegra.support.TestAuth;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -96,7 +96,7 @@ class CapaControllerSecurityTest {
         when(capaService.listar(null, null, PageRequest.of(0, 20))).thenReturn(page);
 
         mockMvc.perform(get("/api/calidad/capas?page=0&size=20")
-                        .with(SecurityTestUtils.userWithAuthorities("analista", "QC_READ"))
+                        .with(TestAuth.auth("analista", "QC_READ"))
                         .header("X-Test-Allow", "true")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
@@ -105,7 +105,7 @@ class CapaControllerSecurityTest {
     @Test
     void rechazaGetSinPermisoQcRead() throws Exception {
         mockMvc.perform(get("/api/calidad/capas")
-                        .with(SecurityTestUtils.userWithAuthorities("sin-qc", "INV_READ"))
+                        .with(TestAuth.auth("sin-qc", "INV_READ"))
                         .header("X-Test-Allow", "true")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
@@ -114,7 +114,7 @@ class CapaControllerSecurityTest {
     @Test
     void rechazaPostSinPermisoQcWriteAunqueTengaQcRead() throws Exception {
         mockMvc.perform(post("/api/calidad/capas")
-                        .with(SecurityTestUtils.userWithAuthorities("lector", "QC_READ"))
+                        .with(TestAuth.auth("lector", "QC_READ"))
                         .header("X-Test-Allow", "true")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -126,7 +126,7 @@ class CapaControllerSecurityTest {
         when(capaService.cerrar(5L)).thenReturn(new CapaDTO());
 
         mockMvc.perform(patch("/api/calidad/capas/5/cerrar")
-                        .with(SecurityTestUtils.userWithAuthorities("finisher", "QC_WORKFLOW_FINISH"))
+                        .with(TestAuth.auth("finisher", "QC_WORKFLOW_FINISH"))
                         .header("X-Test-Allow", "true"))
                 .andExpect(status().isOk());
     }
@@ -140,7 +140,7 @@ class CapaControllerSecurityTest {
                 .build());
 
         mockMvc.perform(get("/api/calidad/capas/7/archivos/9/descargar")
-                        .with(SecurityTestUtils.userWithAuthorities("exporter", "QC_EXPORT"))
+                        .with(TestAuth.auth("exporter", "QC_EXPORT"))
                         .header("X-Test-Allow", "true"))
                 .andExpect(status().isOk());
     }
