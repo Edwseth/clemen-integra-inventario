@@ -84,7 +84,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_READ")
     @DisplayName("GET /api/produccion/ordenes/{id} sin rol permitido devuelve 403")
     void obtenerOrden_sinPermisos_devuelve403() throws Exception {
         mockMvc.perform(get("/api/produccion/ordenes/{id}", 1L))
@@ -92,7 +92,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_OP_READ")
     @DisplayName("GET /api/produccion/ordenes permite consulta a jefe de calidad")
     void listarOrdenes_conRolJefeCalidad_devuelve200() throws Exception {
         when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
@@ -102,7 +102,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_OP_READ")
     @DisplayName("GET /api/produccion/ordenes/{id} permite ver detalle con rol de calidad")
     void obtenerOrden_conRolJefeCalidad_devuelve404SiNoExiste() throws Exception {
         when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.empty());
@@ -112,7 +112,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_OP_READ")
     @DisplayName("POST /api/produccion/ordenes es rechazado para jefe de calidad")
     void crearOrden_conRolJefeCalidad_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/ordenes")
@@ -122,7 +122,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_OP_READ")
     @DisplayName("POST /api/produccion/ordenes/{id}/cierres es rechazado para jefe de calidad")
     void registrarCierre_conRolJefeCalidad_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/ordenes/{id}/cierres", 5L)
@@ -132,7 +132,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_READ")
     @DisplayName("GET /api/produccion/ordenes permite listar con rol planeador")
     void listarOrdenes_conRolPlaneador_devuelve200() throws Exception {
         when(ordenProduccionService.listarPaginado(any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
@@ -142,7 +142,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_READ")
     @DisplayName("GET /api/produccion/ordenes/{id} permite ver detalle con rol planeador")
     void obtenerOrden_conRolPlaneador_devuelve404SiNoExiste() throws Exception {
         when(ordenProduccionService.buscarPorId(1L)).thenReturn(Optional.empty());
@@ -152,7 +152,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"ROL_PLANEADOR", "PROD_OP_CREATE"})
+    @WithMockUser(authorities = {"PO_READ", "PROD_WRITE"})
     @DisplayName("POST /api/produccion/ordenes permite crear con permiso de creación")
     void crearOrden_conRolPlaneador_devuelve201() throws Exception {
         when(ordenProduccionService.crearOrden(any()))
@@ -165,7 +165,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_READ")
     @DisplayName("PUT /api/produccion/ordenes/{id} rechaza actualizar con rol planeador")
     void actualizarOrden_conRolPlaneador_devuelve404SiNoExiste() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -176,7 +176,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_READ")
     @DisplayName("POST /api/produccion/ordenes/{id}/cancelar rechaza workflow con rol planeador")
     void cancelarOrden_conRolPlaneador_devuelve204() throws Exception {
         mockMvc.perform(post("/api/produccion/ordenes/{id}/cancelar", 1L)
@@ -186,7 +186,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_READ")
     @DisplayName("POST /api/produccion/ordenes rechaza rol no autorizado")
     void crearOrden_conRolAlmacenista_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/ordenes")
@@ -196,7 +196,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_READ")
     @DisplayName("PATCH /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar rechaza rol planeador")
     void iniciarEtapa_conPermisoPlaneador_devuelve200() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -205,7 +205,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_READ")
     @DisplayName("PATCH /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar rechaza rol planeador")
     void finalizarEtapa_conRolPlaneador_devuelve403() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -214,7 +214,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_READ")
     @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist rechaza rol planeador")
     void actualizarChecklistPorEtapa_conRolPlaneador_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist", 1L, 2L)
@@ -224,7 +224,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PO_READ")
     @DisplayName("PUT /api/produccion/ordenes/{id}/finalizar rechaza finalizar con rol planeador")
     void finalizarOrden_conRolPlaneador_devuelve403() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -235,7 +235,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_READ")
     @DisplayName("POST /api/produccion/ordenes/{id}/cancelar rechaza rol no autorizado")
     void cancelarOrden_conRolAlmacenista_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/ordenes/{id}/cancelar", 1L)
@@ -251,7 +251,7 @@ class OrdenProduccionControllerSecurityTest {
                 .andExpect(status().isUnauthorized());
     }
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "PROD_OP_READ")
     @DisplayName("GET /api/produccion/ordenes/lookup permite contador via capa HTTP")
     void lookup_conRolContador_noDevuelve403() throws Exception {
         when(ordenProduccionRepository.findByCodigoOrdenIgnoreCase("OP-CLEMEN-20260129-05"))
@@ -263,7 +263,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_READ")
     @DisplayName("GET /api/produccion/ordenes/lookup rechaza rol no autorizado")
     void lookup_conRolNoPermitido_devuelve403() throws Exception {
         mockMvc.perform(get("/api/produccion/ordenes/lookup")
@@ -272,7 +272,7 @@ class OrdenProduccionControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = {"PROD_OP_READ", "PROD_WRITE"})
     @DisplayName("GET /api/produccion/ordenes/lookup serializa categoriaProducto sin 500")
     void lookup_conSuperAdmin_serializaCategoriaSin500() throws Exception {
         OrdenProduccion orden = OrdenProduccion.builder()

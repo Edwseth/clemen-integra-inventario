@@ -134,8 +134,8 @@ class EvaluacionCalidadControllerSecurityTest {
     @Test
     void rechazaAnalistaEnPlantillaMicroDesdeEvaluaciones() throws Exception {
         mockMvc.perform(get("/api/calidad/evaluaciones/plantillas/micro/producto/1")
-                        .with(SecurityMockMvcRequestPostProcessors.user("analista")
-                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-write")
+                                .authorities(() -> "QC_WRITE")))
                 .andExpect(status().isForbidden());
     }
 
@@ -146,23 +146,23 @@ class EvaluacionCalidadControllerSecurityTest {
         when(plantillaAnalisisMicroService.obtenerPorProducto(1L)).thenReturn(dto);
 
         mockMvc.perform(get("/api/calidad/evaluaciones/plantillas/micro/producto/1")
-                        .with(SecurityMockMvcRequestPostProcessors.user("micro")
-                                .authorities(() -> "ROL_MICROBIOLOGO")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-workflow")
+                                .authorities(() -> "QC_WORKFLOW")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void rechazaAnalistaEnResultadosMicro() throws Exception {
         mockMvc.perform(get("/api/calidad/evaluaciones/5/resultados-micro")
-                        .with(SecurityMockMvcRequestPostProcessors.user("analista")
-                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-write")
+                                .authorities(() -> "QC_WRITE")))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/api/calidad/evaluaciones/5/resultados-micro")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[]")
-                        .with(SecurityMockMvcRequestPostProcessors.user("analista")
-                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-write")
+                                .authorities(() -> "QC_WRITE")))
                 .andExpect(status().isForbidden());
     }
 
@@ -173,23 +173,23 @@ class EvaluacionCalidadControllerSecurityTest {
                 .thenReturn(Collections.singletonList(ResultadoAnalisisMicroResponseDTO.builder().build()));
 
         mockMvc.perform(get("/api/calidad/evaluaciones/5/resultados-micro")
-                        .with(SecurityMockMvcRequestPostProcessors.user("micro")
-                                .authorities(() -> "ROL_MICROBIOLOGO")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-workflow")
+                                .authorities(() -> "QC_WORKFLOW")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/calidad/evaluaciones/5/resultados-micro")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[]")
-                        .with(SecurityMockMvcRequestPostProcessors.user("micro")
-                                .authorities(() -> "ROL_MICROBIOLOGO")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-workflow")
+                                .authorities(() -> "QC_WORKFLOW")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void rechazaAnalistaEnPdfMicro() throws Exception {
         mockMvc.perform(get("/api/calidad/evaluaciones/9/micro/pdf")
-                        .with(SecurityMockMvcRequestPostProcessors.user("analista")
-                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-write")
+                                .authorities(() -> "QC_WRITE")))
                 .andExpect(status().isForbidden());
     }
 
@@ -199,8 +199,8 @@ class EvaluacionCalidadControllerSecurityTest {
 
         mockMvc.perform(get("/api/calidad/evaluaciones/9/micro/pdf")
                         .accept(MediaType.APPLICATION_PDF)
-                        .with(SecurityMockMvcRequestPostProcessors.user("micro")
-                                .authorities(() -> "ROL_MICROBIOLOGO")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-workflow")
+                                .authorities(() -> "QC_WORKFLOW")))
                 .andExpect(status().isOk());
     }
 
@@ -219,8 +219,8 @@ class EvaluacionCalidadControllerSecurityTest {
                         .param("tipoEvaluacion", "FISICO")
                         .param("observaciones", "OK")
                         .param("loteProductoId", "10")
-                        .with(SecurityMockMvcRequestPostProcessors.user("analista")
-                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-write")
+                                .authorities(() -> "QC_WRITE")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.nombreLote").value("LOTE-01"))
@@ -243,8 +243,8 @@ class EvaluacionCalidadControllerSecurityTest {
                         .param("tipoEvaluacion", "QUIMICO_MICROBIOLOGICO")
                         .param("observaciones", "OK")
                         .param("loteProductoId", "20")
-                        .with(SecurityMockMvcRequestPostProcessors.user("micro")
-                                .authorities(() -> "ROL_MICROBIOLOGO")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("qc-workflow")
+                                .authorities(() -> "QC_WORKFLOW")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(2L))
                 .andExpect(jsonPath("$.nombreLote").value("LOTE-02"))

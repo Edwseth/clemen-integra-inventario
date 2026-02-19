@@ -97,7 +97,7 @@ class KardexControllerSecurityTest {
                         .param("ordenProduccionId", "7")
                         .param("etapaProduccionId", "11")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
-                                .authorities(() -> "ROL_JEFE_PRODUCCION"))
+                                .authorities(() -> "INV_KARDEX_READ"))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
@@ -114,7 +114,7 @@ class KardexControllerSecurityTest {
         mockMvc.perform(get("/api/inventario/kardex")
                         .param("productoId", "9")
                         .with(SecurityMockMvcRequestPostProcessors.user("superadmin")
-                                .authorities(() -> "ROL_SUPER_ADMIN")))
+                                .authorities(() -> "INV_KARDEX_READ")))
                 .andExpect(status().isOk());
 
         verify(kardexService).obtenerKardex(any());
@@ -125,7 +125,7 @@ class KardexControllerSecurityTest {
         mockMvc.perform(get("/api/inventario/kardex")
                         .param("productoId", "3")
                         .with(SecurityMockMvcRequestPostProcessors.user("analista")
-                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                                .authorities(() -> "QC_READ")))
                 .andExpect(status().isForbidden());
     }
 }

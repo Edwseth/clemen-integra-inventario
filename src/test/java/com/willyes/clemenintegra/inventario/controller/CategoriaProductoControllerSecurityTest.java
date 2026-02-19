@@ -90,7 +90,7 @@ class CategoriaProductoControllerSecurityTest {
 
         mockMvc.perform(get("/api/categorias")
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe-calidad")
-                                .authorities(() -> "ROL_JEFE_CALIDAD")))
+                                .authorities(() -> "INV_CATEGORIAS_READ")))
                 .andExpect(status().isOk());
 
         verify(categoriaProductoService).listarTodas();
@@ -102,7 +102,7 @@ class CategoriaProductoControllerSecurityTest {
 
         mockMvc.perform(get("/api/categorias")
                         .with(SecurityMockMvcRequestPostProcessors.user("planeador")
-                                .authorities(() -> "ROL_PLANEADOR")))
+                                .authorities(() -> "INV_CATEGORIAS_READ")))
                 .andExpect(status().isOk());
 
         verify(categoriaProductoService).listarTodas();
@@ -112,7 +112,7 @@ class CategoriaProductoControllerSecurityTest {
     void rechazaRolNoAutorizado() throws Exception {
         mockMvc.perform(get("/api/categorias")
                         .with(SecurityMockMvcRequestPostProcessors.user("analista")
-                                .authorities(() -> "ROL_ANALISTA_CALIDAD")))
+                                .authorities(() -> "QC_READ")))
                 .andExpect(status().isForbidden());
     }
 }

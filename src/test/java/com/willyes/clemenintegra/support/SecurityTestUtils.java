@@ -1,13 +1,13 @@
 package com.willyes.clemenintegra.support;
 
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 public final class SecurityTestUtils {
 
     private SecurityTestUtils() {
     }
 
-    public static UserRequestPostProcessor userWithAuthorities(String username, String... authorities) {
-        return (UserRequestPostProcessor) TestAuth.auth(username, authorities);
+    public static RequestPostProcessor userWithAuthorities(String username, String... authorities) {
+        return TestAuth.auth(username, authorities);
     }
 }
