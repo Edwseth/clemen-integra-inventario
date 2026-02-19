@@ -116,6 +116,15 @@ class SecurityConfigCanonicalRequestMatchersSmokeTest {
     @Test
     void qcReadPermiteGetCapasPeroNoPost_yQcWritePermitePost() throws Exception {
         // endpoint real /api/calidad/capas: GET permitido por QC_READ en SecurityConfig y @PreAuthorize; POST requiere QC_WRITE+.
+        String capaValidaMinima = """
+                {
+                  "noConformidadId": 1,
+                  "tipo": "CORRECTIVA",
+                  "responsableId": 1,
+                  "fechaInicio": "2024-01-01T10:00:00"
+                }
+                """;
+
         mockMvc.perform(get("/api/calidad/capas")
                         .with(SecurityMockMvcRequestPostProcessors.user("qc-read").authorities(() -> "QC_READ")))
                 .andExpect(status().isOk());
@@ -128,16 +137,16 @@ class SecurityConfigCanonicalRequestMatchersSmokeTest {
 
         mockMvc.perform(post("/api/calidad/capas")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
+                        .content(capaValidaMinima)
                         .with(SecurityMockMvcRequestPostProcessors.user("qc-write").authorities(() -> "QC_WRITE")))
                 .andExpect(status().isCreated());
     }
 
     @Test
     void prodOpReadPermiteGetOrdenesYSinPermisoDa403() throws Exception {
-        // endpoint real /api/produccion/ordenes/{id}/alistamiento: SecurityConfig GET /api/produccion/ordenes/** acepta PROD_READ|PROD_OP_READ.
+        // endpoint real /api/produccion/ordenes/{id}/alistamiento: SecurityConfig permite GET y @PreAuthorize exige PROD_READ.
         mockMvc.perform(get("/api/produccion/ordenes/1/alistamiento")
-                        .with(SecurityMockMvcRequestPostProcessors.user("prod-op-read").authorities(() -> "PROD_OP_READ")))
+                        .with(SecurityMockMvcRequestPostProcessors.user("prod-read").authorities(() -> "PROD_READ")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/produccion/ordenes/1/alistamiento")
