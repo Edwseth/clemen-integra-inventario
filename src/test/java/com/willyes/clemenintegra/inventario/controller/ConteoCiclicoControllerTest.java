@@ -39,7 +39,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ConteoCiclicoController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc(addFilters = true)
+@org.springframework.context.annotation.Import(com.willyes.clemenintegra.shared.security.SecurityConfig.class)
 class ConteoCiclicoControllerTest {
 
     @Autowired
@@ -60,8 +61,20 @@ class ConteoCiclicoControllerTest {
     @MockBean
     private com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider jwtAuthenticationProvider;
 
+    @MockBean
+    private com.willyes.clemenintegra.shared.performance.RequestTimingFilter requestTimingFilter;
+
+    @MockBean
+    private com.willyes.clemenintegra.shared.logging.RequestIdFilter requestIdFilter;
+
+    @MockBean
+    private com.willyes.clemenintegra.shared.security.SuperAdminSoloLecturaWriteBlockFilter superAdminSoloLecturaWriteBlockFilter;
+
+    @MockBean
+    private com.willyes.clemenintegra.shared.repository.UsuarioRepository usuarioRepository;
+
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void listarConteosDevuelve200() throws Exception {
         ConteoCiclicoResumenResponseDTO response = ConteoCiclicoResumenResponseDTO.builder()
                 .id(5L)
@@ -80,7 +93,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void obtenerPorIdDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(15L)
@@ -96,7 +109,7 @@ class ConteoCiclicoControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void listarLotesPorProductoYAlmacenDevuelveLotesEnCuarentena() throws Exception {
         ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
                 .id(501L)
@@ -117,7 +130,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void listarLotesParaConteoSinQDevuelveListado() throws Exception {
         ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
                 .id(11L)
@@ -135,7 +148,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void listarLotesParaConteoConQParcialDevuelve200() throws Exception {
         ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
                 .id(9L)
@@ -155,14 +168,14 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void listarLotesParaConteoSinProductoIdDevuelve400() throws Exception {
         mockMvc.perform(get("/api/inventario/conteos/8/lotes"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void obtenerPorIdNoEncontradoDevuelve404() throws Exception {
         when(conteoCiclicoService.obtenerPorId(99L))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
@@ -173,7 +186,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void crearConteoDevuelve201() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(5L)
@@ -261,21 +274,21 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void jefeAlmacenesNoPuedeAplicarConteoDevuelve403() throws Exception {
         mockMvc.perform(post("/api/inventario/conteos/7/aplicar"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void jefeAlmacenesNoPuedeCerrarConteoDevuelve403() throws Exception {
         mockMvc.perform(post("/api/inventario/conteos/4/cerrar"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(authorities = {"ROL_CONTADOR", "INV_CONTEOS_APPLY", "INV_CONTEOS_CLOSE"})
+    @WithMockUser(authorities = {"INV_CONTEOS_READ", "INV_CONTEOS_APPLY", "INV_CONTEOS_CLOSE"})
     void contadorPuedeAplicarYCerrarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO aplicado = ConteoCiclicoResponseDTO.builder()
                 .id(7L)
@@ -301,7 +314,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void iniciarConteoNoEncontradoDevuelve404() throws Exception {
         when(conteoCiclicoService.marcarEnConteo(30L))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
@@ -312,7 +325,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_CONTEOS_READ")
     void listarConEstadoInvalidoDevuelve400() throws Exception {
         when(conteoCiclicoService.listar(ArgumentMatchers.isNull(), anyString(), ArgumentMatchers.any(Pageable.class)))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Estado de conteo inválido"));
@@ -324,7 +337,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void actualizarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(4L)
@@ -349,7 +362,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void actualizarConteoNoEncontradoDevuelve404() throws Exception {
         when(conteoCiclicoService.actualizarConteo(eq(9L), ArgumentMatchers.anyList()))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
@@ -369,7 +382,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void actualizarConteoEstadoInvalidoDevuelve409() throws Exception {
         when(conteoCiclicoService.actualizarConteo(eq(12L), ArgumentMatchers.anyList()))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO, "Estado no permite edición"));
@@ -389,7 +402,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void actualizarConteoToleraCamposExtras() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(14L)
@@ -420,7 +433,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void actualizarConteoConDatoInvalidoDetallaCampo() throws Exception {
         String body = objectMapper.writeValueAsString(Map.of(
                 "detalles", List.of(Map.of(
@@ -439,7 +452,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
     void actualizarConteoSinLoteDevuelve400() throws Exception {
         String body = objectMapper.writeValueAsString(Map.of(
                 "detalles", List.of(Map.of(
