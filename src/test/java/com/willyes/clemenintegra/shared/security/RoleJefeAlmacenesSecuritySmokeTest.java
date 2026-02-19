@@ -292,7 +292,9 @@ class RoleJefeAlmacenesSecuritySmokeTest {
                 new SimpleGrantedAuthority("DOC_READ"),
                 new SimpleGrantedAuthority("INV_PRODUCT_READ"),
                 new SimpleGrantedAuthority("INV_READ"),
-                new SimpleGrantedAuthority("INV_DECIDE")
+                new SimpleGrantedAuthority("INV_DECIDE"),
+                new SimpleGrantedAuthority("INV_WRITE"),
+                new SimpleGrantedAuthority("INV_AJUSTES_READ")
         ));
         for (String authority : extraAuthorities) {
             authorities.add(new SimpleGrantedAuthority(authority));

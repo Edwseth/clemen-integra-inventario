@@ -369,7 +369,13 @@ class ContadorRoleSecurityTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = {
+            "ROL_CONTADOR",
+            "INV_PRODUCT_READ",
+            "INV_CATEGORIAS_READ",
+            "INV_LOTES_READ",
+            "INV_ALERTAS_READ"
+    })
     void contadorNoPuedeLeerMovimientosSinPermisoDedicado() throws Exception {
         when(productoService.listarTodos(any(), any(), any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
         when(categoriaProductoService.listarTodas()).thenReturn(List.of());

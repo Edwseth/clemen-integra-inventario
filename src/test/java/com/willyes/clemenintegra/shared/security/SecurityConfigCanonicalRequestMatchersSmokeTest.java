@@ -43,7 +43,7 @@ class SecurityConfigCanonicalRequestMatchersSmokeTest {
 
     @RestController
     static class ProbeController {
-        @GetMapping({"/api/calidad/capas", "/api/inventario/productos/1", "/api/inventario/lotes/1", "/api/produccion/ordenes/1", "/api/documental/documentos", "/api/admin/rbac/roles"})
+        @GetMapping({"/api/calidad/capas", "/api/inventario/productos/1", "/api/inventario/lotes/1", "/api/produccion/ordenes", "/api/documental/documentos", "/api/admin/rbac/modulos"})
         public String getProbe() {
             return "ok";
         }
@@ -114,10 +114,10 @@ class SecurityConfigCanonicalRequestMatchersSmokeTest {
 
     @Test
     void prodOpReadPermiteGetOrdenesYSinPermisoDa403() throws Exception {
-        assertNotForbidden(mockMvc.perform(get("/api/produccion/ordenes/1")
+        assertNotForbidden(mockMvc.perform(get("/api/produccion/ordenes")
                 .with(SecurityMockMvcRequestPostProcessors.user("prod-op-read").authorities(() -> "PROD_OP_READ"))));
 
-        assertForbidden(mockMvc.perform(get("/api/produccion/ordenes/1")
+        assertForbidden(mockMvc.perform(get("/api/produccion/ordenes")
                 .with(SecurityMockMvcRequestPostProcessors.user("sin-permisos").authorities(() -> "QC_READ"))));
     }
 
@@ -134,10 +134,10 @@ class SecurityConfigCanonicalRequestMatchersSmokeTest {
 
     @Test
     void adminRbacReadProtegeEndpointYSinPermisoDa403() throws Exception {
-        assertNotForbidden(mockMvc.perform(get("/api/admin/rbac/roles")
+        assertNotForbidden(mockMvc.perform(get("/api/admin/rbac/modulos")
                 .with(SecurityMockMvcRequestPostProcessors.user("rbac-read").authorities(() -> "ADMIN_RBAC_READ"))));
 
-        assertForbidden(mockMvc.perform(get("/api/admin/rbac/roles")
+        assertForbidden(mockMvc.perform(get("/api/admin/rbac/modulos")
                 .with(SecurityMockMvcRequestPostProcessors.user("sin-rbac").authorities(() -> "DOC_READ"))));
     }
 
