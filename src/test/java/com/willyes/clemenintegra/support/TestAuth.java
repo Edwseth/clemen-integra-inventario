@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.support;
 
 import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -25,7 +24,7 @@ public final class TestAuth {
                 .clave("N/A")
                 .nombreCompleto(username)
                 .correo(username + "@test.local")
-                .rol(RolUsuario.ROL_OPERARIO)
+                .rol(null)
                 .activo(true)
                 .bloqueado(false)
                 .build();
@@ -49,6 +48,10 @@ public final class TestAuth {
         merged.addAll(Arrays.asList(authorities));
         merged.addAll(Arrays.asList(roles));
         return auth(username, merged.toArray(String[]::new));
+    }
+
+    public static RequestPostProcessor authMixed(String username, String[] authorities, String[] roles) {
+        return authWithPermissionsAndRoles(username, authorities, roles);
     }
 
     private static List<GrantedAuthority> toGrantedAuthorities(String... values) {
