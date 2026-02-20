@@ -721,6 +721,20 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return valor != null ? valor : BigDecimal.ZERO;
     }
 
+    private BigDecimal calcularCantidadRequeridaInsumo(DetalleFormula detalle, BigDecimal cantidadBase) {
+        if (detalle == null) {
+            return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        }
+        BigDecimal cantidadNecesaria = Optional.ofNullable(detalle.getCantidadNecesaria())
+                .orElse(BigDecimal.ZERO);
+        BigDecimal base = Optional.ofNullable(cantidadBase).orElse(BigDecimal.ZERO);
+        BigDecimal requerida = cantidadNecesaria.multiply(base);
+        UnidadMedida unidad = Optional.ofNullable(detalle.getUnidadMedida())
+                .orElseGet(() -> detalle.getInsumo() != null ? detalle.getInsumo().getUnidadMedida() : null);
+        int escala = unidad != null ? catalogResolver.decimals(unidad) : 6;
+        return requerida.setScale(escala, RoundingMode.HALF_UP);
+    }
+
     private void registrarConsumoDeInsumos(Long ordenProduccionId, Long etapaId, Long usuarioId) {
         boolean consumoRegistrado = !movimientoInventarioRepository
                 .findByOrdenProduccionIdAndOrdenProduccionEtapaIdAndClasificacionOrderByFechaIngresoAsc(
@@ -982,6 +996,225 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         }
     }
 
+    private void registrarDevolucionInsumosPorCierreParcial(OrdenProduccion orden,
+                                                             BigDecimal cantidadRealAcumulada,
+                                                             EtapaProduccion etapaConsumo,
+                                                             Usuario usuario,
+                                                             String traceId) {
+        if (orden == null || orden.getId() == null || orden.getProducto() == null) {
+            return;
+        }
+
+        FormulaProducto formula = formulaProductoRepository
+                .findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FORMULA_NO_ENCONTRADA"));
+
+        Long preBodegaId = catalogResolver.getAlmacenPreBodegaProduccionId();
+        if (preBodegaId == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_PRE_BODEGA_INEXISTENTE");
+        }
+        Long motivoDevId = catalogResolver.getMotivoIdDevolucionDesdeProduccion();
+        if (motivoDevId == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "MOTIVO_DEVOLUCION_DESDE_PRODUCCION_INEXISTENTE");
+        }
+        MotivoMovimiento motivoDevolucion = motivoMovimientoRepository.findById(motivoDevId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "MOTIVO_DEVOLUCION_DESDE_PRODUCCION_INEXISTENTE"));
+
+        Map<Long, BigDecimal> consumoPlanPorProducto = new LinkedHashMap<>();
+        Map<Long, BigDecimal> consumoRealPorProducto = new LinkedHashMap<>();
+
+        for (DetalleFormula det : obtenerDetallesFormulaSeguro(formula)) {
+            if (det == null || det.getInsumo() == null || det.getInsumo().getId() == null) {
+                continue;
+            }
+            Long productoId = det.getInsumo().getId().longValue();
+            consumoPlanPorProducto.merge(productoId,
+                    calcularCantidadRequeridaInsumo(det, orden.getCantidadProgramada()),
+                    BigDecimal::add);
+            consumoRealPorProducto.merge(productoId,
+                    calcularCantidadRequeridaInsumo(det, cantidadRealAcumulada),
+                    BigDecimal::add);
+        }
+
+        if (consumoPlanPorProducto.isEmpty()) {
+            return;
+        }
+
+        List<MovimientoInventario> consumos = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacion(
+                        orden.getId(),
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                        Pageable.unpaged())
+                .getContent();
+        List<MovimientoInventario> devoluciones = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacion(
+                        orden.getId(),
+                        ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION,
+                        Pageable.unpaged())
+                .getContent();
+        List<MovimientoInventario> traslados = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacion(
+                        orden.getId(),
+                        ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION,
+                        Pageable.unpaged())
+                .getContent();
+
+        Map<Long, BigDecimal> consumidoPorLote = new LinkedHashMap<>();
+        Map<Long, BigDecimal> devueltoPorLote = new LinkedHashMap<>();
+        Map<Long, Long> productoPorLote = new HashMap<>();
+        Map<Long, LocalDateTime> fechaConsumoPorLote = new HashMap<>();
+        Map<Long, Almacen> destinoAbastecedorPorLote = new HashMap<>();
+
+        for (MovimientoInventario mov : traslados) {
+            if (mov == null || mov.getLote() == null || mov.getLote().getId() == null
+                    || mov.getProducto() == null || mov.getProducto().getId() == null) {
+                continue;
+            }
+            LoteProducto lotePreBodega = resolverLotePreBodegaParaConsumo(mov, preBodegaId);
+            if (lotePreBodega == null || lotePreBodega.getId() == null) {
+                continue;
+            }
+            if (mov.getAlmacenOrigen() != null && mov.getAlmacenOrigen().getId() != null
+                    && !Objects.equals(mov.getAlmacenOrigen().getId().longValue(), preBodegaId)) {
+                destinoAbastecedorPorLote.putIfAbsent(lotePreBodega.getId(), mov.getAlmacenOrigen());
+            }
+            productoPorLote.putIfAbsent(lotePreBodega.getId(), mov.getProducto().getId().longValue());
+        }
+
+        for (MovimientoInventario mov : consumos) {
+            if (mov == null || mov.getLote() == null || mov.getLote().getId() == null
+                    || mov.getProducto() == null || mov.getProducto().getId() == null) {
+                continue;
+            }
+            Long loteId = mov.getLote().getId();
+            consumidoPorLote.merge(loteId, safeCantidad(mov.getCantidad()), BigDecimal::add);
+            productoPorLote.putIfAbsent(loteId, mov.getProducto().getId().longValue());
+            if (mov.getFechaIngreso() != null) {
+                fechaConsumoPorLote.merge(loteId, mov.getFechaIngreso(),
+                        (a, b) -> a.isBefore(b) ? a : b);
+            }
+        }
+        for (MovimientoInventario mov : devoluciones) {
+            if (mov == null || mov.getLote() == null || mov.getLote().getId() == null) {
+                continue;
+            }
+            devueltoPorLote.merge(mov.getLote().getId(), safeCantidad(mov.getCantidad()), BigDecimal::add);
+        }
+
+        for (Map.Entry<Long, BigDecimal> entry : consumoPlanPorProducto.entrySet()) {
+            Long productoId = entry.getKey();
+            BigDecimal consumoPlan = entry.getValue();
+            BigDecimal consumoReal = consumoRealPorProducto.getOrDefault(productoId, BigDecimal.ZERO);
+            BigDecimal delta = consumoPlan.subtract(consumoReal).setScale(6, RoundingMode.HALF_UP);
+            if (delta.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            BigDecimal pendiente = delta;
+            List<Long> lotesProducto = consumidoPorLote.entrySet().stream()
+                    .filter(e -> Objects.equals(productoPorLote.get(e.getKey()), productoId))
+                    .sorted(Comparator.comparing(
+                                    (Map.Entry<Long, BigDecimal> e) -> fechaConsumoPorLote.getOrDefault(e.getKey(), LocalDateTime.MIN))
+                            .thenComparing(Map.Entry::getKey))
+                    .map(Map.Entry::getKey)
+                    .toList();
+
+            for (Long loteId : lotesProducto) {
+                BigDecimal consumido = consumidoPorLote.getOrDefault(loteId, BigDecimal.ZERO);
+                BigDecimal devuelto = devueltoPorLote.getOrDefault(loteId, BigDecimal.ZERO);
+                BigDecimal saldo = consumido.subtract(devuelto);
+                if (saldo.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+
+                BigDecimal devolver = pendiente.min(saldo).setScale(6, RoundingMode.HALF_UP);
+                if (devolver.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+
+                Almacen destino = destinoAbastecedorPorLote.get(loteId);
+                if (destino == null || destino.getId() == null) {
+                    log.warn("OP-cierre parcial sin almacén abastecedor para devolución op={}, productoId={}, loteId={}",
+                            orden.getId(), productoId, loteId);
+                    continue;
+                }
+
+                String codigoLote = loteProductoRepository.findById(loteId)
+                        .map(LoteProducto::getCodigoLote)
+                        .orElse(null);
+                boolean existeLoteDestino = codigoLote != null
+                        && loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                                codigoLote,
+                                productoId.intValue(),
+                                destino.getId())
+                        .isPresent();
+                if (!existeLoteDestino) {
+                    log.warn("OP-cierre parcial omite devolución para evitar crear lote op={}, productoId={}, loteId={}, destinoAlmacenId={}",
+                            orden.getId(), productoId, loteId, destino.getId());
+                    continue;
+                }
+
+                MovimientoInventarioDTO devolucion = new MovimientoInventarioDTO(
+                        null,
+                        devolver,
+                        TipoMovimiento.DEVOLUCION,
+                        ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION,
+                        orden.getCodigoOrden(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        productoId.intValue(),
+                        loteId,
+                        preBodegaId.intValue(),
+                        destino.getId(),
+                        null,
+                        null,
+                        motivoDevolucion.getId(),
+                        null,
+                        null,
+                        usuario.getId(),
+                        orden.getId(),
+                        Optional.ofNullable(etapaConsumo).map(EtapaProduccion::getId).orElse(null),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+                log.info("OP-cierre parcial devolución DTO traceId={} opId={} etapaId={} productoId={} loteId={} tipo={} clasificacion={} almacenOrigenId={} almacenDestinoId={} motivoId={} cantidad={}",
+                        traceId,
+                        orden.getId(),
+                        devolucion.ordenProduccionEtapaId(),
+                        productoId,
+                        loteId,
+                        devolucion.tipoMovimiento(),
+                        devolucion.clasificacionMovimientoInventario(),
+                        devolucion.almacenOrigenId(),
+                        devolucion.almacenDestinoId(),
+                        devolucion.motivoMovimientoId(),
+                        devolucion.cantidad());
+                movimientoInventarioService.registrarMovimiento(devolucion);
+
+                pendiente = pendiente.subtract(devolver);
+                devueltoPorLote.put(loteId, devuelto.add(devolver));
+                if (pendiente.compareTo(BigDecimal.ZERO) <= 0) {
+                    break;
+                }
+            }
+
+            if (pendiente.compareTo(BigDecimal.ZERO) > 0) {
+                log.warn("OP-cierre parcial quedó delta sin devolver op={}, productoId={}, deltaPendiente={}",
+                        orden.getId(), productoId, pendiente);
+            }
+        }
+    }
+
     private LoteProducto resolverLotePreBodegaParaConsumo(MovimientoInventario movimiento, Long preBodegaId) {
         if (movimiento == null) {
             return null;
@@ -1187,6 +1420,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             EtapaProduccion etapaConsumo = seleccionarEtapaParaConsumo(etapas, orden.getId());
             registrarConsumoDeInsumos(orden.getId(), etapaConsumo.getId(), usuario.getId());
+            boolean reconciliarParcial = dto.getTipo() == TipoCierre.PARCIAL
+                    || acumuladoPropuesto.compareTo(cantidadProgramada) < 0;
+            if (reconciliarParcial) {
+                registrarDevolucionInsumosPorCierreParcial(orden, acumuladoPropuesto, etapaConsumo, usuario, traceId);
+            }
             if (dto.getTipo() == TipoCierre.TOTAL) {
                 registrarConsumoRealPorCierreTotal(orden, etapas, etapaConsumo, usuario, traceId);
             }

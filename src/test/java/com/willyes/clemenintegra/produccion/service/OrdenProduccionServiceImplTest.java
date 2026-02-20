@@ -1665,6 +1665,103 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("registrarCierre parcial devuelve delta de insumo y mantiene consumo neto real")
+    void registrarCierre_parcialDevuelveDeltaInsumo() {
+        OrdenProduccion orden = crearOrdenBase(277L, new BigDecimal("30000"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Producto insumo = new Producto();
+        insumo.setId(30);
+        insumo.setNombre("ME0460");
+        UnidadMedida um = new UnidadMedida();
+        um.setNombre("UND");
+        um.setSimbolo("UND");
+        insumo.setUnidadMedida(um);
+
+        DetalleFormula det = new DetalleFormula();
+        det.setInsumo(insumo);
+        det.setCantidadNecesaria(BigDecimal.ONE);
+        det.setUnidadMedida(um);
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(det));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(orden.getProducto().getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        LoteProducto lote = new LoteProducto();
+        lote.setId(2249L);
+        lote.setCodigoLote("2249");
+        when(loteProductoRepository.findById(2249L)).thenReturn(Optional.of(lote));
+
+        MovimientoInventario consumo = new MovimientoInventario();
+        consumo.setProducto(insumo);
+        consumo.setLote(lote);
+        consumo.setCantidad(new BigDecimal("30000"));
+        consumo.setFechaIngreso(LocalDateTime.now().minusMinutes(5));
+
+        MovimientoInventario traslado = new MovimientoInventario();
+        traslado.setProducto(insumo);
+        traslado.setLote(lote);
+        Almacen origen = new Almacen();
+        origen.setId(5);
+        traslado.setAlmacenOrigen(origen);
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()),
+                eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(consumo)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()),
+                eq(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of()));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()),
+                eq(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(traslado)));
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("2249", 30, 5))
+                .thenReturn(Optional.of(new LoteProducto()));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("29900"))
+                .tipo(TipoCierre.PARCIAL)
+                .build();
+
+        ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+
+        service.registrarCierre(277L, dto);
+
+        verify(movimientoInventarioService, atLeast(1)).registrarMovimiento(captor.capture());
+        List<MovimientoInventarioDTO> movimientos = captor.getAllValues();
+        List<MovimientoInventarioDTO> devoluciones = movimientos.stream()
+                .filter(m -> m.tipoMovimiento() == TipoMovimiento.DEVOLUCION)
+                .toList();
+
+        assertThat(devoluciones).singleElement().satisfies(dev -> {
+            assertThat(dev.productoId()).isEqualTo(30);
+            assertThat(dev.loteProductoId()).isEqualTo(2249L);
+            assertThat(dev.cantidad()).isEqualByComparingTo(new BigDecimal("100.000000"));
+            assertThat(dev.almacenOrigenId()).isEqualTo(6);
+            assertThat(dev.almacenDestinoId()).isEqualTo(5);
+            assertThat(dev.ordenProduccionId()).isEqualTo(277L);
+            assertThat(dev.clasificacionMovimientoInventario())
+                    .isEqualTo(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION);
+        });
+
+        BigDecimal totalSalida = Optional.ofNullable(consumo.getCantidad()).orElse(BigDecimal.ZERO);
+        BigDecimal totalDevuelto = devoluciones.stream()
+                .map(MovimientoInventarioDTO::cantidad)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(totalSalida.subtract(totalDevuelto))
+                .isEqualByComparingTo(new BigDecimal("29900.000000"));
+
+        verify(loteProductoRepository, never()).save(argThat(lp -> lp != null && "2249".equals(lp.getCodigoLote())));
+    }
+
+    @Test
     @DisplayName("registrarCierre total incompleto sin regularización es rechazado")
     void registrarCierre_totalIncompletoSinRegularizacionEsRechazado() {
         OrdenProduccion orden = crearOrdenBase(301L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
