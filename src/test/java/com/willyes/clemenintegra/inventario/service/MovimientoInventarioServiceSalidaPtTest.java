@@ -44,6 +44,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class MovimientoInventarioServiceSalidaPtTest {
@@ -164,6 +165,73 @@ class MovimientoInventarioServiceSalidaPtTest {
                             .containsEntry("loteId", lote.getId())
                             .containsEntry("estado", EstadoLote.EN_CUARENTENA.name());
                 });
+    }
+
+
+    @Test
+    void salidaPtRegularizacionConOp_noSeNormalizaATransferencia() {
+        Producto producto = crearProducto(7, 2);
+        LoteProducto lote = crearLote(300L, producto, ALMACEN_PT_ID, EstadoLote.LIBERADO,
+                new BigDecimal("700"), BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("200"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT,
+                "REG-PT-1",
+                "Regularización PT",
+                null,
+                null,
+                null,
+                producto.getId(),
+                null,
+                Math.toIntExact(ALMACEN_PT_ID),
+                null,
+                null,
+                null,
+                70L,
+                TIPO_DETALLE_SALIDA_PT_ID,
+                null,
+                null,
+                999L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                true,
+                null,
+                null,
+                null
+        );
+
+        configurarMocksSalidaPt(producto, lote);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class)))
+                .willAnswer(invocation -> {
+                    MovimientoInventario mov = invocation.getArgument(0);
+                    mov.setId(600L);
+                    return mov;
+                });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(600L).build());
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        assertThat(respuesta).isNotNull();
+        assertThat(respuesta.getId()).isEqualTo(600L);
+
+        org.mockito.ArgumentCaptor<MovimientoInventario> movCaptor = org.mockito.ArgumentCaptor.forClass(MovimientoInventario.class);
+        verify(movimientoInventarioRepository).save(movCaptor.capture());
+        assertThat(movCaptor.getValue().getTipoMovimiento()).isEqualTo(TipoMovimiento.SALIDA);
+        assertThat(movCaptor.getValue().getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT);
     }
 
     @Test
