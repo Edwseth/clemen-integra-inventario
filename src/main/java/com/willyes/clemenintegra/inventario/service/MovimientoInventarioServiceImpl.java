@@ -244,10 +244,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         // >>> NUEVO: identifica si el cierre de OP está enviando una ENTRADA de PT
         final boolean esEntradaPt = (tipoMovimiento == TipoMovimiento.ENTRADA);
 
-        boolean esRegularizacionPt = clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT;
+        boolean esRegularizacionTrazabilidad = clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD
+                || clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT;
         if (esOpDesdeDto
                 && !esEntradaPt
-                && !esRegularizacionPt
+                && !esRegularizacionTrazabilidad
                 && clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION) {
             tipoMovimiento = TipoMovimiento.TRANSFERENCIA;
             clasificacion = ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION;
