@@ -130,6 +130,19 @@ public class OrdenProduccionController {
                 "Debe enviar un parámetro válido: codigo o id.");
     }
 
+    @GetMapping("/autocomplete")
+    @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ')")
+    public Page<OrdenProduccionResponseDTO> autocomplete(
+            @RequestParam String codigo,
+            @PageableDefault(size = 10, sort = "fechaInicio", direction = Sort.Direction.DESC) Pageable pageable) {
+        String codigoNormalizado = codigo != null ? codigo.trim() : null;
+        if (codigoNormalizado == null || codigoNormalizado.isEmpty() || codigoNormalizado.length() < 2) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe enviar al menos 2 caracteres en 'codigo'.");
+        }
+        return service.listarPaginado(codigoNormalizado, null, null, null, null, null, pageable);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('PROD_READ','PROD_OP_READ')")
     public ResponseEntity<OrdenProduccionResponseDTO> obtenerPorId(@PathVariable Long id) {
