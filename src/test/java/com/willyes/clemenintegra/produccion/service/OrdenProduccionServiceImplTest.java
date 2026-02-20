@@ -28,6 +28,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
@@ -137,6 +138,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private ChecklistEtapaService checklistEtapaService;
     @Mock private LoteConsecutivoDiaService loteConsecutivoDiaService;
     @Mock private OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository;
+    @Mock private RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
 
     @Spy
     @InjectMocks
@@ -155,6 +157,7 @@ class OrdenProduccionServiceImplTest {
         });
         lenient().when(ordenProduccionRepository.countByCodigoOrdenStartingWith(any())).thenReturn(0L);
         lenient().when(ordenProduccionRepository.findCodigosByPrefijo(any())).thenReturn(List.of());
+        lenient().when(regularizacionTrazabilidadRepository.existsByOrdenProduccionId(anyLong())).thenReturn(false);
         EtapaPlantilla etapa = EtapaPlantilla.builder()
                 .id(1L)
                 .nombre("Preparación")
@@ -1662,8 +1665,8 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
-    @DisplayName("registrarCierre total incompleto es rechazado")
-    void registrarCierre_totalIncompletoRequiereConfirmacion() {
+    @DisplayName("registrarCierre total incompleto sin regularización es rechazado")
+    void registrarCierre_totalIncompletoSinRegularizacionEsRechazado() {
         OrdenProduccion orden = crearOrdenBase(301L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
 
@@ -1684,10 +1687,13 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
-    @DisplayName("registrarCierre total incompleto con confirmación también es rechazado")
-    void registrarCierre_totalIncompletoConfirmado() {
+    @DisplayName("registrarCierre total incompleto con regularización se permite")
+    void registrarCierre_totalIncompletoConRegularizacionPermitido() {
         OrdenProduccion orden = crearOrdenBase(302L, new BigDecimal("100"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
+
+        when(regularizacionTrazabilidadRepository.existsByOrdenProduccionId(302L)).thenReturn(true);
+        when(cierreProduccionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("80"))
@@ -1696,13 +1702,10 @@ class OrdenProduccionServiceImplTest {
                 .confirmarCierreParcial(true)
                 .build();
 
-        assertThatThrownBy(() -> service.registrarCierre(302L, dto))
-                .isInstanceOf(ErrorResponseException.class)
-                .satisfies(ex -> {
-                    ErrorResponseException error = (ErrorResponseException) ex;
-                    ProblemDetail body = error.getBody();
-                    assertThat(body.getProperties().get("code")).isEqualTo("CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA");
-                });
+        OrdenProduccion resultado = service.registrarCierre(302L, dto);
+
+        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.FINALIZADA);
+        assertThat(resultado.getCantidadProducidaAcumulada()).isEqualByComparingTo(new BigDecimal("80.00"));
     }
 
     @Test
@@ -1721,6 +1724,27 @@ class OrdenProduccionServiceImplTest {
 
         assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.FINALIZADA);
         assertThat(resultado.getTipoCierre()).isEqualTo(TipoCierre.TOTAL);
+    }
+
+
+    @Test
+    @DisplayName("registrarCierre total 29900 sin regularización responde regla 422")
+    void registrarCierre_total29900SinRegularizacionRechazado() {
+        OrdenProduccion orden = crearOrdenBase(330L, new BigDecimal("30000"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("29900"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(330L, dto))
+                .isInstanceOf(ErrorResponseException.class)
+                .satisfies(ex -> {
+                    ErrorResponseException error = (ErrorResponseException) ex;
+                    ProblemDetail body = error.getBody();
+                    assertThat(body.getProperties().get("code")).isEqualTo("CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA");
+                });
     }
 
     @Test

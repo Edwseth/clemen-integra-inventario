@@ -72,6 +72,7 @@ import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoChecklistItem;
 import com.willyes.clemenintegra.produccion.validators.ProduccionEtapasLockValidator;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
+import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -149,6 +150,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final LoteConsecutivoDiaService loteConsecutivoDiaService;
     private final OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository;
     private final ProduccionEtapasLockValidator produccionEtapasLockValidator;
+    private final RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
 
     private static final int SEMANAS_HOMEOPATICO = 78;
     private static final int SEMANAS_HERENCIA_PS_PT = 78;
@@ -1114,57 +1116,60 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             }
 
             BigDecimal cantidadProgramada = Optional.ofNullable(orden.getCantidadProgramada()).orElse(BigDecimal.ZERO);
-            BigDecimal producidaAntes = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
-            BigDecimal producidaDespues = producidaAntes.add(cantidad);
+            BigDecimal acumuladoActual = Optional.ofNullable(orden.getCantidadProducidaAcumulada()).orElse(BigDecimal.ZERO);
+            BigDecimal acumuladoPropuesto = acumuladoActual.add(cantidad);
 
             if (dto.getTipo() == TipoCierre.PARCIAL) {
-                if (producidaDespues.compareTo(cantidadProgramada) >= 0) {
+                if (acumuladoPropuesto.compareTo(cantidadProgramada) >= 0) {
                     ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
                     problem.setTitle("Regla de cierre de Orden de Producción");
                     problem.setDetail("El cierre parcial no puede completar o exceder la cantidad programada.");
                     problem.setProperty("code", "CIERRE_PARCIAL_SUPERA_PROGRAMADA");
                     problem.setProperty("cantidadProgramada", cantidadProgramada);
-                    problem.setProperty("acumuladoActual", producidaAntes);
+                    problem.setProperty("acumuladoActual", acumuladoActual);
                     problem.setProperty("cantidadSolicitada", cantidad);
-                    problem.setProperty("acumuladoPropuesto", producidaDespues);
+                    problem.setProperty("acumuladoPropuesto", acumuladoPropuesto);
                     throw new ErrorResponseException(HttpStatus.UNPROCESSABLE_ENTITY, problem, null);
                 }
-            } else if (dto.getTipo() == TipoCierre.TOTAL) {
-                if (producidaDespues.compareTo(cantidadProgramada) != 0) {
+            } else if (dto.getTipo() == TipoCierre.TOTAL
+                    && acumuladoPropuesto.compareTo(cantidadProgramada) != 0) {
+                boolean existeRegularizacion = regularizacionTrazabilidadRepository.existsByOrdenProduccionId(orden.getId());
+                if (!existeRegularizacion) {
                     ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
                     problem.setTitle("Regla de cierre de Orden de Producción");
-                    problem.setDetail("El cierre total debe completar exactamente la cantidad programada.");
+                    problem.setDetail("El cierre total requiere regularización cuando no coincide con la cantidad programada.");
                     problem.setProperty("code", "CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA");
                     problem.setProperty("cantidadProgramada", cantidadProgramada);
-                    problem.setProperty("acumuladoActual", producidaAntes);
+                    problem.setProperty("acumuladoActual", acumuladoActual);
                     problem.setProperty("cantidadSolicitada", cantidad);
-                    problem.setProperty("acumuladoPropuesto", producidaDespues);
+                    problem.setProperty("acumuladoPropuesto", acumuladoPropuesto);
+                    problem.setProperty("diferencia", acumuladoPropuesto.subtract(cantidadProgramada));
                     throw new ErrorResponseException(HttpStatus.UNPROCESSABLE_ENTITY, problem, null);
                 }
             }
             boolean cierreDefinitivo = esCierreDefinitivo(dto);
-            EstadoProduccion estadoObjetivo = calcularEstadoObjetivo(orden, producidaDespues, cierreDefinitivo);
+            EstadoProduccion estadoObjetivo = calcularEstadoObjetivo(orden, acumuladoPropuesto, cierreDefinitivo);
 
             // Esta validación actúa por cierre individual; la regla global para evitar cerrar la OP sin cierres
             // se aplica en recalcularEstadoOrden cuando todas las etapas terminan.
             if ((estadoObjetivo == EstadoProduccion.FINALIZADA || estadoObjetivo == EstadoProduccion.CERRADA_INCOMPLETA)
-                    && producidaDespues.compareTo(BigDecimal.ZERO) == 0) {
+                    && acumuladoPropuesto.compareTo(BigDecimal.ZERO) == 0) {
                 ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
                 problem.setTitle("Regla de cierre de Orden de Producción");
                 problem.setDetail("La Orden de Producción no puede cerrarse porque no tiene ingresos registrados.");
                 problem.setProperty("code", "OP_SIN_INGRESOS");
                 problem.setProperty("idOrden", orden.getId());
                 problem.setProperty("cantidadProgramada", cantidadProgramada);
-                problem.setProperty("cantidadFabricadaTotal", producidaDespues);
+                problem.setProperty("cantidadFabricadaTotal", acumuladoPropuesto);
                 throw new ErrorResponseException(HttpStatus.CONFLICT, problem, null);
             }
 
             if (estadoObjetivo == EstadoProduccion.CERRADA_INCOMPLETA
-                    && producidaDespues.compareTo(BigDecimal.ZERO) > 0
-                    && producidaDespues.compareTo(cantidadProgramada) < 0
+                    && acumuladoPropuesto.compareTo(BigDecimal.ZERO) > 0
+                    && acumuladoPropuesto.compareTo(cantidadProgramada) < 0
                     && !Boolean.TRUE.equals(dto.getConfirmarCierreParcial())) {
-                BigDecimal porcentajeCumplimiento = calcularPorcentajeCumplimiento(producidaDespues, cantidadProgramada);
-                BigDecimal cantidadFaltante = cantidadProgramada.subtract(producidaDespues);
+                BigDecimal porcentajeCumplimiento = calcularPorcentajeCumplimiento(acumuladoPropuesto, cantidadProgramada);
+                BigDecimal cantidadFaltante = cantidadProgramada.subtract(acumuladoPropuesto);
                 if (cantidadFaltante.compareTo(BigDecimal.ZERO) < 0) {
                     cantidadFaltante = BigDecimal.ZERO;
                 }
@@ -1174,7 +1179,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 problem.setDetail("Se requiere confirmación para cierre parcial de la Orden de Producción.");
                 problem.setProperty("code", "OP_CIERRE_PARCIAL_REQUIERE_CONFIRMACION");
                 problem.setProperty("cantidadProgramada", cantidadProgramada);
-                problem.setProperty("cantidadFabricadaTotal", producidaDespues);
+                problem.setProperty("cantidadFabricadaTotal", acumuladoPropuesto);
                 problem.setProperty("porcentajeCumplimiento", porcentajeCumplimiento);
                 problem.setProperty("cantidadFaltante", cantidadFaltante);
                 throw new ErrorResponseException(HttpStatus.CONFLICT, problem, null);
@@ -1281,8 +1286,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             TipoMovimientoDetalle tipoDetalleEntrada = tipoMovimientoDetalleRepository.findById(tipoDetalleEntradaId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_ENTRADA_INEXISTENTE"));
 
-            BigDecimal acumulada = producidaAntes;
-            BigDecimal nuevaAcumulada = producidaDespues;
+            BigDecimal acumulada = acumuladoActual;
+            BigDecimal nuevaAcumulada = acumuladoPropuesto;
             BigDecimal porcentajeCumplimiento = calcularPorcentajeCumplimiento(nuevaAcumulada, cantidadProgramada);
 
             orden.setCantidadProducidaAcumulada(nuevaAcumulada);
