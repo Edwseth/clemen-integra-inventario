@@ -41,6 +41,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RegularizacionTrazabilidadServiceImplTest {
+    private static final Integer ALMACEN_PRE_BODEGA = 6;
+
     @Mock OrdenProduccionRepository ordenProduccionRepository;
     @Mock MovimientoInventarioRepository movimientoInventarioRepository;
     @Mock LoteProductoRepository loteProductoRepository;
@@ -234,7 +236,7 @@ class RegularizacionTrazabilidadServiceImplTest {
         return FormulaProducto.builder().detalles(List.of(det)).build();
     }
 
-    private MovimientoInventario consumo(int productoId, long loteId, String cantidad, int almacenOrigen) {
+    private MovimientoInventario consumo(int productoId, long loteId, String cantidad, Integer almacenOrigen) {
         CategoriaProducto c = new CategoriaProducto();
         c.setId(2L);
         Producto p = new Producto();
@@ -243,7 +245,7 @@ class RegularizacionTrazabilidadServiceImplTest {
         LoteProducto l = new LoteProducto();
         l.setId(loteId);
         Almacen almacen = new Almacen();
-        almacen.setId((long) almacenOrigen);
+        almacen.setId(almacenOrigen);
         return MovimientoInventario.builder()
                 .id(loteId)
                 .producto(p)
