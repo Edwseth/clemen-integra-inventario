@@ -248,7 +248,7 @@ WHERE lp.codigoLote = :codigoLote
           and lp.almacen.id = :almacenId
           and lp.agotado = false
           and (lp.stockLote - coalesce(lp.stockReservado, 0)) > 0
-        order by lp.fechaVencimiento asc nulls last, lp.fechaIngreso asc nulls last, lp.id asc
+        order by lp.fechaVencimiento asc nulls last, lp.id asc
     """)
     List<LoteProducto> findFefoByProductoAndAlmacen(@Param("productoId") Long productoId,
                                                     @Param("almacenId") Integer almacenId);
