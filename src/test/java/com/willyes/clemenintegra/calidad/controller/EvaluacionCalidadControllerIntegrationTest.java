@@ -26,6 +26,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,7 +39,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.servlet.multipart.max-file-size=1MB",
+        "spring.servlet.multipart.max-request-size=2MB"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class EvaluacionCalidadControllerIntegrationTest extends IntegrationTestMySqlContainer {
@@ -121,6 +125,29 @@ class EvaluacionCalidadControllerIntegrationTest extends IntegrationTestMySqlCon
                 .build());
 
         when(inventoryCatalogResolver.getAlmacenCuarentenaId()).thenReturn(almacen.getId().longValue());
+    }
+
+
+    @Test
+    @WithMockUser(username = "microbio.test", authorities = "ROL_MICROBIOLOGO")
+    void crearEvaluacionConArchivoMayorAlLimiteRetorna413() throws Exception {
+        byte[] contenido = new byte[2 * 1024 * 1024];
+        MockMultipartFile archivoGrande = new MockMultipartFile(
+                "archivos",
+                "informe.pdf",
+                "application/pdf",
+                contenido);
+
+        mockMvc.perform(multipart("/api/calidad/evaluaciones")
+                        .file(archivoGrande)
+                        .param("tipoEvaluacion", "QUIMICO_MICROBIOLOGICO")
+                        .param("observaciones", "Archivo grande")
+                        .param("loteProductoId", loteProducto.getId().toString())
+                        .param("resultado", "CONFORME"))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.code").value("ARCHIVO_DEMASIADO_GRANDE"))
+                .andExpect(jsonPath("$.message").value("El archivo adjunto supera el tamaño permitido."))
+                .andExpect(jsonPath("$.requestId").exists());
     }
 
     @Test
