@@ -234,6 +234,73 @@ class MovimientoInventarioServiceSalidaPtTest {
         assertThat(movCaptor.getValue().getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT);
     }
 
+
+    @Test
+    void salidaRegularizacionTrazabilidadConOp_noSeNormalizaATransferencia() {
+        Producto producto = crearProducto(8, 2);
+        LoteProducto lote = crearLote(301L, producto, 6L, EstadoLote.LIBERADO,
+                new BigDecimal("700"), BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("120"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD,
+                "REG-TRZ-1",
+                "Regularización trazabilidad",
+                null,
+                null,
+                null,
+                producto.getId(),
+                null,
+                6,
+                null,
+                null,
+                null,
+                70L,
+                TIPO_DETALLE_SALIDA_PT_ID,
+                null,
+                null,
+                1000L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                true,
+                null,
+                null,
+                null
+        );
+
+        configurarMocksSalidaPt(producto, lote);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class)))
+                .willAnswer(invocation -> {
+                    MovimientoInventario mov = invocation.getArgument(0);
+                    mov.setId(601L);
+                    return mov;
+                });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(601L).build());
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        assertThat(respuesta).isNotNull();
+        assertThat(respuesta.getId()).isEqualTo(601L);
+
+        org.mockito.ArgumentCaptor<MovimientoInventario> movCaptor = org.mockito.ArgumentCaptor.forClass(MovimientoInventario.class);
+        verify(movimientoInventarioRepository).save(movCaptor.capture());
+        assertThat(movCaptor.getValue().getTipoMovimiento()).isEqualTo(TipoMovimiento.SALIDA);
+        assertThat(movCaptor.getValue().getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD);
+    }
+
     @Test
     void salidaPtAutoSplitConLoteLiberadoPermiteConsumo() {
         Producto producto = crearProducto(6, 2);
