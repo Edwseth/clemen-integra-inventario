@@ -80,8 +80,8 @@ class RegularizacionTrazabilidadServiceImplTest {
         assertThat(enviados).allMatch(m -> Objects.equals(m.ordenProduccionId(), 98L));
         assertThat(enviados).anyMatch(m -> m.productoId() == 21
                 && m.tipoMovimiento() == TipoMovimiento.ENTRADA
-                && m.clasificacion() == ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION
-                && m.loteId().equals(100L)
+                && m.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION
+                && m.loteProductoId().equals(100L)
                 && m.cantidad().compareTo(new BigDecimal("2")) == 0);
         verify(detalleRepository, atLeastOnce()).save(any(RegularizacionTrazabilidadDetalle.class));
         assertThat(respuesta.cantidadProgramada()).isEqualByComparingTo(new BigDecimal("30"));
