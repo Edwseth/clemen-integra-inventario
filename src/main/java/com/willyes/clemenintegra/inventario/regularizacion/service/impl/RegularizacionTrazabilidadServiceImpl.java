@@ -142,12 +142,13 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
         }
 
         if (Boolean.TRUE.equals(request.ajustarProductoTerminado()) && diferencia.signum() != 0) {
+            final int secFinal = sec;
             movimientoInventarioRepository.findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
                     op.getId(), TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO
             ).ifPresent(ptEntrada -> {
                 Long pId = ptEntrada.getProducto().getId().longValue();
                 Long loteId = ptEntrada.getLote().getId();
-                int secPt = sec + 1;
+                int secPt = secFinal + 1;
                 MovimientoCreadoDTO pt = crearMovimiento(idempotencyKey, secPt, pId, loteId, diferencia.abs(),
                         diferencia.signum() < 0 ? TipoMovimiento.SALIDA : TipoMovimiento.ENTRADA,
                         ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT,
