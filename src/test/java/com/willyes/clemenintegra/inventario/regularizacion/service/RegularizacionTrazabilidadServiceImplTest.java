@@ -41,7 +41,11 @@ class RegularizacionTrazabilidadServiceImplTest {
     void op155_diferenciaNegativa_devuelveEmpaquesLifoSinTocarMp() {
         Usuario u = Usuario.builder().id(1L).build();
         when(regularizacionRepository.findByIdempotencyKey("idem-155")).thenReturn(Optional.empty());
-        when(regularizacionRepository.save(any())).thenAnswer(i -> { var r=i.getArgument(0); if (r.getId()==null) r.setId(10L); return r;});
+        when(regularizacionRepository.save(any(com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidad.class))).thenAnswer(i -> {
+            com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidad r = i.getArgument(0, com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidad.class);
+            if (r.getId() == null) r.setId(10L);
+            return r;
+        });
         when(tipoMovimientoDetalleRepository.findByDescripcion(anyString())).thenReturn(Optional.of(TipoMovimientoDetalle.builder().id(1L).descripcion("x").build()));
         when(motivoMovimientoRepository.findByMotivo(any())).thenReturn(Optional.of(MotivoMovimiento.builder().id(1L).build()));
         when(movimientoInventarioService.registrarMovimiento(any(), anyString())).thenReturn(MovimientoInventarioResponseDTO.builder().id(99L).build());
@@ -65,7 +69,11 @@ class RegularizacionTrazabilidadServiceImplTest {
     void op230_diferenciaPositiva_consumoAdicionalEmpaques() {
         Usuario u = Usuario.builder().id(2L).build();
         when(regularizacionRepository.findByIdempotencyKey("idem-230")).thenReturn(Optional.empty());
-        when(regularizacionRepository.save(any())).thenAnswer(i -> { var r=i.getArgument(0); if (r.getId()==null) r.setId(11L); return r;});
+        when(regularizacionRepository.save(any(com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidad.class))).thenAnswer(i -> {
+            com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidad r = i.getArgument(0, com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidad.class);
+            if (r.getId() == null) r.setId(11L);
+            return r;
+        });
         when(tipoMovimientoDetalleRepository.findByDescripcion(anyString())).thenReturn(Optional.of(TipoMovimientoDetalle.builder().id(1L).descripcion("x").build()));
         when(motivoMovimientoRepository.findByMotivo(any())).thenReturn(Optional.of(MotivoMovimiento.builder().id(1L).build()));
         when(movimientoInventarioService.registrarMovimiento(any(), anyString())).thenReturn(MovimientoInventarioResponseDTO.builder().id(101L).build());
