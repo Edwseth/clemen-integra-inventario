@@ -23,6 +23,8 @@ public enum ClasificacionMovimientoInventario {
     SALIDA_PRODUCCION,
     SALIDA_CLIENTE,//
     CORRECCION_SALIDA_CLIENTE,
+    REGULARIZACION_TRAZABILIDAD,
+    REGULARIZACION_TRAZABILIDAD_PT,
 
     // TRANSFERENCIAS
     TRANSFERENCIA_INTERNA_PRODUCCION,
@@ -30,6 +32,5 @@ public enum ClasificacionMovimientoInventario {
     LIBERACION_CALIDAD,
     RECHAZO_CALIDAD
 }
-
 
 

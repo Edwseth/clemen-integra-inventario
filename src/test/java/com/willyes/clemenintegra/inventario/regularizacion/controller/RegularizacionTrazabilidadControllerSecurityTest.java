@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.inventario.regularizacion.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.willyes.clemenintegra.inventario.regularizacion.dto.AjusteLoteDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadRequestDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadResponseDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.service.RegularizacionTrazabilidadService;
@@ -109,17 +108,15 @@ class RegularizacionTrazabilidadControllerSecurityTest {
     void permiteRolContador() throws Exception {
         when(service.regularizarPorOP(any(), anyString(), any(Usuario.class)))
                 .thenReturn(RegularizacionTrazabilidadResponseDTO.builder()
-                        .operacionId(1L)
+                         .regularizacionId(1L)
                         .idempotencyKey("k1")
                         .ordenProduccionId(1L)
-                        .productoId(10L)
-                        .tipoOperacion("REGULARIZACION_TRAZABILIDAD_OP")
-                        .movimientos(List.of())
+                                                .movimientos(List.of())
                         .registradoPorId(1L)
                         .fecha(LocalDateTime.now())
                         .build());
 
-        mockMvc.perform(post("/api/inventario/regularizaciones-trazabilidad/op")
+        mockMvc.perform(post("/api/produccion/regularizaciones")
                         .header("Idempotency-Key", "k1")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request()))
@@ -129,7 +126,7 @@ class RegularizacionTrazabilidadControllerSecurityTest {
 
     @Test
     void rechazaRolDistinto() throws Exception {
-        mockMvc.perform(post("/api/inventario/regularizaciones-trazabilidad/op")
+        mockMvc.perform(post("/api/produccion/regularizaciones")
                         .header("Idempotency-Key", "k1")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request()))
@@ -140,14 +137,10 @@ class RegularizacionTrazabilidadControllerSecurityTest {
     private RegularizacionTrazabilidadRequestDTO request() {
         return new RegularizacionTrazabilidadRequestDTO(
                 1L,
-                10L,
-                2L,
-                3L,
+                BigDecimal.TEN,
                 "DOC-1",
                 "Observaciones válidas para seguridad",
-                null,
-                false,
-                List.of(new AjusteLoteDTO(100L, "POSITIVO", BigDecimal.ONE))
+                Boolean.FALSE
         );
     }
 }

@@ -240,6 +240,19 @@ WHERE lp.codigoLote = :codigoLote
     """)
     List<com.willyes.clemenintegra.bom.dto.LoteResumenDTO> listarLotesPorProducto(@Param("productoId") Long productoId);
 
+
+    @Query("""
+        select lp
+        from LoteProducto lp
+        where lp.producto.id = :productoId
+          and lp.almacen.id = :almacenId
+          and lp.agotado = false
+          and (lp.stockLote - coalesce(lp.stockReservado, 0)) > 0
+        order by lp.fechaVencimiento asc nulls last, lp.fechaIngreso asc nulls last, lp.id asc
+    """)
+    List<LoteProducto> findFefoByProductoAndAlmacen(@Param("productoId") Long productoId,
+                                                    @Param("almacenId") Integer almacenId);
+
     List<LoteProducto> findAllByCodigoLoteAndProductoId(String codigoLote, Long productoId);
 
     @Query("""
