@@ -56,13 +56,16 @@ class RegularizacionTrazabilidadServiceImplTest {
         when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(155L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA))
                 .thenReturn(List.of(consumo(21, 100L, "50", true), consumo(21, 101L, "40", true), consumo(500, 300L, "90", false)));
 
-        service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(155L, new BigDecimal("977"), "ACTA", "regularizacion op 155", false), "idem-155", u);
+        var respuesta = service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(155L, new BigDecimal("977"), "ACTA", "regularizacion op 155", false), "idem-155", u);
 
         ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
         verify(movimientoInventarioService, atLeastOnce()).registrarMovimiento(captor.capture(), anyString());
         List<MovimientoInventarioDTO> enviados = captor.getAllValues();
         assertThat(enviados).allMatch(m -> Objects.equals(m.ordenProduccionId(), 155L));
         assertThat(enviados).allMatch(m -> m.productoId() == 21); // mp (producto 500) no tocado
+        assertThat(respuesta.cantidadProgramada()).isEqualByComparingTo(new BigDecimal("1000"));
+        assertThat(respuesta.diferencia()).isEqualByComparingTo(new BigDecimal("-23"));
+        assertThat(respuesta.movimientos()).isNotEmpty();
     }
 
     @Test
@@ -86,11 +89,14 @@ class RegularizacionTrazabilidadServiceImplTest {
         LoteProducto fefo = new LoteProducto(); fefo.setId(200L); fefo.setStockLote(new BigDecimal("10")); fefo.setStockReservado(BigDecimal.ZERO);
         when(loteProductoRepository.findFefoByProductoAndAlmacen(23L, 6)).thenReturn(List.of(fefo));
 
-        service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(230L, new BigDecimal("72"), "ACTA", "regularizacion op 230", false), "idem-230", u);
+        var respuesta = service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(230L, new BigDecimal("72"), "ACTA", "regularizacion op 230", false), "idem-230", u);
 
         ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
         verify(movimientoInventarioService, atLeastOnce()).registrarMovimiento(captor.capture(), anyString());
         assertThat(captor.getAllValues()).anyMatch(m -> m.tipoMovimiento() == TipoMovimiento.SALIDA && m.productoId() == 23 && m.cantidad().compareTo(BigDecimal.ONE) == 0);
+        assertThat(respuesta.cantidadProgramada()).isEqualByComparingTo(new BigDecimal("71"));
+        assertThat(respuesta.diferencia()).isEqualByComparingTo(BigDecimal.ONE);
+        assertThat(respuesta.movimientos()).isNotEmpty();
     }
 
     private MovimientoInventario consumo(int productoId, long loteId, String cantidad, boolean empaque) {

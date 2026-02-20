@@ -31,6 +31,7 @@ import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
+import com.willyes.clemenintegra.shared.exception.GlobalExceptionHandler;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,11 +48,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.ErrorResponseException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -79,6 +82,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         UserDetailsServiceAutoConfiguration.class
 })
 @TestPropertySource(properties = {"DB_SECURPASS=dummy", "DB_SECURNAME=dummy"})
+@Import(GlobalExceptionHandler.class)
 class OrdenProduccionControllerTest {
 
     @TestConfiguration
@@ -244,6 +248,32 @@ class OrdenProduccionControllerTest {
 
         verify(ordenProduccionService).registrarCierre(eq(10L), any(CierreProduccionRequestDTO.class));
         verify(ordenProduccionRepository).findByIdForCierreResponse(10L);
+    }
+
+
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @DisplayName("POST /api/produccion/ordenes/{id}/cierres respeta ErrorResponseException 422")
+    void registrarCierre_errorResponseExceptionRetorna422() throws Exception {
+        CierreProduccionRequestDTO request = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("29900"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        var problem = org.springframework.http.ProblemDetail.forStatus(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY);
+        problem.setDetail("El cierre total requiere regularización cuando no coincide con la cantidad programada.");
+        problem.setProperty("code", "CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA");
+        problem.setProperty("cantidadProgramada", new BigDecimal("30000"));
+
+        when(ordenProduccionService.registrarCierre(eq(10L), any(CierreProduccionRequestDTO.class)))
+                .thenThrow(new ErrorResponseException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, problem, null));
+
+        mockMvc.perform(post("/api/produccion/ordenes/{id}/cierres", 10L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("CIERRE_TOTAL_NO_COINCIDE_PROGRAMADA"));
     }
 
     @Test
@@ -574,6 +604,7 @@ class OrdenProduccionControllerTest {
                 .andExpect(jsonPath("$.codigoOrden").value("OP-CLEMEN-20260214-01"));
     }
 
+
     @Test
     @WithMockUser(authorities = "ROL_SUPER_ADMIN")
     @DisplayName("GET /api/produccion/ordenes/lookup permite lookup por codigo a ROL_SUPER_ADMIN")
@@ -602,6 +633,7 @@ class OrdenProduccionControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+
     @Test
     @WithMockUser(authorities = "ROL_SUPER_ADMIN")
     @DisplayName("GET /api/produccion/ordenes/lookup devuelve 404 cuando no existe la orden")
@@ -614,6 +646,7 @@ class OrdenProduccionControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.ORDEN_PRODUCCION_NO_ENCONTRADA.name()));
     }
+
 
     @Test
     @WithMockUser(authorities = "ROL_SUPER_ADMIN")

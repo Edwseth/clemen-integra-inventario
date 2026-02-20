@@ -16,6 +16,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -230,6 +231,27 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleSesionInvalidada(SesionInvalidadaException ex,
                                                                    HttpServletRequest request) {
         return buildResponse(ApiErrorCode.SESION_INVALIDA, ex.getMessage(), null);
+    }
+
+
+    @ExceptionHandler(ErrorResponseException.class)
+    public ResponseEntity<ErrorResponseDTO> handleErrorResponse(ErrorResponseException ex,
+                                                                 HttpServletRequest request) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        var problem = ex.getBody();
+        String code = status.name();
+        String message = status.getReasonPhrase();
+        Object details = null;
+        if (problem != null) {
+            if (problem.getProperties() != null && problem.getProperties().get("code") != null) {
+                code = String.valueOf(problem.getProperties().get("code"));
+            }
+            if (problem.getDetail() != null && !problem.getDetail().isBlank()) {
+                message = problem.getDetail();
+            }
+            details = problem.getProperties();
+        }
+        return buildResponse(status, code, message, details);
     }
 
     @ExceptionHandler(ResponseStatusException.class)

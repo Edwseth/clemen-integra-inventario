@@ -82,7 +82,7 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
         OrdenProduccion op = ordenProduccionRepository.findById(request.ordenProduccionId())
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.ORDEN_PRODUCCION_NO_ENCONTRADA, "OP no encontrada"));
 
-        BigDecimal programada = op.getCantidadProducidaAcumulada() != null ? op.getCantidadProducidaAcumulada() : op.getCantidadProgramada();
+        BigDecimal programada = Optional.ofNullable(op.getCantidadProgramada()).orElse(BigDecimal.ZERO);
         BigDecimal diferencia = request.cantidadRealProducida().subtract(programada);
 
         RegularizacionTrazabilidad reg = regularizacionRepository.save(RegularizacionTrazabilidad.builder()
@@ -134,7 +134,7 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                     BigDecimal qty = disponible.min(pendiente);
                     sec++;
                     creados.add(crearMovimiento(idempotencyKey, sec, productoId, lote.getId(), qty,
-                            TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                            TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD,
                             ALMACEN_PRE_BODEGA, null, op.getId(), request));
                     pendiente = pendiente.subtract(qty);
                 }

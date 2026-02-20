@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface RegularizacionTrazabilidadRepository extends JpaRepository<RegularizacionTrazabilidad, Long> {
     Optional<RegularizacionTrazabilidad> findByIdempotencyKey(String idempotencyKey);
+
+    boolean existsByOrdenProduccionId(Long ordenProduccionId);
 }
