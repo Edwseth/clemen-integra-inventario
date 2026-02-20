@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.produccion.service;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
@@ -64,6 +65,8 @@ class OrdenProduccionServiceChecklistTest {
         LoteConsecutivoDiaService loteConsecutivoDiaService = mock(LoteConsecutivoDiaService.class);
         OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository = mock(OpHomeopaticoOverrideRepository.class);
         ProduccionEtapasLockValidator produccionEtapasLockValidator = mock(ProduccionEtapasLockValidator.class);
+        RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository =
+                mock(RegularizacionTrazabilidadRepository.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -94,7 +97,8 @@ class OrdenProduccionServiceChecklistTest {
                 checklistEtapaItemRepository,
                 loteConsecutivoDiaService,
                 opHomeopaticoOverrideRepository,
-                produccionEtapasLockValidator
+                produccionEtapasLockValidator,
+                regularizacionTrazabilidadRepository
         );
 
         OrdenProduccion orden = OrdenProduccion.builder()
