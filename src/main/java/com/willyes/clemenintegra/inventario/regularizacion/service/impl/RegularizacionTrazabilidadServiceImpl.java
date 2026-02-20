@@ -80,6 +80,10 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                             .cantidad(d.getCantidad())
                             .build())
                     .toList();
+            if (movimientos.isEmpty()) {
+                throw new CustomBusinessException(ApiErrorCode.REGULARIZACION_IDEMPOTENTE_INCONSISTENTE,
+                        "Idempotency-Key ya existe sin detalle de movimientos");
+            }
             return RegularizacionTrazabilidadResponseDTO.builder()
                     .regularizacionId(existente.get().getId())
                     .idempotencyKey(idempotencyKey)
@@ -99,6 +103,71 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
         BigDecimal programada = Optional.ofNullable(op.getCantidadProgramada()).orElse(BigDecimal.ZERO);
         BigDecimal diferencia = request.cantidadRealProducida().subtract(programada);
 
+        List<MovimientoInventario> salidasOp = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(op.getId(),
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA);
+        Map<Long, List<MovimientoInventario>> consumosPorProducto = salidasOp.stream()
+                .filter(m -> m.getProducto() != null && m.getProducto().getId() != null)
+                .collect(Collectors.groupingBy(m -> m.getProducto().getId().longValue()));
+
+        FormulaProducto formula = formulaProductoRepository
+                .findByProductoIdAndEstadoAndActivoTrue(op.getProducto().getId().longValue(), EstadoFormula.APROBADA)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "No existe fórmula aprobada/activa para OP " + op.getId()));
+
+        Map<Long, BigDecimal> deltaPorInsumo = new LinkedHashMap<>();
+        for (DetalleFormula detalleFormula : Optional.ofNullable(formula.getDetalles()).orElse(List.of())) {
+            if (detalleFormula.getInsumo() == null || detalleFormula.getInsumo().getId() == null
+                    || detalleFormula.getCantidadNecesaria() == null
+                    || detalleFormula.getInsumo().getCategoriaProducto() == null
+                    || !Objects.equals(detalleFormula.getInsumo().getCategoriaProducto().getId(), CATEGORIA_EMPAQUE_ID)) {
+                continue;
+            }
+            BigDecimal coef = detalleFormula.getCantidadNecesaria();
+            BigDecimal consumoPlan = coef.multiply(programada);
+            BigDecimal consumoReal = coef.multiply(request.cantidadRealProducida());
+            BigDecimal delta = consumoPlan.subtract(consumoReal);
+            if (delta.signum() != 0) {
+                deltaPorInsumo.merge(detalleFormula.getInsumo().getId().longValue(), delta, BigDecimal::add);
+            }
+        }
+
+        List<MovimientoPlan> planes = new ArrayList<>();
+
+        for (Map.Entry<Long, BigDecimal> e : deltaPorInsumo.entrySet()) {
+            Long productoId = e.getKey();
+            BigDecimal deltaEmpaque = e.getValue();
+            if (deltaEmpaque.signum() > 0) {
+                planificarDevolucion(op.getId(), productoId, deltaEmpaque, consumosPorProducto, planes);
+            } else if (deltaEmpaque.signum() < 0) {
+                planificarConsumoAdicional(op.getId(), productoId, deltaEmpaque.abs(), consumosPorProducto, planes);
+            }
+        }
+
+        if (Boolean.TRUE.equals(request.ajustarProductoTerminado()) && diferencia.signum() != 0) {
+            MovimientoInventario ptEntrada = movimientoInventarioRepository
+                    .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                            op.getId(), TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO
+                    )
+                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.REGULARIZACION_PT_SIN_ENTRADA_BASE,
+                            "No existe ENTRADA_PRODUCTO_TERMINADO base para OP " + op.getId()));
+
+            planes.add(new MovimientoPlan(
+                    ptEntrada.getProducto().getId().longValue(),
+                    ptEntrada.getLote().getId(),
+                    diferencia.abs(),
+                    diferencia.signum() < 0 ? TipoMovimiento.SALIDA : TipoMovimiento.ENTRADA,
+                    ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT,
+                    diferencia.signum() < 0 ? ALMACEN_PT : null,
+                    diferencia.signum() > 0 ? ALMACEN_PT : null
+            ));
+        }
+
+        if (planes.isEmpty()) {
+            throw new CustomBusinessException(ApiErrorCode.REGULARIZACION_SIN_ACCIONES,
+                    "No hay movimientos para regularizar OP " + op.getId());
+        }
+
         RegularizacionTrazabilidad reg = regularizacionRepository.save(RegularizacionTrazabilidad.builder()
                 .ordenProduccionId(op.getId())
                 .cantidadProgramada(programada)
@@ -112,86 +181,12 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                 .fechaIngreso(LocalDateTime.now())
                 .build());
 
-        List<MovimientoInventario> salidasOp = movimientoInventarioRepository
-                .findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(op.getId(),
-                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA);
-        Map<Long, List<MovimientoInventario>> consumosPorProducto = salidasOp.stream()
-                .filter(m -> m.getProducto() != null && m.getProducto().getId() != null)
-                .collect(Collectors.groupingBy(m -> m.getProducto().getId().longValue()));
-
-        FormulaProducto formula = formulaProductoRepository
-                .findByProductoIdAndEstadoAndActivoTrue(op.getProducto().getId().longValue(), EstadoFormula.APROBADA)
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                        "No existe fórmula aprobada/activa para OP " + op.getId()));
-
-        Map<Long, BigDecimal> deltaDevolucionPorInsumo = new LinkedHashMap<>();
-        for (DetalleFormula detalleFormula : Optional.ofNullable(formula.getDetalles()).orElse(List.of())) {
-            if (detalleFormula.getInsumo() == null || detalleFormula.getInsumo().getId() == null
-                    || detalleFormula.getCantidadNecesaria() == null
-                    || detalleFormula.getInsumo().getCategoriaProducto() == null
-                    || !Objects.equals(detalleFormula.getInsumo().getCategoriaProducto().getId(), CATEGORIA_EMPAQUE_ID)) {
-                continue;
-            }
-            BigDecimal coef = detalleFormula.getCantidadNecesaria();
-            BigDecimal consumoPlan = coef.multiply(programada);
-            BigDecimal consumoReal = coef.multiply(request.cantidadRealProducida());
-            BigDecimal delta = consumoPlan.subtract(consumoReal);
-            if (delta.signum() > 0) {
-                deltaDevolucionPorInsumo.merge(detalleFormula.getInsumo().getId().longValue(), delta, BigDecimal::add);
-            }
-        }
-
         List<MovimientoCreadoDTO> creados = new ArrayList<>();
         int sec = 0;
-        for (Map.Entry<Long, BigDecimal> e : deltaDevolucionPorInsumo.entrySet()) {
-            Long productoId = e.getKey();
-            BigDecimal pendiente = e.getValue();
-            List<MovimientoInventario> consumos = new ArrayList<>(consumosPorProducto.getOrDefault(productoId, List.of()));
-            consumos.sort(Comparator.comparing(MovimientoInventario::getFechaIngreso, Comparator.nullsLast(Comparator.reverseOrder()))
-                    .thenComparing(MovimientoInventario::getId, Comparator.nullsLast(Comparator.reverseOrder())));
-
-            if (consumos.isEmpty()) {
-                throw new CustomBusinessException(ApiErrorCode.REGULARIZACION_SIN_LOTE_CONSUMIDO,
-                        "No hay consumo/lote para OP " + op.getId() + " producto " + productoId);
-            }
-
-            for (MovimientoInventario consumo : consumos) {
-                if (pendiente.signum() <= 0) break;
-                if (consumo.getLote() == null || consumo.getLote().getId() == null || consumo.getCantidad() == null) continue;
-
-                BigDecimal qty = consumo.getCantidad().min(pendiente);
-                Integer origen = consumo.getAlmacenOrigen() != null ? Math.toIntExact(consumo.getAlmacenOrigen().getId()) : ALMACEN_PRE_BODEGA;
-                Integer destino = resolveDestinoEmpaque(consumo, origen);
-
-                sec++;
-                creados.add(crearMovimiento(idempotencyKey, sec, productoId, consumo.getLote().getId(), qty,
-                        TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION,
-                        origen, destino, op.getId(), request));
-                pendiente = pendiente.subtract(qty);
-            }
-
-            if (pendiente.signum() > 0) {
-                throw new CustomBusinessException(ApiErrorCode.REGULARIZACION_SIN_LOTE_CONSUMIDO,
-                        "No hay consumo/lote suficiente para OP " + op.getId() + " producto " + productoId);
-            }
-        }
-
-        if (Boolean.TRUE.equals(request.ajustarProductoTerminado()) && diferencia.signum() != 0) {
-            final int secFinal = sec;
-            movimientoInventarioRepository.findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                    op.getId(), TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO
-            ).ifPresent(ptEntrada -> {
-                Long pId = ptEntrada.getProducto().getId().longValue();
-                Long loteId = ptEntrada.getLote().getId();
-                int secPt = secFinal + 1;
-                MovimientoCreadoDTO pt = crearMovimiento(idempotencyKey, secPt, pId, loteId, diferencia.abs(),
-                        diferencia.signum() < 0 ? TipoMovimiento.SALIDA : TipoMovimiento.ENTRADA,
-                        ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT,
-                        diferencia.signum() < 0 ? ALMACEN_PT : null,
-                        diferencia.signum() > 0 ? ALMACEN_PT : null,
-                        op.getId(), request);
-                creados.add(pt);
-            });
+        for (MovimientoPlan plan : planes) {
+            sec++;
+            creados.add(crearMovimiento(idempotencyKey, sec, plan.productoId(), plan.loteId(), plan.cantidad(),
+                    plan.tipo(), plan.clasificacion(), plan.almacenOrigenId(), plan.almacenDestinoId(), op.getId(), request));
         }
 
         return RegularizacionTrazabilidadResponseDTO.builder()
@@ -205,6 +200,102 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                 .registradoPorId(usuarioAuth.getId())
                 .fecha(reg.getFechaIngreso())
                 .build();
+    }
+
+    private void planificarDevolucion(Long opId,
+                                      Long productoId,
+                                      BigDecimal cantidad,
+                                      Map<Long, List<MovimientoInventario>> consumosPorProducto,
+                                      List<MovimientoPlan> planes) {
+        BigDecimal pendiente = cantidad;
+        List<MovimientoInventario> consumos = new ArrayList<>(consumosPorProducto.getOrDefault(productoId, List.of()));
+        consumos.sort(Comparator.comparing(MovimientoInventario::getFechaIngreso, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(MovimientoInventario::getId, Comparator.nullsLast(Comparator.reverseOrder())));
+
+        if (consumos.isEmpty()) {
+            throw new CustomBusinessException(ApiErrorCode.REGULARIZACION_SIN_LOTE_CONSUMIDO,
+                    "No hay consumo/lote para OP " + opId + " producto " + productoId);
+        }
+
+        for (MovimientoInventario consumo : consumos) {
+            if (pendiente.signum() <= 0) break;
+            if (consumo.getLote() == null || consumo.getLote().getId() == null || consumo.getCantidad() == null) continue;
+
+            BigDecimal qty = consumo.getCantidad().min(pendiente);
+            Integer origen = consumo.getAlmacenOrigen() != null ? Math.toIntExact(consumo.getAlmacenOrigen().getId()) : ALMACEN_PRE_BODEGA;
+            Integer destino = resolveDestinoEmpaque(consumo, origen);
+
+            planes.add(new MovimientoPlan(
+                    productoId,
+                    consumo.getLote().getId(),
+                    qty,
+                    TipoMovimiento.ENTRADA,
+                    ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION,
+                    origen,
+                    destino
+            ));
+            pendiente = pendiente.subtract(qty);
+        }
+
+        if (pendiente.signum() > 0) {
+            throw new CustomBusinessException(ApiErrorCode.REGULARIZACION_SIN_LOTE_CONSUMIDO,
+                    "No hay consumo/lote suficiente para OP " + opId + " producto " + productoId);
+        }
+    }
+
+    private void planificarConsumoAdicional(Long opId,
+                                            Long productoId,
+                                            BigDecimal cantidad,
+                                            Map<Long, List<MovimientoInventario>> consumosPorProducto,
+                                            List<MovimientoPlan> planes) {
+        BigDecimal pendiente = cantidad;
+        List<MovimientoInventario> consumos = new ArrayList<>(consumosPorProducto.getOrDefault(productoId, List.of()));
+        consumos.sort(Comparator.comparing(MovimientoInventario::getFechaIngreso, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(MovimientoInventario::getId, Comparator.nullsLast(Comparator.reverseOrder())));
+
+        for (MovimientoInventario consumo : consumos) {
+            if (pendiente.signum() <= 0) break;
+            if (consumo.getLote() == null || consumo.getLote().getId() == null || consumo.getCantidad() == null) continue;
+            BigDecimal qty = consumo.getCantidad().min(pendiente);
+            Integer origen = consumo.getAlmacenOrigen() != null ? Math.toIntExact(consumo.getAlmacenOrigen().getId()) : ALMACEN_PRE_BODEGA;
+            planes.add(new MovimientoPlan(
+                    productoId,
+                    consumo.getLote().getId(),
+                    qty,
+                    TipoMovimiento.SALIDA,
+                    ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD,
+                    origen,
+                    null
+            ));
+            pendiente = pendiente.subtract(qty);
+        }
+
+        if (pendiente.signum() > 0) {
+            List<LoteProducto> fefoLotes = loteProductoRepository.findFefoByProductoAndAlmacen(productoId, ALMACEN_PRE_BODEGA);
+            for (LoteProducto lote : fefoLotes) {
+                if (pendiente.signum() <= 0) break;
+                BigDecimal stock = Optional.ofNullable(lote.getStockLote()).orElse(BigDecimal.ZERO)
+                        .subtract(Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO));
+                if (stock.signum() <= 0) continue;
+                BigDecimal qty = stock.min(pendiente);
+                planes.add(new MovimientoPlan(
+                        productoId,
+                        lote.getId(),
+                        qty,
+                        TipoMovimiento.SALIDA,
+                        ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD,
+                        ALMACEN_PRE_BODEGA,
+                        null
+                ));
+                pendiente = pendiente.subtract(qty);
+            }
+        }
+
+        if (pendiente.signum() > 0) {
+            throw new CustomBusinessException(ApiErrorCode.REGULARIZACION_SIN_LOTE_ELEGIBLE,
+                    "No existe lote elegible para regularización OP " + opId + " producto " + productoId,
+                    Map.of("ordenProduccionId", opId, "productoId", productoId));
+        }
     }
 
     private int resolveDestinoEmpaque(MovimientoInventario consumo, Integer origen) {
@@ -231,7 +322,7 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                                                 Long opId, RegularizacionTrazabilidadRequestDTO request) {
         MotivoMovimiento motivo = motivoMovimientoRepository.findByMotivo(clasificacion)
                 .orElseGet(() -> motivoMovimientoRepository.findByMotivo(
-                        tipo == TipoMovimiento.SALIDA ? ClasificacionMovimientoInventario.SALIDA_PRODUCCION : ClasificacionMovimientoInventario.AJUSTE_POSITIVO)
+                                tipo == TipoMovimiento.SALIDA ? ClasificacionMovimientoInventario.SALIDA_PRODUCCION : ClasificacionMovimientoInventario.AJUSTE_POSITIVO)
                         .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.CATALOGO_FALTANTE, "Motivo no configurado")));
         TipoMovimientoDetalle detalle = tipoMovimientoDetalleRepository.findByDescripcion(clasificacion.name())
                 .orElseGet(() -> tipoMovimientoDetalleRepository.findByDescripcion(tipo == TipoMovimiento.SALIDA ? "SALIDA_PRODUCCION" : "AJUSTE_POSITIVO")
@@ -259,5 +350,14 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
         log.info("REGULARIZACION_TRAZABILIDAD movId={} opId={} producto={} lote={} qty={} idem={}", creado.getId(), opId, productoId, loteId, cantidad, idem);
         return MovimientoCreadoDTO.builder().movimientoId(creado.getId()).tipoMovimiento(tipo.name())
                 .clasificacion(clasificacion.name()).loteProductoId(loteId).cantidad(cantidad).build();
+    }
+
+    private record MovimientoPlan(Long productoId,
+                                  Long loteId,
+                                  BigDecimal cantidad,
+                                  TipoMovimiento tipo,
+                                  ClasificacionMovimientoInventario clasificacion,
+                                  Integer almacenOrigenId,
+                                  Integer almacenDestinoId) {
     }
 }
