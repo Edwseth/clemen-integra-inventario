@@ -42,6 +42,8 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
@@ -618,6 +620,35 @@ class OrdenProduccionControllerTest {
     @DisplayName("GET /api/produccion/ordenes/lookup devuelve 400 cuando no se envian parametros")
     void lookupSinParametros_responde400() throws Exception {
         mockMvc.perform(get("/api/produccion/ordenes/lookup"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ApiErrorCode.SOLICITUD_INVALIDA.name()));
+    }
+
+
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    @DisplayName("GET /api/produccion/ordenes/autocomplete retorna 200 con resultados")
+    void autocomplete_conCodigoValido_responde200() throws Exception {
+        OrdenProduccionResponseDTO dto = new OrdenProduccionResponseDTO();
+        dto.id = 10L;
+        dto.codigoOrden = "OP-CLEMEN-20260212-05";
+
+        when(ordenProduccionService.listarPaginado(eq("OP-"), eq(null), eq(null), eq(null), eq(null), eq(null), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1));
+
+        mockMvc.perform(get("/api/produccion/ordenes/autocomplete")
+                        .param("codigo", "OP-"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(10L))
+                .andExpect(jsonPath("$.content[0].codigoOrden").value("OP-CLEMEN-20260212-05"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_CONTADOR")
+    @DisplayName("GET /api/produccion/ordenes/autocomplete retorna 400 cuando codigo tiene menos de 2 caracteres")
+    void autocomplete_conCodigoCorto_responde400() throws Exception {
+        mockMvc.perform(get("/api/produccion/ordenes/autocomplete")
+                        .param("codigo", "A"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ApiErrorCode.SOLICITUD_INVALIDA.name()));
     }
