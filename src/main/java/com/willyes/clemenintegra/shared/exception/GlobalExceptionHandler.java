@@ -17,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.ErrorResponseException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -175,6 +177,26 @@ public class GlobalExceptionHandler {
                                                                HttpServletRequest request) {
         return buildResponse(ApiErrorCode.ROL_INSUFICIENTE,
                 "Acceso denegado. Contacte a un administrador para solicitar el rol adecuado.",
+                null);
+    }
+
+    @ExceptionHandler({MaxUploadSizeExceededException.class, MultipartException.class})
+    public ResponseEntity<ErrorResponseDTO> handleMultipartTooLarge(Exception ex,
+                                                                     HttpServletRequest request) {
+        Throwable root = getRootCause(ex);
+        String requestId = MDC.get("requestId");
+        String method = request != null ? request.getMethod() : null;
+        String uri = request != null ? request.getRequestURI() : null;
+
+        log.warn("Multipart excede límite requestId={} method={} uri={} rootType={} rootMessage={}",
+                requestId,
+                method,
+                uri,
+                root != null ? root.getClass().getName() : null,
+                root != null ? root.getMessage() : ex.getMessage());
+
+        return buildResponse(ApiErrorCode.ARCHIVO_DEMASIADO_GRANDE,
+                "El archivo adjunto supera el tamaño permitido.",
                 null);
     }
 

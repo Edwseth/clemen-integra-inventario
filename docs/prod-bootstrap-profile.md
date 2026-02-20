@@ -16,3 +16,10 @@ java -jar clemen-integra-backend.jar
 1. Ejecuta el backend con `SPRING_PROFILES_ACTIVE=prod-bootstrap` para aplicar/validar migraciones.
 2. Detén el servicio.
 3. Arranca normalmente con `SPRING_PROFILES_ACTIVE=prod` (Flyway deshabilitado) una vez la base esté alineada.
+
+
+### Requisitos de uploads en PROD
+- Verifica que exista la carpeta temporal `C:/ClemenERP/uploads/tmp` en el servidor.
+- El usuario del servicio backend debe tener permisos de escritura sobre esa ruta.
+- El perfil `prod` fija límites de multipart en 10MB por archivo y 30MB por request.
+
