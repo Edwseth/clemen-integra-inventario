@@ -114,8 +114,7 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
 
         List<MovimientoInventario> salidasOp = movimientoInventarioRepository
                 .findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(op.getId(),
-                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA)
-                .toList();
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA);
         Map<Long, List<MovimientoInventario>> consumosPorProducto = salidasOp.stream()
                 .filter(m -> m.getProducto() != null && m.getProducto().getId() != null)
                 .collect(Collectors.groupingBy(m -> m.getProducto().getId().longValue()));
