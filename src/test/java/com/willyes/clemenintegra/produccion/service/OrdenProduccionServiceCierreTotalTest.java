@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
+import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
@@ -69,6 +70,7 @@ class OrdenProduccionServiceCierreTotalTest {
     private ReservaLoteService reservaLoteService;
     private ReservaLoteRepository reservaLoteRepository;
     private DisponibilidadInsumoService disponibilidadInsumoService;
+    private RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
 
     private OrdenProduccionServiceImpl service;
 
@@ -104,6 +106,7 @@ class OrdenProduccionServiceCierreTotalTest {
         LoteConsecutivoDiaService loteConsecutivoDiaService = mock(LoteConsecutivoDiaService.class);
         OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository = mock(OpHomeopaticoOverrideRepository.class);
         ProduccionEtapasLockValidator produccionEtapasLockValidator = mock(ProduccionEtapasLockValidator.class);
+        regularizacionTrazabilidadRepository = mock(RegularizacionTrazabilidadRepository.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -134,7 +137,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 checklistEtapaItemRepository,
                 loteConsecutivoDiaService,
                 opHomeopaticoOverrideRepository,
-                produccionEtapasLockValidator
+                produccionEtapasLockValidator,
+                regularizacionTrazabilidadRepository
         );
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDO");
