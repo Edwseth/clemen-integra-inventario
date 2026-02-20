@@ -1,287 +1,216 @@
 package com.willyes.clemenintegra.inventario.regularizacion.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
+import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
-import com.willyes.clemenintegra.inventario.regularizacion.dto.AjusteLoteDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.MovimientoCreadoDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadRequestDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadResponseDTO;
-import com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidadOperacion;
-import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadOperacionRepository;
+import com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidad;
+import com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidadDetalle;
+import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadDetalleRepository;
+import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.inventario.regularizacion.service.RegularizacionTrazabilidadService;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
-import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
+import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
+import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
-import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HexFormat;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTrazabilidadService {
 
-    private static final String ESTADO_CREADA = "CREADA";
-    private static final String ESTADO_APLICADA = "APLICADA";
-    private static final String TIPO_OPERACION = "REGULARIZACION_TRAZABILIDAD_OP";
+    private static final long CATEGORIA_EMPAQUE_ID = 2L;
+    private static final int ALMACEN_PRE_BODEGA = 6;
+    private static final int ALMACEN_PRINCIPAL_EMPAQUE = 5;
+    private static final int ALMACEN_PT = 2;
 
     private final OrdenProduccionRepository ordenProduccionRepository;
-    private final ProductoRepository productoRepository;
+    private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final LoteProductoRepository loteProductoRepository;
+    private final MotivoMovimientoRepository motivoMovimientoRepository;
+    private final TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     private final MovimientoInventarioService movimientoInventarioService;
-    private final RegularizacionTrazabilidadOperacionRepository operacionRepository;
-    private final ObjectMapper objectMapper;
-
-    @Value("${app.inventario.regularizacion.allow-negative-stock:false}")
-    private boolean allowNegativeStock;
-
-    @Value("${app.inventario.regularizacion.adjunto-obligatorio:false}")
-    private boolean adjuntoObligatorio;
-
-    @Value("${app.inventario.regularizacion.adjunto-obligatorio-desde-cantidad:1000}")
-    private BigDecimal umbralAdjunto;
+    private final RegularizacionTrazabilidadRepository regularizacionRepository;
+    private final RegularizacionTrazabilidadDetalleRepository detalleRepository;
 
     @Override
     @Transactional
     public RegularizacionTrazabilidadResponseDTO regularizarPorOP(RegularizacionTrazabilidadRequestDTO request,
                                                                   String idempotencyKey,
                                                                   Usuario usuarioAuth) {
-        if (!StringUtils.hasText(idempotencyKey)) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Idempotency-Key es obligatorio");
-        }
-        if (usuarioAuth == null) {
-            throw new CustomBusinessException(ApiErrorCode.SESION_INVALIDA, "Usuario autenticado requerido");
-        }
+        if (usuarioAuth == null) throw new CustomBusinessException(ApiErrorCode.SESION_INVALIDA, "Usuario autenticado requerido");
+        if (!StringUtils.hasText(idempotencyKey)) throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Idempotency-Key es obligatorio");
 
-        validarRequest(request, usuarioAuth);
-        String hash = calcularHashRequest(request);
-
-        var existenteOpt = operacionRepository.findByIdempotencyKey(idempotencyKey);
-        if (existenteOpt.isPresent()) {
-            RegularizacionTrazabilidadOperacion existente = existenteOpt.get();
-            if (!Objects.equals(existente.getRequestHash(), hash)) {
-                throw new CustomBusinessException(ApiErrorCode.IDEMPOTENCY_KEY_REUSADA_CON_OTRO_PAYLOAD,
-                        "La Idempotency-Key ya fue usada con otro payload");
-            }
-            if (ESTADO_APLICADA.equals(existente.getEstado()) && StringUtils.hasText(existente.getResultadoJson())) {
-                return deserializeResultado(existente.getResultadoJson());
-            }
-            throw new CustomBusinessException(ApiErrorCode.OPERACION_EN_PROCESO,
-                    "Existe una operación en proceso para la misma Idempotency-Key");
+        Optional<RegularizacionTrazabilidad> existente = regularizacionRepository.findByIdempotencyKey(idempotencyKey);
+        if (existente.isPresent()) {
+            return RegularizacionTrazabilidadResponseDTO.builder()
+                    .regularizacionId(existente.get().getId())
+                    .idempotencyKey(idempotencyKey)
+                    .ordenProduccionId(existente.get().getOrdenProduccionId())
+                    .cantidadProgramada(existente.get().getCantidadProgramada())
+                    .cantidadReal(existente.get().getCantidadReal())
+                    .diferencia(existente.get().getDiferencia())
+                    .movimientos(List.of())
+                    .registradoPorId(existente.get().getUsuario().getId())
+                    .fecha(existente.get().getFechaIngreso())
+                    .build();
         }
 
-        RegularizacionTrazabilidadOperacion operacion = operacionRepository.save(RegularizacionTrazabilidadOperacion.builder()
+        OrdenProduccion op = ordenProduccionRepository.findById(request.ordenProduccionId())
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.ORDEN_PRODUCCION_NO_ENCONTRADA, "OP no encontrada"));
+
+        BigDecimal programada = op.getCantidadProducidaAcumulada() != null ? op.getCantidadProducidaAcumulada() : op.getCantidadProgramada();
+        BigDecimal diferencia = request.cantidadRealProducida().subtract(programada);
+
+        RegularizacionTrazabilidad reg = regularizacionRepository.save(RegularizacionTrazabilidad.builder()
+                .ordenProduccionId(op.getId())
+                .cantidadProgramada(programada)
+                .cantidadReal(request.cantidadRealProducida())
+                .diferencia(diferencia)
+                .ajustarPt(Boolean.TRUE.equals(request.ajustarProductoTerminado()))
+                .documentoReferencia(request.documentoReferencia())
+                .observaciones(request.observaciones())
                 .idempotencyKey(idempotencyKey)
-                .requestHash(hash)
-                .estado(ESTADO_CREADA)
-                .ordenProduccionId(request.ordenProduccionId())
-                .productoId(request.productoId())
-                .creadoPor(usuarioAuth)
-                .createdAt(LocalDateTime.now())
+                .usuario(usuarioAuth)
+                .fechaIngreso(LocalDateTime.now())
                 .build());
 
-        List<MovimientoCreadoDTO> movimientos = new ArrayList<>();
-        int index = 0;
-        for (AjusteLoteDTO ajuste : request.ajustes()) {
-            index++;
-            boolean positivo = "POSITIVO".equalsIgnoreCase(ajuste.tipo());
-            var clasificacion = positivo
-                    ? ClasificacionMovimientoInventario.AJUSTE_POSITIVO
-                    : ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
-
-            MovimientoInventarioDTO movimientoDTO = new MovimientoInventarioDTO(
-                    null,
-                    ajuste.cantidad(),
-                    TipoMovimiento.AJUSTE,
-                    clasificacion,
-                    request.docReferencia(),
-                    buildObservaciones(request),
-                    null,
-                    null,
-                    null,
-                    Math.toIntExact(request.productoId()),
-                    ajuste.loteProductoId(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    request.motivoMovimientoId(),
-                    request.tipoMovimientoDetalleId(),
-                    null,
-                    null,
-                    request.ordenProduccionId(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            );
-
-            MovimientoInventarioResponseDTO response = movimientoInventarioService.registrarMovimiento(
-                    movimientoDTO,
-                    idempotencyKey + ":" + index
-            );
-            movimientos.add(MovimientoCreadoDTO.builder()
-                    .movimientoId(response.getId())
-                    .tipoMovimiento(TipoMovimiento.AJUSTE.name())
-                    .clasificacion(clasificacion.name())
-                    .loteProductoId(ajuste.loteProductoId())
-                    .cantidad(ajuste.cantidad())
-                    .build());
-        }
-
-        RegularizacionTrazabilidadResponseDTO resultado = RegularizacionTrazabilidadResponseDTO.builder()
-                .operacionId(operacion.getId())
-                .idempotencyKey(idempotencyKey)
-                .ordenProduccionId(request.ordenProduccionId())
-                .productoId(request.productoId())
-                .tipoOperacion(TIPO_OPERACION)
-                .movimientos(movimientos)
-                .registradoPorId(usuarioAuth.getId())
-                .fecha(LocalDateTime.now())
-                .build();
-
-        operacion.setEstado(ESTADO_APLICADA);
-        operacion.setResultadoJson(toJson(resultado));
-        operacionRepository.save(operacion);
-
-        return resultado;
-    }
-
-    private void validarRequest(RegularizacionTrazabilidadRequestDTO request, Usuario usuarioAuth) {
-        if (request == null || request.ajustes() == null || request.ajustes().isEmpty()) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Debe enviar ajustes");
-        }
-        if (!ordenProduccionRepository.existsById(request.ordenProduccionId())) {
-            throw new CustomBusinessException(ApiErrorCode.ORDEN_PRODUCCION_NO_ENCONTRADA, "Orden de producción no encontrada");
-        }
-        if (!productoRepository.existsById(request.productoId())) {
-            throw new CustomBusinessException(ApiErrorCode.PRODUCTO_NO_ENCONTRADO, "Producto no encontrado");
-        }
-        if (request.motivoMovimientoId() == null || request.tipoMovimientoDetalleId() == null) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "motivoMovimientoId y tipoMovimientoDetalleId son requeridos");
-        }
-        if (!StringUtils.hasText(request.observaciones()) || request.observaciones().trim().length() < 15
-                || request.observaciones().trim().length() > 500) {
-            throw new CustomBusinessException(ApiErrorCode.OBSERVACION_REQUERIDA,
-                    "observaciones debe tener entre 15 y 500 caracteres");
-        }
-
-        BigDecimal sumaNegativos = BigDecimal.ZERO;
-        for (AjusteLoteDTO ajuste : request.ajustes()) {
-            if (ajuste.loteProductoId() == null || ajuste.cantidad() == null || ajuste.cantidad().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Ajustes inválidos");
-            }
-            String tipo = ajuste.tipo() == null ? "" : ajuste.tipo().trim().toUpperCase(Locale.ROOT);
-            if (!"POSITIVO".equals(tipo) && !"NEGATIVO".equals(tipo)) {
-                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Tipo de ajuste inválido");
-            }
-            LoteProducto lote = loteProductoRepository.findById(ajuste.loteProductoId())
-                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.LOTE_NO_ENCONTRADO, "Lote no encontrado"));
-            if (lote.getProducto() == null || lote.getProducto().getId() == null
-                    || lote.getProducto().getId().longValue() != request.productoId()) {
-                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                        "El lote no pertenece al producto indicado");
-            }
-            if ("NEGATIVO".equals(tipo)) {
-                sumaNegativos = sumaNegativos.add(ajuste.cantidad());
-            }
-        }
-
-        if (adjuntoObligatorio && sumaNegativos.compareTo(umbralAdjunto) >= 0 && !StringUtils.hasText(request.soporteId())) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "soporteId es obligatorio para regularizaciones de este monto");
-        }
-
-        if (Boolean.TRUE.equals(request.permitirStockNegativo())) {
-            boolean esSuperAdmin = usuarioAuth.getRol() == RolUsuario.ROL_SUPER_ADMIN;
-            if (!allowNegativeStock || !esSuperAdmin) {
-                throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
-                        "No está permitido generar stock negativo");
-            }
-        }
-    }
-
-    private String buildObservaciones(RegularizacionTrazabilidadRequestDTO request) {
-        if (StringUtils.hasText(request.soporteId())) {
-            return request.observaciones().trim() + " | soporteId=" + request.soporteId().trim();
-        }
-        return request.observaciones().trim();
-    }
-
-    String calcularHashRequest(RegularizacionTrazabilidadRequestDTO request) {
-        List<String> ajustesNormalizados = request.ajustes().stream()
-                .sorted(Comparator.comparing(AjusteLoteDTO::loteProductoId)
-                        .thenComparing(a -> a.tipo().toUpperCase(Locale.ROOT))
-                        .thenComparing(AjusteLoteDTO::cantidad))
-                .map(a -> a.loteProductoId() + "|" + a.tipo().trim().toUpperCase(Locale.ROOT) + "|" + a.cantidad().stripTrailingZeros().toPlainString())
+        List<MovimientoInventario> salidasEmpaque = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(op.getId(),
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA)
+                .stream()
+                .filter(m -> m.getProducto() != null && m.getProducto().getCategoriaProducto() != null
+                        && Objects.equals(m.getProducto().getCategoriaProducto().getId(), CATEGORIA_EMPAQUE_ID))
                 .toList();
 
-        String normalized = String.join(";",
-                String.valueOf(request.ordenProduccionId()),
-                String.valueOf(request.productoId()),
-                String.valueOf(request.motivoMovimientoId()),
-                String.valueOf(request.tipoMovimientoDetalleId()),
-                nullSafe(request.docReferencia()),
-                nullSafe(request.observaciones()),
-                nullSafe(request.soporteId()),
-                String.valueOf(Boolean.TRUE.equals(request.permitirStockNegativo())),
-                String.join(",", ajustesNormalizados)
-        );
+        Map<Long, List<MovimientoInventario>> porProducto = salidasEmpaque.stream().collect(Collectors.groupingBy(m -> m.getProducto().getId().longValue()));
 
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(normalized.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new CustomBusinessException(ApiErrorCode.ERROR_INTERNO, "No fue posible calcular hash de idempotencia");
+        List<MovimientoCreadoDTO> creados = new ArrayList<>();
+        int sec = 0;
+        for (Map.Entry<Long, List<MovimientoInventario>> e : porProducto.entrySet()) {
+            Long productoId = e.getKey();
+            BigDecimal pendiente = diferencia.abs();
+            if (diferencia.signum() < 0) {
+                List<MovimientoInventario> lifo = new ArrayList<>(e.getValue());
+                lifo.sort(Comparator.comparing(MovimientoInventario::getFechaIngreso).reversed().thenComparing(MovimientoInventario::getId).reversed());
+                for (MovimientoInventario consumo : lifo) {
+                    if (pendiente.signum() <= 0) break;
+                    BigDecimal qty = consumo.getCantidad().min(pendiente);
+                    sec++;
+                    creados.add(crearMovimiento(idempotencyKey, sec, productoId, consumo.getLote().getId(), qty,
+                            TipoMovimiento.TRANSFERENCIA, ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD,
+                            ALMACEN_PRE_BODEGA, resolveDestinoEmpaque(consumo), op.getId(), request));
+                    pendiente = pendiente.subtract(qty);
+                }
+            } else if (diferencia.signum() > 0) {
+                List<LoteProducto> fefo = loteProductoRepository.findFefoByProductoAndAlmacen(productoId, ALMACEN_PRE_BODEGA);
+                for (LoteProducto lote : fefo) {
+                    if (pendiente.signum() <= 0) break;
+                    BigDecimal disponible = lote.getStockLote().subtract(Optional.ofNullable(lote.getStockReservado()).orElse(BigDecimal.ZERO));
+                    if (disponible.signum() <= 0) continue;
+                    BigDecimal qty = disponible.min(pendiente);
+                    sec++;
+                    creados.add(crearMovimiento(idempotencyKey, sec, productoId, lote.getId(), qty,
+                            TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                            ALMACEN_PRE_BODEGA, null, op.getId(), request));
+                    pendiente = pendiente.subtract(qty);
+                }
+            }
         }
+
+        if (Boolean.TRUE.equals(request.ajustarProductoTerminado()) && diferencia.signum() != 0) {
+            movimientoInventarioRepository.findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                    op.getId(), TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO
+            ).ifPresent(ptEntrada -> {
+                Long pId = ptEntrada.getProducto().getId().longValue();
+                Long loteId = ptEntrada.getLote().getId();
+                int secPt = sec + 1;
+                MovimientoCreadoDTO pt = crearMovimiento(idempotencyKey, secPt, pId, loteId, diferencia.abs(),
+                        diferencia.signum() < 0 ? TipoMovimiento.SALIDA : TipoMovimiento.ENTRADA,
+                        ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT,
+                        diferencia.signum() < 0 ? ALMACEN_PT : null,
+                        diferencia.signum() > 0 ? ALMACEN_PT : null,
+                        op.getId(), request);
+                creados.add(pt);
+            });
+        }
+
+        return RegularizacionTrazabilidadResponseDTO.builder()
+                .regularizacionId(reg.getId())
+                .idempotencyKey(idempotencyKey)
+                .ordenProduccionId(op.getId())
+                .cantidadProgramada(programada)
+                .cantidadReal(request.cantidadRealProducida())
+                .diferencia(diferencia)
+                .movimientos(creados)
+                .registradoPorId(usuarioAuth.getId())
+                .fecha(reg.getFechaIngreso())
+                .build();
     }
 
-    private String nullSafe(String value) {
-        return value == null ? "" : value.trim();
+    private int resolveDestinoEmpaque(MovimientoInventario consumo) {
+        if (consumo.getAlmacenOrigen() != null && Objects.equals(consumo.getAlmacenOrigen().getId(), (long) ALMACEN_PRE_BODEGA)) {
+            return ALMACEN_PRINCIPAL_EMPAQUE;
+        }
+        return ALMACEN_PRINCIPAL_EMPAQUE;
     }
 
-    private String toJson(RegularizacionTrazabilidadResponseDTO response) {
-        try {
-            return objectMapper.writeValueAsString(response);
-        } catch (JsonProcessingException e) {
-            throw new CustomBusinessException(ApiErrorCode.ERROR_INTERNO, "No fue posible serializar resultado");
-        }
-    }
+    private MovimientoCreadoDTO crearMovimiento(String idem, int sec, Long productoId, Long loteId, BigDecimal cantidad,
+                                                TipoMovimiento tipo, ClasificacionMovimientoInventario clasificacion,
+                                                Integer almacenOrigenId, Integer almacenDestinoId,
+                                                Long opId, RegularizacionTrazabilidadRequestDTO request) {
+        MotivoMovimiento motivo = motivoMovimientoRepository.findByMotivo(clasificacion)
+                .orElseGet(() -> motivoMovimientoRepository.findByMotivo(
+                        tipo == TipoMovimiento.SALIDA ? ClasificacionMovimientoInventario.SALIDA_PRODUCCION : ClasificacionMovimientoInventario.AJUSTE_POSITIVO)
+                        .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.CATALOGO_FALTANTE, "Motivo no configurado")));
+        TipoMovimientoDetalle detalle = tipoMovimientoDetalleRepository.findByDescripcion(clasificacion.name())
+                .orElseGet(() -> tipoMovimientoDetalleRepository.findByDescripcion(tipo == TipoMovimiento.SALIDA ? "SALIDA_PRODUCCION" : "AJUSTE_POSITIVO")
+                        .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.CATALOGO_FALTANTE, "Tipo detalle no configurado")));
 
-    private RegularizacionTrazabilidadResponseDTO deserializeResultado(String resultadoJson) {
-        try {
-            return objectMapper.readValue(resultadoJson, RegularizacionTrazabilidadResponseDTO.class);
-        } catch (JsonProcessingException e) {
-            throw new CustomBusinessException(ApiErrorCode.ERROR_INTERNO, "No fue posible deserializar resultado idempotente");
-        }
+        MovimientoInventarioResponseDTO creado = movimientoInventarioService.registrarMovimiento(new MovimientoInventarioDTO(
+                null, cantidad, tipo, clasificacion, request.documentoReferencia(), request.observaciones(),
+                null, null, null, Math.toIntExact(productoId), loteId,
+                almacenOrigenId, almacenDestinoId, null, null,
+                motivo.getId(), detalle.getId(), null, null, opId,
+                null, null, null, null, null, null, null, null, null
+        ), idem + ":" + sec);
+
+        detalleRepository.save(RegularizacionTrazabilidadDetalle.builder()
+                .regularizacion(regularizacionRepository.findByIdempotencyKey(idem).orElseThrow())
+                .productoId(productoId)
+                .loteId(loteId)
+                .cantidad(cantidad)
+                .tipo(tipo.name())
+                .almacenOrigenId(almacenOrigenId)
+                .almacenDestinoId(almacenDestinoId)
+                .movimiento(MovimientoInventario.builder().id(creado.getId()).build())
+                .build());
+
+        log.info("REGULARIZACION_TRAZABILIDAD movId={} opId={} producto={} lote={} qty={} idem={}", creado.getId(), opId, productoId, loteId, cantidad, idem);
+        return MovimientoCreadoDTO.builder().movimientoId(creado.getId()).tipoMovimiento(tipo.name())
+                .clasificacion(clasificacion.name()).loteProductoId(loteId).cantidad(cantidad).build();
     }
 }
