@@ -96,7 +96,7 @@ class VariacionesProduccionServiceImplTest {
             @Override
             public LocalDateTime getFechaIngreso() { return LocalDateTime.now(); }
             @Override
-            public Boolean getTieneDetalle() { return true; }
+            public Long getTieneDetalle() { return 1L; }
         };
     }
 }

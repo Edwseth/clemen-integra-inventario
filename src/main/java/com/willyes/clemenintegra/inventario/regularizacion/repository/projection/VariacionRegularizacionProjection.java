@@ -24,5 +24,5 @@ public interface VariacionRegularizacionProjection {
 
     LocalDateTime getFechaIngreso();
 
-    Boolean getTieneDetalle();
+    Long getTieneDetalle();
 }
