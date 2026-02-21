@@ -52,6 +52,25 @@ class VariacionesProduccionServiceImplTest {
         assertThat(content.get(1).rendimientoPct()).isEqualByComparingTo("90.00");
     }
 
+
+    @Test
+    void listarVariaciones_incluyeOpSinRegularizacionConValoresPorDefecto() {
+        VariacionRegularizacionProjection sinRegularizacion = projection(null, 15L, BigDecimal.valueOf(80), BigDecimal.valueOf(80), BigDecimal.ZERO, 0L);
+
+        when(regularizacionRepository.findUltimasVariacionesPorOP(any(), any(), any(), anyBoolean(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(sinRegularizacion), PageRequest.of(0, 20), 1));
+
+        VariacionOPResponseDTO row = service
+                .listarVariaciones(null, null, null, false, null, PageRequest.of(0, 20))
+                .getContent()
+                .get(0);
+
+        assertThat(row.regularizacionId()).isNull();
+        assertThat(row.cantidadReal()).isEqualByComparingTo("80");
+        assertThat(row.diferencia()).isEqualByComparingTo("0");
+        assertThat(row.rendimientoPct()).isEqualByComparingTo("100.00");
+        assertThat(row.tieneDetalle()).isFalse();
+    }
     @Test
     void listarVariaciones_marcaDataInconsistenteCuandoProgramadaEsCero() {
         VariacionRegularizacionProjection inconsistente = projection(3L, 12L, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TEN);
@@ -74,6 +93,15 @@ class VariacionesProduccionServiceImplTest {
                                                          BigDecimal programada,
                                                          BigDecimal real,
                                                          BigDecimal diferencia) {
+        return projection(regId, opId, programada, real, diferencia, 1L);
+    }
+
+    private VariacionRegularizacionProjection projection(Long regId,
+                                                         Long opId,
+                                                         BigDecimal programada,
+                                                         BigDecimal real,
+                                                         BigDecimal diferencia,
+                                                         Long tieneDetalle) {
         return new VariacionRegularizacionProjection() {
             @Override
             public Long getRegularizacionId() { return regId; }
@@ -96,7 +124,7 @@ class VariacionesProduccionServiceImplTest {
             @Override
             public LocalDateTime getFechaIngreso() { return LocalDateTime.now(); }
             @Override
-            public Long getTieneDetalle() { return 1L; }
+            public Long getTieneDetalle() { return tieneDetalle; }
         };
     }
 }

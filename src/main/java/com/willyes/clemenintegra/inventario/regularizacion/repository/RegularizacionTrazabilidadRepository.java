@@ -18,58 +18,60 @@ public interface RegularizacionTrazabilidadRepository extends JpaRepository<Regu
     boolean existsByOrdenProduccionId(Long ordenProduccionId);
 
     @Query(value = """
-            SELECT t.id AS regularizacionId,
-                   t.orden_produccion_id AS ordenProduccionId,
-                   t.cantidad_programada AS cantidadProgramada,
-                   t.cantidad_real AS cantidadReal,
-                   t.diferencia AS diferencia,
-                   t.ajustar_pt AS ajustarPt,
-                   t.documento_referencia AS documentoReferencia,
-                   t.observaciones AS observaciones,
-                   t.usuario_id AS usuarioId,
-                   t.fecha_ingreso AS fechaIngreso,
-                   EXISTS(SELECT 1 FROM regularizacion_detalle rd WHERE rd.regularizacion_id = t.id) AS tieneDetalle
-            FROM (
+            WITH ult_reg AS (
               SELECT rt.*,
                      ROW_NUMBER() OVER (
                          PARTITION BY rt.orden_produccion_id
                          ORDER BY rt.fecha_ingreso DESC, rt.id DESC
                      ) AS rn
               FROM regularizaciones_trazabilidad rt
-            ) t
-            WHERE t.rn = 1
-              AND (:fechaInicio IS NULL OR t.fecha_ingreso >= :fechaInicio)
-              AND (:fechaFin IS NULL OR t.fecha_ingreso <= :fechaFin)
-              AND (:ordenProduccionId IS NULL OR t.orden_produccion_id = :ordenProduccionId)
-              AND (:soloConVariacion = FALSE OR t.diferencia <> 0)
+            )
+            SELECT ur.id AS regularizacionId,
+                   op.id AS ordenProduccionId,
+                   op.cantidad_programada AS cantidadProgramada,
+                   COALESCE(ur.cantidad_real, op.cantidad_programada) AS cantidadReal,
+                   COALESCE(ur.diferencia, 0) AS diferencia,
+                   ur.ajustar_pt AS ajustarPt,
+                   ur.documento_referencia AS documentoReferencia,
+                   ur.observaciones AS observaciones,
+                   ur.usuario_id AS usuarioId,
+                   COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) AS fechaIngreso,
+                   (SELECT COUNT(*) FROM regularizacion_detalle rd WHERE rd.regularizacion_id = ur.id) AS tieneDetalle
+            FROM orden_produccion op
+            LEFT JOIN ult_reg ur ON ur.orden_produccion_id = op.id AND ur.rn = 1
+            WHERE op.estado = 'FINALIZADA'
+              AND (:fechaInicio IS NULL OR COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) >= :fechaInicio)
+              AND (:fechaFin IS NULL OR COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) <= :fechaFin)
+              AND (:ordenProduccionId IS NULL OR op.id = :ordenProduccionId)
+              AND (:soloConVariacion = FALSE OR COALESCE(ur.diferencia, 0) <> 0)
               AND (:tipoVariacion IS NULL
-                   OR (:tipoVariacion = 'POSITIVA' AND t.diferencia > 0)
-                   OR (:tipoVariacion = 'NEGATIVA' AND t.diferencia < 0)
-                   OR (:tipoVariacion = 'CERO' AND t.diferencia = 0))
-            ORDER BY t.fecha_ingreso DESC, t.id DESC
+                   OR (:tipoVariacion = 'POSITIVA' AND COALESCE(ur.diferencia, 0) > 0)
+                   OR (:tipoVariacion = 'NEGATIVA' AND COALESCE(ur.diferencia, 0) < 0)
+                   OR (:tipoVariacion = 'CERO' AND COALESCE(ur.diferencia, 0) = 0))
+            ORDER BY COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) DESC,
+                     op.id DESC
             """,
             countQuery = """
-            SELECT COUNT(*)
-            FROM (
-              SELECT rt.id,
-                     rt.orden_produccion_id,
-                     rt.fecha_ingreso,
-                     rt.diferencia,
+            WITH ult_reg AS (
+              SELECT rt.*,
                      ROW_NUMBER() OVER (
                          PARTITION BY rt.orden_produccion_id
                          ORDER BY rt.fecha_ingreso DESC, rt.id DESC
                      ) AS rn
               FROM regularizaciones_trazabilidad rt
-            ) t
-            WHERE t.rn = 1
-              AND (:fechaInicio IS NULL OR t.fecha_ingreso >= :fechaInicio)
-              AND (:fechaFin IS NULL OR t.fecha_ingreso <= :fechaFin)
-              AND (:ordenProduccionId IS NULL OR t.orden_produccion_id = :ordenProduccionId)
-              AND (:soloConVariacion = FALSE OR t.diferencia <> 0)
+            )
+            SELECT COUNT(*)
+            FROM orden_produccion op
+            LEFT JOIN ult_reg ur ON ur.orden_produccion_id = op.id AND ur.rn = 1
+            WHERE op.estado = 'FINALIZADA'
+              AND (:fechaInicio IS NULL OR COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) >= :fechaInicio)
+              AND (:fechaFin IS NULL OR COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) <= :fechaFin)
+              AND (:ordenProduccionId IS NULL OR op.id = :ordenProduccionId)
+              AND (:soloConVariacion = FALSE OR COALESCE(ur.diferencia, 0) <> 0)
               AND (:tipoVariacion IS NULL
-                   OR (:tipoVariacion = 'POSITIVA' AND t.diferencia > 0)
-                   OR (:tipoVariacion = 'NEGATIVA' AND t.diferencia < 0)
-                   OR (:tipoVariacion = 'CERO' AND t.diferencia = 0))
+                   OR (:tipoVariacion = 'POSITIVA' AND COALESCE(ur.diferencia, 0) > 0)
+                   OR (:tipoVariacion = 'NEGATIVA' AND COALESCE(ur.diferencia, 0) < 0)
+                   OR (:tipoVariacion = 'CERO' AND COALESCE(ur.diferencia, 0) = 0))
             """,
             nativeQuery = true)
     Page<VariacionRegularizacionProjection> findUltimasVariacionesPorOP(@Param("fechaInicio") LocalDateTime fechaInicio,
@@ -80,35 +82,38 @@ public interface RegularizacionTrazabilidadRepository extends JpaRepository<Regu
                                                                         Pageable pageable);
 
     @Query(value = """
-            SELECT t.id AS regularizacionId,
-                   t.orden_produccion_id AS ordenProduccionId,
-                   t.cantidad_programada AS cantidadProgramada,
-                   t.cantidad_real AS cantidadReal,
-                   t.diferencia AS diferencia,
-                   t.ajustar_pt AS ajustarPt,
-                   t.documento_referencia AS documentoReferencia,
-                   t.observaciones AS observaciones,
-                   t.usuario_id AS usuarioId,
-                   t.fecha_ingreso AS fechaIngreso,
-                   EXISTS(SELECT 1 FROM regularizacion_detalle rd WHERE rd.regularizacion_id = t.id) AS tieneDetalle
-            FROM (
+            WITH ult_reg AS (
               SELECT rt.*,
                      ROW_NUMBER() OVER (
                          PARTITION BY rt.orden_produccion_id
                          ORDER BY rt.fecha_ingreso DESC, rt.id DESC
                      ) AS rn
               FROM regularizaciones_trazabilidad rt
-            ) t
-            WHERE t.rn = 1
-              AND (:fechaInicio IS NULL OR t.fecha_ingreso >= :fechaInicio)
-              AND (:fechaFin IS NULL OR t.fecha_ingreso <= :fechaFin)
-              AND (:ordenProduccionId IS NULL OR t.orden_produccion_id = :ordenProduccionId)
-              AND (:soloConVariacion = FALSE OR t.diferencia <> 0)
+            )
+            SELECT ur.id AS regularizacionId,
+                   op.id AS ordenProduccionId,
+                   op.cantidad_programada AS cantidadProgramada,
+                   COALESCE(ur.cantidad_real, op.cantidad_programada) AS cantidadReal,
+                   COALESCE(ur.diferencia, 0) AS diferencia,
+                   ur.ajustar_pt AS ajustarPt,
+                   ur.documento_referencia AS documentoReferencia,
+                   ur.observaciones AS observaciones,
+                   ur.usuario_id AS usuarioId,
+                   COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) AS fechaIngreso,
+                   (SELECT COUNT(*) FROM regularizacion_detalle rd WHERE rd.regularizacion_id = ur.id) AS tieneDetalle
+            FROM orden_produccion op
+            LEFT JOIN ult_reg ur ON ur.orden_produccion_id = op.id AND ur.rn = 1
+            WHERE op.estado = 'FINALIZADA'
+              AND (:fechaInicio IS NULL OR COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) >= :fechaInicio)
+              AND (:fechaFin IS NULL OR COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) <= :fechaFin)
+              AND (:ordenProduccionId IS NULL OR op.id = :ordenProduccionId)
+              AND (:soloConVariacion = FALSE OR COALESCE(ur.diferencia, 0) <> 0)
               AND (:tipoVariacion IS NULL
-                   OR (:tipoVariacion = 'POSITIVA' AND t.diferencia > 0)
-                   OR (:tipoVariacion = 'NEGATIVA' AND t.diferencia < 0)
-                   OR (:tipoVariacion = 'CERO' AND t.diferencia = 0))
-            ORDER BY t.fecha_ingreso DESC, t.id DESC
+                   OR (:tipoVariacion = 'POSITIVA' AND COALESCE(ur.diferencia, 0) > 0)
+                   OR (:tipoVariacion = 'NEGATIVA' AND COALESCE(ur.diferencia, 0) < 0)
+                   OR (:tipoVariacion = 'CERO' AND COALESCE(ur.diferencia, 0) = 0))
+            ORDER BY COALESCE(ur.fecha_ingreso, op.fecha_fin, op.fecha_cierre, op.fecha_ultimo_cierre) DESC,
+                     op.id DESC
             """, nativeQuery = true)
     List<VariacionRegularizacionProjection> findUltimasVariacionesPorOPSinPaginacion(@Param("fechaInicio") LocalDateTime fechaInicio,
                                                                                       @Param("fechaFin") LocalDateTime fechaFin,
