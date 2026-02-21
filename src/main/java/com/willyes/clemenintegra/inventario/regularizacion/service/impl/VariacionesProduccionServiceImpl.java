@@ -139,6 +139,8 @@ public class VariacionesProduccionServiceImpl implements VariacionesProduccionSe
                 ? null
                 : safePercent(row.getDiferencia(), cantidadProgramada);
 
+        boolean tieneDetalle = row.getTieneDetalle() != null && row.getTieneDetalle() > 0;
+
         return VariacionOPResponseDTO.builder()
                 .regularizacionId(row.getRegularizacionId())
                 .ordenProduccionId(row.getOrdenProduccionId())
@@ -152,7 +154,7 @@ public class VariacionesProduccionServiceImpl implements VariacionesProduccionSe
                 .observaciones(row.getObservaciones())
                 .usuarioId(row.getUsuarioId())
                 .fechaIngreso(row.getFechaIngreso())
-                .tieneDetalle(Boolean.TRUE.equals(row.getTieneDetalle()))
+                .tieneDetalle(tieneDetalle)
                 .dataInconsistente(inconsistente)
                 .build();
     }
