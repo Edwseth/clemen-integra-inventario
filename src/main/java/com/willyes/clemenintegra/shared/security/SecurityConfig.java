@@ -367,6 +367,17 @@ public class SecurityConfig {
                             "PROD_ETAPA_CHECKLIST_READ"
                     );
 
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/produccion/variaciones",
+                            "/api/produccion/variaciones/*").hasAnyAuthority(
+                            "PROD_VARIACIONES_READ"
+                    );
+
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/produccion/variaciones/export").hasAnyAuthority(
+                            "PROD_VARIACIONES_EXPORT"
+                    );
+
                     auth.requestMatchers(HttpMethod.PUT, "/api/produccion/etapas/*/checklist").hasAnyAuthority(
                             "PROD_ETAPA_CHECKLIST_WRITE"
                     );
