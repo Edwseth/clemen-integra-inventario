@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.service.InventarioGeneralCorteReport
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.ReporteInventarioService;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +46,8 @@ class ReporteInventarioControllerSecurityTest {
     private LoteProductoService loteProductoService;
     @MockBean
     private MovimientoInventarioService movimientoInventarioService;
+    @MockBean
+    private ProductoRepository productoRepository;
     @MockBean
     private InventarioGeneralCorteReportService inventarioGeneralCorteReportService;
     @MockBean

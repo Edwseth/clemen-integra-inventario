@@ -39,7 +39,12 @@ public class InventarioGeneralCorteReportService {
 
     @Transactional(readOnly = true)
     public Workbook generarExcelInventarioGeneralCorte(LocalDateTime hasta) {
-        List<InventarioGeneralRow> filas = calcularFilasInventarioGeneralCorte(hasta);
+        return generarExcelInventarioGeneralCorte(hasta, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Workbook generarExcelInventarioGeneralCorte(LocalDateTime hasta, Set<Long> productoIds) {
+        List<InventarioGeneralRow> filas = calcularFilasInventarioGeneralCorte(hasta, productoIds);
         return construirWorkbook(filas);
     }
 
