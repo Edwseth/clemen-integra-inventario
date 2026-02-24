@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,17 @@ public class InventarioGeneralCorteReportService {
 
     @Transactional(readOnly = true)
     public Workbook generarExcelInventarioGeneralCorte(LocalDateTime hasta) {
+        List<InventarioGeneralRow> filas = calcularFilasInventarioGeneralCorte(hasta);
+        return construirWorkbook(filas);
+    }
+
+    @Transactional(readOnly = true)
+    public List<InventarioGeneralRow> calcularFilasInventarioGeneralCorte(LocalDateTime hasta) {
+        return calcularFilasInventarioGeneralCorte(hasta, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<InventarioGeneralRow> calcularFilasInventarioGeneralCorte(LocalDateTime hasta, Set<Long> productoIds) {
         List<MovimientoInventario> movimientos = movimientoInventarioRepository
                 .findAllByFechaIngresoLessThanEqual(hasta);
 
@@ -48,6 +60,9 @@ public class InventarioGeneralCorteReportService {
             Producto producto = mov.getProducto();
             LoteProducto lote = mov.getLote();
             if (producto == null || lote == null || producto.getId() == null || lote.getId() == null) {
+                continue;
+            }
+            if (productoIds != null && !productoIds.isEmpty() && !productoIds.contains(producto.getId().longValue())) {
                 continue;
             }
             for (MovimientoSignosResolver.AporteInventario aporte : movimientoSignosResolver.resolverAportesPorAlmacen(mov)) {
@@ -63,7 +78,7 @@ public class InventarioGeneralCorteReportService {
             }
         }
 
-        List<FilaInventario> filas = new ArrayList<>();
+        List<InventarioGeneralRow> filas = new ArrayList<>();
         for (Map.Entry<ClaveInventario, BigDecimal> e : acumulado.entrySet()) {
             if (e.getValue().compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
@@ -72,7 +87,7 @@ public class InventarioGeneralCorteReportService {
             if (data == null) {
                 continue;
             }
-            filas.add(new FilaInventario(
+            filas.add(new InventarioGeneralRow(
                     data.sku(),
                     data.nombre(),
                     data.udm(),
@@ -84,14 +99,14 @@ public class InventarioGeneralCorteReportService {
         }
 
         filas.sort(Comparator
-                .comparing(FilaInventario::sku, Comparator.nullsLast(String::compareToIgnoreCase))
-                .thenComparing(FilaInventario::lote, Comparator.nullsLast(String::compareToIgnoreCase))
-                .thenComparing(FilaInventario::ubicacion, Comparator.nullsLast(String::compareToIgnoreCase)));
+                .comparing(InventarioGeneralRow::sku, Comparator.nullsLast(String::compareToIgnoreCase))
+                .thenComparing(InventarioGeneralRow::lote, Comparator.nullsLast(String::compareToIgnoreCase))
+                .thenComparing(InventarioGeneralRow::ubicacion, Comparator.nullsLast(String::compareToIgnoreCase)));
 
-        return construirWorkbook(filas);
+        return filas;
     }
 
-    private Workbook construirWorkbook(List<FilaInventario> filas) {
+    private Workbook construirWorkbook(List<InventarioGeneralRow> filas) {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Inventario General");
 
@@ -107,7 +122,7 @@ public class InventarioGeneralCorteReportService {
         }
 
         int rowNum = 1;
-        for (FilaInventario fila : filas) {
+        for (InventarioGeneralRow fila : filas) {
             Row row = sheet.createRow(rowNum++);
             row.createCell(0).setCellValue(valorTexto(fila.sku()));
             row.createCell(1).setCellValue(valorTexto(fila.nombre()));
@@ -133,8 +148,8 @@ public class InventarioGeneralCorteReportService {
 
     private record ClaveInventario(Long productoId, Long loteId, Long almacenId) {}
 
-    private record FilaInventario(String sku, String nombre, String udm, BigDecimal cant, String lote, String vence,
-                                  String ubicacion) {}
+    public record InventarioGeneralRow(String sku, String nombre, String udm, BigDecimal cant, String lote,
+                                       String vence, String ubicacion) {}
 
     private record MetadataFila(String sku, String nombre, String udm, String lote, String vence, String ubicacion) {
         static MetadataFila from(Producto producto, LoteProducto lote) {

@@ -5,9 +5,14 @@ import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.InventarioGeneralCorteReportService;
+import com.willyes.clemenintegra.inventario.dto.InventarioGeneralPreviewRowDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -22,10 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Comparator;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/reportes")
@@ -238,6 +246,37 @@ public class ReporteInventarioController {
     }
 
 
+    // Paginación in-memory sobre las mismas filas del Excel; con ~10 usuarios concurrentes se prioriza consistencia funcional.
+    @GetMapping("/inventario-general/preview")
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT')")
+    public ResponseEntity<Page<InventarioGeneralPreviewRowDTO>> previewInventarioGeneralCorte(
+            @RequestParam(name = "fechaCorte")
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaCorte,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        LocalDateTime hasta = fechaCorte.atTime(23, 59, 59);
+        List<InventarioGeneralPreviewRowDTO> filas = inventarioGeneralCorteReportService
+                .calcularFilasInventarioGeneralCorte(hasta)
+                .stream()
+                .map(f -> new InventarioGeneralPreviewRowDTO(
+                        f.sku(),
+                        f.nombre(),
+                        f.udm(),
+                        f.cant(),
+                        f.lote(),
+                        f.vence(),
+                        f.ubicacion()
+                ))
+                .toList();
+
+        List<InventarioGeneralPreviewRowDTO> ordenadas = aplicarOrdenPreview(filas, pageable);
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), ordenadas.size());
+        List<InventarioGeneralPreviewRowDTO> content = start >= ordenadas.size() ? List.of() : ordenadas.subList(start, end);
+        Page<InventarioGeneralPreviewRowDTO> page = new PageImpl<>(content, pageable, ordenadas.size());
+        return ResponseEntity.ok(page);
+    }
+
     @GetMapping(value = "/inventario-general", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> exportarInventarioGeneralCorte(
@@ -269,6 +308,29 @@ public class ReporteInventarioController {
             log.error("Error generando reporte de inventario general al corte", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+
+    private List<InventarioGeneralPreviewRowDTO> aplicarOrdenPreview(List<InventarioGeneralPreviewRowDTO> filas, Pageable pageable) {
+        Comparator<InventarioGeneralPreviewRowDTO> comparator = Comparator
+                .comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
+
+        if (pageable.getSort().isSorted()) {
+            for (var order : pageable.getSort()) {
+                Comparator<InventarioGeneralPreviewRowDTO> current = switch (order.getProperty()) {
+                    case "nombre" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::nombre, Comparator.nullsLast(String::compareToIgnoreCase));
+                    case "udm" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::udm, Comparator.nullsLast(String::compareToIgnoreCase));
+                    case "cant" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::cant, Comparator.nullsLast(BigDecimal::compareTo));
+                    case "lote" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::lote, Comparator.nullsLast(String::compareToIgnoreCase));
+                    case "vence" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::vence, Comparator.nullsLast(String::compareToIgnoreCase));
+                    case "ubicacion" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::ubicacion, Comparator.nullsLast(String::compareToIgnoreCase));
+                    default -> Comparator.comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
+                };
+                comparator = comparator.thenComparing(order.isAscending() ? current : current.reversed());
+            }
+        }
+
+        return filas.stream().sorted(comparator).toList();
     }
 
     @GetMapping(value = "/movimientos", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
