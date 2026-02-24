@@ -1,5 +1,8 @@
 package com.willyes.clemenintegra.inventario.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
@@ -80,6 +83,8 @@ class ReporteInventarioControllerInventarioGeneralIntegrationTest extends Integr
     private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     @Autowired
     private MovimientoInventarioRepository movimientoInventarioRepository;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
     private JavaMailSender javaMailSender;
@@ -135,6 +140,65 @@ class ReporteInventarioControllerInventarioGeneralIntegrationTest extends Integr
 
         List<FilaExcel> filas = ejecutarYLeer(LocalDate.of(2026, 1, 31));
         assertThat(filas.stream().anyMatch(f -> f.lote().equals(data.loteB.getCodigoLote()))).isFalse();
+    }
+
+
+    @Test
+    @WithMockUser(authorities = "INV_REPORTES_EXPORT")
+    void previewInventarioGeneralRetornaMismasFilasQueExcelYPagina() throws Exception {
+        TestData data = crearData();
+        registrarMovimiento(data, data.loteA, data.almacenA, null,
+                TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                new BigDecimal("10"), LocalDateTime.of(2026, 1, 20, 8, 0));
+        registrarMovimiento(data, data.loteA, data.almacenA, null,
+                TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_CLIENTE,
+                new BigDecimal("4"), LocalDateTime.of(2026, 2, 1, 8, 0));
+
+        LocalDate fechaCorte = LocalDate.of(2026, 1, 31);
+        List<FilaExcel> excelFilas = ejecutarYLeer(fechaCorte);
+        List<FilaJson> previewFilas = ejecutarPreviewYLeer(fechaCorte, 0, 20);
+
+        assertThat(previewFilas).hasSize(excelFilas.size());
+        FilaExcel filaExcel = excelFilas.stream()
+                .filter(f -> f.lote().equals(data.loteA.getCodigoLote()) && f.ubicacion().contains(data.almacenA.getNombre()))
+                .findFirst().orElseThrow();
+        FilaJson filaPreview = previewFilas.stream()
+                .filter(f -> f.lote().equals(data.loteA.getCodigoLote()) && f.ubicacion().contains(data.almacenA.getNombre()))
+                .findFirst().orElseThrow();
+
+        assertThat(filaPreview.sku()).isEqualTo(filaExcel.sku());
+        assertThat(filaPreview.nombre()).isEqualTo(filaExcel.nombre());
+        assertThat(filaPreview.udm()).isEqualTo(filaExcel.udm());
+        assertThat(filaPreview.cant()).isEqualByComparingTo(filaExcel.cantidad());
+        assertThat(filaPreview.lote()).isEqualTo(filaExcel.lote());
+        assertThat(filaPreview.vence()).isEqualTo(filaExcel.vence());
+        assertThat(filaPreview.ubicacion()).isEqualTo(filaExcel.ubicacion());
+    }
+
+    @Test
+    @WithMockUser(authorities = "INV_REPORTES_EXPORT")
+    void previewInventarioGeneralIgnoraMovimientosPosterioresAlCorte() throws Exception {
+        TestData data = crearData();
+        registrarMovimiento(data, data.loteB, data.almacenB, null,
+                TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                new BigDecimal("5"), LocalDateTime.of(2026, 2, 2, 10, 0));
+
+        List<FilaJson> filas = ejecutarPreviewYLeer(LocalDate.of(2026, 1, 31), 0, 20);
+        assertThat(filas.stream().anyMatch(f -> f.lote().equals(data.loteB.getCodigoLote()))).isFalse();
+    }
+
+
+    private List<FilaJson> ejecutarPreviewYLeer(LocalDate fechaCorte, int page, int size) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/reportes/inventario-general/preview")
+                        .param("fechaCorte", fechaCorte.toString())
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsByteArray());
+        return objectMapper.convertValue(root.get("content"), new TypeReference<List<FilaJson>>() {
+        });
     }
 
     private List<FilaExcel> ejecutarYLeer(LocalDate fechaCorte) throws Exception {
@@ -279,6 +343,9 @@ class ReporteInventarioControllerInventarioGeneralIntegrationTest extends Integr
 
     private record FilaExcel(String sku, String nombre, String udm, BigDecimal cantidad, String lote, String vence,
                              String ubicacion) {}
+
+    private record FilaJson(String sku, String nombre, String udm, BigDecimal cant, String lote, String vence,
+                            String ubicacion) {}
 
     private record TestData(Usuario usuario,
                             Producto producto,
