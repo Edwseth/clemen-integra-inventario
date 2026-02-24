@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.service.ReporteInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.inventario.service.InventarioGeneralCorteReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -36,6 +37,7 @@ public class ReporteInventarioController {
     private final ProductoService productoService;
     private final LoteProductoService loteProductoService;
     private final MovimientoInventarioService movimientoService;
+    private final InventarioGeneralCorteReportService inventarioGeneralCorteReportService;
 
     private static final MediaType EXCEL =
             MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -233,6 +235,40 @@ public class ReporteInventarioController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=alertas_activas.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(stream.toByteArray());
+    }
+
+
+    @GetMapping(value = "/inventario-general", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT')")
+    public ResponseEntity<byte[]> exportarInventarioGeneralCorte(
+            @RequestParam(name = "fechaCorte", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaCorte
+    ) {
+        if (fechaCorte == null) {
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"message\":\"fechaCorte es obligatoria (YYYY-MM-DD)\"}".getBytes());
+        }
+
+        LocalDateTime hasta = fechaCorte.atTime(23, 59, 59);
+
+        try (Workbook workbook = inventarioGeneralCorteReportService.generarExcelInventarioGeneralCorte(hasta);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            workbook.write(baos);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(EXCEL);
+            headers.set(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=inventario_general_corte_" + fechaCorte + ".xlsx");
+            return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Validación fallida al generar reporte de inventario general al corte", ex);
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"message\":\"fechaCorte es obligatoria (YYYY-MM-DD)\"}".getBytes());
+        } catch (Exception ex) {
+            log.error("Error generando reporte de inventario general al corte", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @GetMapping(value = "/movimientos", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

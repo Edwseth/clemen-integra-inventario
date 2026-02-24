@@ -5,8 +5,6 @@ import com.willyes.clemenintegra.inventario.dto.KardexItemDTO;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.Producto;
-import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
-import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
@@ -18,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,34 +26,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class KardexServiceImpl implements KardexService {
 
-    private static final EnumSet<ClasificacionMovimientoInventario> CLASIFICACIONES_ENTRADA = EnumSet.of(
-            ClasificacionMovimientoInventario.AJUSTE_POSITIVO,
-            ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION,
-            ClasificacionMovimientoInventario.DEVOLUCION_DE_PROVEEDOR,
-            ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO,
-            ClasificacionMovimientoInventario.ENTRADA_REPROCESO,
-            ClasificacionMovimientoInventario.RECEPCION_COMPRA,
-            ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE,
-            ClasificacionMovimientoInventario.LIBERACION_CALIDAD
-    );
-
-    private static final EnumSet<ClasificacionMovimientoInventario> CLASIFICACIONES_SALIDA = EnumSet.of(
-            ClasificacionMovimientoInventario.AJUSTE_NEGATIVO,
-            ClasificacionMovimientoInventario.DEVOLUCION_A_PROVEEDOR,
-            ClasificacionMovimientoInventario.SALIDA_MUESTRA_CALIDAD,
-            ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
-            ClasificacionMovimientoInventario.SALIDA_CLIENTE,
-            ClasificacionMovimientoInventario.RECHAZO_CALIDAD
-    );
-
-    private static final EnumSet<ClasificacionMovimientoInventario> CLASIFICACIONES_TRANSFERENCIA = EnumSet.of(
-            ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
-            ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
-    );
-
     private final ProductoRepository productoRepository;
     private final LoteProductoRepository loteProductoRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
+    private final MovimientoSignosResolver movimientoSignosResolver;
 
     @Override
     public List<KardexItemDTO> obtenerKardex(KardexFiltro filtro) {
@@ -171,7 +144,7 @@ public class KardexServiceImpl implements KardexService {
                                               Long almacenId) {
         BigDecimal saldo = BigDecimal.ZERO;
         List<MovimientoConTotales> items = movimientos.stream()
-                .map(mov -> new MovimientoConTotales(mov, calcularEntrada(mov, almacenId), calcularSalida(mov, almacenId)))
+                .map(mov -> new MovimientoConTotales(mov, movimientoSignosResolver.calcularEntrada(mov, almacenId), movimientoSignosResolver.calcularSalida(mov, almacenId)))
                 .collect(Collectors.toList());
 
         List<KardexItemDTO> resultado = new java.util.ArrayList<>(items.size());
@@ -198,61 +171,4 @@ public class KardexServiceImpl implements KardexService {
     }
 
     private record MovimientoConTotales(MovimientoInventario movimiento, BigDecimal entrada, BigDecimal salida) {}
-
-    private BigDecimal calcularEntrada(MovimientoInventario movimiento, Long almacenId) {
-        ClasificacionMovimientoInventario clasificacion = movimiento.getClasificacion();
-        TipoMovimiento tipoMovimiento = movimiento.getTipoMovimiento();
-
-        if (CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion) || tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
-            if (mismoAlmacen(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null, almacenId)) {
-                return obtenerCantidad(movimiento);
-            }
-            return BigDecimal.ZERO;
-        }
-
-        if (CLASIFICACIONES_ENTRADA.contains(clasificacion)) {
-            return obtenerCantidad(movimiento);
-        }
-
-        if (clasificacion == null && (tipoMovimiento == TipoMovimiento.ENTRADA
-                || tipoMovimiento == TipoMovimiento.RECEPCION
-                || tipoMovimiento == TipoMovimiento.DEVOLUCION)) {
-            return obtenerCantidad(movimiento);
-        }
-
-        return BigDecimal.ZERO;
-    }
-
-    private BigDecimal calcularSalida(MovimientoInventario movimiento, Long almacenId) {
-        ClasificacionMovimientoInventario clasificacion = movimiento.getClasificacion();
-        TipoMovimiento tipoMovimiento = movimiento.getTipoMovimiento();
-
-        if (CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion) || tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
-            if (mismoAlmacen(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null, almacenId)) {
-                return obtenerCantidad(movimiento);
-            }
-            return BigDecimal.ZERO;
-        }
-
-        if (CLASIFICACIONES_SALIDA.contains(clasificacion)) {
-            return obtenerCantidad(movimiento);
-        }
-
-        if (clasificacion == null && tipoMovimiento == TipoMovimiento.SALIDA) {
-            return obtenerCantidad(movimiento);
-        }
-
-        return BigDecimal.ZERO;
-    }
-
-    private boolean mismoAlmacen(Number almacenMovimientoId, Long almacenFiltroId) {
-        if (almacenMovimientoId == null || almacenFiltroId == null) {
-            return false;
-        }
-        return Objects.equals(almacenMovimientoId.longValue(), almacenFiltroId);
-    }
-
-    private BigDecimal obtenerCantidad(MovimientoInventario movimientoInventario) {
-        return Optional.ofNullable(movimientoInventario.getCantidad()).orElse(BigDecimal.ZERO);
-    }
 }
