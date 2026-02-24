@@ -175,6 +175,51 @@ class ReporteInventarioControllerInventarioGeneralIntegrationTest extends Integr
         assertThat(filaPreview.ubicacion()).isEqualTo(filaExcel.ubicacion());
     }
 
+
+    @Test
+    @WithMockUser(authorities = "INV_REPORTES_EXPORT")
+    void previewInventarioGeneralRespetaSortSkuAscYDesc() throws Exception {
+        TestData dataB = crearData("SKU-B", "Producto B");
+        TestData dataA = crearData("SKU-A", "Producto A");
+        LocalDateTime fechaMovimiento = LocalDateTime.of(2026, 1, 20, 8, 0);
+
+        registrarMovimiento(dataB, dataB.loteA, dataB.almacenA, null,
+                TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                new BigDecimal("5"), fechaMovimiento);
+        registrarMovimiento(dataA, dataA.loteA, dataA.almacenA, null,
+                TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                new BigDecimal("5"), fechaMovimiento);
+
+        LocalDate fechaCorte = LocalDate.of(2026, 1, 31);
+        List<FilaJson> asc = ejecutarPreviewYLeer(fechaCorte, 0, 20, "sku,asc");
+        List<FilaJson> desc = ejecutarPreviewYLeer(fechaCorte, 0, 20, "sku,desc");
+
+        assertThat(asc).extracting(FilaJson::sku)
+                .containsSubsequence("SKU-A", "SKU-B");
+        assertThat(desc).extracting(FilaJson::sku)
+                .containsSubsequence("SKU-B", "SKU-A");
+    }
+
+    @Test
+    @WithMockUser(authorities = "INV_REPORTES_EXPORT")
+    void previewInventarioGeneralRespetaSortCantDesc() throws Exception {
+        TestData dataMayor = crearData("SKU-CANT-1", "Producto Cant 1");
+        TestData dataMenor = crearData("SKU-CANT-2", "Producto Cant 2");
+        LocalDateTime fechaMovimiento = LocalDateTime.of(2026, 1, 20, 8, 0);
+
+        registrarMovimiento(dataMayor, dataMayor.loteA, dataMayor.almacenA, null,
+                TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                new BigDecimal("10"), fechaMovimiento);
+        registrarMovimiento(dataMenor, dataMenor.loteA, dataMenor.almacenA, null,
+                TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                new BigDecimal("3"), fechaMovimiento);
+
+        List<FilaJson> filas = ejecutarPreviewYLeer(LocalDate.of(2026, 1, 31), 0, 20, "cant,desc");
+
+        assertThat(filas).extracting(FilaJson::cant)
+                .containsSubsequence(new BigDecimal("10.00"), new BigDecimal("3.00"));
+    }
+
     @Test
     @WithMockUser(authorities = "INV_REPORTES_EXPORT")
     void previewInventarioGeneralIgnoraMovimientosPosterioresAlCorte() throws Exception {
@@ -189,10 +234,20 @@ class ReporteInventarioControllerInventarioGeneralIntegrationTest extends Integr
 
 
     private List<FilaJson> ejecutarPreviewYLeer(LocalDate fechaCorte, int page, int size) throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/reportes/inventario-general/preview")
-                        .param("fechaCorte", fechaCorte.toString())
-                        .param("page", String.valueOf(page))
-                        .param("size", String.valueOf(size)))
+        return ejecutarPreviewYLeer(fechaCorte, page, size, null);
+    }
+
+    private List<FilaJson> ejecutarPreviewYLeer(LocalDate fechaCorte, int page, int size, String sort) throws Exception {
+        var request = get("/api/reportes/inventario-general/preview")
+                .param("fechaCorte", fechaCorte.toString())
+                .param("page", String.valueOf(page))
+                .param("size", String.valueOf(size));
+
+        if (sort != null) {
+            request = request.param("sort", sort);
+        }
+
+        MvcResult result = mockMvc.perform(request)
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -255,6 +310,15 @@ class ReporteInventarioControllerInventarioGeneralIntegrationTest extends Integr
 
     private TestData crearData() {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
+        return crearData("SKU-INV-" + suffix, "Producto Inv " + suffix, suffix);
+    }
+
+    private TestData crearData(String sku, String nombre) {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        return crearData(sku, nombre, suffix);
+    }
+
+    private TestData crearData(String sku, String nombre, String suffix) {
         Usuario usuario = usuarioRepository.save(Usuario.builder()
                 .nombreUsuario("inv-user-" + suffix)
                 .clave("secret")
@@ -277,8 +341,8 @@ class ReporteInventarioControllerInventarioGeneralIntegrationTest extends Integr
                 .build());
 
         Producto producto = productoRepository.save(Producto.builder()
-                .codigoSku("SKU-INV-" + suffix)
-                .nombre("Producto Inv " + suffix)
+                .codigoSku(sku)
+                .nombre(nombre)
                 .stockMinimo(BigDecimal.ZERO)
                 .unidadMedida(um)
                 .categoriaProducto(categoria)
