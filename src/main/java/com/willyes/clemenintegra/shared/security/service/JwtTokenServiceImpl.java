@@ -10,17 +10,21 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Map;
 
 @Service
 public class JwtTokenServiceImpl implements JwtTokenService {
 
-    private static final long EXPIRATION_MS = 3600_000; // 1 hora
     private final Key secretKey;
+    private final long accessTokenExpirationMinutes;
 
-    public JwtTokenServiceImpl(@Value("${clemen.jwt.secret}") String secret) {
+    public JwtTokenServiceImpl(@Value("${clemen.jwt.secret}") String secret,
+                               @Value("${clemen.jwt.access-token-expiration-minutes:15}") long accessTokenExpirationMinutes) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.accessTokenExpirationMinutes = accessTokenExpirationMinutes;
     }
 
     public String generarToken(Usuario usuario) {
@@ -33,9 +37,14 @@ public class JwtTokenServiceImpl implements JwtTokenService {
                 .setSubject(usuario.getNombreUsuario())
                 .addClaims(claims)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
+                .setExpiration(Date.from(getAccessTokenExpiresAt()))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    @Override
+    public Instant getAccessTokenExpiresAt() {
+        return Instant.now().plus(accessTokenExpirationMinutes, ChronoUnit.MINUTES);
     }
 
     public Claims extraerClaims(String token) {
