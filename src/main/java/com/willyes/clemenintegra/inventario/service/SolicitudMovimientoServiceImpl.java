@@ -15,18 +15,9 @@ import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
-import com.itextpdf.kernel.colors.DeviceRgb;
-import com.itextpdf.kernel.geom.PageSize;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.borders.Border;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.element.Text;
-import com.itextpdf.layout.properties.TextAlignment;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -38,11 +29,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -598,94 +592,75 @@ public class SolicitudMovimientoServiceImpl implements SolicitudMovimientoServic
                 : (solicitudes.get(0).getUsuarioSolicitante() != null
                 ? solicitudes.get(0).getUsuarioSolicitante().getNombreCompleto()
                 : null);
+        String productoNombre = op != null && op.getProducto() != null
+                ? op.getProducto().getNombre()
+                : null;
+
+        List<PicklistItem> items = buildPicklistItems(solicitudes);
+        String html = componerHtmlPicklist(codigoOrden, fechaOrden, solicitante, productoNombre, items);
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            PdfWriter writer = new PdfWriter(out);
-            PdfDocument pdf = new PdfDocument(writer);
-            Document document = new Document(pdf, PageSize.A4);
-            document.setMargins(36f, 36f, 36f, 36f);
-
-            Table header = new Table(new float[]{60f, 40f}).useAllAvailableWidth();
-            Cell left = new Cell().setBorder(Border.NO_BORDER);
-            left.add(new Paragraph()
-                    .add(new Text("Picklist OP: ").setBold().setFontSize(11))
-                    .add(new Text(codigoOrden != null ? codigoOrden : "-").setFontSize(10)));
-            left.add(new Paragraph()
-                    .add(new Text("Fecha OP: ").setBold().setFontSize(11))
-                    .add(new Text(fechaOrden != null ? fechaOrden.toString() : "-").setFontSize(10)));
-            Cell right = new Cell().setBorder(Border.NO_BORDER);
-            right.add(new Paragraph()
-                    .add(new Text("Solicitante: ").setBold().setFontSize(11))
-                    .add(new Text(solicitante != null ? solicitante : "-").setFontSize(10)));
-            header.addCell(left);
-            header.addCell(right);
-            header.setMarginBottom(10f);
-            document.add(header);
-
-            float[] widths = {22f, 16f, 10f, 8f, 14f, 14f, 14f, 14f, 24f};
-            Table table = new Table(widths).useAllAvailableWidth();
-            String[] headers = {"Producto", "Lote", "Cant.", "UM", "Alm. Origen", "Ubic. Origen", "Alm. Destino", "Ubic. Destino", "Observaciones"};
-            for (String h : headers) {
-                table.addHeaderCell(new Cell()
-                        .add(new Paragraph(h).setFontSize(9).setBold())
-                        .setBackgroundColor(new DeviceRgb(0xF2, 0xF2, 0xF2))
-                        .setPadding(6)
-                        .setTextAlignment(TextAlignment.LEFT));
-            }
-
-            List<PicklistItem> items = buildPicklistItems(solicitudes);
-
-            int index = 0;
-            for (PicklistItem item : items) {
-                index++;
-                boolean zebra = index % 2 == 0;
-                DeviceRgb zebraColor = new DeviceRgb(0xFA, 0xFA, 0xFA);
-
-                String[] valores = {
-                        item.producto(),
-                        item.lote(),
-                        item.cantidad(),
-                        item.unidadMedida(),
-                        item.almacenOrigen(),
-                        item.ubicacionOrigen(),
-                        item.almacenDestino(),
-                        item.ubicacionDestino(),
-                        item.observaciones()
-                };
-                for (int i = 0; i < valores.length; i++) {
-                    Cell cell = new Cell()
-                            .add(new Paragraph(valores[i]).setFontSize(9))
-                            .setPadding(5)
-                            .setTextAlignment(i == 2 ? TextAlignment.RIGHT : TextAlignment.LEFT);
-                    if (zebra) {
-                        cell.setBackgroundColor(zebraColor);
-                    }
-                    table.addCell(cell);
-                }
-            }
-            document.add(table);
-
-            Table firmas = new Table(new float[]{25f, 25f, 25f, 25f})
-                    .useAllAvailableWidth()
-                    .setMarginTop(20f);
-            for (int i = 0; i < 4; i++) {
-                firmas.addCell(new Cell().add(new Paragraph("____________________"))
-                        .setBorder(Border.NO_BORDER)
-                        .setTextAlignment(TextAlignment.CENTER));
-            }
-            String[] labels = {"Alistó", "Verificó", "Entregó", "Recibió"};
-            for (String l : labels) {
-                firmas.addCell(new Cell().add(new Paragraph(l).setFontSize(9))
-                        .setBorder(Border.NO_BORDER)
-                        .setTextAlignment(TextAlignment.CENTER));
-            }
-            document.add(firmas);
-
-            document.close();
+            PdfRendererBuilder builder = new PdfRendererBuilder();
+            builder.useFastMode();
+            builder.withHtmlContent(html, null);
+            builder.toStream(out);
+            builder.run();
             return new PicklistDTO(codigoOrden, out.toByteArray());
         } catch (Exception e) {
             throw new RuntimeException("Error generando PDF", e);
         }
+    }
+
+    private String componerHtmlPicklist(String codigoOrden,
+                                        LocalDate fechaOrden,
+                                        String solicitante,
+                                        String productoNombre,
+                                        List<PicklistItem> items) {
+        String html = loadTemplate("templates/produccion/picklist.ftl");
+        StringBuilder rows = new StringBuilder();
+        for (PicklistItem item : items) {
+            rows.append("<tr>")
+                    .append("<td>").append(escapeHtml(item.producto())).append("</td>")
+                    .append("<td>").append(escapeHtml(item.lote())).append("</td>")
+                    .append("<td class='num'>").append(escapeHtml(item.cantidad())).append("</td>")
+                    .append("<td>").append(escapeHtml(item.unidadMedida())).append("</td>")
+                    .append("<td>").append(escapeHtml(item.almacenOrigen())).append("</td>")
+                    .append("<td>").append(escapeHtml(item.ubicacionOrigen())).append("</td>")
+                    .append("<td>").append(escapeHtml(item.almacenDestino())).append("</td>")
+                    .append("<td>").append(escapeHtml(item.ubicacionDestino())).append("</td>")
+                    .append("<td>").append(escapeHtml(item.observaciones())).append("</td>")
+                    .append("</tr>");
+        }
+
+        return html
+                .replace("${codigoOP}", escapeHtml(orDash(codigoOrden)))
+                .replace("${solicitanteNombre}", escapeHtml(orDash(solicitante)))
+                .replace("${productoNombre!\"-\"}", escapeHtml(orDash(productoNombre)))
+                .replace("${fechaOP}", escapeHtml(fechaOrden != null ? fechaOrden.toString() : "-"))
+                .replace("${itemsRows}", rows.toString());
+    }
+
+    private String loadTemplate(String classpathLocation) {
+        try (InputStream is = new ClassPathResource(classpathLocation).getInputStream()) {
+            return StreamUtils.copyToString(is, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new IllegalStateException("No se encontró la plantilla: " + classpathLocation, e);
+        }
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+    private String orDash(String value) {
+        return (value == null || value.isBlank()) ? "-" : value;
     }
 
     List<PicklistItem> buildPicklistItems(List<SolicitudMovimiento> solicitudes) {
