@@ -28,11 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayOutputStream;
-import java.math.BigDecimal;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -332,26 +333,51 @@ public class ReporteInventarioController {
     }
 
     private List<InventarioGeneralPreviewRowDTO> aplicarOrdenPreview(List<InventarioGeneralPreviewRowDTO> filas, Pageable pageable) {
-        Comparator<InventarioGeneralPreviewRowDTO> comparator = Comparator
-                .comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
+        Comparator<InventarioGeneralPreviewRowDTO> comparator = null;
 
         if (pageable.getSort().isSorted()) {
             for (var order : pageable.getSort()) {
-                Comparator<InventarioGeneralPreviewRowDTO> current = switch (order.getProperty()) {
-                    case "sku" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
-                    case "nombre" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::nombre, Comparator.nullsLast(String::compareToIgnoreCase));
-                    case "udm" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::udm, Comparator.nullsLast(String::compareToIgnoreCase));
-                    case "cant" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::cant, Comparator.nullsLast(BigDecimal::compareTo));
-                    case "lote" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::lote, Comparator.nullsLast(String::compareToIgnoreCase));
-                    case "vence" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::vence, Comparator.nullsLast(String::compareToIgnoreCase));
-                    case "ubicacion" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::ubicacion, Comparator.nullsLast(String::compareToIgnoreCase));
-                    default -> Comparator.comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
-                };
-                comparator = comparator.thenComparing(order.isAscending() ? current : current.reversed());
+                Comparator<InventarioGeneralPreviewRowDTO> current = comparatorPorCampo(order.getProperty());
+                if (current == null) {
+                    continue;
+                }
+                Comparator<InventarioGeneralPreviewRowDTO> currentOrdenado = order.isAscending() ? current : current.reversed();
+                comparator = comparator == null ? currentOrdenado : comparator.thenComparing(currentOrdenado);
             }
         }
 
-        return filas.stream().sorted(comparator).toList();
+        Comparator<InventarioGeneralPreviewRowDTO> fallbackNombreAsc = Comparator
+                .comparing(InventarioGeneralPreviewRowDTO::nombre, Comparator.nullsLast(String::compareToIgnoreCase));
+
+        Comparator<InventarioGeneralPreviewRowDTO> comparadorFinal = comparator == null
+                ? fallbackNombreAsc
+                : comparator.thenComparing(fallbackNombreAsc);
+
+        return filas.stream().sorted(comparadorFinal).toList();
+    }
+
+    private Comparator<InventarioGeneralPreviewRowDTO> comparatorPorCampo(String property) {
+        return switch (property) {
+            case "sku" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
+            case "nombre" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::nombre, Comparator.nullsLast(String::compareToIgnoreCase));
+            case "udm" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::udm, Comparator.nullsLast(String::compareToIgnoreCase));
+            case "cant" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::cant, Comparator.nullsLast(BigDecimal::compareTo));
+            case "lote" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::lote, Comparator.nullsLast(String::compareToIgnoreCase));
+            case "vence" -> Comparator.comparing(this::parseVence, Comparator.nullsLast(LocalDate::compareTo));
+            case "ubicacion" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::ubicacion, Comparator.nullsLast(String::compareToIgnoreCase));
+            default -> null;
+        };
+    }
+
+    private LocalDate parseVence(InventarioGeneralPreviewRowDTO row) {
+        if (row.vence() == null || row.vence().isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(row.vence());
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
     }
 
     @GetMapping(value = "/movimientos", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
