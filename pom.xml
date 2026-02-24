@@ -166,10 +166,10 @@
 
   <build>
     <resources>
-      <!-- Bloque CON filtro para application*.properties/yml -->
+      <!-- Bloque SIN filtro para application*.properties/yml -->
       <resource>
         <directory>src/main/resources</directory>
-        <filtering>true</filtering>
+        <filtering>false</filtering>
         <includes>
           <include>**/application*.properties</include>
           <include>**/application*.yml</include>
@@ -214,24 +214,7 @@
         <version>3.3.1</version>
         <configuration>
           <encoding>UTF-8</encoding>
-          <delimiters>
-            <delimiter>@</delimiter>
-          </delimiters>
-          <useDefaultDelimiters>true</useDefaultDelimiters>
         </configuration>
-      </plugin>
-
-      <plugin>
-        <groupId>io.github.git-commit-id</groupId>
-        <artifactId>git-commit-id-maven-plugin</artifactId>
-        <version>8.0.2</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>revision</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
 
       <plugin>

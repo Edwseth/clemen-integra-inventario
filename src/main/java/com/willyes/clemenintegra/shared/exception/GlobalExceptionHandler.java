@@ -4,7 +4,6 @@ import com.willyes.clemenintegra.calidad.model.enums.MotivoRetencion;
 import com.willyes.clemenintegra.shared.dto.ErrorResponseDTO;
 import com.willyes.clemenintegra.shared.security.exception.SesionInactivaException;
 import com.willyes.clemenintegra.shared.security.exception.SesionInvalidadaException;
-import com.willyes.clemenintegra.shared.security.exception.SessionExpiredException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -254,15 +253,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleSesionInvalidada(SesionInvalidadaException ex,
                                                                    HttpServletRequest request) {
         return buildResponse(ApiErrorCode.SESION_INVALIDA, ex.getMessage(), null);
-    }
-
-    @ExceptionHandler(SessionExpiredException.class)
-    public ResponseEntity<ErrorResponseDTO> handleSessionExpired(SessionExpiredException ex,
-                                                                 HttpServletRequest request) {
-        return buildResponse(HttpStatus.UNAUTHORIZED,
-                "SESSION_EXPIRED",
-                "Tu sesión expiró. Inicia sesión nuevamente.",
-                null);
     }
 
 
