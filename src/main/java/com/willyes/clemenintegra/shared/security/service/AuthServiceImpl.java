@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.shared.security.service;
 import com.willyes.clemenintegra.shared.dto.auth.AuthResponseDTO;
 import com.willyes.clemenintegra.shared.dto.auth.Codigo2FARequestDTO;
 import com.willyes.clemenintegra.shared.dto.auth.LoginRequestDTO;
+import com.willyes.clemenintegra.shared.dto.auth.RefreshResponseDTO;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.notification.EmailService;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -27,6 +28,7 @@ public class AuthServiceImpl implements AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
+    private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
 
     @Transactional
@@ -100,6 +102,24 @@ public class AuthServiceImpl implements AuthService {
                 usuario.getNombreUsuario(),
                 usuario.getRol().name(),
                 usuario.getNivelAccesoAdmin().name()
+        );
+    }
+
+    @Override
+    @Transactional
+    public String emitirRefreshToken(String nombreUsuario) {
+        Usuario usuario = usuarioRepository.findByNombreUsuario(nombreUsuario)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        return refreshTokenService.createRefreshToken(usuario);
+    }
+
+    @Override
+    @Transactional
+    public RefreshResult refreshAccessToken(String refreshToken) {
+        RefreshTokenService.RefreshTokenRotationResult result = refreshTokenService.rotate(refreshToken);
+        return new RefreshResult(
+                new RefreshResponseDTO(result.accessToken(), result.expiresAt()),
+                result.refreshToken()
         );
     }
 }

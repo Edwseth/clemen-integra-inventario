@@ -14,7 +14,7 @@ class JwtTokenServiceImplTest {
 
     @Test
     void incluyeYRecuperaSessionVersionEnToken() {
-        JwtTokenServiceImpl service = new JwtTokenServiceImpl(SECRET);
+        JwtTokenServiceImpl service = new JwtTokenServiceImpl(SECRET, 15);
         Usuario usuario = Usuario.builder()
                 .id(99L)
                 .nombreUsuario("tester")
@@ -40,7 +40,7 @@ class JwtTokenServiceImplTest {
 
     @Test
     void devuelveCeroCuandoTokenNoTieneSessionVersion() {
-        JwtTokenServiceImpl service = new JwtTokenServiceImpl(SECRET);
+        JwtTokenServiceImpl service = new JwtTokenServiceImpl(SECRET, 15);
         String token = Jwts.builder()
                 .setSubject("legacy")
                 .setIssuedAt(new java.util.Date())
