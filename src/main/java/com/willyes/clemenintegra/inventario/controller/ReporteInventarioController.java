@@ -36,6 +36,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @RestController
@@ -357,8 +358,9 @@ public class ReporteInventarioController {
     }
 
     private Comparator<InventarioGeneralPreviewRowDTO> comparatorPorCampo(String property) {
-        return switch (property) {
-            case "sku" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
+        String normalizedProperty = property == null ? "" : property.trim().toLowerCase();
+        return switch (normalizedProperty) {
+            case "sku" -> Comparator.comparing(row -> normalizarTexto(row.sku()), Comparator.nullsLast(String::compareTo));
             case "nombre" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::nombre, Comparator.nullsLast(String::compareToIgnoreCase));
             case "udm" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::udm, Comparator.nullsLast(String::compareToIgnoreCase));
             case "cant" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::cant, Comparator.nullsLast(BigDecimal::compareTo));
@@ -367,6 +369,10 @@ public class ReporteInventarioController {
             case "ubicacion" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::ubicacion, Comparator.nullsLast(String::compareToIgnoreCase));
             default -> null;
         };
+    }
+
+    private String normalizarTexto(String valor) {
+        return valor == null ? null : valor.toUpperCase(Locale.ROOT);
     }
 
     private LocalDate parseVence(InventarioGeneralPreviewRowDTO row) {

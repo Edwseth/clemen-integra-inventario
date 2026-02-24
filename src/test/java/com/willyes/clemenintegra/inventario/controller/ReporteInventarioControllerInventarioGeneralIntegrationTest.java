@@ -179,25 +179,33 @@ class ReporteInventarioControllerInventarioGeneralIntegrationTest extends Integr
     @Test
     @WithMockUser(authorities = "INV_REPORTES_EXPORT")
     void previewInventarioGeneralRespetaSortSkuAscYDesc() throws Exception {
-        TestData dataB = crearData("SKU-B", "Producto B");
+        TestData dataC = crearData("SKU-C", "Producto C");
         TestData dataA = crearData("SKU-A", "Producto A");
+        TestData dataB = crearData("SKU-B", "Producto B");
         LocalDateTime fechaMovimiento = LocalDateTime.of(2026, 1, 20, 8, 0);
 
-        registrarMovimiento(dataB, dataB.loteA, dataB.almacenA, null,
+        registrarMovimiento(dataC, dataC.loteA, dataC.almacenA, null,
                 TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
                 new BigDecimal("5"), fechaMovimiento);
         registrarMovimiento(dataA, dataA.loteA, dataA.almacenA, null,
                 TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
                 new BigDecimal("5"), fechaMovimiento);
+        registrarMovimiento(dataB, dataB.loteA, dataB.almacenA, null,
+                TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.RECEPCION_COMPRA,
+                new BigDecimal("5"), fechaMovimiento);
 
         LocalDate fechaCorte = LocalDate.of(2026, 1, 31);
-        List<FilaJson> asc = ejecutarPreviewYLeer(fechaCorte, 0, 20, "sku,asc");
-        List<FilaJson> desc = ejecutarPreviewYLeer(fechaCorte, 0, 20, "sku,desc");
+        List<FilaJson> asc = ejecutarPreviewYLeer(fechaCorte, 0, 50, "sku,asc");
+        List<FilaJson> desc = ejecutarPreviewYLeer(fechaCorte, 0, 50, "sku,desc");
 
-        assertThat(asc).extracting(FilaJson::sku)
-                .containsSubsequence("SKU-A", "SKU-B");
-        assertThat(desc).extracting(FilaJson::sku)
-                .containsSubsequence("SKU-B", "SKU-A");
+        assertThat(asc.stream()
+                .map(FilaJson::sku)
+                .filter(sku -> sku.startsWith("SKU-"))
+                .toList()).containsSequence("SKU-A", "SKU-B", "SKU-C");
+        assertThat(desc.stream()
+                .map(FilaJson::sku)
+                .filter(sku -> sku.startsWith("SKU-"))
+                .toList()).containsSequence("SKU-C", "SKU-B", "SKU-A");
     }
 
     @Test
