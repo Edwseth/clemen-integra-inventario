@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.service.LoteProductoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.ReporteInventarioService;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.SecurityConfig;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
@@ -46,6 +47,8 @@ class ReporteInventarioControllerSmokeTest {
     private LoteProductoService loteProductoService;
     @MockBean
     private MovimientoInventarioService movimientoInventarioService;
+    @MockBean
+    private ProductoRepository productoRepository;
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
     @MockBean

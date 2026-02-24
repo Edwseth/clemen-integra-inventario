@@ -32,6 +32,13 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     List<Producto> findByCategoriaProducto_TipoIn(List<TipoCategoria> tipos);
     List<Producto> findByCategoriaProducto_TipoAndActivoTrueOrderByNombreAsc(TipoCategoria tipo);
 
+    @Query("""
+            select p.id
+            from Producto p
+            where p.categoriaProducto.id = :categoriaId
+            """)
+    List<Long> findIdsByCategoriaProductoId(@Param("categoriaId") Long categoriaId);
+
     List<Producto> findByModoControlInventarioAndActivoTrue(ModoControlInventario modo);
 
     List<Producto> findByModoControlInventarioAndActivoTrueAndCategoriaProducto_TipoIn(

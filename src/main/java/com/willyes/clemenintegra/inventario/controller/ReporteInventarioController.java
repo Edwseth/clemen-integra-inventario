@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.InventarioGeneralCorteReportService;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.dto.InventarioGeneralPreviewRowDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/reportes")
@@ -46,6 +48,7 @@ public class ReporteInventarioController {
     private final LoteProductoService loteProductoService;
     private final MovimientoInventarioService movimientoService;
     private final InventarioGeneralCorteReportService inventarioGeneralCorteReportService;
+    private final ProductoRepository productoRepository;
 
     private static final MediaType EXCEL =
             MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -252,11 +255,17 @@ public class ReporteInventarioController {
     public ResponseEntity<Page<InventarioGeneralPreviewRowDTO>> previewInventarioGeneralCorte(
             @RequestParam(name = "fechaCorte")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaCorte,
+            @RequestParam(required = false) Long categoriaProductoId,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         LocalDateTime hasta = fechaCorte.atTime(23, 59, 59);
+        Set<Long> productIds = resolverProductoIds(categoriaProductoId);
+        if (categoriaProductoId != null && productIds.isEmpty()) {
+            return ResponseEntity.ok(Page.empty(pageable));
+        }
+
         List<InventarioGeneralPreviewRowDTO> filas = inventarioGeneralCorteReportService
-                .calcularFilasInventarioGeneralCorte(hasta)
+                .calcularFilasInventarioGeneralCorte(hasta, productIds)
                 .stream()
                 .map(f -> new InventarioGeneralPreviewRowDTO(
                         f.sku(),
@@ -281,7 +290,8 @@ public class ReporteInventarioController {
     @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> exportarInventarioGeneralCorte(
             @RequestParam(name = "fechaCorte", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaCorte
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaCorte,
+            @RequestParam(required = false) Long categoriaProductoId
     ) {
         if (fechaCorte == null) {
             return ResponseEntity.badRequest()
@@ -290,8 +300,10 @@ public class ReporteInventarioController {
         }
 
         LocalDateTime hasta = fechaCorte.atTime(23, 59, 59);
+        Set<Long> productIds = resolverProductoIds(categoriaProductoId);
 
-        try (Workbook workbook = inventarioGeneralCorteReportService.generarExcelInventarioGeneralCorte(hasta);
+        try (Workbook workbook = inventarioGeneralCorteReportService
+                .generarExcelInventarioGeneralCorte(hasta, productIds);
              ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             workbook.write(baos);
             HttpHeaders headers = new HttpHeaders();
@@ -311,6 +323,14 @@ public class ReporteInventarioController {
     }
 
 
+
+    private Set<Long> resolverProductoIds(Long categoriaProductoId) {
+        if (categoriaProductoId == null) {
+            return null;
+        }
+        return Set.copyOf(productoRepository.findIdsByCategoriaProductoId(categoriaProductoId));
+    }
+
     private List<InventarioGeneralPreviewRowDTO> aplicarOrdenPreview(List<InventarioGeneralPreviewRowDTO> filas, Pageable pageable) {
         Comparator<InventarioGeneralPreviewRowDTO> comparator = Comparator
                 .comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
@@ -318,6 +338,7 @@ public class ReporteInventarioController {
         if (pageable.getSort().isSorted()) {
             for (var order : pageable.getSort()) {
                 Comparator<InventarioGeneralPreviewRowDTO> current = switch (order.getProperty()) {
+                    case "sku" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::sku, Comparator.nullsLast(String::compareToIgnoreCase));
                     case "nombre" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::nombre, Comparator.nullsLast(String::compareToIgnoreCase));
                     case "udm" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::udm, Comparator.nullsLast(String::compareToIgnoreCase));
                     case "cant" -> Comparator.comparing(InventarioGeneralPreviewRowDTO::cant, Comparator.nullsLast(BigDecimal::compareTo));
