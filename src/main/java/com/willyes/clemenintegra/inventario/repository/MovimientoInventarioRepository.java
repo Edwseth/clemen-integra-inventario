@@ -266,6 +266,12 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             Long almacenDestinoId,
             ClasificacionMovimientoInventario clasificacion);
 
+
+    @EntityGraph(attributePaths = {
+            "producto", "producto.unidadMedida", "lote", "lote.ubicacionFisica", "almacenOrigen", "almacenDestino"
+    })
+    List<MovimientoInventario> findAllByFechaIngresoLessThanEqual(LocalDateTime hasta);
+
     @EntityGraph(attributePaths = {
             "producto",
             "lote",
