@@ -60,7 +60,7 @@ class DocumentoCalidadControllerTest {
     private AuthenticationManager authenticationManager;
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "QC_READ")
     void listarDocumentosDevuelvePagina() throws Exception {
         DocumentoCalidadDTO dto = DocumentoCalidadDTO.builder()
                 .id(1L)
@@ -77,7 +77,7 @@ class DocumentoCalidadControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "QC_WRITE")
     void crearDocumentoRetornaOk() throws Exception {
         DocumentoCalidadDTO respuesta = DocumentoCalidadDTO.builder()
                 .id(9L)
@@ -95,7 +95,7 @@ class DocumentoCalidadControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "QC_WRITE")
     void subirVersionRetornaOk() throws Exception {
         MockMultipartFile archivo = new MockMultipartFile(
                 "archivo",
@@ -119,7 +119,7 @@ class DocumentoCalidadControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "QC_READ")
     void descargarVersionRetornaArchivo() throws Exception {
         DocumentoCalidadVersionDownloadDTO descarga = DocumentoCalidadVersionDownloadDTO.builder()
                 .nombreArchivo("manual.pdf")

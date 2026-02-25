@@ -131,7 +131,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes retorna 201 cuando la validación es correcta")
     void crearOrden_valida() throws Exception {
         OrdenProduccionResponseDTO orden = new OrdenProduccionResponseDTO();
@@ -155,7 +155,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos responde 200")
     void listarMovimientosPorEtapa_respondeOk() throws Exception {
         when(ordenProduccionService.listarMovimientosPorEtapa(10L, 20L, null))
@@ -169,7 +169,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/{ordenId}/insumos permite ROL_PLANEADOR")
     void listarInsumos_planeador_respondeOk() throws Exception {
         when(ordenProduccionService.listarInsumos(10L)).thenReturn(List.of(new InsumoOPDTO()));
@@ -181,7 +181,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes/{id}/cancelar retorna 204 para cancelación exitosa")
     void cancelarOrden_respondeNoContent() throws Exception {
         CancelarOrdenRequestDTO request = new CancelarOrdenRequestDTO();
@@ -198,7 +198,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes/{id}/cierres responde 200 y mapea categoriaProducto")
     void registrarCierre_recargaOrdenParaResponseConCategoria() throws Exception {
         CierreProduccionRequestDTO request = CierreProduccionRequestDTO.builder()
@@ -253,7 +253,7 @@ class OrdenProduccionControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes/{id}/cierres respeta ErrorResponseException 422")
     void registrarCierre_errorResponseExceptionRetorna422() throws Exception {
         CierreProduccionRequestDTO request = CierreProduccionRequestDTO.builder()
@@ -277,7 +277,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("POST /api/produccion/ordenes permite SUPER_ADMIN")
     void crearOrden_superAdminPermitido() throws Exception {
         OrdenProduccionResponseDTO orden = new OrdenProduccionResponseDTO();
@@ -300,7 +300,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes retorna 400 con code STOCK_INSUFICIENTE")
     void crearOrden_insuficiente() throws Exception {
         ResultadoValidacionOrdenDTO respuesta = ResultadoValidacionOrdenDTO.builder()
@@ -329,7 +329,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes retorna 409 y code estable al requerir confirmación homeopática")
     void crearOrden_homeopaticoRequiereConfirmacion_responde409() throws Exception {
         when(ordenProduccionService.crearOrden(any(CrearOrdenProduccionRequestDTO.class)))
@@ -349,7 +349,7 @@ class OrdenProduccionControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes retorna 400 cuando confirmacionHomeopatico=true y motivo inválido")
     void crearOrden_homeopaticoConfirmadoConMotivoInvalido_responde400() throws Exception {
         CrearOrdenProduccionRequestDTO request = buildRequest();
@@ -364,7 +364,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/{id} permite consulta a jefe de calidad")
     void obtenerOrden_jefeCalidadPuedeConsultar() throws Exception {
         com.willyes.clemenintegra.produccion.model.OrdenProduccion orden = com.willyes.clemenintegra.produccion.model.OrdenProduccion.builder()
@@ -380,7 +380,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/consumos responde 200 con lista vacía")
     void listarConsumosPorEtapa_retornaListaVacia() throws Exception {
         when(ordenProduccionService.listarConsumosPorEtapa(5L, 7L, null)).thenReturn(List.of());
@@ -393,7 +393,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos responde 200 con lista vacía")
     void listarMovimientosPorEtapa_retornaListaVacia() throws Exception {
         when(ordenProduccionService.listarMovimientosPorEtapa(8L, 9L, null)).thenReturn(List.of());
@@ -406,7 +406,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/movimientos responde con movimientos")
     void listarMovimientosPorEtapa_retornaMovimientos() throws Exception {
         MovimientoInventarioResponseDTO movimiento = MovimientoInventarioResponseDTO.builder()
@@ -428,7 +428,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist responde 200 y retorna lista vacía")
     void obtenerChecklistPorEtapa_respondeOk() throws Exception {
         ChecklistEtapaDTO checklist = ChecklistEtapaDTO.builder()
@@ -449,7 +449,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist responde 200 con checklist lleno")
     void obtenerChecklistPorEtapa_conDatos() throws Exception {
         ChecklistItemDTO item = ChecklistItemDTO.builder()
@@ -477,7 +477,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("GET /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist devuelve 400 si la etapa no corresponde")
     void obtenerChecklistPorEtapa_etapaNoPertenece() throws Exception {
         when(checklistEtapaService.obtenerPorOrdenYEtapa(9L, 99L))
@@ -491,7 +491,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/checklist responde 200")
     void actualizarChecklistPorEtapa_respondeOk() throws Exception {
         ChecklistEtapaDTO checklist = ChecklistEtapaDTO.builder()
@@ -512,7 +512,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar responde 200 y retorna la orden")
     void iniciarEtapa_postDevuelveOrden() throws Exception {
         OrdenProduccion orden = OrdenProduccion.builder()
@@ -536,7 +536,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/iniciar devuelve 409 si existe otra etapa activa")
     void iniciarEtapa_postConflictoOtraActiva() throws Exception {
         when(ordenProduccionService.iniciarEtapa(77L, 88L))
@@ -548,7 +548,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("POST /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar responde 200")
     void finalizarEtapa_postRespondeOk() throws Exception {
         Usuario usuario = Usuario.builder().id(10L).nombreCompleto("Operador").build();
@@ -567,7 +567,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = {"PROD_READ","PROD_WRITE","PROD_WORKFLOW","PROD_WORKFLOW_START","PROD_WORKFLOW_FINISH","PROD_ETAPA_CHECKLIST_READ","PROD_ETAPA_CHECKLIST_WRITE","PROD_OP_WORKFLOW_CANCEL","PROD_OP_WORKFLOW_FINALIZE","PROD_ETAPA_START","PROD_ETAPA_FINISH"})
     @DisplayName("PATCH /api/produccion/ordenes/{ordenId}/etapas/{etapaId}/finalizar responde 200")
     void finalizarEtapa_patchRespondeOk() throws Exception {
         Usuario usuario = Usuario.builder().id(20L).nombreCompleto("Operador Patch").build();
@@ -586,7 +586,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/lookup permite lookup por codigo a ROL_CONTADOR")
     void lookupPorCodigo_contador_respondeOk() throws Exception {
         OrdenProduccion orden = OrdenProduccion.builder()
@@ -606,7 +606,7 @@ class OrdenProduccionControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/lookup permite lookup por codigo a ROL_SUPER_ADMIN")
     void lookupPorCodigo_superAdmin_respondeOk() throws Exception {
         OrdenProduccion orden = OrdenProduccion.builder()
@@ -625,9 +625,11 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = "INV_READ")
     @DisplayName("GET /api/produccion/ordenes/lookup rechaza roles no autorizados")
     void lookupPorCodigo_rolNoAutorizado_responde403() throws Exception {
+        // usuario autenticado sin permiso canónico PROD_READ
+
         mockMvc.perform(get("/api/produccion/ordenes/lookup")
                         .param("codigo", "OP-CLEMEN-20260214-03"))
                 .andExpect(status().isForbidden());
@@ -635,7 +637,7 @@ class OrdenProduccionControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/lookup devuelve 404 cuando no existe la orden")
     void lookupPorCodigo_noExiste_responde404() throws Exception {
         when(ordenProduccionRepository.findByCodigoOrdenIgnoreCase("OP-CLEMEN-404"))
@@ -649,7 +651,7 @@ class OrdenProduccionControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/lookup devuelve 400 cuando no se envian parametros")
     void lookupSinParametros_responde400() throws Exception {
         mockMvc.perform(get("/api/produccion/ordenes/lookup"))
@@ -659,7 +661,7 @@ class OrdenProduccionControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/autocomplete retorna 200 con resultados")
     void autocomplete_conCodigoValido_responde200() throws Exception {
         OrdenProduccionResponseDTO dto = new OrdenProduccionResponseDTO();
@@ -677,7 +679,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_CONTADOR")
+    @WithMockUser(authorities = "PROD_READ")
     @DisplayName("GET /api/produccion/ordenes/autocomplete retorna 400 cuando codigo tiene menos de 2 caracteres")
     void autocomplete_conCodigoCorto_responde400() throws Exception {
         mockMvc.perform(get("/api/produccion/ordenes/autocomplete")

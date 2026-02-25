@@ -52,7 +52,7 @@ class AlistamientoProduccionControllerTest {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = "PROD_READ")
     void obtenerAlistamientoRetornaDto() throws Exception {
         AlistamientoOrdenProduccionDTO dto = AlistamientoOrdenProduccionDTO.builder()
                 .ordenId(1L)

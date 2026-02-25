@@ -247,6 +247,7 @@ public class ConteoCiclicoService {
 
     @Transactional
     public ConteoCiclicoResponseDTO cerrar(Long conteoId) {
+        validarPermisoCerrarConteo();
         ConteoCiclico conteo = cambiarEstado(conteoId, EstadoConteoCiclico.CERRADO);
         return mapper.toResponseCompleto(conteo);
     }
@@ -311,6 +312,24 @@ public class ConteoCiclicoService {
         ConteoCiclico aplicado = conteoRepository.save(conteo);
         return mapper.toResponseCompleto(aplicado);
     }
+
+    private void validarPermisoCerrarConteo() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getAuthorities() == null) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "No tiene permiso INV_CONTEOS_CLOSE para cerrar conteos");
+        }
+
+        boolean tienePermisoClose = authentication.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch("INV_CONTEOS_CLOSE"::equals);
+
+        if (!tienePermisoClose) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "No tiene permiso INV_CONTEOS_CLOSE para cerrar conteos");
+        }
+    }
+
     private ConteoCiclico cambiarEstado(Long conteoId, EstadoConteoCiclico destino) {
         ConteoCiclico conteo = conteoRepository.findByIdWithDetallesForUpdate(conteoId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,

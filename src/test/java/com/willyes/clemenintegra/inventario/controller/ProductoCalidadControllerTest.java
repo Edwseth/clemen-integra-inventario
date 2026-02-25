@@ -51,7 +51,7 @@ class ProductoCalidadControllerTest {
     private AuthenticationEntryPoint authenticationEntryPoint;
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "INV_READ")
     void jefeCalidadPuedeActualizarCamposCalidad() throws Exception {
         long productoId = 10L;
         ProductoCalidadUpdateDTO dto = new ProductoCalidadUpdateDTO(true, false, true);
@@ -75,7 +75,7 @@ class ProductoCalidadControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_ALMACENISTA")
+    @WithMockUser(authorities = "INV_WRITE")
     void rolNoAutorizadoRecibeForbidden() throws Exception {
         long productoId = 10L;
         ProductoCalidadUpdateDTO dto = new ProductoCalidadUpdateDTO(true, true, true);
@@ -87,7 +87,7 @@ class ProductoCalidadControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "INV_READ")
     void idInexistenteDevuelveNotFound() throws Exception {
         when(productoService.actualizarCamposCalidad(eq(999999L), any(ProductoCalidadUpdateDTO.class)))
                 .thenThrow(new ResponseStatusException(NOT_FOUND, "PRODUCTO_NO_ENCONTRADO"));

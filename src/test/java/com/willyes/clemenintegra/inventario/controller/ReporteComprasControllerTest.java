@@ -51,7 +51,7 @@ class ReporteComprasControllerTest {
     private AuthenticationManager authenticationManager;
 
     @Test
-    @WithMockUser(authorities = "ROL_COMPRADOR")
+    @WithMockUser(authorities = "INV_READ")
     void obtenerReporteRetorna200ConCamposEsperados() throws Exception {
         ReporteComprasRowDTO fila = ReporteComprasRowDTO.builder()
                 .ocCodigo("OC-001")
@@ -91,7 +91,7 @@ class ReporteComprasControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_SUPER_ADMIN")
+    @WithMockUser(authorities = "INV_READ")
     void exportarExcelRetorna200YBytesNoVacios() throws Exception {
         when(reporteComprasService.exportarExcel(any(), any())).thenReturn(new byte[]{1, 2, 3});
 

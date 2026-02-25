@@ -373,6 +373,10 @@ public class SecurityConfig {
                             "PROD_VARIACIONES_READ"
                     );
 
+                    auth.requestMatchers(HttpMethod.POST, "/api/produccion/regularizaciones").hasAuthority(
+                            "PROD_TRAZABILIDAD_REGULARIZACION"
+                    );
+
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/produccion/variaciones/export").hasAnyAuthority(
                             "PROD_VARIACIONES_EXPORT"
