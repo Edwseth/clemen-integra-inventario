@@ -2480,7 +2480,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
             BigDecimal nuevoStock = stockActual.subtract(pendienteDetalle);
             if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) {
-                throw loteStockInsuficienteException(loteOrigen, producto, pendiente, movible, loteOrigen.getAlmacen());
+                throw loteStockInsuficienteException(loteOrigen, producto, pendienteDetalle, stockActual, loteOrigen.getAlmacen());
             }
 
             BigDecimal nuevoReservado = reservadoActual.subtract(pendienteDetalle);
