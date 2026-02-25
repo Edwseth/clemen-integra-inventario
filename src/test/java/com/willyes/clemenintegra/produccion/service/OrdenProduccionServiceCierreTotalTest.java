@@ -71,6 +71,7 @@ class OrdenProduccionServiceCierreTotalTest {
     private ReservaLoteRepository reservaLoteRepository;
     private DisponibilidadInsumoService disponibilidadInsumoService;
     private RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
+    private CosteoProduccionService costeoProduccionService;
 
     private OrdenProduccionServiceImpl service;
 
@@ -107,6 +108,7 @@ class OrdenProduccionServiceCierreTotalTest {
         OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository = mock(OpHomeopaticoOverrideRepository.class);
         ProduccionEtapasLockValidator produccionEtapasLockValidator = mock(ProduccionEtapasLockValidator.class);
         regularizacionTrazabilidadRepository = mock(RegularizacionTrazabilidadRepository.class);
+        costeoProduccionService = mock(CosteoProduccionService.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -138,7 +140,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 loteConsecutivoDiaService,
                 opHomeopaticoOverrideRepository,
                 produccionEtapasLockValidator,
-                regularizacionTrazabilidadRepository
+                regularizacionTrazabilidadRepository,
+                costeoProduccionService
         );
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDO");
