@@ -29,7 +29,7 @@ public class RegularizacionTrazabilidadDetalle {
     @Column(name = "lote_id", nullable = false)
     private Long loteId;
 
-    @Column(name = "cantidad", nullable = false, precision = 10, scale = 2)
+    @Column(name = "cantidad", nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidad;
 
     @Column(name = "tipo", nullable = false, length = 10)
@@ -44,4 +44,12 @@ public class RegularizacionTrazabilidadDetalle {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movimiento_id", nullable = false)
     private MovimientoInventario movimiento;
+
+    @PrePersist
+    @PreUpdate
+    private void normalizeCantidad() {
+        if (cantidad != null) {
+            cantidad = cantidad.setScale(6, java.math.RoundingMode.HALF_UP);
+        }
+    }
 }

@@ -34,19 +34,19 @@ public class OrdenProduccion {
     private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidadProgramada;
 
-    @Column(nullable = false, precision = 10, scale = 2, columnDefinition = "DECIMAL(10,2) DEFAULT 0")
+    @Column(nullable = false, precision = 18, scale = 6, columnDefinition = "DECIMAL(18,6) DEFAULT 0")
     private BigDecimal cantidadProducida;
 
-    @Column(name = "cantidad_producida_acumulada", nullable = false, precision = 10, scale = 2, columnDefinition = "DECIMAL(10,2) DEFAULT 0")
+    @Column(name = "cantidad_producida_acumulada", nullable = false, precision = 18, scale = 6, columnDefinition = "DECIMAL(18,6) DEFAULT 0")
     private BigDecimal cantidadProducidaAcumulada;
 
     @Column(name = "fecha_ultimo_cierre")
     private LocalDateTime fechaUltimoCierre;
 
-    @Column(precision = 10, scale = 2)
+    @Column(precision = 18, scale = 6)
     private BigDecimal porcentajeCumplimiento;
 
     @Enumerated(EnumType.STRING)
@@ -107,7 +107,12 @@ public class OrdenProduccion {
     // Garantiza que las instancias construidas con builder no persistan un estado nulo
     // (causante del error de columna NOT NULL en batch_record_estado).
     @PrePersist
+    @PreUpdate
     public void prePersist() {
+        if (cantidadProgramada != null) cantidadProgramada = cantidadProgramada.setScale(6, java.math.RoundingMode.HALF_UP);
+        if (cantidadProducida != null) cantidadProducida = cantidadProducida.setScale(6, java.math.RoundingMode.HALF_UP);
+        if (cantidadProducidaAcumulada != null) cantidadProducidaAcumulada = cantidadProducidaAcumulada.setScale(6, java.math.RoundingMode.HALF_UP);
+        if (porcentajeCumplimiento != null) porcentajeCumplimiento = porcentajeCumplimiento.setScale(6, java.math.RoundingMode.HALF_UP);
         if (batchRecordEstado == null) {
             batchRecordEstado = EstadoBatchRecord.BORRADOR;
         }

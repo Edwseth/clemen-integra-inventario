@@ -26,7 +26,7 @@ public class CierreProduccion {
     @JoinColumn(name = "orden_produccion_id", nullable = false)
     private OrdenProduccion ordenProduccion;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidad;
 
     @Enumerated(EnumType.STRING)
@@ -49,7 +49,11 @@ public class CierreProduccion {
     private String usuarioNombre;
 
     @PrePersist
+    @PreUpdate
     public void prePersist() {
+        if (cantidad != null) {
+            cantidad = cantidad.setScale(6, java.math.RoundingMode.HALF_UP);
+        }
         if (fechaCierre == null) {
             fechaCierre = LocalDateTime.now();
         }

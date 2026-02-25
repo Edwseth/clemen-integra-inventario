@@ -22,7 +22,7 @@ public class AjusteInventario {
     @Column(nullable = false)
     private LocalDateTime fecha;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidad;
 
     @Column(length = 100, nullable = false)
@@ -62,5 +62,13 @@ public class AjusteInventario {
     public void setAlmacen(Almacen almacen) {this.almacen = almacen;}
     public Usuario getUsuario() {return usuario;}
     public void setUsuario(Usuario usuario) {this.usuario = usuario;}
+
+    @PrePersist
+    @PreUpdate
+    private void normalizeCantidad() {
+        if (cantidad != null) {
+            cantidad = cantidad.setScale(6, java.math.RoundingMode.HALF_UP);
+        }
+    }
 }
 

@@ -38,7 +38,7 @@ public class SolicitudMovimiento {
     @JoinColumn(name = "lote_id")
     private LoteProducto lote;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidad;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -100,7 +100,11 @@ public class SolicitudMovimiento {
     private List<SolicitudMovimientoDetalle> detalles = new ArrayList<>();
 
     @PrePersist
+    @PreUpdate
     public void prePersist() {
+        if (cantidad != null) {
+            cantidad = cantidad.setScale(6, java.math.RoundingMode.HALF_UP);
+        }
         if (fechaSolicitud == null) {
             fechaSolicitud = LocalDateTime.now();
         }
