@@ -16,6 +16,7 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
