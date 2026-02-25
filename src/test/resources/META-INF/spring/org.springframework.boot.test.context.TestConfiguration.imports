@@ -1,1 +1,2 @@
 com.willyes.clemenintegra.produccion.config.ReporteOrdenProduccionTestConfig
+com.willyes.clemenintegra.shared.security.testsupport.WebMvcSliceSecurityTestConfig
