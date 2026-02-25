@@ -119,6 +119,9 @@ public class LoteProducto {
     @Column(name = "costo_total_material_ingresado", precision = 19, scale = 6)
     private BigDecimal costoTotalMaterialIngresado;
 
+    @Column(name = "total_ingresado_material", precision = 19, scale = 6)
+    private BigDecimal totalIngresadoMaterial;
+
     public LoteProducto(Long id) {
         this.id = id;
     }

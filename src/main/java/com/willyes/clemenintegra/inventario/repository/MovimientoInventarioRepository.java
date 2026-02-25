@@ -394,8 +394,10 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             select coalesce(sum(case
                 when m.clasificacion in (com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                                          com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD)
+                     and m.tipoMovimiento = com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento.SALIDA
                     then coalesce(m.costoTotalAplicado, 0)
                 when m.clasificacion = com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION
+                     and m.tipoMovimiento = com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento.ENTRADA
                     then -coalesce(m.costoTotalAplicado, 0)
                 else 0
             end), 0)

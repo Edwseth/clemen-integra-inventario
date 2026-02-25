@@ -26,6 +26,7 @@ import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepos
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -37,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -189,6 +191,8 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                     plan.tipo(), plan.clasificacion(), plan.almacenOrigenId(), plan.almacenDestinoId(), op.getId(), request));
         }
 
+        recalcularCostoUnitarioLoteProducidoSiCierreTotal(op, request.cantidadRealProducida());
+
         return RegularizacionTrazabilidadResponseDTO.builder()
                 .regularizacionId(reg.getId())
                 .idempotencyKey(idempotencyKey)
@@ -200,6 +204,32 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                 .registradoPorId(usuarioAuth.getId())
                 .fecha(reg.getFechaIngreso())
                 .build();
+    }
+
+
+    private void recalcularCostoUnitarioLoteProducidoSiCierreTotal(OrdenProduccion op, BigDecimal cantidadRealProducida) {
+        if (op == null || op.getEstado() == null) {
+            return;
+        }
+        if (op.getEstado() != EstadoProduccion.FINALIZADA && op.getEstado() != EstadoProduccion.CERRADA_INCOMPLETA) {
+            return;
+        }
+        if (cantidadRealProducida == null || cantidadRealProducida.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        loteProductoRepository.findByOrdenProduccionIdAndProductoId(op.getId(), op.getProducto().getId().longValue())
+                .ifPresent(lote -> {
+                    BigDecimal costoTotalMaterialRealOp = Optional.ofNullable(
+                                    movimientoInventarioRepository.sumarCostoMaterialRealOp(op.getId()))
+                            .orElse(BigDecimal.ZERO)
+                            .setScale(6, RoundingMode.HALF_UP);
+                    BigDecimal costoUnitario = costoTotalMaterialRealOp
+                            .divide(cantidadRealProducida, 6, RoundingMode.HALF_UP);
+                    lote.setCostoTotalMaterialIngresado(costoTotalMaterialRealOp);
+                    lote.setCostoUnitarioMaterial(costoUnitario);
+                    loteProductoRepository.save(lote);
+                });
     }
 
     private void planificarDevolucion(Long opId,

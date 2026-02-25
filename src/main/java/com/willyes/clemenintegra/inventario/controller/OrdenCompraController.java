@@ -10,6 +10,8 @@ import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
 import com.willyes.clemenintegra.inventario.service.HistorialEstadoOrdenService;
 import com.willyes.clemenintegra.inventario.service.RecepcionOCService;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -53,6 +55,9 @@ public class OrdenCompraController {
     private final OrdenCompraPdfService ordenCompraPdfService;
     private final OrdenCompraMapper mapper;
 
+    private static final BigDecimal IVA_MIN = BigDecimal.ZERO;
+    private static final BigDecimal IVA_MAX = new BigDecimal("100");
+
     @PostMapping
     // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('INV_WRITE')")
@@ -88,6 +93,7 @@ public class OrdenCompraController {
             Producto producto = productoRepository.findById(d.getProductoId())
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado"));
 
+            validarIvaPorcentaje(d.getIva());
             BigDecimal valorTotal = calcularValorTotalLinea(d.getCantidad(), d.getValorUnitario(), d.getIva());
 
             return OrdenCompraDetalle.builder()
@@ -138,6 +144,7 @@ public class OrdenCompraController {
             Producto producto = productoRepository.findById(d.getProductoId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Producto no encontrado"));
 
+            validarIvaPorcentaje(d.getIva());
             BigDecimal valorTotal = calcularValorTotalLinea(d.getCantidad(), d.getValorUnitario(), d.getIva());
 
             return OrdenCompraDetalle.builder()
@@ -253,6 +260,16 @@ public class OrdenCompraController {
             return StreamUtils.copyToString(is, StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new RuntimeException("No se encontró la plantilla: " + classpathLocation, e);
+        }
+    }
+
+    private void validarIvaPorcentaje(BigDecimal iva) {
+        if (iva == null) {
+            return;
+        }
+        if (iva.compareTo(IVA_MIN) < 0 || iva.compareTo(IVA_MAX) > 0) {
+            throw new CustomBusinessException(ApiErrorCode.IVA_PORCENTAJE_INVALIDO,
+                    "IVA_PORCENTAJE_INVALIDO");
         }
     }
 

@@ -2,6 +2,8 @@ package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.*;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +46,7 @@ class MovimientoInventarioRepositoryFechaTest {
     private MotivoMovimiento motivoMovimiento;
     private TipoMovimientoDetalle tipoMovimientoDetalle;
     private Almacen almacen;
+    private OrdenProduccion ordenProduccion;
 
     @BeforeEach
     void setUp() {
@@ -118,6 +121,18 @@ class MovimientoInventarioRepositoryFechaTest {
 
         tipoMovimientoDetalle = entityManager.persist(TipoMovimientoDetalle.builder()
                 .descripcion("Detalle")
+                .build());
+
+        ordenProduccion = entityManager.persist(OrdenProduccion.builder()
+                .codigoOrden("OP-TEST-1")
+                .fechaInicio(LocalDateTime.now().minusDays(1))
+                .cantidadProgramada(new BigDecimal("10.00"))
+                .cantidadProducida(BigDecimal.ZERO)
+                .cantidadProducidaAcumulada(BigDecimal.ZERO)
+                .estado(EstadoProduccion.EN_PROCESO)
+                .producto(producto)
+                .unidadMedida(producto.getUnidadMedida())
+                .responsable(usuario)
                 .build());
     }
 
@@ -226,6 +241,47 @@ class MovimientoInventarioRepositoryFechaTest {
                 .hasSize(1)
                 .extracting(MovimientoInventario::getId)
                 .containsExactly(movimientoProductoObjetivo.getId());
+    }
+
+    @Test
+    @DisplayName("sumarCostoMaterialRealOp aplica signo negativo a devoluciones")
+    void sumarCostoMaterialRealOp_devolucionRestaCostoTotal() {
+        movimientoInventarioRepository.save(MovimientoInventario.builder()
+                .cantidad(new BigDecimal("5"))
+                .tipoMovimiento(TipoMovimiento.SALIDA)
+                .clasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION)
+                .fechaIngreso(LocalDateTime.now().minusHours(2))
+                .docReferencia("OP-1")
+                .registradoPor(usuario)
+                .producto(producto)
+                .lote(lote)
+                .almacenOrigen(almacen)
+                .motivoMovimiento(motivoMovimiento)
+                .tipoMovimientoDetalle(tipoMovimientoDetalle)
+                .ordenProduccion(ordenProduccion)
+                .costoTotalAplicado(new BigDecimal("100.000000"))
+                .build());
+
+        movimientoInventarioRepository.save(MovimientoInventario.builder()
+                .cantidad(new BigDecimal("1"))
+                .tipoMovimiento(TipoMovimiento.ENTRADA)
+                .clasificacion(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION)
+                .fechaIngreso(LocalDateTime.now().minusHours(1))
+                .docReferencia("OP-1")
+                .registradoPor(usuario)
+                .producto(producto)
+                .lote(lote)
+                .almacenDestino(almacen)
+                .motivoMovimiento(motivoMovimiento)
+                .tipoMovimientoDetalle(tipoMovimientoDetalle)
+                .ordenProduccion(ordenProduccion)
+                .costoTotalAplicado(new BigDecimal("40.000000"))
+                .build());
+
+        entityManager.flush();
+
+        BigDecimal total = movimientoInventarioRepository.sumarCostoMaterialRealOp(ordenProduccion.getId());
+        assertThat(total).isEqualByComparingTo("60.000000");
     }
 
     private MovimientoInventario crearMovimiento(LocalDateTime fechaIngreso, BigDecimal cantidad) {

@@ -16,6 +16,7 @@ import com.willyes.clemenintegra.inventario.regularizacion.service.impl.Regulari
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -37,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -141,6 +143,36 @@ class RegularizacionTrazabilidadServiceImplTest {
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting(e -> ((CustomBusinessException) e).getCode())
                 .isEqualTo(ApiErrorCode.REGULARIZACION_PT_SIN_ENTRADA_BASE);
+    }
+
+
+    @Test
+    void regularizacionPostCierreTotal_recalculaCostoUnitarioLoteProducido() {
+        Usuario u = Usuario.builder().id(1L).build();
+        setupRegularizacionLifecycle("idem-cierre", 15L);
+        setupCatalogos();
+
+        OrdenProduccion op = op(12L, 10, "100");
+        op.setEstado(EstadoProduccion.FINALIZADA);
+        when(ordenProduccionRepository.findById(12L)).thenReturn(Optional.of(op));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaEmpaque(21, "1")));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
+                12L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
+        )).thenReturn(List.of(consumo(21, 300L, "100", ALMACEN_PRE_BODEGA)));
+        when(movimientoInventarioRepository.sumarCostoMaterialRealOp(12L)).thenReturn(new BigDecimal("500.000000"));
+
+        LoteProducto lotePt = new LoteProducto();
+        lotePt.setId(901L);
+        lotePt.setCostoUnitarioMaterial(BigDecimal.ZERO);
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(12L, 10L)).thenReturn(Optional.of(lotePt));
+
+        service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(12L, new BigDecimal("80"), "ACTA", "post cierre", false), "idem-cierre", u);
+
+        verify(loteProductoRepository).save(argThat(lote ->
+                lote.getId().equals(901L)
+                        && lote.getCostoTotalMaterialIngresado().compareTo(new BigDecimal("500.000000")) == 0
+                        && lote.getCostoUnitarioMaterial().compareTo(new BigDecimal("6.250000")) == 0));
     }
 
     @Test

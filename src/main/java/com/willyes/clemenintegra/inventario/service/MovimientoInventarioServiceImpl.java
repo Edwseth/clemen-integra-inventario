@@ -2085,17 +2085,17 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva);
             BigDecimal costoTotalRecibo = costeoInventarioService.calcularCostoTotalLineaRecepcion(
                     ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva);
-            BigDecimal costoUnitActual = existente.getCostoUnitarioMaterial();
-            if (costoUnitActual != null && stockAnterior.compareTo(BigDecimal.ZERO) > 0 && nuevo.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal nuevoCostoUnit = costoUnitActual.multiply(stockAnterior)
-                        .add(costoUnitRecibo.multiply(cantidad))
-                        .divide(nuevo, 6, RoundingMode.HALF_UP);
+            BigDecimal acumuladoCosto = safeScale6(existente.getCostoTotalMaterialIngresado()).add(costoTotalRecibo);
+            BigDecimal totalIngresadoMaterial = safeScale6(existente.getTotalIngresadoMaterial()).add(safeScale6(cantidad));
+            existente.setCostoTotalMaterialIngresado(acumuladoCosto);
+            existente.setTotalIngresadoMaterial(totalIngresadoMaterial);
+            if (totalIngresadoMaterial.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal nuevoCostoUnit = costeoInventarioService.calcularCostoUnitarioPromedioPorIngreso(
+                        acumuladoCosto, totalIngresadoMaterial);
                 existente.setCostoUnitarioMaterial(nuevoCostoUnit);
             } else {
                 existente.setCostoUnitarioMaterial(costoUnitRecibo);
             }
-            BigDecimal acumuladoCosto = safeScale6(existente.getCostoTotalMaterialIngresado()).add(costoTotalRecibo);
-            existente.setCostoTotalMaterialIngresado(acumuladoCosto);
             existente.setStockLote(nuevo);
             existente.setAlmacen(destino);
             return loteProductoRepository.save(existente);
@@ -2133,11 +2133,17 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .almacen(destino)
                 .usuarioLiberador(!requiereAnalisis ? usuario : null)
                 .stockLote(cantidad)
-                .costoUnitarioMaterial(costeoInventarioService.calcularCostoUnitarioRecepcion(
-                        ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva))
                 .costoTotalMaterialIngresado(costeoInventarioService.calcularCostoTotalLineaRecepcion(
                         ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva))
+                .totalIngresadoMaterial(safeScale6(cantidad))
                 .build();
+        if (lote.getTotalIngresadoMaterial() != null && lote.getTotalIngresadoMaterial().compareTo(BigDecimal.ZERO) > 0) {
+            lote.setCostoUnitarioMaterial(costeoInventarioService.calcularCostoUnitarioPromedioPorIngreso(
+                    lote.getCostoTotalMaterialIngresado(), lote.getTotalIngresadoMaterial()));
+        } else {
+            lote.setCostoUnitarioMaterial(costeoInventarioService.calcularCostoUnitarioRecepcion(
+                    ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva));
+        }
         return loteProductoRepository.save(lote);
     }
 

@@ -51,6 +51,16 @@ class CosteoInventarioServiceImplTest {
     }
 
     @Test
+    void calcularCostoUnitarioPromedioPorIngreso_noDependeStockActual() {
+        BigDecimal costoUnitario = service.calcularCostoUnitarioPromedioPorIngreso(
+                new BigDecimal("540.000000"),
+                new BigDecimal("6.000000")
+        );
+
+        assertEquals(new BigDecimal("90.000000"), costoUnitario);
+    }
+
+    @Test
     void calcularCostoTotalMovimiento_consumoLote() {
         BigDecimal total = service.calcularCostoTotalMovimiento(new BigDecimal("50"), new BigDecimal("3"));
         assertEquals(new BigDecimal("150.000000"), total);
