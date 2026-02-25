@@ -4,7 +4,6 @@ import com.willyes.clemenintegra.inventario.controller.StockDisponibleComparativ
 import com.willyes.clemenintegra.inventario.dto.StockDisponibleComparativoResponseDTO;
 import com.willyes.clemenintegra.inventario.service.StockDisponibleComparativoService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
-import com.willyes.clemenintegra.shared.security.SecurityConfig;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
 import com.willyes.clemenintegra.support.TestAuth;
 import org.junit.jupiter.api.DisplayName;
@@ -13,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,8 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(StockDisponibleComparativoController.class)
-@AutoConfigureMockMvc(addFilters = true)
-@Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = {"DB_SECURPASS=dummy", "DB_SECURNAME=dummy"})
 class StockDisponibleComparativoControllerSmokeTest {
 

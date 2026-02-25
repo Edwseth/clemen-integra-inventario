@@ -137,6 +137,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private ReservaLoteRepository reservaLoteRepository;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
     @Mock private ChecklistEtapaService checklistEtapaService;
+    @Mock private CosteoProduccionService costeoProduccionService;
     @Mock private LoteConsecutivoDiaService loteConsecutivoDiaService;
     @Mock private OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository;
     @Mock private RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;

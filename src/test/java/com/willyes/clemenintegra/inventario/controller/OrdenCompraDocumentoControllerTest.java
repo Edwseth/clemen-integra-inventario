@@ -4,7 +4,6 @@ import com.willyes.clemenintegra.inventario.dto.OrdenCompraDocumentoDescargaDTO;
 import com.willyes.clemenintegra.inventario.dto.OrdenCompraDocumentoResponseDTO;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraDocumentoService;
 import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
-import com.willyes.clemenintegra.shared.security.SecurityConfig;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
@@ -40,8 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = OrdenCompraDocumentoController.class)
-@AutoConfigureMockMvc
-@Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 class OrdenCompraDocumentoControllerTest {
 
     @Autowired
