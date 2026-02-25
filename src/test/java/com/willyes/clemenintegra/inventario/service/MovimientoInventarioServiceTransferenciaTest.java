@@ -38,6 +38,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 
@@ -705,37 +706,19 @@ class MovimientoInventarioServiceTransferenciaTest {
         LoteProducto lote = crearLote(2845L, producto, 6, EstadoLote.LIBERADO,
                 new BigDecimal("0.460000"), BigDecimal.ZERO.setScale(6), false);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = buildTransferenciaDTO(
                 new BigDecimal("0.468000"),
                 TipoMovimiento.SALIDA,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 "DOC-DEC",
-                null,
-                null,
-                null,
-                null,
                 producto.getId(),
                 lote.getId(),
                 6,
                 null,
-                null,
-                null,
                 11L,
                 5L,
-                null,
                 359L,
-                null,
-                null,
-                null,
-                null,
-                lote.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                null,
-                Boolean.FALSE,
-                null
+                lote.getCodigoLote()
         );
 
         configurarMocksBasicos(producto, lote);
@@ -767,37 +750,19 @@ class MovimientoInventarioServiceTransferenciaTest {
         LoteProducto loteOrigen = crearLote(2845L, producto, 1, EstadoLote.LIBERADO,
                 new BigDecimal("0.470000"), BigDecimal.ZERO.setScale(6), false);
 
-        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
-                null,
+        MovimientoInventarioDTO dto = buildTransferenciaDTO(
                 new BigDecimal("0.470000"),
                 TipoMovimiento.TRANSFERENCIA,
                 ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
                 "DOC-TR-DEC",
-                null,
-                null,
-                null,
-                null,
                 producto.getId(),
                 loteOrigen.getId(),
                 1,
                 6,
-                null,
-                null,
                 5L,
                 5L,
                 null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                loteOrigen.getCodigoLote(),
-                null,
-                null,
-                Boolean.FALSE,
-                null,
-                Boolean.FALSE,
-                null
+                loteOrigen.getCodigoLote()
         );
 
         configurarMocksBasicos(producto, loteOrigen);
@@ -842,6 +807,51 @@ class MovimientoInventarioServiceTransferenciaTest {
                     return new Almacen(id instanceof Integer ? (Integer) id : ((Long) id).intValue());
                 });
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
+    }
+
+    private MovimientoInventarioDTO buildTransferenciaDTO(BigDecimal cantidad,
+                                                          TipoMovimiento tipoMovimiento,
+                                                          ClasificacionMovimientoInventario clasificacion,
+                                                          String docReferencia,
+                                                          Integer productoId,
+                                                          Long loteProductoId,
+                                                          Integer almacenOrigenId,
+                                                          Integer almacenDestinoId,
+                                                          Long motivoMovimientoId,
+                                                          Long tipoMovimientoDetalleId,
+                                                          Long ordenProduccionId,
+                                                          String codigoLote) {
+        return new MovimientoInventarioDTO(
+                null,
+                cantidad,
+                tipoMovimiento,
+                clasificacion,
+                docReferencia,
+                null,
+                null,
+                null,
+                null,
+                productoId,
+                loteProductoId,
+                almacenOrigenId,
+                almacenDestinoId,
+                null,
+                null,
+                motivoMovimientoId,
+                tipoMovimientoDetalleId,
+                null,
+                null,
+                ordenProduccionId,
+                null,
+                null,
+                codigoLote,
+                null,
+                null,
+                Boolean.FALSE,
+                List.of(),
+                Boolean.FALSE,
+                null
+        );
     }
 
     private Producto crearProducto(Integer id, int escala) {
