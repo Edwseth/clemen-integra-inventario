@@ -323,6 +323,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         Integer almacenOrigenIdNormalizadoInt = dto.almacenOrigenId();
         boolean salidaPt = clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                && !esRegularizacionTrazabilidad
                 && isSalidaPt(tipoMovimiento, resolvedTipoDetalleId);
 
         Long almacenPtId = null;
