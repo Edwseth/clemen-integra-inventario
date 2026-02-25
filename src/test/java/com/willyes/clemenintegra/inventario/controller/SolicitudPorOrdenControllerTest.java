@@ -133,7 +133,7 @@ class SolicitudPorOrdenControllerTest {
                         .param("page", "0")
                         .param("size", "10")
                         .with(SecurityMockMvcRequestPostProcessors.user("planeador")
-                                .authorities(() -> "ROL_PLANEADOR")))
+                                .authorities(() -> "INV_SOLICITUDES_READ")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].items[0].estadoDetalle").value("PENDIENTE"))
                 .andExpect(jsonPath("$.content[0].items[0].detalleId").value(228))

@@ -74,7 +74,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_READ")
     @DisplayName("GET /api/produccion/batch-record/{id} devuelve op y fórmula")
     void obtenerBatchRecord() throws Exception {
         BatchRecordDTO dto = new BatchRecordDTO();
@@ -97,7 +97,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_READ")
     @DisplayName("GET /api/produccion/batch-record/{id} permite consulta a jefe de calidad")
     void obtenerBatchRecordRolCalidad() throws Exception {
         BatchRecordDTO dto = new BatchRecordDTO();
@@ -112,7 +112,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_READ")
     @DisplayName("GET /api/produccion/batch-record/{id} permite consulta a planeador")
     void obtenerBatchRecordRolPlaneador() throws Exception {
         BatchRecordDTO dto = new BatchRecordDTO();
@@ -127,7 +127,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_READ")
     @DisplayName("GET /api/produccion/batch-record/{id} devuelve 404 cuando no existe")
     void obtenerBatchRecordNoExiste() throws Exception {
         when(batchRecordService.buildByOrdenProduccion(anyLong()))
@@ -140,7 +140,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_EXPORT")
     @DisplayName("GET /api/produccion/batch-record/{id}/pdf devuelve PDF con headers")
     void exportarPdfBatchRecord() throws Exception {
         BatchRecordDTO dto = new BatchRecordDTO();
@@ -158,7 +158,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_EXPORT")
     @DisplayName("GET /api/produccion/batch-record/{id}/pdf permite acceso a jefe de calidad")
     void exportarPdfBatchRecordRolCalidad() throws Exception {
         BatchRecordDTO dto = new BatchRecordDTO();
@@ -175,7 +175,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_DECIDE")
     @DisplayName("POST /api/produccion/calidad/batch-record/{id}/decision devuelve 204")
     void decidirBatchRecord() throws Exception {
         String body = "{\"decision\":\"APROBADO\",\"observacionesCalidad\":\"Listo\"}";
@@ -189,7 +189,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_READ")
     @DisplayName("POST /api/produccion/calidad/batch-record/{id}/decision requiere rol de calidad")
     void decidirBatchRecordNoAutorizado() throws Exception {
         String body = "{\"decision\":\"APROBADO\"}";
@@ -203,7 +203,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_READ")
     @DisplayName("POST /api/produccion/batch-record/{id}/controles-proceso es rechazado para jefe de calidad")
     void guardarControlesProceso_conRolCalidad_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/batch-record/{id}/controles-proceso", 3L)
@@ -213,7 +213,7 @@ class BatchRecordControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_PLANEADOR")
+    @WithMockUser(authorities = "PROD_BATCH_RECORD_READ")
     @DisplayName("POST /api/produccion/batch-record/{id}/controles-proceso rechaza rol planeador")
     void guardarControlesProceso_conRolPlaneador_devuelve403() throws Exception {
         mockMvc.perform(post("/api/produccion/batch-record/{id}/controles-proceso", 4L)

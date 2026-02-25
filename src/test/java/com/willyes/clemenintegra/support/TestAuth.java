@@ -42,6 +42,15 @@ public final class TestAuth {
     private TestAuth() {
     }
 
+
+    public static RequestPostProcessor jwtWithAuthorities(String... auths) {
+        return auth("jwt-test", auths);
+    }
+
+    public static UserRequestPostProcessor userWithAuthorities(String... auths) {
+        return SecurityMockMvcRequestPostProcessors.user("user-test").authorities(toGrantedAuthorities(auths));
+    }
+
     public static RequestPostProcessor auth(String username, String... authorities) {
         Usuario usuario = Usuario.builder()
                 .id(1L)
