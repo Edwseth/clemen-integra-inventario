@@ -113,6 +113,12 @@ public class LoteProducto {
             foreignKey = @ForeignKey(name = "fk_lotes_productos_lote_origen"))
     private LoteProducto loteOrigen;
 
+    @Column(name = "costo_unitario_material", precision = 19, scale = 6)
+    private BigDecimal costoUnitarioMaterial;
+
+    @Column(name = "costo_total_material_ingresado", precision = 19, scale = 6)
+    private BigDecimal costoTotalMaterialIngresado;
+
     public LoteProducto(Long id) {
         this.id = id;
     }

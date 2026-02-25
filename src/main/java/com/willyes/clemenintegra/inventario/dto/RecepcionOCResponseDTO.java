@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
@@ -27,6 +28,8 @@ public class RecepcionOCResponseDTO {
     private Long usuarioId;
     private String nombreUsuario;
     private String observaciones;
+    private BigDecimal gastosAdicionalesTotal;
+    private String criterioProrrateo;
 
     @Builder.Default
     private List<RecepcionOCDetalleResponseDTO> detalles = Collections.emptyList();

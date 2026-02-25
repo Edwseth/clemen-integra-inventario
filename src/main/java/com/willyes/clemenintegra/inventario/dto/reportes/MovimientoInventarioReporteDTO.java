@@ -10,6 +10,8 @@ public record MovimientoInventarioReporteDTO(
         String productoNombre,
         String productoSku,
         BigDecimal cantidad,
+        BigDecimal costoUnitarioAplicado,
+        BigDecimal costoTotalAplicado,
         String nombreLote,
         String nombreAlmacen,
         String usuarioRegistro

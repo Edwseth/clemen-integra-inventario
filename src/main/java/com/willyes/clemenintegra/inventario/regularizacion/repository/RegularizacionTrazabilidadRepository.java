@@ -17,6 +17,8 @@ public interface RegularizacionTrazabilidadRepository extends JpaRepository<Regu
 
     boolean existsByOrdenProduccionId(Long ordenProduccionId);
 
+    Optional<RegularizacionTrazabilidad> findTopByOrdenProduccionIdOrderByFechaIngresoDescIdDesc(Long ordenProduccionId);
+
     @Query(value = """
             WITH ult_reg AS (
               SELECT rt.*,

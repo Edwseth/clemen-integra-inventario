@@ -46,8 +46,15 @@ public class RecepcionOCServiceImpl implements RecepcionOCService {
         Objects.requireNonNull(usuarioId, "usuarioId es obligatorio");
         Objects.requireNonNull(fechaNegocio, "fechaNegocio es obligatorio");
 
-        return recepcionOCRepository.findByOrdenCompraIdAndFechaRecepcion(ordenCompraId, fechaNegocio)
+        RecepcionOC recepcion = recepcionOCRepository.findByOrdenCompraIdAndFechaRecepcion(ordenCompraId, fechaNegocio)
                 .orElseGet(() -> crearCabecera(ordenCompraId, almacenDestinoId, proveedorId, usuarioId, fechaNegocio, observaciones));
+        if (recepcion.getGastosAdicionalesTotal() == null) {
+            recepcion.setGastosAdicionalesTotal(java.math.BigDecimal.ZERO.setScale(6));
+        }
+        if (recepcion.getCriterioProrrateo() == null || recepcion.getCriterioProrrateo().isBlank()) {
+            recepcion.setCriterioProrrateo("VALOR");
+        }
+        return recepcion;
     }
 
     @Override

@@ -167,6 +167,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     private final LoteCalidadValidator loteCalidadValidator;
     private final UbicacionFisicaRepository ubicacionFisicaRepository;
     private final EtapaProduccionRepository etapaProduccionRepository;
+    private final CosteoInventarioService costeoInventarioService;
     //private final Long motivoSalidaProdId = catalogResolver.getMotivoSalidaProduccionId();
     //private final Long tipoDetSalidaProdId = catalogResolver.getTipoDetalleSalidaProduccionId();
 
@@ -769,8 +770,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             if (dto.ordenCompraId() == null) {
                 throw new IllegalArgumentException("Las recepciones sin Orden de Compra deben usar un lote existente");
             }
+            OrdenCompraDetalle detalleCostoRecepcion = resolverDetalleOrdenCompra(dto, orden, producto);
+            BigDecimal gastosAdicionalesRecepcion = recepcionCabecera != null
+                    ? safeScale6(recepcionCabecera.getGastosAdicionalesTotal())
+                    : BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+            BigDecimal subtotalTotalRecepcionConIva = calcularSubtotalLineaConIva(detalleCostoRecepcion, cantidadSolicitada);
             LoteProducto loteRecepcion = crearLoteRecepcion(dto, producto, almacenDestino, usuario,
-                    cantidadSolicitada, motivoMovimiento);
+                    cantidadSolicitada, motivoMovimiento, detalleCostoRecepcion, gastosAdicionalesRecepcion, subtotalTotalRecepcionConIva);
             lotesProcesados = List.of(new MovimientoLoteDetalle(loteRecepcion, cantidadSolicitada));
 
         } else if (salidaPt) {
@@ -875,6 +881,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         movimiento.setProducto(producto);
         movimiento.setLote(principal.lote());
         movimiento.setCantidad(principal.cantidad());
+        aplicarCostoMovimiento(movimiento, principal.lote(), principal.cantidad());
         movimiento.setAlmacenOrigen(almacenOrigen);
         movimiento.setAlmacenDestino(almacenDestino);
         movimiento.setOrdenProduccion(ordenProduccion);
@@ -960,7 +967,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             List<MovimientoInventario> adicionales = new ArrayList<>();
             for (int i = 1; i < lotesProcesados.size(); i++) {
                 MovimientoLoteDetalle detalle = lotesProcesados.get(i);
-                adicionales.add(duplicarMovimientoBase(movimiento, detalle.lote(), detalle.cantidad()));
+                MovimientoInventario movimientoAdicional = duplicarMovimientoBase(movimiento, detalle.lote(), detalle.cantidad());
+                aplicarCostoMovimiento(movimientoAdicional, detalle.lote(), detalle.cantidad());
+                adicionales.add(movimientoAdicional);
             }
             if (!adicionales.isEmpty()) {
                 repository.saveAll(adicionales);
@@ -2056,7 +2065,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     private LoteProducto crearLoteRecepcion(MovimientoInventarioDTO dto, Producto producto,
                                             Almacen destino, Usuario usuario, BigDecimal cantidad,
-                                            MotivoMovimiento motivoMovimiento) {
+                                            MotivoMovimiento motivoMovimiento,
+                                            OrdenCompraDetalle ordenCompraDetalleCosto,
+                                            BigDecimal gastosAdicionalesTotalRecepcion,
+                                            BigDecimal subtotalTotalRecepcionConIva) {
         if (dto.loteProductoId() != null) {
             Optional<LoteProducto> existenteOpt = loteProductoRepository.findById(dto.loteProductoId());
             if (existenteOpt.isEmpty()) {
@@ -2067,7 +2079,23 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO");
             }
             LoteProducto existente = existenteOpt.get();
-            BigDecimal nuevo = Optional.ofNullable(existente.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
+            BigDecimal stockAnterior = Optional.ofNullable(existente.getStockLote()).orElse(BigDecimal.ZERO);
+            BigDecimal nuevo = stockAnterior.add(cantidad);
+            BigDecimal costoUnitRecibo = costeoInventarioService.calcularCostoUnitarioRecepcion(
+                    ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva);
+            BigDecimal costoTotalRecibo = costeoInventarioService.calcularCostoTotalLineaRecepcion(
+                    ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva);
+            BigDecimal costoUnitActual = existente.getCostoUnitarioMaterial();
+            if (costoUnitActual != null && stockAnterior.compareTo(BigDecimal.ZERO) > 0 && nuevo.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal nuevoCostoUnit = costoUnitActual.multiply(stockAnterior)
+                        .add(costoUnitRecibo.multiply(cantidad))
+                        .divide(nuevo, 6, RoundingMode.HALF_UP);
+                existente.setCostoUnitarioMaterial(nuevoCostoUnit);
+            } else {
+                existente.setCostoUnitarioMaterial(costoUnitRecibo);
+            }
+            BigDecimal acumuladoCosto = safeScale6(existente.getCostoTotalMaterialIngresado()).add(costoTotalRecibo);
+            existente.setCostoTotalMaterialIngresado(acumuladoCosto);
             existente.setStockLote(nuevo);
             existente.setAlmacen(destino);
             return loteProductoRepository.save(existente);
@@ -2105,8 +2133,49 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .almacen(destino)
                 .usuarioLiberador(!requiereAnalisis ? usuario : null)
                 .stockLote(cantidad)
+                .costoUnitarioMaterial(costeoInventarioService.calcularCostoUnitarioRecepcion(
+                        ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva))
+                .costoTotalMaterialIngresado(costeoInventarioService.calcularCostoTotalLineaRecepcion(
+                        ordenCompraDetalleCosto, cantidad, gastosAdicionalesTotalRecepcion, subtotalTotalRecepcionConIva))
                 .build();
         return loteProductoRepository.save(lote);
+    }
+
+    private void aplicarCostoMovimiento(MovimientoInventario movimiento, LoteProducto lote, BigDecimal cantidadMovimiento) {
+        BigDecimal costoUnitario = lote != null ? safeScale6(lote.getCostoUnitarioMaterial()) : BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        BigDecimal cantidadAbs = cantidadMovimiento == null
+                ? BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP)
+                : cantidadMovimiento.abs().setScale(6, RoundingMode.HALF_UP);
+        BigDecimal costoTotal = costeoInventarioService.calcularCostoTotalMovimiento(costoUnitario, cantidadAbs);
+        movimiento.setCostoUnitarioAplicado(costoUnitario);
+        movimiento.setCostoTotalAplicado(costoTotal);
+    }
+
+    private OrdenCompraDetalle resolverDetalleOrdenCompra(MovimientoInventarioDTO dto, OrdenCompra orden, Producto producto) {
+        if (dto.ordenCompraDetalleId() != null) {
+            return entityManager.getReference(OrdenCompraDetalle.class, dto.ordenCompraDetalleId());
+        }
+        if (orden == null || orden.getDetalles() == null) {
+            return null;
+        }
+        return orden.getDetalles().stream()
+                .filter(det -> det.getProducto() != null && Objects.equals(det.getProducto().getId(), producto.getId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private BigDecimal calcularSubtotalLineaConIva(OrdenCompraDetalle detalle, BigDecimal cantidadRecibida) {
+        if (detalle == null) {
+            return BigDecimal.ZERO.setScale(6, RoundingMode.HALF_UP);
+        }
+        BigDecimal subtotal = safeScale6(cantidadRecibida).multiply(safeScale6(detalle.getValorUnitario()));
+        BigDecimal iva = subtotal.multiply(safeScale6(detalle.getIva()))
+                .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+        return subtotal.add(iva).setScale(6, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal safeScale6(BigDecimal value) {
+        return (value == null ? BigDecimal.ZERO : value).setScale(6, RoundingMode.HALF_UP);
     }
 
     private void validarFechaVencimientoRecepcion(LocalDateTime fechaVencimiento) {
@@ -3290,6 +3359,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         copia.setSolicitudMovimiento(base.getSolicitudMovimiento());
         copia.setRecepcionOc(base.getRecepcionOc());
         copia.setCodigoRecepcion(base.getCodigoRecepcion());
+        copia.setCostoUnitarioAplicado(base.getCostoUnitarioAplicado());
+        copia.setCostoTotalAplicado(base.getCostoTotalAplicado());
         return copia;
     }
 

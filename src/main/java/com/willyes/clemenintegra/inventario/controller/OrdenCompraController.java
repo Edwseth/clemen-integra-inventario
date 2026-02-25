@@ -88,15 +88,7 @@ public class OrdenCompraController {
             Producto producto = productoRepository.findById(d.getProductoId())
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado"));
 
-            // subtotal y total (si quieres incluir IVA en total de línea, descomenta el bloque)
-            BigDecimal subtotal  = d.getValorUnitario().multiply(d.getCantidad());
-            BigDecimal ivaPct    = d.getIva() != null ? d.getIva() : BigDecimal.ZERO;
-            BigDecimal ivaValor  = ivaPct.compareTo(BigDecimal.ZERO) > 0
-                    ? subtotal.multiply(ivaPct).divide(BigDecimal.valueOf(100))
-                    : BigDecimal.ZERO;
-            BigDecimal valorTotal = subtotal.add(ivaValor);
-            // si prefieres exactamente cantidad*unitario como tenías antes, usa:
-            // BigDecimal valorTotal = d.getValorUnitario().multiply(d.getCantidad());
+            BigDecimal valorTotal = calcularValorTotalLinea(d.getCantidad(), d.getValorUnitario(), d.getIva());
 
             return OrdenCompraDetalle.builder()
                     .ordenCompra(orden)
@@ -146,7 +138,7 @@ public class OrdenCompraController {
             Producto producto = productoRepository.findById(d.getProductoId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Producto no encontrado"));
 
-            BigDecimal valorTotal = d.getValorUnitario().multiply(d.getCantidad());
+            BigDecimal valorTotal = calcularValorTotalLinea(d.getCantidad(), d.getValorUnitario(), d.getIva());
 
             return OrdenCompraDetalle.builder()
                     .ordenCompra(orden)
@@ -262,6 +254,17 @@ public class OrdenCompraController {
         } catch (Exception e) {
             throw new RuntimeException("No se encontró la plantilla: " + classpathLocation, e);
         }
+    }
+
+    private BigDecimal calcularValorTotalLinea(BigDecimal cantidad, BigDecimal valorUnitario, BigDecimal ivaPorcentaje) {
+        BigDecimal cantidadSegura = cantidad != null ? cantidad : BigDecimal.ZERO;
+        BigDecimal valorUnitarioSeguro = valorUnitario != null ? valorUnitario : BigDecimal.ZERO;
+        BigDecimal ivaSeguro = ivaPorcentaje != null ? ivaPorcentaje : BigDecimal.ZERO;
+
+        BigDecimal subtotal = cantidadSegura.multiply(valorUnitarioSeguro);
+        BigDecimal ivaValor = subtotal.multiply(ivaSeguro)
+                .divide(BigDecimal.valueOf(100), 6, java.math.RoundingMode.HALF_UP);
+        return subtotal.add(ivaValor).setScale(6, java.math.RoundingMode.HALF_UP);
     }
 
     private static java.math.BigDecimal bd(Number n) {
