@@ -21,4 +21,7 @@ public interface CosteoInventarioService {
     );
 
     BigDecimal calcularCostoTotalMovimiento(BigDecimal costoUnitario, BigDecimal cantidadMovimiento);
+
+    BigDecimal calcularCostoUnitarioPromedioPorIngreso(BigDecimal costoTotalMaterialIngresado,
+                                                       BigDecimal totalIngresadoMaterial);
 }

@@ -14,6 +14,8 @@ import com.willyes.clemenintegra.inventario.service.HistorialEstadoOrdenService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
 import com.willyes.clemenintegra.inventario.service.RecepcionOCService;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -33,6 +35,7 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = {
@@ -124,5 +127,42 @@ class OrdenCompraControllerSecurityTest {
 
         var response = ordenCompraController.crear(request);
         assertThat(response.getStatusCode().value()).isEqualTo(201);
+    }
+
+    @Test
+    @WithMockUser(authorities = "INV_WRITE")
+    void crearOrdenCompraIvaMayorA100Retorna422() {
+        Proveedor proveedor = new Proveedor();
+        proveedor.setId(1);
+        Producto producto = new Producto();
+        producto.setId(2);
+
+        when(proveedorRepository.findById(1L)).thenReturn(Optional.of(proveedor));
+        when(productoRepository.findById(2L)).thenReturn(Optional.of(producto));
+        when(ordenCompraService.calcularFechaCompromisoEntrega(any())).thenReturn(LocalDate.now());
+        when(ordenCompraService.generarCodigoOrdenCompra()).thenReturn("OC-001");
+
+        OrdenCompraDetalleRequestDTO detalle = new OrdenCompraDetalleRequestDTO(
+                2L,
+                BigDecimal.ONE,
+                new BigDecimal("100.00"),
+                new BigDecimal("101.00"),
+                LocalDate.now().plusDays(7)
+        );
+
+        OrdenCompraRequestDTO request = new OrdenCompraRequestDTO(
+                1L,
+                CondicionesPago.CONTADO,
+                "comprador",
+                "obs",
+                BigDecimal.ZERO,
+                LocalDate.now().plusDays(10),
+                List.of(detalle)
+        );
+
+        assertThatThrownBy(() -> ordenCompraController.crear(request))
+                .isInstanceOf(CustomBusinessException.class)
+                .extracting(e -> ((CustomBusinessException) e).getCode())
+                .isEqualTo(ApiErrorCode.IVA_PORCENTAJE_INVALIDO);
     }
 }

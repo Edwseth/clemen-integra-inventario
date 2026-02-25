@@ -70,6 +70,7 @@ El código ha sido refactorizado mediante **Codex Workspace**, mejorando la legi
 - **Movimientos** `/api/movimientos` – registrar y consultar con filtros `productoId`, `almacenId`, `tipoMovimiento`, `clasificacion`, `fechaInicio`, `fechaFin`.
 - **Órdenes de compra** `/api/inventario/ordenes` – crear una orden con sus detalles.
   - En la creación, el servidor asigna automáticamente la orden a cada detalle, por lo que no se requiere `ordenCompraId` en los elementos enviados.
+  - El campo `iva` de cada detalle se interpreta como **porcentaje** y debe estar en el rango `0..100`; si excede 100 la API responde `422` con `code=IVA_PORCENTAJE_INVALIDO`.
 - **Ajustes de inventario** `/api/inventario/ajustes` – listar, crear y eliminar.
 - **Reportes** `/api/reportes` – alta/baja rotación (`fechaInicio`, `fechaFin`), productos más costosos (`categoria`), trazabilidad por lote (`codigoLote`), productos en retención o liberación (`estadoLote`, `desde`, `hasta`), no conformidades (`tipo`, `area`, `desde`, `hasta`), CAPA (`estado`, `desde`, `hasta`), stock actual, productos por vencer, alertas de inventario y movimientos. Todos devuelven Excel.
 

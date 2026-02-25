@@ -60,7 +60,18 @@ public class CosteoInventarioServiceImpl implements CosteoInventarioService {
         return cantidad.multiply(costoUnit).setScale(6, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal safe(BigDecimal value) {
+    @Override
+    public BigDecimal calcularCostoUnitarioPromedioPorIngreso(BigDecimal costoTotalMaterialIngresado,
+                                                              BigDecimal totalIngresadoMaterial) {
+        BigDecimal costoTotal = safe(costoTotalMaterialIngresado).setScale(6, RoundingMode.HALF_UP);
+        BigDecimal totalIngresado = safe(totalIngresadoMaterial).setScale(6, RoundingMode.HALF_UP);
+        if (totalIngresado.compareTo(BigDecimal.ZERO) <= 0) {
+            return ZERO;
+        }
+        return costoTotal.divide(totalIngresado, 6, RoundingMode.HALF_UP);
+    }
+
+        private BigDecimal safe(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
 }
