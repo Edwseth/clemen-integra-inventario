@@ -19,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import com.willyes.clemenintegra.shared.security.testsupport.WithTestSuperAdmin;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -74,7 +75,7 @@ class ConteoCiclicoControllerTest {
     private com.willyes.clemenintegra.shared.repository.UsuarioRepository usuarioRepository;
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_READ")
+    @WithTestSuperAdmin
     void listarConteosDevuelve200() throws Exception {
         ConteoCiclicoResumenResponseDTO response = ConteoCiclicoResumenResponseDTO.builder()
                 .id(5L)
@@ -93,7 +94,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_READ")
+    @WithTestSuperAdmin
     void obtenerPorIdDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(15L)
@@ -109,7 +110,7 @@ class ConteoCiclicoControllerTest {
 
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_READ")
+    @WithTestSuperAdmin
     void listarLotesPorProductoYAlmacenDevuelveLotesEnCuarentena() throws Exception {
         ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
                 .id(501L)
@@ -130,7 +131,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_READ")
+    @WithTestSuperAdmin
     void listarLotesParaConteoSinQDevuelveListado() throws Exception {
         ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
                 .id(11L)
@@ -148,7 +149,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_READ")
+    @WithTestSuperAdmin
     void listarLotesParaConteoConQParcialDevuelve200() throws Exception {
         ConteoCiclicoLoteResponseDTO lote = ConteoCiclicoLoteResponseDTO.builder()
                 .id(9L)
@@ -168,14 +169,14 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_READ")
+    @WithTestSuperAdmin
     void listarLotesParaConteoSinProductoIdDevuelve400() throws Exception {
         mockMvc.perform(get("/api/inventario/conteos/8/lotes"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_READ")
+    @WithTestSuperAdmin
     void obtenerPorIdNoEncontradoDevuelve404() throws Exception {
         when(conteoCiclicoService.obtenerPorId(99L))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
@@ -186,7 +187,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    @WithTestSuperAdmin
     void crearConteoDevuelve201() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(5L)
@@ -208,7 +209,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_APPLY")
+    @WithTestSuperAdmin
     void aplicarConteoRespondeOk() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(7L)
@@ -233,7 +234,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_START")
+    @WithTestSuperAdmin
     void iniciarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(3L)
@@ -248,7 +249,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_CLOSE")
+    @WithTestSuperAdmin
     void cerrarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(4L)
@@ -263,7 +264,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_CLOSE")
+    @WithTestSuperAdmin
     void transicionInvalidaDevuelve409() throws Exception {
         when(conteoCiclicoService.cerrar(21L))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO, "Transición de estado no permitida"));
@@ -288,7 +289,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"INV_CONTEOS_READ", "INV_CONTEOS_APPLY", "INV_CONTEOS_CLOSE"})
+    @WithTestSuperAdmin
     void contadorPuedeAplicarYCerrarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO aplicado = ConteoCiclicoResponseDTO.builder()
                 .id(7L)
@@ -314,7 +315,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    @WithTestSuperAdmin
     void iniciarConteoNoEncontradoDevuelve404() throws Exception {
         when(conteoCiclicoService.marcarEnConteo(30L))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
@@ -325,7 +326,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_READ")
+    @WithTestSuperAdmin
     void listarConEstadoInvalidoDevuelve400() throws Exception {
         when(conteoCiclicoService.listar(ArgumentMatchers.isNull(), anyString(), ArgumentMatchers.any(Pageable.class)))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "Estado de conteo inválido"));
@@ -337,7 +338,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    @WithTestSuperAdmin
     void actualizarConteoDevuelve200() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(4L)
@@ -362,7 +363,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    @WithTestSuperAdmin
     void actualizarConteoNoEncontradoDevuelve404() throws Exception {
         when(conteoCiclicoService.actualizarConteo(eq(9L), ArgumentMatchers.anyList()))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Conteo no encontrado"));
@@ -382,7 +383,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    @WithTestSuperAdmin
     void actualizarConteoEstadoInvalidoDevuelve409() throws Exception {
         when(conteoCiclicoService.actualizarConteo(eq(12L), ArgumentMatchers.anyList()))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.CONTEO_ESTADO_INVALIDO, "Estado no permite edición"));
@@ -402,7 +403,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    @WithTestSuperAdmin
     void actualizarConteoToleraCamposExtras() throws Exception {
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(14L)
@@ -433,7 +434,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    @WithTestSuperAdmin
     void actualizarConteoConDatoInvalidoDetallaCampo() throws Exception {
         String body = objectMapper.writeValueAsString(Map.of(
                 "detalles", List.of(Map.of(
@@ -452,7 +453,7 @@ class ConteoCiclicoControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "INV_CONTEOS_WRITE")
+    @WithTestSuperAdmin
     void actualizarConteoSinLoteDevuelve400() throws Exception {
         String body = objectMapper.writeValueAsString(Map.of(
                 "detalles", List.of(Map.of(

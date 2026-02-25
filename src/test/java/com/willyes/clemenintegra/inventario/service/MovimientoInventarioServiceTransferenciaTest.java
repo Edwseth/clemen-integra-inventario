@@ -744,6 +744,7 @@ class MovimientoInventarioServiceTransferenciaTest {
         given(motivoMovimientoRepository.findById(11L)).willReturn(Optional.of(motivo));
         EtapaProduccion etapaActiva = new EtapaProduccion();
         etapaActiva.setId(71L);
+        etapaActiva.setFechaInicio(LocalDateTime.now().minusMinutes(5));
         OrdenProduccion ordenProduccion = new OrdenProduccion();
         ordenProduccion.setId(359L);
         etapaActiva.setOrdenProduccion(ordenProduccion);
@@ -751,6 +752,8 @@ class MovimientoInventarioServiceTransferenciaTest {
                 .willReturn(1L);
         given(etapaProduccionRepository.findByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNull(359L))
                 .willReturn(List.of(etapaActiva));
+        given(etapaProduccionRepository.findTopByOrdenProduccionIdAndFechaInicioIsNotNullAndFechaFinIsNullOrderByFechaInicioDescIdDesc(359L))
+                .willReturn(Optional.of(etapaActiva));
         given(mapper.toEntity(dto)).willReturn(new MovimientoInventario());
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto, null))

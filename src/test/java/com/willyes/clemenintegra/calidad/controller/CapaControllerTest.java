@@ -20,7 +20,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.willyes.clemenintegra.shared.security.testsupport.WithTestSuperAdmin;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -64,7 +64,7 @@ class CapaControllerTest {
     private AuthenticationManager authenticationManager;
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithTestSuperAdmin
     void listarCapasDevuelvePagina() throws Exception {
         CapaDTO capa = CapaDTO.builder()
                 .id(1L)
@@ -83,7 +83,7 @@ class CapaControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithTestSuperAdmin
     void crearCapaRetorna201() throws Exception {
         CapaDTO respuesta = CapaDTO.builder()
                 .id(2L)
@@ -104,7 +104,7 @@ class CapaControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithTestSuperAdmin
     void crearCapaAceptaDescripcionComoObservaciones() throws Exception {
         LocalDateTime inicio = LocalDateTime.of(2024, 5, 1, 10, 0);
         LocalDateTime limite = inicio.plusDays(5);
@@ -154,7 +154,7 @@ class CapaControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithTestSuperAdmin
     void cerrarCapaRetornaOk() throws Exception {
         CapaDTO respuesta = CapaDTO.builder()
                 .id(3L)
@@ -173,7 +173,7 @@ class CapaControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithTestSuperAdmin
     void adjuntarArchivoRetorna201() throws Exception {
         MockMultipartFile archivo = new MockMultipartFile(
                 "archivo",
@@ -197,7 +197,7 @@ class CapaControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithTestSuperAdmin
     void flujoAdjuntosListaYDescarga() throws Exception {
         MockMultipartFile archivo = new MockMultipartFile(
                 "archivo",
@@ -244,7 +244,7 @@ class CapaControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    @WithTestSuperAdmin
     void descargarArchivoNoEncontradoDevuelve404() throws Exception {
         when(capaService.descargarArchivo(9L, 77L))
                 .thenThrow(new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "Archivo no encontrado"));
