@@ -36,6 +36,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,10 +86,24 @@ class MovimientoInventarioServiceConsumoEtapaTest {
     private UbicacionFisicaRepository ubicacionFisicaRepository;
     @Mock
     private EtapaProduccionRepository etapaProduccionRepository;
+    @Mock
+    private CosteoInventarioService costeoInventarioService;
 
     @Spy
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void defaultCosteoInventario() {
+        lenient().when(costeoInventarioService.calcularCostoUnitarioRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalLineaRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoUnitarioPromedioPorIngreso(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalMovimiento(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+    }
 
     @Test
     void consumirInsumosPorOrden_asociaEtapaEnSalidaProduccion() {

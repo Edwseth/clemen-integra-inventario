@@ -100,6 +100,8 @@ class MovimientoInventarioServiceAlmacenOrigenTest {
     private UbicacionFisicaRepository ubicacionFisicaRepository;
     @Mock
     private EtapaProduccionRepository etapaProduccionRepository;
+    @Mock
+    private CosteoInventarioService costeoInventarioService;
 
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
@@ -110,6 +112,18 @@ class MovimientoInventarioServiceAlmacenOrigenTest {
         authentication.setAuthenticated(true);
         SecurityContextHolder.getContext().setAuthentication(authentication);
         lenient().when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(null);
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void defaultCosteoInventario() {
+        lenient().when(costeoInventarioService.calcularCostoUnitarioRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalLineaRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoUnitarioPromedioPorIngreso(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalMovimiento(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
     }
 
     @Test

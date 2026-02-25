@@ -75,10 +75,24 @@ class MovimientoInventarioServiceFefoTest {
     @Mock
     private EtapaProduccionRepository etapaProduccionRepository;
     @Mock
+    private CosteoInventarioService costeoInventarioService;
+    @Mock
     private UbicacionFisicaRepository ubicacionFisicaRepository;
 
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void defaultCosteoInventario() {
+        lenient().when(costeoInventarioService.calcularCostoUnitarioRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalLineaRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoUnitarioPromedioPorIngreso(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalMovimiento(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+    }
 
     @Test
     void simulateFefo_ordenaPorVencimientoYDescartaEstadosNoElegibles() {
