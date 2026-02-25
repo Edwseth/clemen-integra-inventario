@@ -39,6 +39,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -695,6 +696,131 @@ class MovimientoInventarioServiceTransferenciaTest {
         service.registrarMovimiento(dto, "idem-2");
 
         verify(bitacoraCambiosInventarioService, never()).crear(any());
+    }
+
+
+    @Test
+    void salidaConCantidadDecimalMayorAlDisponible_retorna422ConDetalle() {
+        Producto producto = crearProducto(517, 2);
+        LoteProducto lote = crearLote(2845L, producto, 6, EstadoLote.LIBERADO,
+                new BigDecimal("0.460000"), BigDecimal.ZERO.setScale(6), false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("0.468000"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                "DOC-DEC",
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                6,
+                null,
+                null,
+                null,
+                11L,
+                5L,
+                null,
+                359L,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                Boolean.FALSE,
+                null
+        );
+
+        configurarMocksBasicos(producto, lote);
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(Usuario.builder().id(2L).build());
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(11L);
+        motivo.setMotivo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        given(motivoMovimientoRepository.findById(11L)).willReturn(Optional.of(motivo));
+        given(mapper.toEntity(dto)).willReturn(new MovimientoInventario());
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto, null))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException businessException = (CustomBusinessException) ex;
+                    assertThat(businessException.getCode()).isEqualTo(ApiErrorCode.LOTE_STOCK_INSUFICIENTE);
+                    Map<String, Object> details = (Map<String, Object>) businessException.getDetails();
+                    assertThat(details.get("productoId")).isEqualTo(517);
+                    assertThat(details.get("loteId")).isEqualTo(2845L);
+                    assertThat(details.get("almacenOrigenId")).isEqualTo(6);
+                    assertThat((BigDecimal) details.get("solicitado")).isEqualByComparingTo(new BigDecimal("0.468000"));
+                    assertThat((BigDecimal) details.get("disponible")).isEqualByComparingTo(new BigDecimal("0.460000"));
+                    assertThat((BigDecimal) details.get("diferencia")).isEqualByComparingTo(new BigDecimal("0.008000"));
+                });
+    }
+
+    @Test
+    void transferenciaDecimalMantieneStockExactoSeisDecimales() {
+        Producto producto = crearProducto(517, 2);
+        LoteProducto loteOrigen = crearLote(2845L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("0.470000"), BigDecimal.ZERO.setScale(6), false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("0.470000"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                "DOC-TR-DEC",
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                loteOrigen.getId(),
+                1,
+                6,
+                null,
+                null,
+                5L,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                loteOrigen.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                Boolean.FALSE,
+                null
+        );
+
+        configurarMocksBasicos(producto, loteOrigen);
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(Usuario.builder().id(2L).build());
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(5L);
+        motivo.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        given(motivoMovimientoRepository.findById(5L)).willReturn(Optional.of(motivo));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        movimientoEntidad.setCantidad(new BigDecimal("0.470000"));
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class))).willReturn(MovimientoInventarioResponseDTO.builder().id(999L).build());
+
+        service.registrarMovimiento(dto, null);
+
+        assertThat(loteOrigen.getStockLote()).isEqualByComparingTo(new BigDecimal("0.000000"));
+        ArgumentCaptor<MovimientoInventario> captor = ArgumentCaptor.forClass(MovimientoInventario.class);
+        verify(movimientoInventarioRepository).save(captor.capture());
+        assertThat(captor.getValue().getCantidad()).isEqualByComparingTo(new BigDecimal("0.470000"));
     }
 
     private void configurarMocksBasicos(Producto producto, LoteProducto lote) {

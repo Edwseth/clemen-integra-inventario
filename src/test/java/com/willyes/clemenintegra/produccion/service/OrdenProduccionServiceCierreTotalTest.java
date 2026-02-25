@@ -25,6 +25,8 @@ import com.willyes.clemenintegra.produccion.repository.OpHomeopaticoOverrideRepo
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.validators.ProduccionEtapasLockValidator;
 import com.willyes.clemenintegra.shared.model.Usuario;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -359,6 +362,51 @@ class OrdenProduccionServiceCierreTotalTest {
                 dto != null && dto.productoId().longValue() == insumo.getId().longValue()));
         verify(movimientoInventarioService, never()).registrarMovimiento(argThat(dto ->
                 dto != null && dto.productoId().longValue() == productoFabricado.getId().longValue()));
+    }
+
+
+    @Test
+    void registrarConsumoRealPorCierreTotal_fallaCuandoConsumoDecimalSuperaStock() {
+        OrdenProduccion orden = ordenProduccion(new BigDecimal("0.468"));
+        Usuario usuario = usuario(61L);
+
+        Producto insumo = producto(517);
+        FormulaProducto formula = formula(insumo, BigDecimal.ONE);
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(
+                orden.getProducto().getId().longValue(), EstadoFormula.APROBADA)).thenReturn(Optional.of(formula));
+
+        when(catalogResolver.getTipoDetalleSalidaProduccionId()).thenReturn(10L);
+        when(tipoMovimientoDetalleRepository.findById(10L)).thenReturn(Optional.of(tipoMovimientoDetalle(10L)));
+        when(catalogResolver.getMotivoSalidaProduccionId()).thenReturn(11L);
+        when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(motivoMovimiento(11L)));
+        when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+
+        MovimientoInventario alistado = transferenciaPrebodega(insumo, 6, new BigDecimal("0.460000"));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()), eq(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION), any()))
+                .thenReturn(new PageImpl<>(List.of(alistado)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                eq(orden.getId()), eq(ClasificacionMovimientoInventario.SALIDA_PRODUCCION), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(
+                eq(orden.getId()), eq(insumo.getId().longValue()), eq(TipoMovimiento.SALIDA), eq(10L)))
+                .thenReturn(BigDecimal.ZERO);
+
+        CustomBusinessException stockError = new CustomBusinessException(
+                ApiErrorCode.LOTE_STOCK_INSUFICIENTE,
+                "LOTE_STOCK_INSUFICIENTE"
+        );
+        when(movimientoInventarioService.registrarMovimiento(any())).thenThrow(stockError);
+
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(
+                service,
+                "registrarConsumoRealPorCierreTotal",
+                orden,
+                List.of(),
+                null,
+                usuario,
+                "trace-test"
+        )).hasRootCauseInstanceOf(CustomBusinessException.class);
     }
 
     private OrdenProduccion ordenProduccion(BigDecimal cantidadProgramada) {

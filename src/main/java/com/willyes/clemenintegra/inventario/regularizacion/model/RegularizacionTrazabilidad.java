@@ -23,13 +23,13 @@ public class RegularizacionTrazabilidad {
     @Column(name = "orden_produccion_id", nullable = false)
     private Long ordenProduccionId;
 
-    @Column(name = "cantidad_programada", nullable = false, precision = 10, scale = 2)
+    @Column(name = "cantidad_programada", nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidadProgramada;
 
-    @Column(name = "cantidad_real", nullable = false, precision = 10, scale = 2)
+    @Column(name = "cantidad_real", nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidadReal;
 
-    @Column(name = "diferencia", nullable = false, precision = 10, scale = 2)
+    @Column(name = "diferencia", nullable = false, precision = 18, scale = 6)
     private BigDecimal diferencia;
 
     @Column(name = "ajustar_pt", nullable = false)
@@ -50,4 +50,12 @@ public class RegularizacionTrazabilidad {
 
     @Column(name = "fecha_ingreso", nullable = false)
     private LocalDateTime fechaIngreso;
+
+    @PrePersist
+    @PreUpdate
+    private void normalizeCantidad() {
+        if (cantidadProgramada != null) cantidadProgramada = cantidadProgramada.setScale(6, java.math.RoundingMode.HALF_UP);
+        if (cantidadReal != null) cantidadReal = cantidadReal.setScale(6, java.math.RoundingMode.HALF_UP);
+        if (diferencia != null) diferencia = diferencia.setScale(6, java.math.RoundingMode.HALF_UP);
+    }
 }
