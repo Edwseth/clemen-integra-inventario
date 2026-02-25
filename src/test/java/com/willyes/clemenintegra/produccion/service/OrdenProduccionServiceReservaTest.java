@@ -43,6 +43,7 @@ import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepositor
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -118,6 +119,8 @@ class OrdenProduccionServiceReservaTest {
     @Mock private ReservaLoteService reservaLoteService;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
     @Mock private LoteConsecutivoDiaService loteConsecutivoDiaService;
+    @Mock private RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
+    @Mock private CosteoProduccionService costeoProduccionService;
 
     @InjectMocks
     private OrdenProduccionServiceImpl service;
@@ -127,6 +130,8 @@ class OrdenProduccionServiceReservaTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(costeoProduccionService.calcularCostoUnitarioMaterialOp(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
         orden = new OrdenProduccion();
         orden.setId(1L);
         orden.setEstado(EstadoProduccion.EN_PROCESO);

@@ -60,6 +60,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        Authentication autenticacionExistente = SecurityContextHolder.getContext().getAuthentication();
+        if (autenticacionExistente != null) {
+            log.debug("JwtAuthenticationFilter: contexto ya autenticado para URI {}, se respeta autenticación preexistente", uri);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         AuthenticationManager authenticationManager = authenticationManagerProvider.getIfAvailable();
         if (authenticationManager == null) {
             log.warn("JwtAuthenticationFilter: no hay AuthenticationManager disponible, se omite validación JWT para {}", uri);

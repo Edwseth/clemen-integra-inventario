@@ -34,6 +34,7 @@ import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
+import com.willyes.clemenintegra.produccion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoDetalle;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -82,6 +83,8 @@ class OrdenProduccionServicePsFefoTest {
     @Mock private UmValidator umValidator;
     @Mock private ReservaLoteService reservaLoteService;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
+    @Mock private CosteoProduccionService costeoProduccionService;
+    @Mock private RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
     @Mock private LoteProductoRepository loteProductoRepository;
 
     @InjectMocks
@@ -93,6 +96,8 @@ class OrdenProduccionServicePsFefoTest {
 
     @BeforeEach
     void init() {
+        lenient().when(costeoProduccionService.calcularCostoUnitarioMaterialOp(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
         Producto productoPt = new Producto();
         productoPt.setId(100);
         CategoriaProducto categoriaPt = new CategoriaProducto();

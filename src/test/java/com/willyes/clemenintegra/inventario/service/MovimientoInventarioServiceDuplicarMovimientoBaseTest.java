@@ -18,6 +18,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class MovimientoInventarioServiceDuplicarMovimientoBaseTest {
@@ -45,8 +47,23 @@ class MovimientoInventarioServiceDuplicarMovimientoBaseTest {
     @Mock private EtapaProduccionRepository etapaProduccionRepository;
     @Mock private EntityManager entityManager;
 
+    @Mock
+    private CosteoInventarioService costeoInventarioService;
+
     @InjectMocks
     private MovimientoInventarioServiceImpl service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void defaultCosteoInventario() {
+        lenient().when(costeoInventarioService.calcularCostoUnitarioRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalLineaRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoUnitarioPromedioPorIngreso(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalMovimiento(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+    }
 
     @Test
     void duplicarMovimientoBase_preservaEtapaProduccion() {

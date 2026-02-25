@@ -41,6 +41,7 @@ import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -90,6 +91,8 @@ class MovimientoInventarioServiceSolicitudOpTest {
     @Mock
     private EtapaProduccionRepository etapaProduccionRepository;
     @Mock
+    private CosteoInventarioService costeoInventarioService;
+    @Mock
     private UbicacionFisicaRepository ubicacionFisicaRepository;
 
     @InjectMocks
@@ -105,6 +108,18 @@ class MovimientoInventarioServiceSolicitudOpTest {
     @AfterEach
     void clearSecurity() {
         SecurityContextHolder.clearContext();
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void defaultCosteoInventario() {
+        lenient().when(costeoInventarioService.calcularCostoUnitarioRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalLineaRecepcion(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoUnitarioPromedioPorIngreso(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
+        lenient().when(costeoInventarioService.calcularCostoTotalMovimiento(any(), any()))
+                .thenReturn(BigDecimal.ZERO.setScale(6));
     }
 
     @Test
