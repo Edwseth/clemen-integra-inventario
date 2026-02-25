@@ -43,7 +43,10 @@ public class OrdenCompraDetalleController {
         Producto producto = productoRepository.findById(request.getProductoId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Producto no encontrado"));
 
-        BigDecimal valorTotal = request.getValorUnitario().multiply(request.getCantidad());
+        BigDecimal subtotal = request.getValorUnitario().multiply(request.getCantidad());
+        BigDecimal ivaValor = subtotal.multiply(request.getIva() != null ? request.getIva() : BigDecimal.ZERO)
+                .divide(BigDecimal.valueOf(100), 6, java.math.RoundingMode.HALF_UP);
+        BigDecimal valorTotal = subtotal.add(ivaValor).setScale(6, java.math.RoundingMode.HALF_UP);
         BigDecimal cantidadRecibida = BigDecimal.ZERO;
 
         OrdenCompraDetalle entidad = OrdenCompraDetalle.builder()

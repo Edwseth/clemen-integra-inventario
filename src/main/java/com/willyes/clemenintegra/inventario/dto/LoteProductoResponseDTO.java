@@ -20,6 +20,8 @@ public class LoteProductoResponseDTO {
     private LocalDateTime fechaFabricacion;
     private LocalDateTime fechaVencimiento;
     private BigDecimal stockLote;
+    private BigDecimal costoUnitarioMaterial;
+    private BigDecimal costoTotalMaterialIngresado;
     private EstadoLote estado;
     private Double temperaturaAlmacenamiento;
     private LocalDateTime fechaLiberacion;

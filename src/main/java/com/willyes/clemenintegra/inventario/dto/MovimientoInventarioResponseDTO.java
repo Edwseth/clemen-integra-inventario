@@ -24,6 +24,8 @@ public class MovimientoInventarioResponseDTO {
     private TipoMovimiento tipoMovimiento;
     private String clasificacion;
     private BigDecimal cantidad;
+    private BigDecimal costoUnitarioAplicado;
+    private BigDecimal costoTotalAplicado;
     private Long productoId;
     private String nombreProducto;
     @JsonProperty("sku")

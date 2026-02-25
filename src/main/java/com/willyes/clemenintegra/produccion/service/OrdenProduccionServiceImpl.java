@@ -151,6 +151,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository;
     private final ProduccionEtapasLockValidator produccionEtapasLockValidator;
     private final RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
+    private final CosteoProduccionService costeoProduccionService;
 
     private static final int SEMANAS_HOMEOPATICO = 78;
     private static final int SEMANAS_HERENCIA_PS_PT = 78;
@@ -1639,6 +1640,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 codigoLote = lote.getCodigoLote();
             }
             loteProductoRepository.save(lote);
+            if (dto.getTipo() == TipoCierre.TOTAL) {
+                BigDecimal costoTotalMaterialRealOp = Optional.ofNullable(
+                                movimientoInventarioRepository.sumarCostoMaterialRealOp(orden.getId()))
+                        .orElse(BigDecimal.ZERO);
+                BigDecimal cantidadRealProducida = regularizacionTrazabilidadRepository
+                        .findTopByOrdenProduccionIdOrderByFechaIngresoDescIdDesc(orden.getId())
+                        .map(r -> Optional.ofNullable(r.getCantidadReal()).orElse(BigDecimal.ZERO))
+                        .orElse(acumuladoPropuesto);
+                if (cantidadRealProducida != null && cantidadRealProducida.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal costoUnitarioPsPt = costeoProduccionService
+                            .calcularCostoUnitarioMaterialOp(costoTotalMaterialRealOp, cantidadRealProducida);
+                    lote.setCostoUnitarioMaterial(costoUnitarioPsPt);
+                    lote.setCostoTotalMaterialIngresado(costoTotalMaterialRealOp.setScale(6, RoundingMode.HALF_UP));
+                    loteProductoRepository.save(lote);
+                }
+            }
             log.info("OP-cierre lote op={}, producto={}, loteId={}, codigoLote={}, cantidad={}, fechaFabricacion={}, fechaVencimiento={}, almacenId={}, estado={}, usuario={}",
                     orden.getId(), orden.getProducto().getId(), lote.getId(), codigoLote, cantidad, fechaFabricacion, fechaVencimiento, destino.getId(), estadoLote, usuario.getId());
 

@@ -389,4 +389,19 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             TipoMovimiento tipoMovimiento,
             ClasificacionMovimientoInventario clasificacion);
 
+
+    @Query("""
+            select coalesce(sum(case
+                when m.clasificacion in (com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                                         com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD)
+                    then coalesce(m.costoTotalAplicado, 0)
+                when m.clasificacion = com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION
+                    then -coalesce(m.costoTotalAplicado, 0)
+                else 0
+            end), 0)
+            from MovimientoInventario m
+            where m.ordenProduccion.id = :ordenProduccionId
+            """)
+    BigDecimal sumarCostoMaterialRealOp(@Param("ordenProduccionId") Long ordenProduccionId);
+
 }

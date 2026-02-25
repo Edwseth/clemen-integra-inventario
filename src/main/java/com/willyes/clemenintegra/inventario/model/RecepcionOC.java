@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,6 +55,14 @@ public class RecepcionOC {
 
     @Column(name = "observaciones", length = 500)
     private String observaciones;
+
+    @Builder.Default
+    @Column(name = "gastos_adicionales_total", precision = 19, scale = 6)
+    private BigDecimal gastosAdicionalesTotal = BigDecimal.ZERO.setScale(6);
+
+    @Builder.Default
+    @Column(name = "criterio_prorrateo", length = 20)
+    private String criterioProrrateo = "VALOR";
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

@@ -134,6 +134,12 @@ public class MovimientoInventario {
     @Column(name = "codigo_recepcion", length = 32)
     private String codigoRecepcion;
 
+    @Column(name = "costo_unitario_aplicado", precision = 19, scale = 6)
+    private BigDecimal costoUnitarioAplicado;
+
+    @Column(name = "costo_total_aplicado", precision = 19, scale = 6)
+    private BigDecimal costoTotalAplicado;
+
     @PrePersist
     public void prePersist() {
         if (this.fechaIngreso == null) {
@@ -191,4 +197,8 @@ public class MovimientoInventario {
     public void setRecepcionOc(RecepcionOC recepcionOc) {this.recepcionOc = recepcionOc;}
     public String getCodigoRecepcion() {return codigoRecepcion;}
     public void setCodigoRecepcion(String codigoRecepcion) {this.codigoRecepcion = codigoRecepcion;}
+    public BigDecimal getCostoUnitarioAplicado() {return costoUnitarioAplicado;}
+    public void setCostoUnitarioAplicado(BigDecimal costoUnitarioAplicado) {this.costoUnitarioAplicado = costoUnitarioAplicado;}
+    public BigDecimal getCostoTotalAplicado() {return costoTotalAplicado;}
+    public void setCostoTotalAplicado(BigDecimal costoTotalAplicado) {this.costoTotalAplicado = costoTotalAplicado;}
 }

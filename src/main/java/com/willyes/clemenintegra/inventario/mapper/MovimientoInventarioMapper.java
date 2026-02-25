@@ -62,6 +62,8 @@ public interface MovimientoInventarioMapper {
         dto.setClasificacion(clasificacion);
 
         dto.setCantidad(m.getCantidad());
+        dto.setCostoUnitarioAplicado(m.getCostoUnitarioAplicado());
+        dto.setCostoTotalAplicado(m.getCostoTotalAplicado());
 
         Producto p = m.getProducto();
         if (p == null && m.getLote() != null) {
