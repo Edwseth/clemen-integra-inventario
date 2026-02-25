@@ -67,6 +67,7 @@ class OrdenProduccionServiceChecklistTest {
         ProduccionEtapasLockValidator produccionEtapasLockValidator = mock(ProduccionEtapasLockValidator.class);
         RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository =
                 mock(RegularizacionTrazabilidadRepository.class);
+        CosteoProduccionService costeoProduccionService = mock(CosteoProduccionService.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -98,7 +99,8 @@ class OrdenProduccionServiceChecklistTest {
                 loteConsecutivoDiaService,
                 opHomeopaticoOverrideRepository,
                 produccionEtapasLockValidator,
-                regularizacionTrazabilidadRepository
+                regularizacionTrazabilidadRepository,
+                costeoProduccionService
         );
 
         OrdenProduccion orden = OrdenProduccion.builder()
