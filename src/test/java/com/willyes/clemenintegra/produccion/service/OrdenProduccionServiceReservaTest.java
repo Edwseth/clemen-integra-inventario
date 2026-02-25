@@ -43,7 +43,7 @@ import com.willyes.clemenintegra.produccion.repository.CierreProduccionRepositor
 import com.willyes.clemenintegra.produccion.repository.EtapaPlantillaRepository;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
-import com.willyes.clemenintegra.produccion.repository.RegularizacionTrazabilidadRepository;
+import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
