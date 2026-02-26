@@ -6,9 +6,8 @@ import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.ReporteInventarioService;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
-import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.SecurityConfig;
-import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
+import com.willyes.clemenintegra.support.BaseWebMvcSecurityTest;
 import com.willyes.clemenintegra.support.TestAuth;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.hamcrest.Matchers;
@@ -34,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = true)
 @Import(SecurityConfig.class)
 @TestPropertySource(properties = {"DB_SECURPASS=dummy", "DB_SECURNAME=dummy"})
-class ReporteInventarioControllerSmokeTest {
+class ReporteInventarioControllerSmokeTest extends BaseWebMvcSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -49,24 +48,6 @@ class ReporteInventarioControllerSmokeTest {
     private MovimientoInventarioService movimientoInventarioService;
     @MockBean
     private ProductoRepository productoRepository;
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
-    @MockBean
-    private UsuarioInactivoFilter usuarioInactivoFilter;
-    @MockBean
-    private com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider jwtAuthenticationProvider;
-
-    @MockBean
-    private com.willyes.clemenintegra.shared.performance.RequestTimingFilter requestTimingFilter;
-
-    @MockBean
-    private com.willyes.clemenintegra.shared.logging.RequestIdFilter requestIdFilter;
-
-    @MockBean
-    private com.willyes.clemenintegra.shared.security.SuperAdminSoloLecturaWriteBlockFilter superAdminSoloLecturaWriteBlockFilter;
-
-    @MockBean
-    private com.willyes.clemenintegra.shared.repository.UsuarioRepository usuarioRepository;
 
     @Test
     @DisplayName("GET /api/reportes/alta-rotacion responde 200 y cabecera de adjunto")

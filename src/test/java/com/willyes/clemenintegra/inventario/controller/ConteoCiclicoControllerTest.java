@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import com.willyes.clemenintegra.shared.security.testsupport.WithTestSuperAdmin;
+import com.willyes.clemenintegra.support.BaseWebMvcSecurityTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -41,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ConteoCiclicoController.class)
 @AutoConfigureMockMvc(addFilters = false)
-class ConteoCiclicoControllerTest {
+class ConteoCiclicoControllerTest extends BaseWebMvcSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;
