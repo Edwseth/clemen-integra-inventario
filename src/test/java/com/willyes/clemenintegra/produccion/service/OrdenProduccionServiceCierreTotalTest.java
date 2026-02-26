@@ -406,7 +406,13 @@ class OrdenProduccionServiceCierreTotalTest {
                 null,
                 usuario,
                 "trace-test"
-        )).hasRootCauseInstanceOf(CustomBusinessException.class);
+        ))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException cb = (CustomBusinessException) ex;
+                    assertThat(cb.getCode()).isEqualTo(ApiErrorCode.LOTE_STOCK_INSUFICIENTE);
+                    assertThat(cb.getMessage()).contains("LOTE_STOCK_INSUFICIENTE");
+                });
     }
 
     private OrdenProduccion ordenProduccion(BigDecimal cantidadProgramada) {

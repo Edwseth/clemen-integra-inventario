@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.dto.ProductoCalidadUpdateDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
+import com.willyes.clemenintegra.support.BaseWebMvcSecurityTest;
 import com.willyes.clemenintegra.support.TestMethodSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = ProductoCalidadController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(TestMethodSecurityConfig.class)
-class ProductoCalidadControllerTest {
+class ProductoCalidadControllerTest extends BaseWebMvcSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;

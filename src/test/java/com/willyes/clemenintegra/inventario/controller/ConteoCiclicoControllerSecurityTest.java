@@ -5,21 +5,8 @@ import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico;
 import com.willyes.clemenintegra.inventario.service.ConteoCiclicoService;
-import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
-import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
-import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
-import com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider;
 import com.willyes.clemenintegra.shared.security.SecurityConfig;
-import com.willyes.clemenintegra.shared.security.SuperAdminSoloLecturaWriteBlockFilter;
-import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -32,12 +19,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.willyes.clemenintegra.support.BaseWebMvcSecurityTest;
 import com.willyes.clemenintegra.support.SecurityTestUtils;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -47,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = true)
 @Import({SecurityConfig.class, ConteoCiclicoControllerSecurityTest.MethodSecurityConfig.class})
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
-class ConteoCiclicoControllerSecurityTest {
+class ConteoCiclicoControllerSecurityTest extends BaseWebMvcSecurityTest {
 
     @org.springframework.boot.test.context.TestConfiguration
     @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity(prePostEnabled = true)
@@ -62,53 +48,6 @@ class ConteoCiclicoControllerSecurityTest {
 
     @MockBean
     private ConteoCiclicoService conteoCiclicoService;
-    @MockBean
-    private JwtAuthenticationProvider jwtAuthenticationProvider;
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
-    @MockBean
-    private UsuarioInactivoFilter usuarioInactivoFilter;
-    @MockBean
-    private RequestTimingFilter requestTimingFilter;
-    @MockBean
-    private RequestIdFilter requestIdFilter;
-    @MockBean
-    private SuperAdminSoloLecturaWriteBlockFilter superAdminSoloLecturaWriteBlockFilter;
-    @MockBean
-    private UsuarioRepository usuarioRepository;
-
-    @BeforeEach
-    void configureFilters() throws ServletException, IOException {
-        doAnswer(invocation -> {
-            FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(jwtAuthenticationFilter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
-
-        doAnswer(invocation -> {
-            FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(usuarioInactivoFilter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
-
-        doAnswer(invocation -> {
-            FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(requestTimingFilter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
-
-        doAnswer(invocation -> {
-            FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(requestIdFilter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
-
-        doAnswer(invocation -> {
-            FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(superAdminSoloLecturaWriteBlockFilter).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
-    }
 
     @Test
     void permiteListarConteosConPermisoCanonicoRead() throws Exception {
