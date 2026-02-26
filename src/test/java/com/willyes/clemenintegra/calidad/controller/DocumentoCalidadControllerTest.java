@@ -12,13 +12,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import com.willyes.clemenintegra.support.TestMethodSecurityConfig;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockMultipartFile;
@@ -38,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = DocumentoCalidadController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({DocumentoCalidadControllerTest.MethodSecurityTestConfig.class, GlobalExceptionHandler.class})
+@Import({TestMethodSecurityConfig.class, GlobalExceptionHandler.class})
 class DocumentoCalidadControllerTest {
 
     @Autowired
@@ -119,7 +118,7 @@ class DocumentoCalidadControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "QC_READ")
+    @WithMockUser(authorities = "QC_EXPORT")
     void descargarVersionRetornaArchivo() throws Exception {
         DocumentoCalidadVersionDownloadDTO descarga = DocumentoCalidadVersionDownloadDTO.builder()
                 .nombreArchivo("manual.pdf")
@@ -134,8 +133,4 @@ class DocumentoCalidadControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
 
-    @EnableMethodSecurity(prePostEnabled = true)
-    @TestConfiguration
-    static class MethodSecurityTestConfig {
-    }
 }

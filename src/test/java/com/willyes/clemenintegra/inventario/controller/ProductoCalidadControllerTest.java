@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.dto.ProductoCalidadUpdateDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
-import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
-import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
-import com.willyes.clemenintegra.shared.security.SecurityConfig;
-import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
+import com.willyes.clemenintegra.support.TestMethodSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,8 +14,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -31,8 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ProductoCalidadController.class)
-@AutoConfigureMockMvc
-@Import({SecurityConfig.class, UsuarioInactivoFilter.class, RequestTimingFilter.class, RequestIdFilter.class})
+@AutoConfigureMockMvc(addFilters = false)
+@Import(TestMethodSecurityConfig.class)
 class ProductoCalidadControllerTest {
 
     @Autowired
@@ -44,11 +39,6 @@ class ProductoCalidadControllerTest {
     @MockBean
     private ProductoService productoService;
 
-    @MockBean
-    private UserDetailsService userDetailsService;
-
-    @MockBean
-    private AuthenticationEntryPoint authenticationEntryPoint;
 
     @Test
     @WithMockUser(authorities = "INV_READ")

@@ -277,7 +277,7 @@ class OrdenProduccionControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "PROD_READ")
+    @WithMockUser(authorities = {"ROL_SUPER_ADMIN", "PROD_WRITE"})
     @DisplayName("POST /api/produccion/ordenes permite SUPER_ADMIN")
     void crearOrden_superAdminPermitido() throws Exception {
         OrdenProduccionResponseDTO orden = new OrdenProduccionResponseDTO();
