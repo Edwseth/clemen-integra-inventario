@@ -273,6 +273,9 @@
         <version>3.1.2</version>
         <configuration>
           <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+          <systemPropertyVariables>
+            <spring.profiles.active>test</spring.profiles.active>
+          </systemPropertyVariables>
           <properties>
             <excludeTags>${junit.excludeTags}</excludeTags>
           </properties>
