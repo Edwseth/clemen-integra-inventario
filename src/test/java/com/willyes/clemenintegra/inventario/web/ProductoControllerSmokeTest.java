@@ -12,12 +12,8 @@ import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepos
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
-import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
-import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
-import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
-import com.willyes.clemenintegra.shared.security.SecurityConfig;
 import com.willyes.clemenintegra.support.TestAuth;
-import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
+import com.willyes.clemenintegra.support.TestMethodSecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +26,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -53,8 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductoController.class)
-@AutoConfigureMockMvc
-@Import({SecurityConfig.class, UsuarioInactivoFilter.class, RequestTimingFilter.class, RequestIdFilter.class})
+@AutoConfigureMockMvc(addFilters = false)
+@Import(TestMethodSecurityConfig.class)
 @TestPropertySource(properties = {"DB_SECURPASS=dummy", "DB_SECURNAME=dummy"})
 class ProductoControllerSmokeTest {
 
@@ -76,14 +70,7 @@ class ProductoControllerSmokeTest {
     @MockBean
     private UnidadMedidaRepository unidadMedidaRepository;
 
-    @MockBean
-    private UsuarioRepository usuarioRepository;
 
-    @MockBean
-    private UserDetailsService userDetailsService;
-
-    @MockBean
-    private AuthenticationEntryPoint authenticationEntryPoint;
 
     @Test
     @DisplayName("POST /api/productos devuelve 201 y datos mínimos al crear un producto")
@@ -196,7 +183,7 @@ class ProductoControllerSmokeTest {
                 .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/productos/buscar")
-                        .with(TestAuth.auth("contador", "INV_PRODUCT_READ"))
+                        .with(TestAuth.auth("contador", "INV_READ"))
                         .param("query", "resveratrol")
                         .param("page", "0")
                         .param("size", "20"))
@@ -213,7 +200,7 @@ class ProductoControllerSmokeTest {
     @DisplayName("GET /api/productos/buscar rechaza roles sin permiso")
     void buscarProductosParaAjustes_rolNoPermitido() throws Exception {
         mockMvc.perform(get("/api/productos/buscar")
-                        .with(TestAuth.auth("almacenista", "INV_READ"))
+                        .with(TestAuth.auth("almacenista", "INV_PRODUCT_READ"))
                         .param("query", "resveratrol"))
                 .andExpect(status().isForbidden());
     }
@@ -226,7 +213,7 @@ class ProductoControllerSmokeTest {
                 .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/productos/buscar")
-                        .with(TestAuth.auth("admin", "INV_PRODUCT_READ"))
+                        .with(TestAuth.auth("admin", "INV_READ"))
                         .param("query", "resveratrol"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].nombre").value("Resveratrol Gold"));
@@ -240,7 +227,7 @@ class ProductoControllerSmokeTest {
                 .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/productos/buscar")
-                        .with(TestAuth.auth("admin", "INV_PRODUCT_READ"))
+                        .with(TestAuth.auth("admin", "INV_READ"))
                         .param("query", "SKU-ABC"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].codigoSku").value("SKU-ABC-01"));
@@ -254,7 +241,7 @@ class ProductoControllerSmokeTest {
                 .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/productos/buscar")
-                        .with(TestAuth.auth("contador", "INV_PRODUCT_READ"))
+                        .with(TestAuth.auth("contador", "INV_READ"))
                         .param("term", "al")
                         .param("page", "0")
                         .param("size", "20"))

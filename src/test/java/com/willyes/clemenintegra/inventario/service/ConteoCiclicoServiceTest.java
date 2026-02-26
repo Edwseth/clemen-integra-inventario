@@ -603,7 +603,6 @@ class ConteoCiclicoServiceTest {
                 .estado(EstadoConteoCiclico.EN_CONTEO)
                 .detalles(new java.util.ArrayList<>())
                 .build();
-        when(conteoCiclicoRepository.findByIdWithDetallesForUpdate(200L)).thenReturn(Optional.of(conteo));
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("jefe", "N/A", List.of(() -> "INV_CONTEOS_WRITE"))
         );
