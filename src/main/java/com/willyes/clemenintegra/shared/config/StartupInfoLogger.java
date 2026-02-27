@@ -31,10 +31,12 @@ public class StartupInfoLogger implements ApplicationListener<ApplicationReadyEv
         String address = environment.getProperty("server.address", "0.0.0.0");
         String contextPath = environment.getProperty("server.servlet.context-path", "/");
         String allowedOrigins = environment.getProperty("app.cors.allowed-origins", "");
+        String datasourceUrl = environment.getProperty("spring.datasource.url", "<not-configured>");
 
         log.info("Runtime profile(s): {}", profiles);
         log.info("Server address: {}:{}", address, port);
         log.info("Context path: {}", contextPath);
+        log.info("Datasource URL: {}", datasourceUrl);
         log.info("CORS allowed origins: {}", allowedOrigins.isBlank() ? "<none>" : allowedOrigins);
     }
 }

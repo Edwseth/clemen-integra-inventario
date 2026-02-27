@@ -157,6 +157,13 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev    # desarrollo local
 # o
 java -jar target/clemen-integra-backend.jar --spring.profiles.active=demo  # demo (Vercel + Tunnel)
 ```
+
+### Arranque de ambiente PRUEBAS (mismo JAR)
+```bash
+SPRING_PROFILES_ACTIVE=pruebas java -jar target/clemen-integra-backend.jar
+```
+Este perfil expone la app en `:8081` con contexto `/pruebas` y apunta a la base `clemen_pruebas`.
+
 La aplicación inicia por defecto en el puerto `8080` y la documentación Swagger se encuentra en `/swagger-ui.html`.
 
 ### Swagger detrás de túnel

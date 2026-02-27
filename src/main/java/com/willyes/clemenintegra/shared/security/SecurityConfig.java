@@ -522,12 +522,15 @@ public class SecurityConfig {
             );
         }
 
-        // 2. Siempre permitir localhost para trabajo local,
+        // 2. Garantizar origen oficial del frontend ERP para prod/pruebas.
+        originPatterns.add("https://erp.clemenlab.com");
+
+        // 3. Siempre permitir localhost para trabajo local,
         //    sin importar si la propiedad vino o no.
         originPatterns.add("http://localhost:5173");
         originPatterns.add("http://127.0.0.1:5173");
 
-        // 3. Si hay al menos un origen externo, agregar túnel y Vercel
+        // 4. Si hay al menos un origen externo, agregar túnel y Vercel
         boolean hasExternalOrigin = originPatterns.stream().anyMatch(origin ->
                 !(origin.contains("://localhost") || origin.contains("://127.") || origin.contains("://0.0.0.0"))
         );
