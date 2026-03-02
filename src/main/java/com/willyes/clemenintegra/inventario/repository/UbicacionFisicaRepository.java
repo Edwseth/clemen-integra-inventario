@@ -16,6 +16,8 @@ public interface UbicacionFisicaRepository extends JpaRepository<UbicacionFisica
 
     boolean existsByAlmacenIdAndCodigoIgnoreCaseAndIdNot(Integer almacenId, String codigo, Long id);
 
+    boolean existsByAlmacenIdAndActivoTrue(Integer almacenId);
+
     @Query("""
             SELECT u
             FROM UbicacionFisica u

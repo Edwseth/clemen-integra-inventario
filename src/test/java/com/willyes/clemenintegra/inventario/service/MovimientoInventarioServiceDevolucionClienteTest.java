@@ -212,6 +212,73 @@ class MovimientoInventarioServiceDevolucionClienteTest {
     }
 
     @Test
+    void shouldFailLegacyWithoutFechaVencimiento() {
+        Producto producto = crearProducto(351);
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("10"),
+                TipoMovimiento.RECEPCION,
+                ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE,
+                "DOC-DEV-LEGACY",
+                "Observaciones legacy",
+                "Cliente Uno",
+                CausaDevolucionPT.TROCADO,
+                CondicionProductoDevuelto.OPTIMO,
+                producto.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                TIPO_DETALLE_EXPLICITO_ID,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "L-LEG-1",
+                null,
+                null,
+                null,
+                null,
+                true,
+                null
+        );
+
+        stubCatalogosRecepcionDevolucion();
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(TIPO_DETALLE_EXPLICITO_ID);
+        given(tipoMovimientoDetalleRepository.findById(TIPO_DETALLE_EXPLICITO_ID)).willReturn(Optional.of(tipoDetalle));
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_REQUERIDA));
+    }
+
+    @Test
+    void shouldFailNoLegacyWithoutFecha_whenLoteOrigenSinVencimiento() {
+        Producto producto = crearProducto(352);
+        LoteProducto lote = crearLote(652L, producto, 2, EstadoLote.LIBERADO);
+        lote.setFechaVencimiento(null);
+        MovimientoInventarioDTO dto = construirDto(producto.getId(), lote.getId(),
+                CausaDevolucionPT.TROCADO, CondicionProductoDevuelto.OPTIMO, false, TIPO_DETALLE_EXPLICITO_ID,
+                null);
+
+        stubCatalogosRecepcionDevolucion();
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
+        tipoDetalle.setId(TIPO_DETALLE_EXPLICITO_ID);
+        given(tipoMovimientoDetalleRepository.findById(TIPO_DETALLE_EXPLICITO_ID)).willReturn(Optional.of(tipoDetalle));
+        given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_REQUERIDA));
+    }
+
+    @Test
     void shouldReject_whenNotLegacy_andMissingLoteProductoId() {
         Producto producto = crearProducto(300);
         MovimientoInventarioDTO dto = construirDto(producto.getId(), null,
@@ -278,6 +345,74 @@ class MovimientoInventarioServiceDevolucionClienteTest {
     }
 
     @Test
+    void shouldSetFechaVencimientoWhenNoLegacyAndOrigenSinFecha() {
+        Producto producto = crearProducto(353);
+        LoteProducto lote = crearLote(653L, producto, 2, EstadoLote.LIBERADO);
+        lote.setFechaVencimiento(null);
+        LocalDateTime fecha = LocalDateTime.now().plusDays(60);
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("10"),
+                TipoMovimiento.RECEPCION,
+                ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE,
+                "DOC-DEV-1",
+                "Observaciones",
+                "Cliente Uno",
+                CausaDevolucionPT.TROCADO,
+                CondicionProductoDevuelto.OPTIMO,
+                producto.getId(),
+                lote.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                TIPO_DETALLE_EXPLICITO_ID,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                fecha,
+                null,
+                null,
+                null,
+                false,
+                null
+        );
+
+        stubCatalogosRecepcionDevolucion();
+        configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_EXPLICITO_ID);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(16L).build());
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(16L);
+            return mov;
+        });
+
+        ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+        doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(1002L);
+            }
+            return lp;
+        }).when(loteProductoRepository).save(loteCaptor.capture());
+
+        service.registrarMovimiento(dto);
+
+        assertThat(loteCaptor.getValue().getFechaVencimiento()).isEqualTo(fecha);
+    }
+
     void shouldAssignTipoDetalleEntrada_whenMissingTipoDetalleId() {
         Producto producto = crearProducto(400);
         LoteProducto lote = crearLote(600L, producto, 2, EstadoLote.LIBERADO);
@@ -562,7 +697,7 @@ class MovimientoInventarioServiceDevolucionClienteTest {
                 null,
                 null,
                 codigoLote,
-                null,
+                LocalDateTime.now().plusDays(120),
                 null,
                 null,
                 null,
