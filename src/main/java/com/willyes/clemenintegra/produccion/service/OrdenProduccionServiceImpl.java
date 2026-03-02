@@ -2174,15 +2174,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 }
             }
 
-            Integer destinoIdInt = destino.getId();
-            if (destinoIdInt != null
-                    && ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(destinoIdInt)
-                    && dto.getUbicacionDestinoId() == null) {
-                throw new CustomBusinessException(ApiErrorCode.UBICACION_DESTINO_REQUERIDA,
-                        "Debe indicar ubicación destino para el cierre de producción",
-                        Map.of("almacenDestinoId", destinoIdInt));
-            }
-
             LocalDateTime fechaFabricacion = LocalDateTime.now();
             Integer semanasVigencia = obtenerSemanasVigenciaProductoTerminado(orden.getProducto());
             LocalDateTime fechaVencimientoBase = semanasVigencia != null
