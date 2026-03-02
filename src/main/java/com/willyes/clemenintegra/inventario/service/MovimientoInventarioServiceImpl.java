@@ -699,6 +699,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         validarParametros(tipoMovimiento, almacenOrigen, almacenDestino);
 
+        validarUbicacionDestinoTransferenciaPt(dto, tipoMovimiento, clasificacion, almacenOrigen, almacenDestino);
+
         Long motivoMovimientoId = dto.motivoMovimientoId();
         if (motivoMovimientoId == null && esRecepcionDevolucionCliente) {
             motivoMovimientoId = resolverMotivoDevolucionCliente(almacenDestino);
@@ -3386,6 +3388,47 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             "No se encontró MotivoMovimiento configurado para SALIDA_CLIENTE"));
         }
         return null;
+    }
+
+    private void validarUbicacionDestinoTransferenciaPt(MovimientoInventarioDTO dto,
+                                                       TipoMovimiento tipoMovimiento,
+                                                       ClasificacionMovimientoInventario clasificacion,
+                                                       Almacen almacenOrigen,
+                                                       Almacen almacenDestino) {
+        if (dto == null
+                || tipoMovimiento != TipoMovimiento.TRANSFERENCIA
+                || clasificacion != ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL
+                || dto.ubicacionDestinoId() != null
+                || almacenOrigen == null
+                || almacenDestino == null
+                || !esTransferenciaCuarentenaABodegaPt(almacenOrigen, almacenDestino)) {
+            return;
+        }
+
+        Integer almacenDestinoId = almacenDestino.getId();
+        if (almacenDestinoId != null && ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(almacenDestinoId)) {
+            throw new CustomBusinessException(ApiErrorCode.UBICACION_DESTINO_REQUERIDA,
+                    "Debe indicar ubicación destino para la transferencia a Bodega PT",
+                    Map.of("almacenDestinoId", almacenDestinoId));
+        }
+    }
+
+    private boolean esTransferenciaCuarentenaABodegaPt(Almacen almacenOrigen, Almacen almacenDestino) {
+        Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+        if (almacenCuarentenaId == null || almacenOrigen.getId() == null || almacenDestino.getId() == null) {
+            return false;
+        }
+
+        if (!Objects.equals(almacenOrigen.getId().longValue(), almacenCuarentenaId)) {
+            return false;
+        }
+
+        if (almacenDestino.getCategoria() == TipoCategoria.PRODUCTO_TERMINADO) {
+            return true;
+        }
+
+        Long almacenPtId = catalogResolver.getAlmacenPtId();
+        return almacenPtId != null && Objects.equals(almacenDestino.getId().longValue(), almacenPtId);
     }
 
     private Long resolverMotivoDevolucionCliente(Almacen almacenDestino) {
