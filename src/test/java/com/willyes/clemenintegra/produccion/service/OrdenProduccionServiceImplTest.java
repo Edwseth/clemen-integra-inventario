@@ -194,8 +194,8 @@ class OrdenProduccionServiceImplTest {
 
 
     @Test
-    @DisplayName("registrarCierre exige ubicación destino cuando el almacén tiene ubicaciones activas")
-    void debeExigirUbicacionDestinoEnCierreCuandoAlmacenTieneUbicaciones() {
+    @DisplayName("registrarCierre no exige ubicación destino aunque el almacén tenga ubicaciones activas")
+    void noDebeExigirUbicacionDestinoEnCierreCuandoAlmacenTieneUbicaciones() {
         OrdenProduccion orden = crearOrdenBase(900L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
         stubInfraCierre(orden, 1L);
         when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(30)).thenReturn(true);
@@ -205,9 +205,7 @@ class OrdenProduccionServiceImplTest {
                 .tipo(TipoCierre.TOTAL)
                 .build();
 
-        assertThatThrownBy(() -> service.registrarCierre(900L, dto))
-                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
-                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.UBICACION_DESTINO_REQUERIDA));
+        assertThatCode(() -> service.registrarCierre(900L, dto)).doesNotThrowAnyException();
     }
 
     @Test

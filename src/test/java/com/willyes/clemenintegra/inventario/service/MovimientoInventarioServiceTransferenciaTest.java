@@ -286,6 +286,133 @@ class MovimientoInventarioServiceTransferenciaTest {
     }
 
     @Test
+    void transferenciaCuarentenaABodegaPtSinUbicacionConUbicacionesActivasFalla422() {
+        Producto producto = crearProducto(19, 2);
+        LoteProducto lote = crearLote(140L, producto, 1, EstadoLote.EN_CUARENTENA,
+                new BigDecimal("2000"), BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("500"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                null,
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                6,
+                null,
+                null,
+                null,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                null,
+                null
+        );
+
+        configurarMocksBasicos(producto, lote);
+        given(catalogResolver.getAlmacenCuarentenaId()).willReturn(1L);
+        given(catalogResolver.getAlmacenPtId()).willReturn(6L);
+        given(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(6)).willReturn(true);
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.UBICACION_DESTINO_REQUERIDA));
+    }
+
+    @Test
+    void transferenciaCuarentenaABodegaPtConUbicacionValidaSeteaUbicacionEnLote() {
+        Producto producto = crearProducto(20, 2);
+        LoteProducto lote = crearLote(141L, producto, 1, EstadoLote.EN_CUARENTENA,
+                new BigDecimal("2000"), BigDecimal.ZERO, false);
+        Almacen almacenDestino = new Almacen(6);
+        UbicacionFisica ubicacion = UbicacionFisica.builder()
+                .id(199L)
+                .almacen(almacenDestino)
+                .codigo("PT-A1")
+                .activo(true)
+                .build();
+        LoteProducto loteDestino = crearLote(1401L, producto, almacenDestino.getId(), EstadoLote.DISPONIBLE,
+                BigDecimal.ZERO, BigDecimal.ZERO, false);
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("500"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                null,
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lote.getId(),
+                1,
+                almacenDestino.getId(),
+                null,
+                null,
+                null,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lote.getCodigoLote(),
+                null,
+                null,
+                Boolean.FALSE,
+                null,
+                null,
+                ubicacion.getId()
+        );
+
+        configurarMocksBasicos(producto, lote);
+        given(catalogResolver.getAlmacenCuarentenaId()).willReturn(1L);
+        given(catalogResolver.getAlmacenPtId()).willReturn(6L);
+        given(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(almacenDestino.getId())).willReturn(true);
+        given(ubicacionFisicaRepository.findByIdAndActivoTrue(ubicacion.getId()))
+                .willReturn(Optional.of(ubicacion));
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                lote.getCodigoLote(), producto.getId(), almacenDestino.getId()))
+                .willReturn(Optional.of(loteDestino));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(301L);
+            return mov;
+        });
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(301L).build());
+
+        MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
+
+        assertThat(respuesta.getId()).isEqualTo(301L);
+        assertThat(loteDestino.getUbicacionFisica()).isEqualTo(ubicacion);
+    }
+
+
+    @Test
     void movimientoOp_fuerzaDocReferenciaConCodigoOrden() {
         Producto producto = crearProducto(8, 2);
         LoteProducto lote = crearLote(30L, producto, 1, EstadoLote.LIBERADO,

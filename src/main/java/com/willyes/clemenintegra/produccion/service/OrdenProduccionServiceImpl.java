@@ -1592,15 +1592,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 }
             }
 
-            Integer destinoIdInt = destino.getId();
-            if (destinoIdInt != null
-                    && ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(destinoIdInt)
-                    && dto.getUbicacionDestinoId() == null) {
-                throw new CustomBusinessException(ApiErrorCode.UBICACION_DESTINO_REQUERIDA,
-                        "Debe indicar ubicación destino para el cierre de producción",
-                        Map.of("almacenDestinoId", destinoIdInt));
-            }
-
             String codigoLote = dto.getCodigoLote();
             if (lote == null) {
                 if (codigoLote != null && !codigoLote.isBlank()) {
