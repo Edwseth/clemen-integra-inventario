@@ -2882,7 +2882,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         Map.of("loteId", loteId));
             }
             if (loteOrigen.getFechaVencimiento() != null && dto.fechaVencimiento() != null
-                    && !loteOrigen.getFechaVencimiento().equals(dto.fechaVencimiento())) {
+                    && !mismaFechaCalendario(loteOrigen.getFechaVencimiento(), dto.fechaVencimiento())) {
                 throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_INVALIDA,
                         "La fecha de vencimiento enviada no coincide con la del lote origen",
                         Map.of(
@@ -3161,7 +3161,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             lote.setFechaVencimiento(fechaVencimientoEsperada);
             return;
         }
-        if (!lote.getFechaVencimiento().equals(fechaVencimientoEsperada)) {
+        if (!mismaFechaCalendario(lote.getFechaVencimiento(), fechaVencimientoEsperada)) {
             throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_INVALIDA,
                     "La fecha de vencimiento enviada no coincide con la del lote",
                     Map.of(
@@ -3170,6 +3170,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             "fechaVencimientoPayload", fechaVencimientoEsperada
                     ));
         }
+    }
+
+
+    private boolean mismaFechaCalendario(LocalDateTime fechaLote, LocalDateTime fechaPayload) {
+        if (fechaLote == null || fechaPayload == null) {
+            return Objects.equals(fechaLote, fechaPayload);
+        }
+        return fechaLote.toLocalDate().equals(fechaPayload.toLocalDate());
     }
 
     private void recalcularAgotadoSegunDisponibilidad(LoteProducto lote) {

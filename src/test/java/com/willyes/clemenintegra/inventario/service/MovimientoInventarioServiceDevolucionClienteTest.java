@@ -617,6 +617,67 @@ class MovimientoInventarioServiceDevolucionClienteTest {
                 });
     }
 
+
+    @Test
+    void shouldAcceptSameFechaVencimientoByDateIgnoringTime_forNonLegacy() {
+        Producto producto = crearProducto(910);
+        LoteProducto lote = crearLote(911L, producto, 2, EstadoLote.LIBERADO);
+        lote.setFechaVencimiento(LocalDateTime.of(2026, 9, 2, 11, 45));
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("10"),
+                TipoMovimiento.RECEPCION,
+                ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE,
+                "DOC-DEV-ISO",
+                "Observaciones",
+                "Cliente Uno",
+                CausaDevolucionPT.TROCADO,
+                CondicionProductoDevuelto.OPTIMO,
+                producto.getId(),
+                lote.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                TIPO_DETALLE_EXPLICITO_ID,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                LocalDateTime.of(2026, 9, 2, 0, 0),
+                null,
+                null,
+                null,
+                false,
+                null
+        );
+
+        stubCatalogosRecepcionDevolucion();
+        configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_EXPLICITO_ID);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(212L).build());
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(212L);
+            return mov;
+        });
+
+        MovimientoInventarioResponseDTO response = service.registrarMovimiento(dto);
+
+        assertThat(response.getId()).isEqualTo(212L);
+    }
+
     private void configurarMocksBasicos(Producto producto, LoteProducto lote, long almacenDestinoId, long tipoDetalleId) {
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         TipoMovimientoDetalle tipoDetalle = new TipoMovimientoDetalle();
