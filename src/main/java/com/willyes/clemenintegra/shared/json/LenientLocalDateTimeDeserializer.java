@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonToken;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -39,6 +40,12 @@ public class LenientLocalDateTimeDeserializer extends JsonDeserializer<LocalDate
             return null;
         }
         try {
+            LocalDate localDate = LocalDate.parse(trimmed, DateTimeFormatter.ISO_LOCAL_DATE);
+            return localDate.atStartOfDay();
+        } catch (DateTimeParseException ignored) {
+            // probar con fecha-hora local
+        }
+        try {
             return LocalDateTime.parse(trimmed, ISO_LOCAL);
         } catch (DateTimeParseException ignored) {
             // probar con formatos que incluyan zona horaria
@@ -55,6 +62,9 @@ public class LenientLocalDateTimeDeserializer extends JsonDeserializer<LocalDate
         } catch (DateTimeParseException ignored) {
             // dejar caer en excepción genérica
         }
-        throw InvalidFormatException.from(p, "Formato de fecha inválido", trimmed, LocalDateTime.class);
+        throw InvalidFormatException.from(p,
+                "Formato de fecha inválido. Use 'yyyy-MM-dd' para fechaVencimiento",
+                trimmed,
+                LocalDateTime.class);
     }
 }

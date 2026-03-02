@@ -14,6 +14,7 @@ import com.willyes.clemenintegra.shared.security.JwtAuthenticationFilter;
 import com.willyes.clemenintegra.shared.security.UsuarioInactivoFilter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -29,12 +30,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -125,6 +128,41 @@ class MovimientoInventarioControllerSmokeTest {
                 .andExpect(jsonPath("$.code").value("SOLICITUD_INVALIDA"))
                 .andExpect(jsonPath("$.message").value("Solicitud inválida"))
                 .andExpect(jsonPath("$.details").isArray());
+    }
+
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_ALMACENES")
+    @DisplayName("POST /api/movimientos acepta fechaVencimiento ISO yyyy-MM-dd en devoluciones PT")
+    void registrarMovimientoDevolucionPt_conFechaIso_deberiaNormalizarInicioDelDia() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "cantidad", 10,
+                "productoId", 1,
+                "tipoMovimiento", "RECEPCION",
+                "clasificacionMovimientoInventario", "RECEPCION_DEVOLUCION_CLIENTE",
+                "fechaVencimiento", "2026-09-02"
+        );
+
+        MovimientoInventarioResponseDTO response = MovimientoInventarioResponseDTO.builder()
+                .id(201L)
+                .productoId(1L)
+                .tipoMovimiento(TipoMovimiento.RECEPCION)
+                .fechaIngreso(LocalDateTime.now())
+                .build();
+
+        when(movimientoInventarioService.registrarMovimiento(any(), anyString())).thenReturn(response);
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "test-" + UUID.randomUUID())
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO> captor =
+                ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
+        assertThat(captor.getValue().fechaVencimiento())
+                .isEqualTo(LocalDateTime.of(2026, Month.SEPTEMBER, 2, 0, 0));
     }
 
     @Test

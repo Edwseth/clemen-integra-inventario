@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.willyes.clemenintegra.inventario.model.enums.CausaDevolucionPT;
@@ -48,10 +49,10 @@ public record MovimientoInventarioDTO(
         Long ordenCompraDetalleId,
         String codigoLote,
         /**
-         * Fecha asociada a la creación o actualización de lotes (recepciones/ajustes).
-         * Para salidas de producto terminado y otros movimientos este campo es opcional
-         * y normalmente se omite del payload enviado por el frontend.
+         * Formato oficial REST para fecha de vencimiento: ISO yyyy-MM-dd.
+         * El backend normaliza internamente a LocalDateTime a las 00:00:00.
          */
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
         @JsonDeserialize(using = LenientLocalDateTimeDeserializer.class)
         LocalDateTime fechaVencimiento,
         /**
