@@ -112,6 +112,7 @@ class OrdenProduccionServiceCierreTotalTest {
         ProduccionEtapasLockValidator produccionEtapasLockValidator = mock(ProduccionEtapasLockValidator.class);
         regularizacionTrazabilidadRepository = mock(RegularizacionTrazabilidadRepository.class);
         costeoProduccionService = mock(CosteoProduccionService.class);
+        UbicacionFisicaRepository ubicacionFisicaRepository = mock(UbicacionFisicaRepository.class);
 
         service = new OrdenProduccionServiceImpl(
                 formulaProductoRepository,
@@ -144,7 +145,8 @@ class OrdenProduccionServiceCierreTotalTest {
                 opHomeopaticoOverrideRepository,
                 produccionEtapasLockValidator,
                 regularizacionTrazabilidadRepository,
-                costeoProduccionService
+                costeoProduccionService,
+                ubicacionFisicaRepository
         );
         ReflectionTestUtils.setField(service, "estadosSolicitudPendientesConf", "PENDIENTE");
         ReflectionTestUtils.setField(service, "estadosSolicitudConcluyentesConf", "ATENDIDO");

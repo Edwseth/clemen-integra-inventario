@@ -21,4 +21,5 @@ public class CierreProduccionRequestDTO {
     private Boolean confirmarCierreParcial;
     private String turno;
     private String observacion;
+    private Long ubicacionDestinoId;
 }

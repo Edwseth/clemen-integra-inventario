@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
+import com.willyes.clemenintegra.inventario.repository.UbicacionFisicaRepository;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
@@ -152,6 +153,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final ProduccionEtapasLockValidator produccionEtapasLockValidator;
     private final RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
     private final CosteoProduccionService costeoProduccionService;
+    private final UbicacionFisicaRepository ubicacionFisicaRepository;
 
     private static final int SEMANAS_HOMEOPATICO = 78;
     private static final int SEMANAS_HERENCIA_PS_PT = 78;
@@ -1590,6 +1592,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 }
             }
 
+            Integer destinoIdInt = destino.getId();
+            if (destinoIdInt != null
+                    && ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(destinoIdInt)
+                    && dto.getUbicacionDestinoId() == null) {
+                throw new CustomBusinessException(ApiErrorCode.UBICACION_DESTINO_REQUERIDA,
+                        "Debe indicar ubicación destino para el cierre de producción",
+                        Map.of("almacenDestinoId", destinoIdInt));
+            }
+
             String codigoLote = dto.getCodigoLote();
             if (lote == null) {
                 if (codigoLote != null && !codigoLote.isBlank()) {
@@ -1688,7 +1699,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     null,
                     null,
                     null,
-                    null);
+                    dto.getUbicacionDestinoId());
             log.info("OP-cierre entrada DTO traceId={} opId={} etapaId={} productoId={} loteId={} tipo={} clasificacion={} almacenOrigenId={} almacenDestinoId={} tipoDetalleId={} motivoId={} cantidad={}",
                     traceId,
                     orden.getId(),
@@ -2161,6 +2172,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     destino = almacenPt;
                     estadoLote = EstadoLote.DISPONIBLE;
                 }
+            }
+
+            Integer destinoIdInt = destino.getId();
+            if (destinoIdInt != null
+                    && ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(destinoIdInt)
+                    && dto.getUbicacionDestinoId() == null) {
+                throw new CustomBusinessException(ApiErrorCode.UBICACION_DESTINO_REQUERIDA,
+                        "Debe indicar ubicación destino para el cierre de producción",
+                        Map.of("almacenDestinoId", destinoIdInt));
             }
 
             LocalDateTime fechaFabricacion = LocalDateTime.now();

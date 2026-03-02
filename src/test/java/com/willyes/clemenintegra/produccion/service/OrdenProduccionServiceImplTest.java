@@ -141,6 +141,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private LoteConsecutivoDiaService loteConsecutivoDiaService;
     @Mock private OpHomeopaticoOverrideRepository opHomeopaticoOverrideRepository;
     @Mock private RegularizacionTrazabilidadRepository regularizacionTrazabilidadRepository;
+    @Mock private UbicacionFisicaRepository ubicacionFisicaRepository;
 
     @Spy
     @InjectMocks
@@ -188,6 +189,46 @@ class OrdenProduccionServiceImplTest {
         lenient().when(motivoMovimientoRepository.findById(11L)).thenReturn(Optional.of(motivoSalida));
         lenient().when(movimientoInventarioRepository.sumaCantidadPorOrdenProductoTipoDetalle(anyLong(), anyLong(), any(), anyLong()))
                 .thenReturn(BigDecimal.ZERO);
+        lenient().when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(anyInt())).thenReturn(false);
+    }
+
+
+    @Test
+    @DisplayName("registrarCierre exige ubicación destino cuando el almacén tiene ubicaciones activas")
+    void debeExigirUbicacionDestinoEnCierreCuandoAlmacenTieneUbicaciones() {
+        OrdenProduccion orden = crearOrdenBase(900L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(30)).thenReturn(true);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("5"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(900L, dto))
+                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.UBICACION_DESTINO_REQUERIDA));
+    }
+
+    @Test
+    @DisplayName("registrarCierre propaga ubicación destino al movimiento de entrada PT")
+    void debePropagarUbicacionDestinoAlMovimientoDeEntradaPt() {
+        OrdenProduccion orden = crearOrdenBase(901L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(30)).thenReturn(true);
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("5"))
+                .tipo(TipoCierre.TOTAL)
+                .ubicacionDestinoId(88L)
+                .build();
+
+        service.registrarCierre(901L, dto);
+
+        ArgumentCaptor<MovimientoInventarioDTO> movimientoCaptor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService, atLeast(1)).registrarMovimiento(movimientoCaptor.capture());
+        assertThat(movimientoCaptor.getAllValues())
+                .anyMatch(m -> m.tipoMovimiento() == TipoMovimiento.ENTRADA && Long.valueOf(88L).equals(m.ubicacionDestinoId()));
     }
 
     @Test

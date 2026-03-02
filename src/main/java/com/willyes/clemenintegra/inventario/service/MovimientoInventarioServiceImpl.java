@@ -2876,6 +2876,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             "No se encontró el lote para la devolución",
                             Map.of("loteId", loteId)));
 
+            if (loteOrigen.getFechaVencimiento() == null && dto.fechaVencimiento() == null) {
+                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_REQUERIDA,
+                        "Debe indicar fecha de vencimiento para la devolución",
+                        Map.of("loteId", loteId));
+            }
+            if (loteOrigen.getFechaVencimiento() != null && dto.fechaVencimiento() != null
+                    && !loteOrigen.getFechaVencimiento().equals(dto.fechaVencimiento())) {
+                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_INVALIDA,
+                        "La fecha de vencimiento enviada no coincide con la del lote origen",
+                        Map.of(
+                                "loteId", loteId,
+                                "fechaVencimientoLote", loteOrigen.getFechaVencimiento(),
+                                "fechaVencimientoPayload", dto.fechaVencimiento()
+                        ));
+            }
+
             if (loteOrigen.getProducto() == null || !Objects.equals(loteOrigen.getProducto().getId(), producto.getId())) {
                 throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_COMBINACION_INVALIDA,
                         "El lote no corresponde al producto de la devolución",
@@ -2890,8 +2906,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
 
             // TODO: validar que el lote tenga al menos una SALIDA_CLIENTE previa.
-            loteDestino = ensureDestinoLote(producto, codigoLote, loteOrigen, almacenDestino);
+            loteDestino = ensureDestinoLote(producto, codigoLote, loteOrigen, almacenDestino, dto.fechaVencimiento());
         } else {
+            if (dto.fechaVencimiento() == null) {
+                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_REQUERIDA,
+                        "Debe indicar fecha de vencimiento para la devolución legacy",
+                        Map.of("codigoLote", dto.codigoLote()));
+            }
+
             String codigoLote = dto.codigoLote().trim();
             Optional<LoteProducto> destinoExistente = loteProductoRepository
                     .findByCodigoLoteAndProductoIdAndAlmacenId(
@@ -2908,6 +2930,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 if (loteDestino.getEstado() == null) {
                     loteDestino.setEstado(estadoLegacy);
                 }
+                validarYAsignarFechaVencimientoDevolucion(loteDestino, dto.fechaVencimiento());
             } else {
                 loteDestino = new LoteProducto();
                 loteDestino.setProducto(producto);
@@ -2916,6 +2939,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 loteDestino.setEstado(estadoLegacy);
                 loteDestino.setStockLote(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING));
                 loteDestino.setStockReservado(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING));
+                loteDestino.setFechaVencimiento(dto.fechaVencimiento());
             }
         }
 
@@ -3001,7 +3025,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw loteStockInsuficienteException(loteOrigen, producto, cantidadNormalizada, stockActual, loteOrigen.getAlmacen());
         }
 
-        LoteProducto loteDestino = ensureDestinoLote(producto, loteOrigen.getCodigoLote(), loteOrigen, destino);
+        LoteProducto loteDestino = ensureDestinoLote(producto, loteOrigen.getCodigoLote(), loteOrigen, destino, null);
 
         int escala = resolverEscalaProducto(producto);
         BigDecimal nuevoStockOrigen = stockActual.subtract(cantidadNormalizada)
@@ -3053,7 +3077,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                                                          Almacen destino,
                                                          Producto producto,
                                                          BigDecimal cantidadTransferida) {
-        LoteProducto loteDestino = ensureDestinoLote(producto, loteOrigen.getCodigoLote(), loteOrigen, destino);
+        LoteProducto loteDestino = ensureDestinoLote(producto, loteOrigen.getCodigoLote(), loteOrigen, destino, null);
         int escala = resolverEscalaProducto(producto);
         BigDecimal stockDestino = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO)
                 .setScale(escala, RoundingMode.HALF_UP);
@@ -3073,7 +3097,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             Producto producto,
             String codigoLote,
             LoteProducto loteOrigen,
-            Almacen almacenDestino
+            Almacen almacenDestino,
+            LocalDateTime fechaVencimientoEsperada
     ) {
         Integer prodId = producto.getId();
         Integer destinoId = almacenDestino.getId();
@@ -3084,8 +3109,17 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (exacto.isPresent()) {
             LoteProducto existente = exacto.get();
+            boolean modificado = false;
             if (existente.getLoteOrigen() == null && loteOrigen != null) {
                 existente.setLoteOrigen(loteOrigen);
+                modificado = true;
+            }
+            LocalDateTime fechaAntes = existente.getFechaVencimiento();
+            validarYAsignarFechaVencimientoDevolucion(existente, fechaVencimientoEsperada);
+            if (!Objects.equals(fechaAntes, existente.getFechaVencimiento())) {
+                modificado = true;
+            }
+            if (modificado) {
                 loteProductoRepository.save(existente);
             }
             return existente;
@@ -3110,11 +3144,32 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             nuevo.setStockLote(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING));
             nuevo.setStockReservado(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING));
         }
+        validarYAsignarFechaVencimientoDevolucion(nuevo, fechaVencimientoEsperada);
 
         LoteProducto guardado = loteProductoRepository.save(nuevo);
         log.info("DESTINO_LOTE_CREADO: code={}, prod={}, destinoId={}, loteId={}",
                 codigoLote, prodId, destinoId, guardado.getId());
         return guardado;
+    }
+
+
+    private void validarYAsignarFechaVencimientoDevolucion(LoteProducto lote, LocalDateTime fechaVencimientoEsperada) {
+        if (fechaVencimientoEsperada == null) {
+            return;
+        }
+        if (lote.getFechaVencimiento() == null) {
+            lote.setFechaVencimiento(fechaVencimientoEsperada);
+            return;
+        }
+        if (!lote.getFechaVencimiento().equals(fechaVencimientoEsperada)) {
+            throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_INVALIDA,
+                    "La fecha de vencimiento enviada no coincide con la del lote",
+                    Map.of(
+                            "loteId", lote.getId(),
+                            "fechaVencimientoLote", lote.getFechaVencimiento(),
+                            "fechaVencimientoPayload", fechaVencimientoEsperada
+                    ));
+        }
     }
 
     private void recalcularAgotadoSegunDisponibilidad(LoteProducto lote) {
@@ -3614,7 +3669,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     producto,
                     codigoLote,
                     loteOrigen,
-                    almacenDestino
+                    almacenDestino,
+                    null
             );
 
             Almacen destinoAlmacen = Objects.requireNonNull(
