@@ -21,6 +21,7 @@ import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.CategoriaProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
+import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
@@ -82,6 +83,8 @@ class LoteCalidadControllerLiberarIntegrationTest extends IntegrationTestMySqlCo
     private MotivoMovimientoRepository motivoMovimientoRepository;
     @Autowired
     private TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
+    @Autowired
+    private MovimientoInventarioRepository movimientoInventarioRepository;
 
     @MockBean
     private InventoryCatalogResolver inventoryCatalogResolver;
@@ -215,5 +218,18 @@ class LoteCalidadControllerLiberarIntegrationTest extends IntegrationTestMySqlCo
                 .andExpect(jsonPath("$.id").value(lote.getId()))
                 .andExpect(jsonPath("$.ordenProduccionId").isNumber())
                 .andExpect(jsonPath("$.codigoOrdenProduccion").value("OP-LIB-1"));
+
+        LoteProducto loteActualizado = loteProductoRepository.findById(lote.getId()).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(loteActualizado.getEstado()).isEqualTo(EstadoLote.LIBERADO);
+        org.assertj.core.api.Assertions.assertThat(loteActualizado.getAlmacen().getId()).isEqualTo(lote.getAlmacen().getId());
+
+        boolean existeTransferenciaLiberacion = movimientoInventarioRepository
+                .existsByTipoMovimientoAndLoteIdAndAlmacenOrigenIdAndAlmacenDestinoIdAndClasificacion(
+                        com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento.TRANSFERENCIA,
+                        lote.getId(),
+                        lote.getAlmacen().getId().longValue(),
+                        2L,
+                        ClasificacionMovimientoInventario.LIBERACION_CALIDAD);
+        org.assertj.core.api.Assertions.assertThat(existeTransferenciaLiberacion).isFalse();
     }
 }

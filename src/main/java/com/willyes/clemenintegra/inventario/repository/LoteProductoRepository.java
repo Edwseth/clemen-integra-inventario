@@ -361,4 +361,41 @@ WHERE lp.codigoLote = :codigoLote
             @Param("productoIds") Collection<Integer> productoIds,
             @Param("almacenIds") Collection<Integer> almacenIds,
             @Param("codigosLote") Collection<String> codigosLote);
+
+
+    @Query(value = """
+        SELECT lp.id AS loteId,
+               lp.codigo_lote AS codigoLote,
+               lp.productos_id AS productoId,
+               p.nombre AS nombreProducto,
+               (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) AS stockDisponible,
+               lp.fecha_vencimiento AS fechaVencimiento,
+               lp.estado AS estado,
+               lp.almacenes_id AS almacenIdActual,
+               a.nombre AS nombreAlmacenActual
+        FROM lotes_productos lp
+                 JOIN productos p ON p.id = lp.productos_id
+                 JOIN categorias_producto cp ON cp.id = p.categorias_producto_id
+                 JOIN almacenes a ON a.id = lp.almacenes_id
+        WHERE lp.estado = 'LIBERADO'
+          AND lp.almacenes_id = :almacenCuarentenaId
+          AND cp.tipo = 'PRODUCTO_TERMINADO'
+          AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
+        ORDER BY (lp.fecha_vencimiento IS NULL) ASC, lp.fecha_vencimiento ASC, lp.id ASC
+        """,
+            countQuery = """
+        SELECT COUNT(*)
+        FROM lotes_productos lp
+                 JOIN productos p ON p.id = lp.productos_id
+                 JOIN categorias_producto cp ON cp.id = p.categorias_producto_id
+        WHERE lp.estado = 'LIBERADO'
+          AND lp.almacenes_id = :almacenCuarentenaId
+          AND cp.tipo = 'PRODUCTO_TERMINADO'
+          AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
+        """,
+            nativeQuery = true)
+    org.springframework.data.domain.Page<com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtProjection> findPendientesUbicarPt(
+            @Param("almacenCuarentenaId") Long almacenCuarentenaId,
+            org.springframework.data.domain.Pageable pageable);
+
 }

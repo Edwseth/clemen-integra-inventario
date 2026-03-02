@@ -9,6 +9,8 @@ import com.willyes.clemenintegra.calidad.repository.CondicionUsoRepository;
 import com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtProjection;
+import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoPorLoteDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO;
@@ -91,6 +93,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
     private final CondicionUsoService condicionUsoService;
     private final PlantillaAnalisisMicroService plantillaAnalisisMicroService;
     private final CondicionUsoRepository condicionUsoRepository;
+    private final UbicacionFisicaRepository ubicacionFisicaRepository;
     private final CondicionUsoMapper mapper;
     private final BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
     @jakarta.persistence.PersistenceContext
@@ -428,6 +431,45 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return lotes.map(loteProductoMapper::toResponseDTO);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LotePendienteUbicarPtResponseDTO> obtenerPendientesUbicarPt(Pageable pageable) {
+        Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+        if (almacenCuarentenaId == null) {
+            return org.springframework.data.domain.Page.empty(pageable);
+        }
+        Long almacenDestinoSugeridoId = catalogResolver.getAlmacenPtId();
+        String nombreAlmacenDestinoSugerido = null;
+        boolean requiereUbicacionDestino = false;
+        if (almacenDestinoSugeridoId != null) {
+            nombreAlmacenDestinoSugerido = almacenRepo.findById(almacenDestinoSugeridoId)
+                    .map(Almacen::getNombre)
+                    .orElse(null);
+            Integer destinoInt = Math.toIntExact(almacenDestinoSugeridoId);
+            requiereUbicacionDestino = ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(destinoInt);
+        }
+
+        Page<LotePendienteUbicarPtProjection> page = loteProductoRepository.findPendientesUbicarPt(almacenCuarentenaId, pageable);
+        final Long destinoIdFinal = almacenDestinoSugeridoId;
+        final String destinoNombreFinal = nombreAlmacenDestinoSugerido;
+        final boolean requiereUbicacionFinal = requiereUbicacionDestino;
+        return page.map(item -> LotePendienteUbicarPtResponseDTO.builder()
+                .loteId(item.getLoteId())
+                .codigoLote(item.getCodigoLote())
+                .productoId(item.getProductoId() != null ? item.getProductoId().longValue() : null)
+                .nombreProducto(item.getNombreProducto())
+                .stockDisponible(item.getStockDisponible())
+                .fechaVencimiento(item.getFechaVencimiento())
+                .estado(item.getEstado())
+                .almacenIdActual(item.getAlmacenIdActual() != null ? item.getAlmacenIdActual().longValue() : null)
+                .nombreAlmacenActual(item.getNombreAlmacenActual())
+                .almacenDestinoSugeridoId(destinoIdFinal)
+                .nombreAlmacenDestinoSugerido(destinoNombreFinal)
+                .requiereUbicacionDestino(requiereUbicacionFinal)
+                .build());
+    }
+
+
     @Transactional(readOnly = true)
     public Workbook generarReporteLotesPorVencerExcel(LocalDateTime inicio, LocalDateTime fin) {
         LocalDate hoy = LocalDate.now();
@@ -640,7 +682,7 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE,
                     "Solo el Jefe de Calidad o Super Admin pueden liberar lotes.");
         }
-        return liberarLoteConReglasCalidad(loteId, usuarioActual, true, observacion, "LIBERAR");
+        return liberarLoteConReglasCalidad(loteId, usuarioActual, false, observacion, "LIBERAR");
     }
 
     private LoteProductoResponseDTO liberarLoteConReglasCalidad(Long loteId,
@@ -662,12 +704,16 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CLASIFICACION_LIBERACION_INVALIDA");
         }
 
-        Long motivoId = catalogResolver.getMotivoIdTransferenciaCalidad();
-        MotivoMovimiento motivo = motivoMovimientoRepository.findById(motivoId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE"));
-        Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
-        TipoMovimientoDetalle tipoDetalle = tipoMovimientoDetalleRepository.findById(tipoDetalleTransferenciaId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_TRANSFERENCIA_INEXISTENTE"));
+        MotivoMovimiento motivo = null;
+        TipoMovimientoDetalle tipoDetalle = null;
+        if (moverAlmacen) {
+            Long motivoId = catalogResolver.getMotivoIdTransferenciaCalidad();
+            motivo = motivoMovimientoRepository.findById(motivoId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "MOTIVO_TRANSFERENCIA_INEXISTENTE"));
+            Long tipoDetalleTransferenciaId = catalogResolver.getTipoDetalleTransferenciaId();
+            tipoDetalle = tipoMovimientoDetalleRepository.findById(tipoDetalleTransferenciaId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "TIPO_DETALLE_TRANSFERENCIA_INEXISTENTE"));
+        }
 
         LoteProducto lote = loteProductoRepository.findByIdForUpdate(loteId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lote no encontrado"));
