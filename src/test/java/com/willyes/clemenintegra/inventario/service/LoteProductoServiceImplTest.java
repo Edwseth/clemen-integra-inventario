@@ -51,6 +51,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -583,7 +585,7 @@ class LoteProductoServiceImplTest {
     @Test
     @DisplayName("Debe listar pendientes por ubicar PT en cuarentena")
     void obtenerPendientesUbicarPt_devuelveBandeja() {
-        org.springframework.data.Pageable pageable = org.springframework.data.PageRequest.of(0, 10);
+        Pageable pageable = PageRequest.of(0, 10);
         LotePendienteUbicarPtProjection projection = org.mockito.Mockito.mock(LotePendienteUbicarPtProjection.class);
         when(projection.getLoteId()).thenReturn(11L);
         when(projection.getCodigoLote()).thenReturn("LP-PT-001");
@@ -602,7 +604,7 @@ class LoteProductoServiceImplTest {
         when(almacenRepo.findById(2L)).thenReturn(Optional.of(destino));
         when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(2)).thenReturn(true);
         when(loteProductoRepository.findPendientesUbicarPt(7L, pageable))
-                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(projection), pageable, 1));
+                .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
 
         var resultado = service.obtenerPendientesUbicarPt(pageable);
 
