@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtProjection;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
@@ -29,6 +30,7 @@ import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepos
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
+import com.willyes.clemenintegra.inventario.repository.UbicacionFisicaRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -93,6 +95,7 @@ class LoteProductoServiceImplTest {
     @Mock private CondicionUsoService condicionUsoService;
     @Mock private PlantillaAnalisisMicroService plantillaAnalisisMicroService;
     @Mock private CondicionUsoRepository condicionUsoRepository;
+    @Mock private UbicacionFisicaRepository ubicacionFisicaRepository;
     @Mock private CondicionUsoMapper condicionUsoMapper;
     @Mock private BitacoraCambiosInventarioService bitacoraCambiosInventarioService;
     @Mock private ResultadoAnalisisMicrobiologicoRepository resultadoAnalisisMicrobiologicoRepository;
@@ -138,12 +141,10 @@ class LoteProductoServiceImplTest {
         service.liberarLotePorCalidad(10L, jefeCalidad, "Obs liberación");
 
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
-        assertThat(lote.getAlmacen().getId()).isEqualTo(2L);
+        assertThat(lote.getAlmacen().getId()).isEqualTo(7L);
 
-        ArgumentCaptor<com.willyes.clemenintegra.inventario.model.MovimientoInventario> movCaptor = ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.model.MovimientoInventario.class);
-        verify(movimientoInventarioRepository).save(movCaptor.capture());
-        assertThat(movCaptor.getValue().getAlmacenDestino().getId()).isEqualTo(2L);
-        assertThat(movCaptor.getValue().getAlmacenOrigen().getId()).isEqualTo(7L);
+        verify(movimientoInventarioRepository, org.mockito.Mockito.never())
+                .save(any(com.willyes.clemenintegra.inventario.model.MovimientoInventario.class));
         ArgumentCaptor<com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO> bitacoraCaptor =
                 ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO.class);
         verify(bitacoraCambiosInventarioService).crear(bitacoraCaptor.capture());
@@ -172,12 +173,10 @@ class LoteProductoServiceImplTest {
         service.liberarLotePorCalidad(20L, jefeCalidad, "Obs liberación");
 
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
-        assertThat(lote.getAlmacen().getId()).isEqualTo(8L);
+        assertThat(lote.getAlmacen().getId()).isEqualTo(7L);
 
-        ArgumentCaptor<com.willyes.clemenintegra.inventario.model.MovimientoInventario> movCaptor = ArgumentCaptor.forClass(com.willyes.clemenintegra.inventario.model.MovimientoInventario.class);
-        verify(movimientoInventarioRepository).save(movCaptor.capture());
-        assertThat(movCaptor.getValue().getAlmacenDestino().getId()).isEqualTo(8L);
-        assertThat(movCaptor.getValue().getAlmacenOrigen().getId()).isEqualTo(7L);
+        verify(movimientoInventarioRepository, org.mockito.Mockito.never())
+                .save(any(com.willyes.clemenintegra.inventario.model.MovimientoInventario.class));
     }
 
     @Test
@@ -578,6 +577,39 @@ class LoteProductoServiceImplTest {
 
         assertThat(ex.getStatusCode().value()).isEqualTo(HttpStatus.CONFLICT.value());
         assertThat(ex.getReason()).isEqualTo("Faltan resultados microbiológicos");
+    }
+
+
+    @Test
+    @DisplayName("Debe listar pendientes por ubicar PT en cuarentena")
+    void obtenerPendientesUbicarPt_devuelveBandeja() {
+        org.springframework.data.Pageable pageable = org.springframework.data.PageRequest.of(0, 10);
+        LotePendienteUbicarPtProjection projection = org.mockito.Mockito.mock(LotePendienteUbicarPtProjection.class);
+        when(projection.getLoteId()).thenReturn(11L);
+        when(projection.getCodigoLote()).thenReturn("LP-PT-001");
+        when(projection.getProductoId()).thenReturn(33);
+        when(projection.getNombreProducto()).thenReturn("PT A");
+        when(projection.getStockDisponible()).thenReturn(new BigDecimal("4.20"));
+        when(projection.getFechaVencimiento()).thenReturn(LocalDateTime.now().plusDays(5));
+        when(projection.getEstado()).thenReturn("LIBERADO");
+        when(projection.getAlmacenIdActual()).thenReturn(7);
+        when(projection.getNombreAlmacenActual()).thenReturn("Cuarentena");
+
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
+        Almacen destino = almacenConId(2);
+        destino.setNombre("Principal PT");
+        when(almacenRepo.findById(2L)).thenReturn(Optional.of(destino));
+        when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(2)).thenReturn(true);
+        when(loteProductoRepository.findPendientesUbicarPt(7L, pageable))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(projection), pageable, 1));
+
+        var resultado = service.obtenerPendientesUbicarPt(pageable);
+
+        assertThat(resultado.getTotalElements()).isEqualTo(1);
+        assertThat(resultado.getContent().get(0).loteId()).isEqualTo(11L);
+        assertThat(resultado.getContent().get(0).almacenDestinoSugeridoId()).isEqualTo(2L);
+        assertThat(resultado.getContent().get(0).requiereUbicacionDestino()).isTrue();
     }
 
     private void mockCatalogosBasicos(Long motivoId, Long tipoDetalleId) {
