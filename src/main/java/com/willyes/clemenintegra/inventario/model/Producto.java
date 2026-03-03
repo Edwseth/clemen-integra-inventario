@@ -189,6 +189,16 @@ public class Producto {
     public boolean isRequiereAnalisisMicrobiologico() {return requiereAnalisisMicrobiologico;}
     public void setRequiereAnalisisMicrobiologico(boolean requiereAnalisisMicrobiologico) {this.requiereAnalisisMicrobiologico = requiereAnalisisMicrobiologico;}
 
-}
+    /**
+     * Alias legacy para compatibilidad con llamadas del builder usando el nombre histórico
+     * tipoAnalisisCalidad(...). Internamente delega al campo persistido tipoAnalisis.
+     */
+    public static class ProductoBuilder {
+        public ProductoBuilder tipoAnalisisCalidad(TipoAnalisisCalidad tipoAnalisisCalidad) {
+            this.tipoAnalisis = tipoAnalisisCalidad;
+            return this;
+        }
+    }
 
+}
 
