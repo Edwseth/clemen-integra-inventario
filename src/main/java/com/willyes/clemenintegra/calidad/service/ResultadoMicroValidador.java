@@ -10,7 +10,10 @@ import java.util.regex.Pattern;
 
 final class ResultadoMicroValidador {
 
-    private static final Pattern OPERADOR_NUMERICO = Pattern.compile("(?i)(<=|>=|<|>|=)?\\s*([0-9]+(?:\\.[0-9]+)?)");
+    private static final Pattern OPERADOR_NUMERICO = Pattern.compile("(?i)(<=|>=|<|>|=|≤|≥)?\\s*([0-9][0-9.,]*)");
+    private static final Pattern SOLO_NUMERO = Pattern.compile("([0-9][0-9.,]*)");
+    private static final Pattern MILES_PUNTO = Pattern.compile("^\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?$");
+    private static final Pattern MILES_COMA = Pattern.compile("^\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?$");
 
     private ResultadoMicroValidador() {
     }
@@ -45,17 +48,17 @@ final class ResultadoMicroValidador {
             }
         }
 
-        String operador = matcher.group(1) == null ? "=" : matcher.group(1);
+        String operador = normalizarOperador(matcher.group(1));
         BigDecimal limite;
         try {
-            limite = new BigDecimal(matcher.group(2));
-        } catch (NumberFormatException e) {
+            limite = parseNumero(matcher.group(2));
+        } catch (Exception e) {
             return cumpleActual;
         }
 
         BigDecimal valorResultado;
         try {
-            valorResultado = new BigDecimal(resultado.trim());
+            valorResultado = parseNumero(resultado);
         } catch (Exception e) {
             return cumpleActual;
         }
@@ -70,8 +73,37 @@ final class ResultadoMicroValidador {
         };
     }
 
+    private static String normalizarOperador(String operador) {
+        if (operador == null || operador.isBlank()) {
+            return "=";
+        }
+        return switch (operador.trim()) {
+            case "≤" -> "<=";
+            case "≥" -> ">=";
+            default -> operador.trim();
+        };
+    }
+
+    private static BigDecimal parseNumero(String texto) {
+        Matcher matcher = SOLO_NUMERO.matcher(texto == null ? "" : texto);
+        if (!matcher.find()) {
+            throw new NumberFormatException("No se encontró número en el texto");
+        }
+
+        String valor = matcher.group(1);
+        if (MILES_PUNTO.matcher(valor).matches()) {
+            valor = valor.replace(".", "").replace(',', '.');
+        } else if (MILES_COMA.matcher(valor).matches()) {
+            valor = valor.replace(",", "");
+        } else if (valor.contains(",") && !valor.contains(".")) {
+            valor = valor.replace(',', '.');
+        }
+
+        return new BigDecimal(valor);
+    }
+
     private static String extraerNumero(String texto) {
-        Matcher matcher = Pattern.compile("([0-9]+(?:\\.[0-9]+)?)").matcher(texto);
+        Matcher matcher = SOLO_NUMERO.matcher(texto);
         if (matcher.find()) {
             return matcher.group(1);
         }
@@ -89,4 +121,3 @@ final class ResultadoMicroValidador {
         return cumpleActual;
     }
 }
-

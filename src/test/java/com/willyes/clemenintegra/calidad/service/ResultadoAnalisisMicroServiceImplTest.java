@@ -244,5 +244,49 @@ class ResultadoAnalisisMicroServiceImplTest {
         verify(analisisMicroPdfService, never()).generarPdf(anyLong());
         verify(evaluacionRepository, never()).save(any(EvaluacionCalidad.class));
     }
+
+    @Test
+    void guardaCumpleCorrectamenteParaEspecificacionConMiles() {
+        PlantillaAnalisisMicrobiologico plantilla = PlantillaAnalisisMicrobiologico.builder()
+                .id(30L)
+                .nombre("Plantilla Micro")
+                .build();
+        ParametroAnalisisMicrobiologico parametro = ParametroAnalisisMicrobiologico.builder()
+                .id(50L)
+                .plantilla(plantilla)
+                .nombreEnsayo("Mesófilos")
+                .tipoResultado(TipoResultadoAnalisis.NUMERICO)
+                .especificacion("<10.000 UFC/mL")
+                .orden(1)
+                .build();
+        plantilla.setParametros(List.of(parametro));
+
+        Producto producto = Producto.builder().id(7).nombre("Prod Micro").plantillaAnalisisMicrobiologico(plantilla).build();
+        LoteProducto lote = LoteProducto.builder().id(21L).producto(producto).codigoLote("L-10").build();
+        EvaluacionCalidad evaluacion = EvaluacionCalidad.builder()
+                .id(61L)
+                .loteProducto(lote)
+                .tipoEvaluacion(com.willyes.clemenintegra.calidad.model.enums.TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
+                .archivosAdjuntos(new java.util.ArrayList<>())
+                .fechaEvaluacion(LocalDateTime.now())
+                .build();
+
+        when(evaluacionRepository.findById(61L)).thenReturn(Optional.of(evaluacion));
+        when(resultadoRepository.findByEvaluacionId(61L)).thenReturn(List.of());
+        when(resultadoRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(analisisMicroPdfService.generarPdf(61L)).thenReturn("pdf".getBytes());
+        when(evaluacionRepository.save(any(EvaluacionCalidad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var payload = List.of(ResultadoAnalisisMicroRequestDTO.builder()
+                .parametroId(50L)
+                .resultado("1000")
+                .build());
+
+        var res = service.guardarResultados(61L, payload);
+
+        assertThat(res).hasSize(1);
+        assertThat(res.get(0).getCumple()).isTrue();
+    }
+
 }
 
