@@ -31,7 +31,11 @@ public class PlantillaCampo {
     private String label;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_campo", nullable = false, length = 30)
+    @Column(
+            name = "tipo_campo",
+            nullable = false,
+            columnDefinition = "ENUM('triestado','numerico','texto','fecha','select')"
+    )
     private TipoCampoPlantilla tipoCampo;
 
     @Column(name = "requerido", nullable = false)
