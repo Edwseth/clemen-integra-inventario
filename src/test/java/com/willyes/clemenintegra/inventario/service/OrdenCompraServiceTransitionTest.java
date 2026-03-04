@@ -1,7 +1,9 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.OrdenCompraDetalleRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.OcServicioEjecucionResponse;
 import com.willyes.clemenintegra.inventario.model.HistorialEstadoOrden;
+import com.willyes.clemenintegra.inventario.model.OcServicioEjecucion;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.model.Producto;
@@ -9,7 +11,10 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.HistorialEstadoOrdenRepository;
+import com.willyes.clemenintegra.inventario.repository.OcServicioEjecucionRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
+import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
+import com.willyes.clemenintegra.inventario.repository.RecepcionOCRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
@@ -26,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -48,6 +54,12 @@ class OrdenCompraServiceTransitionTest {
     private OrdenCompraRepository ordenCompraRepository;
     @Mock
     private HistorialEstadoOrdenRepository historialEstadoOrdenRepository;
+    @Mock
+    private OcServicioEjecucionRepository ocServicioEjecucionRepository;
+    @Mock
+    private MovimientoInventarioRepository movimientoInventarioRepository;
+    @Mock
+    private RecepcionOCRepository recepcionOCRepository;
 
     @InjectMocks
     private OrdenCompraService ordenCompraService;
@@ -273,6 +285,127 @@ class OrdenCompraServiceTransitionTest {
         assertEquals(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE, orden.getEstado());
         assertEquals(new BigDecimal("3"), orden.getDetalles().get(0).getCantidadRecibida());
         assertEquals(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE, historial.getEstado());
+    }
+
+    @Test
+    void ejecutarServicioParcialUnaLineaActualizaRecibidosEstadoYLog() {
+        OrdenCompraDetalle d1 = detalleConId(101L, new BigDecimal("5"), BigDecimal.ZERO);
+        OrdenCompraDetalle d2 = detalleConId(102L, new BigDecimal("4"), BigDecimal.ZERO);
+        OrdenCompra orden = OrdenCompra.builder()
+                .id(20)
+                .tipo(TipoOrdenCompra.SERVICIOS)
+                .estado(EstadoOrdenCompra.ENVIADA)
+                .detalles(List.of(d1, d2))
+                .build();
+        d1.setOrdenCompra(orden);
+        d2.setOrdenCompra(orden);
+
+        when(ordenCompraRepository.findByIdWithDetalles(20L)).thenReturn(Optional.of(orden));
+        when(ordenCompraRepository.save(any(OrdenCompra.class))).thenAnswer(a -> a.getArgument(0));
+        when(ocServicioEjecucionRepository.save(any(OcServicioEjecucion.class))).thenAnswer(a -> a.getArgument(0));
+        when(historialEstadoOrdenRepository.save(any(HistorialEstadoOrden.class))).thenAnswer(a -> a.getArgument(0));
+
+        OcServicioEjecucion ejecucion = ordenCompraService.ejecutarServicioParcial(
+                20L, 101L, new BigDecimal("2"), LocalDateTime.now(), "avance 1", buildUser(7L, RolUsuario.ROL_COMPRADOR));
+
+        assertEquals(new BigDecimal("2"), d1.getCantidadRecibida());
+        assertEquals(EstadoOrdenCompra.PARCIALMENTE_RECIBIDA, orden.getEstado());
+        assertEquals(new BigDecimal("2"), ejecucion.getCantidadEjecutada());
+        verify(ocServicioEjecucionRepository).save(any(OcServicioEjecucion.class));
+        verify(historialEstadoOrdenRepository).save(any(HistorialEstadoOrden.class));
+        verify(movimientoInventarioRepository, never()).save(any());
+        verify(recepcionOCRepository, never()).save(any());
+    }
+
+    @Test
+    void ejecutarServicioParcialCompletaRestanteYPasaARecibidaCompletamente() {
+        OrdenCompraDetalle detalle = detalleConId(201L, new BigDecimal("5"), new BigDecimal("2"));
+        OrdenCompra orden = OrdenCompra.builder()
+                .id(21)
+                .tipo(TipoOrdenCompra.SERVICIOS)
+                .estado(EstadoOrdenCompra.PARCIALMENTE_RECIBIDA)
+                .detalles(List.of(detalle))
+                .build();
+        detalle.setOrdenCompra(orden);
+
+        when(ordenCompraRepository.findByIdWithDetalles(21L)).thenReturn(Optional.of(orden));
+        when(ordenCompraRepository.save(any(OrdenCompra.class))).thenAnswer(a -> a.getArgument(0));
+        when(ocServicioEjecucionRepository.save(any(OcServicioEjecucion.class))).thenAnswer(a -> a.getArgument(0));
+        when(historialEstadoOrdenRepository.save(any(HistorialEstadoOrden.class))).thenAnswer(a -> a.getArgument(0));
+
+        ordenCompraService.ejecutarServicioParcial(
+                21L, 201L, new BigDecimal("3"), null, "completa", buildUser(9L, RolUsuario.ROL_COMPRADOR));
+
+        assertEquals(new BigDecimal("5"), detalle.getCantidadRecibida());
+        assertEquals(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE, orden.getEstado());
+    }
+
+    @Test
+    void ejecutarServicioParcialExcedePendienteLanza422() {
+        OrdenCompraDetalle detalle = detalleConId(301L, new BigDecimal("5"), new BigDecimal("4"));
+        OrdenCompra orden = OrdenCompra.builder()
+                .id(22)
+                .tipo(TipoOrdenCompra.SERVICIOS)
+                .estado(EstadoOrdenCompra.ENVIADA)
+                .detalles(List.of(detalle))
+                .build();
+
+        when(ordenCompraRepository.findByIdWithDetalles(22L)).thenReturn(Optional.of(orden));
+
+        CustomBusinessException ex = assertThrows(CustomBusinessException.class, () ->
+                ordenCompraService.ejecutarServicioParcial(22L, 301L, new BigDecimal("2"), null, null, buildUser(9L, RolUsuario.ROL_COMPRADOR)));
+
+        assertEquals(ApiErrorCode.OC_SERVICIO_EXCEDE_PENDIENTE, ex.getCode());
+    }
+
+    @Test
+    void ejecutarServicioParcialEnOcBienesLanza422() {
+        OrdenCompraDetalle detalle = detalleConId(401L, new BigDecimal("5"), BigDecimal.ZERO);
+        OrdenCompra orden = OrdenCompra.builder()
+                .id(23)
+                .tipo(TipoOrdenCompra.BIENES)
+                .estado(EstadoOrdenCompra.ENVIADA)
+                .detalles(List.of(detalle))
+                .build();
+
+        when(ordenCompraRepository.findByIdWithDetalles(23L)).thenReturn(Optional.of(orden));
+
+        CustomBusinessException ex = assertThrows(CustomBusinessException.class, () ->
+                ordenCompraService.ejecutarServicioParcial(23L, 401L, new BigDecimal("1"), null, null, buildUser(9L, RolUsuario.ROL_COMPRADOR)));
+
+        assertEquals(ApiErrorCode.OC_NO_ES_SERVICIO, ex.getCode());
+    }
+
+    @Test
+    void listarEjecucionesServicioRetornaOrdenadoPorFechaDesc() {
+        OrdenCompra orden = OrdenCompra.builder().id(24).tipo(TipoOrdenCompra.SERVICIOS).build();
+        OrdenCompraDetalle detalle = detalleConId(501L, new BigDecimal("5"), BigDecimal.ZERO);
+        Usuario usuario = new Usuario();
+        usuario.setNombreCompleto("Usuario Test");
+
+        OcServicioEjecucion ejecucion = OcServicioEjecucion.builder()
+                .ordenCompra(orden)
+                .ordenCompraDetalle(detalle)
+                .cantidadEjecutada(new BigDecimal("1"))
+                .fechaEjecucion(LocalDateTime.now())
+                .observaciones("obs")
+                .usuario(usuario)
+                .build();
+
+        when(ordenCompraRepository.findById(24L)).thenReturn(Optional.of(orden));
+        when(ocServicioEjecucionRepository.findByOrdenCompra_IdOrderByFechaEjecucionDesc(24L)).thenReturn(List.of(ejecucion));
+
+        List<OcServicioEjecucionResponse> respuesta = ordenCompraService.listarEjecucionesServicio(24L);
+
+        assertEquals(1, respuesta.size());
+        assertEquals(501L, respuesta.get(0).detalleId());
+        assertEquals("Usuario Test", respuesta.get(0).usuarioNombre());
+    }
+
+    private OrdenCompraDetalle detalleConId(Long id, BigDecimal cantidad, BigDecimal recibida) {
+        OrdenCompraDetalle detalle = detalle(cantidad, recibida);
+        detalle.setId(id);
+        return detalle;
     }
 
     private OrdenCompraDetalle detalle(BigDecimal cantidad, BigDecimal recibida) {

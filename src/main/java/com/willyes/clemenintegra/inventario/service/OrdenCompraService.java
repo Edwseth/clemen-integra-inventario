@@ -2,7 +2,9 @@ package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.dto.OrdenCompraDetalleRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.OcServicioEjecucionResponse;
 import com.willyes.clemenintegra.inventario.model.HistorialEstadoOrden;
+import com.willyes.clemenintegra.inventario.model.OcServicioEjecucion;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
@@ -10,6 +12,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.repository.HistorialEstadoOrdenRepository;
+import com.willyes.clemenintegra.inventario.repository.OcServicioEjecucionRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
@@ -38,6 +41,7 @@ public class OrdenCompraService {
 
     private final OrdenCompraRepository ordenCompraRepository;
     private final HistorialEstadoOrdenRepository historialEstadoOrdenRepository;
+    private final OcServicioEjecucionRepository ocServicioEjecucionRepository;
 
     /**
      * Busca una orden de compra por su ID incluyendo proveedor y detalles.
@@ -307,39 +311,171 @@ public class OrdenCompraService {
         OrdenCompra orden = ordenCompraRepository.findByIdWithDetalles(ordenId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ORDEN_NO_ENCONTRADA"));
 
-        if (orden.getTipo() != TipoOrdenCompra.SERVICIOS) {
-            throw new CustomBusinessException(ApiErrorCode.OC_SERVICIO_INVALIDA, "OC_NO_ES_DE_SERVICIOS");
-        }
+        validarOcServicios(orden);
 
         if (!(orden.getEstado() == EstadoOrdenCompra.ENVIADA || orden.getEstado() == EstadoOrdenCompra.PARCIALMENTE_RECIBIDA)) {
             throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "ESTADO_NO_PERMITE_EJECUTAR_SERVICIO");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         if (orden.getDetalles() != null) {
             for (OrdenCompraDetalle detalle : orden.getDetalles()) {
-                if (detalle != null) {
-                    detalle.setCantidadRecibida(detalle.getCantidad());
+                if (detalle == null) {
+                    continue;
+                }
+                BigDecimal pendiente = pendiente(detalle);
+                if (pendiente.compareTo(BigDecimal.ZERO) > 0) {
+                    registrarEjecucion(orden, detalle, pendiente, now, observaciones, principal);
+                    detalle.setCantidadRecibida(safe(detalle.getCantidadRecibida()).add(pendiente));
                 }
             }
         }
 
-        orden.setEstado(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE);
+        EstadoOrdenCompra estadoAnterior = orden.getEstado();
+        EstadoOrdenCompra nuevoEstado = calcularEstadoServicios(orden);
+        orden.setEstado(nuevoEstado);
         ordenCompraRepository.save(orden);
 
+        if (nuevoEstado != estadoAnterior) {
+            return guardarHistorialEstado(orden, nuevoEstado, principal, observaciones);
+        }
+
+        return HistorialEstadoOrden.builder()
+                .ordenCompra(orden)
+                .estado(nuevoEstado)
+                .fechaCambio(now)
+                .cambiadoPor(resolveUsuario(principal))
+                .observaciones(observaciones)
+                .build();
+    }
+
+    public OcServicioEjecucion ejecutarServicioParcial(Long ordenId,
+                                                       Long detalleId,
+                                                       BigDecimal cantidadEjecutada,
+                                                       LocalDateTime fechaEjecucion,
+                                                       String observaciones,
+                                                       CustomUserDetails principal) {
+        if (principal == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "USUARIO_NO_AUTENTICADO");
+        }
+        if (cantidadEjecutada == null || cantidadEjecutada.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "CANTIDAD_EJECUTADA_INVALIDA");
+        }
+
+        OrdenCompra orden = ordenCompraRepository.findByIdWithDetalles(ordenId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ORDEN_NO_ENCONTRADA"));
+        validarOcServicios(orden);
+
+        OrdenCompraDetalle detalle = orden.getDetalles().stream()
+                .filter(d -> d != null && d.getId() != null && d.getId().equals(detalleId))
+                .findFirst()
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.OC_DETALLE_NO_PERTENECE, "OC_DETALLE_NO_PERTENECE"));
+
+        BigDecimal pendiente = pendiente(detalle);
+        if (cantidadEjecutada.compareTo(pendiente) > 0) {
+            throw new CustomBusinessException(ApiErrorCode.OC_SERVICIO_EXCEDE_PENDIENTE, "OC_SERVICIO_EXCEDE_PENDIENTE");
+        }
+
+        LocalDateTime fechaReal = fechaEjecucion != null ? fechaEjecucion : LocalDateTime.now();
+        OcServicioEjecucion ejecucion = registrarEjecucion(orden, detalle, cantidadEjecutada, fechaReal, observaciones, principal);
+
+        detalle.setCantidadRecibida(safe(detalle.getCantidadRecibida()).add(cantidadEjecutada));
+
+        EstadoOrdenCompra estadoAnterior = orden.getEstado();
+        EstadoOrdenCompra nuevoEstado = calcularEstadoServicios(orden);
+        orden.setEstado(nuevoEstado);
+        ordenCompraRepository.save(orden);
+
+        if (nuevoEstado != estadoAnterior) {
+            guardarHistorialEstado(orden, nuevoEstado, principal, observaciones);
+        }
+        return ejecucion;
+    }
+
+    public List<OcServicioEjecucionResponse> listarEjecucionesServicio(Long ordenId) {
+        OrdenCompra orden = ordenCompraRepository.findById(ordenId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ORDEN_NO_ENCONTRADA"));
+        validarOcServicios(orden);
+
+        return ocServicioEjecucionRepository.findByOrdenCompra_IdOrderByFechaEjecucionDesc(ordenId)
+                .stream()
+                .map(e -> new OcServicioEjecucionResponse(
+                        e.getFechaEjecucion(),
+                        e.getOrdenCompraDetalle().getId(),
+                        e.getCantidadEjecutada(),
+                        e.getObservaciones(),
+                        e.getUsuario() != null ? e.getUsuario().getNombreCompleto() : null
+                ))
+                .toList();
+    }
+
+    private void validarOcServicios(OrdenCompra orden) {
+        if (orden.getTipo() != TipoOrdenCompra.SERVICIOS) {
+            throw new CustomBusinessException(ApiErrorCode.OC_NO_ES_SERVICIO, "OC_NO_ES_SERVICIO");
+        }
+    }
+
+    private HistorialEstadoOrden guardarHistorialEstado(OrdenCompra orden,
+                                                        EstadoOrdenCompra estado,
+                                                        CustomUserDetails principal,
+                                                        String observaciones) {
+        HistorialEstadoOrden historial = HistorialEstadoOrden.builder()
+                .ordenCompra(orden)
+                .estado(estado)
+                .fechaCambio(LocalDateTime.now())
+                .cambiadoPor(resolveUsuario(principal))
+                .observaciones(observaciones)
+                .build();
+        return historialEstadoOrdenRepository.save(historial);
+    }
+
+    private OcServicioEjecucion registrarEjecucion(OrdenCompra orden,
+                                                   OrdenCompraDetalle detalle,
+                                                   BigDecimal cantidad,
+                                                   LocalDateTime fecha,
+                                                   String observaciones,
+                                                   CustomUserDetails principal) {
+        OcServicioEjecucion ejecucion = OcServicioEjecucion.builder()
+                .ordenCompra(orden)
+                .ordenCompraDetalle(detalle)
+                .cantidadEjecutada(cantidad)
+                .fechaEjecucion(fecha)
+                .observaciones(observaciones)
+                .usuario(resolveUsuario(principal))
+                .createdAt(LocalDateTime.now())
+                .build();
+        return ocServicioEjecucionRepository.save(ejecucion);
+    }
+
+    private EstadoOrdenCompra calcularEstadoServicios(OrdenCompra orden) {
+        boolean allReceived = orden.getDetalles().stream()
+                .filter(Objects::nonNull)
+                .allMatch(d -> safe(d.getCantidadRecibida()).compareTo(safe(d.getCantidad())) >= 0);
+        if (allReceived) {
+            return EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE;
+        }
+
+        boolean anyReceived = orden.getDetalles().stream()
+                .filter(Objects::nonNull)
+                .anyMatch(d -> safe(d.getCantidadRecibida()).compareTo(BigDecimal.ZERO) > 0);
+        return anyReceived ? EstadoOrdenCompra.PARCIALMENTE_RECIBIDA : EstadoOrdenCompra.ENVIADA;
+    }
+
+    private BigDecimal pendiente(OrdenCompraDetalle detalle) {
+        return safe(detalle.getCantidad()).subtract(safe(detalle.getCantidadRecibida()));
+    }
+
+    private BigDecimal safe(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private Usuario resolveUsuario(CustomUserDetails principal) {
         Usuario usuario = principal.getUsuario() != null ? principal.getUsuario() : new Usuario();
         if (usuario.getId() == null) {
             usuario.setId(principal.getId());
         }
-
-        HistorialEstadoOrden historial = HistorialEstadoOrden.builder()
-                .ordenCompra(orden)
-                .estado(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE)
-                .fechaCambio(LocalDateTime.now())
-                .cambiadoPor(usuario)
-                .observaciones(observaciones)
-                .build();
-
-        return historialEstadoOrdenRepository.save(historial);
+        return usuario;
     }
+
 
 }
