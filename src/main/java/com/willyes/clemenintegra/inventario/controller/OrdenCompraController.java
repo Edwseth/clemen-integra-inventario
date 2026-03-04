@@ -332,6 +332,39 @@ public class OrdenCompraController {
         return ResponseEntity.ok(HistorialEstadoOrdenMapper.toResponse(historial));
     }
 
+
+    @PostMapping("/{ocId}/servicios/ejecuciones")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE')")
+    public ResponseEntity<OcServicioEjecucionResponse> ejecutarServicioParcial(
+            @PathVariable Long ocId,
+            @RequestBody OcServicioEjecucionRequest request,
+            @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
+        OcServicioEjecucion ejecucion = ordenCompraService.ejecutarServicioParcial(
+                ocId,
+                request.detalleId(),
+                request.cantidadEjecutada(),
+                request.fechaEjecucion(),
+                request.observaciones(),
+                usuarioAutenticado);
+
+        OcServicioEjecucionResponse response = new OcServicioEjecucionResponse(
+                ejecucion.getFechaEjecucion(),
+                ejecucion.getOrdenCompraDetalle().getId(),
+                ejecucion.getCantidadEjecutada(),
+                ejecucion.getObservaciones(),
+                ejecucion.getUsuario() != null ? ejecucion.getUsuario().getNombreCompleto() : null
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{ocId}/servicios/ejecuciones")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE')")
+    public ResponseEntity<List<OcServicioEjecucionResponse>> listarEjecucionesServicio(@PathVariable Long ocId) {
+        return ResponseEntity.ok(ordenCompraService.listarEjecucionesServicio(ocId));
+    }
+
     @GetMapping("/{id}/historial")
     public ResponseEntity<List<HistorialEstadoOrdenResponse>> historial(@PathVariable Long id) {
         List<HistorialEstadoOrdenResponse> historial = historialEstadoOrdenService.listarPorOrden(id)
