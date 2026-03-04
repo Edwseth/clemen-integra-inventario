@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.HistorialEstadoOrdenRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
