@@ -7,8 +7,10 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.Proveedor;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.CategoriaProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
@@ -35,6 +37,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -104,6 +107,19 @@ class OrdenCompraListadoFiltrosIntegrationTest extends IntegrationTestMySqlConta
                 .activo(true)
                 .build());
 
+        Producto servicio = productoRepository.save(Producto.builder()
+                .codigoSku("SKU-OC-SRV")
+                .nombre("Servicio OC")
+                .descripcionProducto("Servicio")
+                .stockMinimo(BigDecimal.ZERO)
+                .unidadMedida(unidad)
+                .categoriaProducto(categoria)
+                .creadoPor(usuario)
+                .tipoAnalisis(TipoAnalisisCalidad.NINGUNO)
+                .modoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK)
+                .activo(true)
+                .build());
+
         Proveedor aldaplast = proveedorRepository.save(Proveedor.builder()
                 .nombre("ALDAPLAST")
                 .identificacion("100")
@@ -130,6 +146,7 @@ class OrdenCompraListadoFiltrosIntegrationTest extends IntegrationTestMySqlConta
                 .fechaCompromisoEntrega(LocalDate.now().minusDays(1))
                 .proveedor(aldaplast)
                 .estado(EstadoOrdenCompra.ENVIADA)
+                .tipo(TipoOrdenCompra.BIENES)
                 .build());
 
         OrdenCompra ocMismoProveedor = ordenCompraRepository.save(OrdenCompra.builder()
@@ -138,6 +155,7 @@ class OrdenCompraListadoFiltrosIntegrationTest extends IntegrationTestMySqlConta
                 .fechaCompromisoEntrega(LocalDate.now().plusDays(4))
                 .proveedor(aldaplast)
                 .estado(EstadoOrdenCompra.CREADA)
+                .tipo(TipoOrdenCompra.BIENES)
                 .build());
 
         OrdenCompra ocOtroProveedor = ordenCompraRepository.save(OrdenCompra.builder()
@@ -146,6 +164,7 @@ class OrdenCompraListadoFiltrosIntegrationTest extends IntegrationTestMySqlConta
                 .fechaCompromisoEntrega(LocalDate.now().plusDays(5))
                 .proveedor(otro)
                 .estado(EstadoOrdenCompra.ENVIADA)
+                .tipo(TipoOrdenCompra.SERVICIOS)
                 .build());
 
         ordenCompraDetalleRepository.save(OrdenCompraDetalle.builder()
@@ -170,7 +189,7 @@ class OrdenCompraListadoFiltrosIntegrationTest extends IntegrationTestMySqlConta
 
         ordenCompraDetalleRepository.save(OrdenCompraDetalle.builder()
                 .ordenCompra(ocOtroProveedor)
-                .producto(producto)
+                .producto(servicio)
                 .cantidad(new BigDecimal("6.000"))
                 .cantidadRecibida(BigDecimal.ZERO)
                 .valorUnitario(BigDecimal.ONE)
@@ -243,5 +262,55 @@ class OrdenCompraListadoFiltrosIntegrationTest extends IntegrationTestMySqlConta
                 .andExpect(jsonPath("$.content[0].codigoOrden").value("OC-ATRA"))
                 .andExpect(jsonPath("$.content[0].estado").value("ENVIADA"))
                 .andExpect(jsonPath("$.content[0].proveedorNombre", containsStringIgnoringCase("aldap")));
+    }
+
+    @Test
+    @WithMockUser(authorities = "INV_READ")
+    void listarSinTipoIncluyeBienesYServicios() throws Exception {
+        mockMvc.perform(get("/api/ordenes-compra")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sort", "id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].tipo", containsInAnyOrder("BIENES", "BIENES", "SERVICIOS")));
+    }
+
+    @Test
+    @WithMockUser(authorities = "INV_READ")
+    void listarConTipoServiciosDevuelveSoloServicios() throws Exception {
+        mockMvc.perform(get("/api/ordenes-compra")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("tipo", "SERVICIOS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[*].tipo", everyItem(org.hamcrest.Matchers.is("SERVICIOS"))));
+    }
+
+    @Test
+    @WithMockUser(authorities = "INV_READ")
+    void listarEstadoSinTipoMantieneDefaultBienes() throws Exception {
+        mockMvc.perform(get("/api/ordenes-compra/estado")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("estado", "ENVIADA"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].codigoOrden").value("OC-ATRA"))
+                .andExpect(jsonPath("$.content[*].tipo", everyItem(org.hamcrest.Matchers.is("BIENES"))));
+    }
+
+    @Test
+    @WithMockUser(authorities = "INV_READ")
+    void listarEstadoConTipoServiciosDevuelveSoloServicios() throws Exception {
+        mockMvc.perform(get("/api/ordenes-compra/estado")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("estado", "ENVIADA")
+                        .param("tipo", "SERVICIOS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].codigoOrden").value("OC-NORTE"))
+                .andExpect(jsonPath("$.content[*].tipo", everyItem(org.hamcrest.Matchers.is("SERVICIOS"))));
     }
 }

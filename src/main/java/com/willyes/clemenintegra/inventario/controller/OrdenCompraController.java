@@ -188,8 +188,7 @@ public class OrdenCompraController {
             @RequestParam(name = "tipo", required = false) TipoOrdenCompra tipo,
             @RequestParam(name = "proveedor", required = false) String proveedor,
             @RequestParam(name = "atrasadas", required = false, defaultValue = "false") boolean atrasadas) {
-        TipoOrdenCompra tipoFiltro = tipo != null ? tipo : TipoOrdenCompra.BIENES;
-        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarFiltrado(pageable, atrasadas, estado, tipoFiltro, proveedor);
+        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarFiltrado(pageable, atrasadas, estado, tipo, proveedor);
         return ResponseEntity.ok(page);
     }
 

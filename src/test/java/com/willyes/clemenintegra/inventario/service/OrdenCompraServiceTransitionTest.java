@@ -7,7 +7,6 @@ import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
-import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.HistorialEstadoOrdenRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
@@ -120,7 +119,7 @@ class OrdenCompraServiceTransitionTest {
                 anyBoolean(),
                 org.mockito.ArgumentMatchers.<Set<EstadoOrdenCompra>>any(),
                 nullable(EstadoOrdenCompra.class),
-                eq(TipoOrdenCompra.BIENES),
+                isNull(),
                 nullable(String.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         Page<?> result = ordenCompraService.listar(pageable, true);
@@ -130,7 +129,7 @@ class OrdenCompraServiceTransitionTest {
                 eq(true),
                 org.mockito.ArgumentMatchers.<Set<EstadoOrdenCompra>>any(),
                 isNull(),
-                eq(TipoOrdenCompra.BIENES),
+                isNull(),
                 isNull());
     }
 
