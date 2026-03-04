@@ -1,0 +1,9 @@
+-- Soporte OC tipo BIENES/SERVICIOS y categoría de servicios
+
+ALTER TABLE categorias_producto
+    MODIFY COLUMN tipo ENUM('MATERIA_PRIMA','PRODUCTO_TERMINADO','MATERIAL_EMPAQUE','SUMINISTROS','REPUESTOS','OBSOLETOS','PRODUCTO_SEMI_ELABORADO','SERVICIOS') NOT NULL;
+
+ALTER TABLE ordenes_compra
+    ADD COLUMN tipo ENUM('BIENES','SERVICIOS') NOT NULL DEFAULT 'BIENES';
+
+CREATE INDEX idx_oc_tipo_estado ON ordenes_compra (tipo, estado);

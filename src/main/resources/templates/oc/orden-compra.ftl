@@ -110,7 +110,7 @@
       </div>
     </div>
     <div class="cell oc-meta">
-      <h1>Orden de Compra</h1>
+      <h1>${tituloDocumento}</h1>
       <div class="oc-num">No. ${numero}</div>
       <div class="oc-tip small">Citar éste número en el documento de entrega de la mercancía.</div>
     </div>

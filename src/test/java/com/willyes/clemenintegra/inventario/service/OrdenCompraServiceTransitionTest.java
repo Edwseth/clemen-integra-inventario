@@ -4,7 +4,10 @@ import com.willyes.clemenintegra.inventario.dto.OrdenCompraDetalleRequestDTO;
 import com.willyes.clemenintegra.inventario.model.HistorialEstadoOrden;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.HistorialEstadoOrdenRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
@@ -192,6 +195,65 @@ class OrdenCompraServiceTransitionTest {
         LocalDate result = ordenCompraService.calcularFechaCompromisoEntrega(detalles);
 
         assertNull(result);
+    }
+
+    @Test
+    void determinarTipoOrdenServiciosCuandoTodosSinControl() {
+        Producto servicioA = new Producto();
+        servicioA.setModoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK);
+        Producto servicioB = new Producto();
+        servicioB.setModoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK);
+
+        TipoOrdenCompra tipo = ordenCompraService.determinarTipoOrdenPorDetalles(List.of(servicioA, servicioB));
+
+        assertEquals(TipoOrdenCompra.SERVICIOS, tipo);
+    }
+
+    @Test
+    void determinarTipoOrdenBienesCuandoTodosConControl() {
+        Producto bienA = new Producto();
+        bienA.setModoControlInventario(ModoControlInventario.CONTROL_STOCK);
+        Producto bienB = new Producto();
+        bienB.setModoControlInventario(ModoControlInventario.CONTROL_STOCK);
+
+        TipoOrdenCompra tipo = ordenCompraService.determinarTipoOrdenPorDetalles(List.of(bienA, bienB));
+
+        assertEquals(TipoOrdenCompra.BIENES, tipo);
+    }
+
+    @Test
+    void determinarTipoOrdenMezcladoLanza422() {
+        Producto bien = new Producto();
+        bien.setModoControlInventario(ModoControlInventario.CONTROL_STOCK);
+        Producto servicio = new Producto();
+        servicio.setModoControlInventario(ModoControlInventario.SIN_CONTROL_STOCK);
+
+        CustomBusinessException ex = assertThrows(CustomBusinessException.class,
+                () -> ordenCompraService.determinarTipoOrdenPorDetalles(List.of(bien, servicio)));
+
+        assertEquals(ApiErrorCode.OC_TIPO_MEZCLADO_NO_PERMITIDO, ex.getCode());
+    }
+
+    @Test
+    void ejecutarServicioActualizaCantidadesEstadoEHistorial() {
+        OrdenCompra orden = OrdenCompra.builder()
+                .id(10)
+                .tipo(TipoOrdenCompra.SERVICIOS)
+                .estado(EstadoOrdenCompra.ENVIADA)
+                .detalles(List.of(detalle(new BigDecimal("3"), BigDecimal.ZERO)))
+                .build();
+
+        when(ordenCompraRepository.findByIdWithDetalles(10L)).thenReturn(Optional.of(orden));
+        when(ordenCompraRepository.save(any(OrdenCompra.class))).thenAnswer(a -> a.getArgument(0));
+        when(historialEstadoOrdenRepository.save(any(HistorialEstadoOrden.class)))
+                .thenAnswer(a -> a.getArgument(0));
+
+        HistorialEstadoOrden historial = ordenCompraService.ejecutarServicio(10L,
+                buildUser(7L, RolUsuario.ROL_COMPRADOR), "servicio ejecutado");
+
+        assertEquals(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE, orden.getEstado());
+        assertEquals(new BigDecimal("3"), orden.getDetalles().get(0).getCantidadRecibida());
+        assertEquals(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE, historial.getEstado());
     }
 
     private OrdenCompraDetalle detalle(BigDecimal cantidad, BigDecimal recibida) {

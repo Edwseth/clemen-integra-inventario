@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.mapper.OrdenCompraMapper;
 import com.willyes.clemenintegra.inventario.mapper.HistorialEstadoOrdenMapper;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraPdfService;
 import com.willyes.clemenintegra.inventario.service.OrdenCompraService;
@@ -89,14 +90,22 @@ public class OrdenCompraController {
 
         orden.setCodigoOrden(ordenCompraService.generarCodigoOrdenCompra());
 
-        List<OrdenCompraDetalle> detalles = dto.getDetalles().stream().map(d -> {
-            Producto producto = productoRepository.findById(d.getProductoId())
-                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado"));
+        List<Producto> productosDetalle = dto.getDetalles().stream().map(d ->
+                productoRepository.findById(d.getProductoId())
+                        .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado"))
+        ).toList();
+
+        orden.setTipo(ordenCompraService.determinarTipoOrdenPorDetalles(productosDetalle));
+
+        List<OrdenCompraDetalle> detalles = new java.util.ArrayList<>();
+        for (int i = 0; i < dto.getDetalles().size(); i++) {
+            var d = dto.getDetalles().get(i);
+            Producto producto = productosDetalle.get(i);
 
             validarIvaPorcentaje(d.getIva());
             BigDecimal valorTotal = calcularValorTotalLinea(d.getCantidad(), d.getValorUnitario(), d.getIva());
 
-            return OrdenCompraDetalle.builder()
+            detalles.add(OrdenCompraDetalle.builder()
                     .ordenCompra(orden)
                     .producto(producto)
                     .cantidad(d.getCantidad())
@@ -105,8 +114,8 @@ public class OrdenCompraController {
                     .iva(d.getIva())
                     .cantidadRecibida(BigDecimal.ZERO)
                     .fechaNecesidad(d.getFechaNecesidad())
-                    .build();
-        }).toList();
+                    .build());
+        }
 
         orden.setDetalles(detalles);
 
@@ -139,15 +148,22 @@ public class OrdenCompraController {
         // Eliminar detalles anteriores
         detalleRepository.deleteByOrdenCompra_Id(id);
 
+        List<Producto> productosDetalle = dto.getDetalles().stream().map(d ->
+                productoRepository.findById(d.getProductoId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Producto no encontrado"))
+        ).toList();
+        orden.setTipo(ordenCompraService.determinarTipoOrdenPorDetalles(productosDetalle));
+
         // Crear y guardar nuevos detalles
-        List<OrdenCompraDetalle> nuevosDetalles = dto.getDetalles().stream().map(d -> {
-            Producto producto = productoRepository.findById(d.getProductoId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Producto no encontrado"));
+        List<OrdenCompraDetalle> nuevosDetalles = new java.util.ArrayList<>();
+        for (int i = 0; i < dto.getDetalles().size(); i++) {
+            var d = dto.getDetalles().get(i);
+            Producto producto = productosDetalle.get(i);
 
             validarIvaPorcentaje(d.getIva());
             BigDecimal valorTotal = calcularValorTotalLinea(d.getCantidad(), d.getValorUnitario(), d.getIva());
 
-            return OrdenCompraDetalle.builder()
+            nuevosDetalles.add(OrdenCompraDetalle.builder()
                     .ordenCompra(orden)
                     .producto(producto)
                     .cantidad(d.getCantidad())
@@ -156,8 +172,8 @@ public class OrdenCompraController {
                     .iva(d.getIva())
                     .cantidadRecibida(BigDecimal.ZERO)
                     .fechaNecesidad(d.getFechaNecesidad())
-                    .build();
-        }).toList();
+                    .build());
+        }
 
         detalleRepository.saveAll(nuevosDetalles);
 
@@ -169,17 +185,21 @@ public class OrdenCompraController {
     public ResponseEntity<Page<OrdenCompraResponseDTO>> listar(
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(name = "estado", required = false) EstadoOrdenCompra estado,
+            @RequestParam(name = "tipo", required = false) TipoOrdenCompra tipo,
             @RequestParam(name = "proveedor", required = false) String proveedor,
             @RequestParam(name = "atrasadas", required = false, defaultValue = "false") boolean atrasadas) {
-        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarFiltrado(pageable, atrasadas, estado, proveedor);
+        TipoOrdenCompra tipoFiltro = tipo != null ? tipo : TipoOrdenCompra.BIENES;
+        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarFiltrado(pageable, atrasadas, estado, tipoFiltro, proveedor);
         return ResponseEntity.ok(page);
     }
 
     @GetMapping("/estado")
     public ResponseEntity<Page<OrdenCompraResponseDTO>> listarPorEstado(
             @RequestParam EstadoOrdenCompra estado,
+            @RequestParam(name = "tipo", required = false) TipoOrdenCompra tipo,
             @PageableDefault(size = 10) Pageable pageable) {
-        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarFiltrado(pageable, false, estado, null);
+        TipoOrdenCompra tipoFiltro = tipo != null ? tipo : TipoOrdenCompra.BIENES;
+        Page<OrdenCompraResponseDTO> page = ordenCompraService.listarPorEstado(estado, tipoFiltro, pageable);
         return ResponseEntity.ok(page);
     }
 
@@ -296,6 +316,21 @@ public class OrdenCompraController {
     public ResponseEntity<List<RecepcionOCResponseDTO>> recepcionesPorOrden(@PathVariable Long id) {
         List<RecepcionOCResponseDTO> recepciones = recepcionOCService.listarRecepcionesPorOrden(id);
         return ResponseEntity.ok(recepciones);
+    }
+
+
+    @PutMapping("/{id}/ejecutar-servicio")
+    // TODO:REMOVE_AFTER_INV_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('INV_WRITE','INV_WORKFLOW','INV_DECIDE')")
+    public ResponseEntity<HistorialEstadoOrdenResponse> ejecutarServicio(
+            @PathVariable Long id,
+            @RequestBody(required = false) EjecutarServicioOrdenRequest request,
+            @AuthenticationPrincipal CustomUserDetails usuarioAutenticado) {
+        HistorialEstadoOrden historial = ordenCompraService.ejecutarServicio(
+                id,
+                usuarioAutenticado,
+                request != null ? request.observaciones() : null);
+        return ResponseEntity.ok(HistorialEstadoOrdenMapper.toResponse(historial));
     }
 
     @GetMapping("/{id}/historial")
