@@ -49,7 +49,7 @@ public class OrdenCompraService {
     }
 
     public Page<OrdenCompraResponseDTO> listar(Pageable pageable, boolean atrasadas) {
-        return listarFiltrado(pageable, atrasadas, null, TipoOrdenCompra.BIENES, null);
+        return listarFiltrado(pageable, atrasadas, null, null, null);
     }
 
     public Page<OrdenCompraResponseDTO> listarFiltrado(Pageable pageable,
