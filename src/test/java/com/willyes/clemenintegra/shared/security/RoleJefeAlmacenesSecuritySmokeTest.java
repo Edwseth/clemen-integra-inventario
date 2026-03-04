@@ -12,6 +12,8 @@ import com.willyes.clemenintegra.inventario.controller.OrdenCompraController;
 import com.willyes.clemenintegra.inventario.controller.ProductoController;
 import com.willyes.clemenintegra.inventario.controller.SolicitudMovimientoController;
 import com.willyes.clemenintegra.inventario.dto.ProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
@@ -48,6 +50,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -160,7 +163,13 @@ class RoleJefeAlmacenesSecuritySmokeTest {
         when(usuarioService.buscarPorNombreUsuario(anyString())).thenReturn(usuario);
         when(solicitudMovimientoService.aprobarSolicitud(anyLong(), anyLong())).thenReturn(null);
 
-        when(ordenCompraService.listarFiltrado(any(), any(Boolean.class), any(), any())).thenReturn(new PageImpl<>(List.of()));
+        // Firma actual service: listarFiltrado(Pageable, boolean, EstadoOrdenCompra, TipoOrdenCompra, String)
+        when(ordenCompraService.listarFiltrado(
+                any(org.springframework.data.domain.Pageable.class),
+                eq(false),
+                any(EstadoOrdenCompra.class),
+                any(TipoOrdenCompra.class),
+                anyString())).thenReturn(new PageImpl<>(List.of()));
         when(controlDocumentalService.buscarDocumentos(any(), any(), any(), any(), any())).thenReturn(Page.empty());
     }
 
