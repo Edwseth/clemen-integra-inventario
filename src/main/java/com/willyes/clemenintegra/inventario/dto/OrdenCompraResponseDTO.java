@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.dto;
 
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ public class OrdenCompraResponseDTO {
     private Long id;
     private String codigoOrden;
     private String estado;
+    private String tipo;
     private String proveedorNombre;
     private LocalDateTime fechaOrden;
     private LocalDate fechaCompromisoEntrega;
@@ -26,6 +28,7 @@ public class OrdenCompraResponseDTO {
     public OrdenCompraResponseDTO(Integer id,
                                   String codigoOrden,
                                   EstadoOrdenCompra estado,
+                                  TipoOrdenCompra tipo,
                                   String proveedorNombre,
                                   LocalDateTime fechaOrden,
                                   LocalDate fechaCompromisoEntrega,
@@ -35,6 +38,7 @@ public class OrdenCompraResponseDTO {
         this.id = id != null ? id.longValue() : null;
         this.codigoOrden = codigoOrden;
         this.estado = estado != null ? estado.name() : null;
+        this.tipo = tipo != null ? tipo.name() : null;
         this.proveedorNombre = proveedorNombre;
         this.fechaOrden = fechaOrden;
         this.fechaCompromisoEntrega = fechaCompromisoEntrega;

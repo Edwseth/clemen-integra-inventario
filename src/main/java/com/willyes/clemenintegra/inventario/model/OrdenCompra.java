@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.inventario.model;
 
 import com.willyes.clemenintegra.inventario.model.enums.CondicionesPago;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -42,6 +43,11 @@ public class OrdenCompra {
     @Column(name = "observaciones", length = 255)
     private String observaciones;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo", length = 20, nullable = false)
+    private TipoOrdenCompra tipo = TipoOrdenCompra.BIENES;
+
     @Column(name = "fecha_compromiso_entrega")
     private LocalDate fechaCompromisoEntrega;
 
@@ -69,6 +75,7 @@ public class OrdenCompra {
     public Proveedor getProveedor() {return proveedor;}
     public EstadoOrdenCompra getEstado() {return estado;}
     public String getObservaciones() {return observaciones;}
+    public TipoOrdenCompra getTipo() {return tipo;}
     public List<OrdenCompraDetalle> getDetalles() {return detalles;}
     public LocalDate getFechaCompromisoEntrega() { return fechaCompromisoEntrega; }
     public CondicionesPago getCondicionesPago() { return condicionesPago; }
@@ -84,5 +91,6 @@ public class OrdenCompra {
     public void setProveedor(Proveedor proveedor) {this.proveedor = proveedor;}
     public void setEstado(EstadoOrdenCompra estado) {this.estado = estado;}
     public void setObservaciones(String observaciones) {this.observaciones = observaciones;}
+    public void setTipo(TipoOrdenCompra tipo) { this.tipo = tipo; }
     public void setFechaCompromisoEntrega(LocalDate fechaCompromisoEntrega) { this.fechaCompromisoEntrega = fechaCompromisoEntrega; }
 }

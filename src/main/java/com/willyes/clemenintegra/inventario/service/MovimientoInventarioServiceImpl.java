@@ -20,6 +20,7 @@ import com.willyes.clemenintegra.inventario.model.enums.EstadoSolicitudMovimient
 import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -731,6 +732,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
             orden = ordenCompraRepository.findById(dto.ordenCompraId().longValue())
                     .orElseThrow(() -> new NoSuchElementException("Orden de compra no encontrada"));
+            if (orden.getTipo() == TipoOrdenCompra.SERVICIOS) {
+                throw new CustomBusinessException(ApiErrorCode.OC_SERVICIO_NO_RECEPCIONABLE,
+                        "Las órdenes de tipo SERVICIOS no pueden recepcionarse por inventario");
+            }
             if (orden.getEstado() == EstadoOrdenCompra.CERRADA
                     || orden.getEstado() == EstadoOrdenCompra.CANCELADA
                     || orden.getEstado() == EstadoOrdenCompra.RECHAZADA) {

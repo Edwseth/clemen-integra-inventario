@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
@@ -15,6 +16,7 @@ import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoI
 import com.willyes.clemenintegra.inventario.model.enums.CondicionProductoDevuelto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
@@ -536,6 +538,30 @@ class MovimientoInventarioServiceDevolucionClienteTest {
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void shouldRejectRecepcionCompraWhenOrdenEsServicios() {
+        Producto producto = crearProducto(431);
+        MovimientoInventarioDTO dto = construirDtoRecepcionCompra(producto.getId());
+
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        given(motivoMovimientoRepository.findById(dto.motivoMovimientoId()))
+                .willReturn(Optional.of(MotivoMovimiento.builder()
+                        .id(dto.motivoMovimientoId())
+                        .motivo(ClasificacionMovimientoInventario.RECEPCION_COMPRA)
+                        .descripcion("Recepción compra")
+                        .build()));
+        given(ordenCompraRepository.findById(dto.ordenCompraId().longValue()))
+                .willReturn(Optional.of(OrdenCompra.builder()
+                        .id(dto.ordenCompraId())
+                        .tipo(TipoOrdenCompra.SERVICIOS)
+                        .build()));
+
+        assertThatThrownBy(() -> service.registrarMovimiento(dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.OC_SERVICIO_NO_RECEPCIONABLE));
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.model.Proveedor;
 import com.willyes.clemenintegra.inventario.model.enums.CondicionesPago;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
@@ -54,7 +55,8 @@ public class OrdenCompraPdfService {
         html = html.replace("${numero}",   esc(oc.getCodigoOrden() != null ? oc.getCodigoOrden() : String.valueOf(oc.getId())))
                 .replace("${fechaDia}",  fechaDia)
                 .replace("${fechaMes}",  fechaMes)
-                .replace("${fechaAnio}", fechaAnio);
+                .replace("${fechaAnio}", fechaAnio)
+                .replace("${tituloDocumento}", oc.getTipo() == TipoOrdenCompra.SERVICIOS ? "Orden de Servicio" : "Orden de Compra");
 
         // Proveedor
         Proveedor p = oc.getProveedor();

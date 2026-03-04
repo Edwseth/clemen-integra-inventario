@@ -35,6 +35,7 @@ public interface OrdenCompraMapper {
     @Mapping(target = "id", source = "id")
     @Mapping(target = "codigoOrden", source = "codigoOrden")
     @Mapping(target = "estado", source = "estado", qualifiedByName = "enumName")
+    @Mapping(target = "tipo", source = "tipo", qualifiedByName = "enumName")
     @Mapping(target = "proveedorNombre", source = "proveedor.nombre")
     @Mapping(target = "fechaOrden", source = "fechaOrden")
     @Mapping(target = "fechaCompromisoEntrega", source = "fechaCompromisoEntrega")
@@ -52,6 +53,7 @@ public interface OrdenCompraMapper {
 
     @Mapping(target = "proveedor", source = "proveedor")
     @Mapping(target = "detalles", source = "detalles")
+    @Mapping(target = "tipo", source = "tipo", qualifiedByName = "enumName")
     @Mapping(target = "fechaOrden", source = "fechaOrden")
     @Mapping(target = "descuento", source = "descuento")
     @Mapping(target = "fechaCompromisoEntrega", source = "fechaCompromisoEntrega")
@@ -130,4 +132,3 @@ public interface OrdenCompraMapper {
         );
     }
 }
-

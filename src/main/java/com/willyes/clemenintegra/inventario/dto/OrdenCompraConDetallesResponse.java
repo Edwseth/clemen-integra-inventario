@@ -8,6 +8,7 @@ public class OrdenCompraConDetallesResponse {
     public Long id;
     public String codigoOrden;
     public String estado;
+    public String tipo;
     public LocalDateTime fechaOrden;
     public String observaciones;
     public ProveedorMinResponse proveedor;

@@ -5,6 +5,10 @@ import com.willyes.clemenintegra.inventario.dto.OrdenCompraResponseDTO;
 import com.willyes.clemenintegra.inventario.model.HistorialEstadoOrden;
 import com.willyes.clemenintegra.inventario.model.OrdenCompra;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.enums.ModoControlInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle;
 import com.willyes.clemenintegra.inventario.repository.HistorialEstadoOrdenRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
@@ -45,12 +49,13 @@ public class OrdenCompraService {
     }
 
     public Page<OrdenCompraResponseDTO> listar(Pageable pageable, boolean atrasadas) {
-        return listarFiltrado(pageable, atrasadas, null, null);
+        return listarFiltrado(pageable, atrasadas, null, TipoOrdenCompra.BIENES, null);
     }
 
     public Page<OrdenCompraResponseDTO> listarFiltrado(Pageable pageable,
                                                        boolean atrasadas,
                                                        EstadoOrdenCompra estado,
+                                                       TipoOrdenCompra tipo,
                                                        String proveedor) {
         String proveedorNormalizado = (proveedor == null || proveedor.isBlank()) ? null : proveedor.trim();
         return ordenCompraRepository.findListadoFiltrado(
@@ -58,11 +63,12 @@ public class OrdenCompraService {
                 atrasadas,
                 EnumSet.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.PARCIALMENTE_RECIBIDA),
                 estado,
+                tipo,
                 proveedorNormalizado);
     }
 
-    public Page<OrdenCompraResponseDTO> listarPorEstado(EstadoOrdenCompra estado, Pageable pageable) {
-        return listarFiltrado(pageable, false, estado, null);
+    public Page<OrdenCompraResponseDTO> listarPorEstado(EstadoOrdenCompra estado, TipoOrdenCompra tipo, Pageable pageable) {
+        return listarFiltrado(pageable, false, estado, tipo, null);
     }
 
     public String generarCodigoOrdenCompra() {
@@ -265,4 +271,75 @@ public class OrdenCompraService {
             throw new CustomBusinessException(ApiErrorCode.ROL_INSUFICIENTE, "ROL_SIN_PERMISO_ESTADO");
         }
     }
+
+
+    public TipoOrdenCompra determinarTipoOrdenPorDetalles(List<Producto> productos) {
+        if (productos == null || productos.isEmpty()) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Debe registrar al menos un producto para determinar el tipo de OC");
+        }
+
+        boolean todosSinControl = productos.stream()
+                .allMatch(p -> p != null && p.getModoControlInventario() == ModoControlInventario.SIN_CONTROL_STOCK);
+
+        boolean todosConControl = productos.stream()
+                .allMatch(p -> p != null && p.getModoControlInventario() == ModoControlInventario.CONTROL_STOCK);
+
+        if (todosSinControl) {
+            return TipoOrdenCompra.SERVICIOS;
+        }
+
+        if (todosConControl) {
+            return TipoOrdenCompra.BIENES;
+        }
+
+        throw new CustomBusinessException(ApiErrorCode.OC_TIPO_MEZCLADO_NO_PERMITIDO,
+                "No se permite mezclar productos con y sin control de inventario en una misma OC");
+    }
+
+    public HistorialEstadoOrden ejecutarServicio(Long ordenId,
+                                                 CustomUserDetails principal,
+                                                 String observaciones) {
+        if (principal == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA, "USUARIO_NO_AUTENTICADO");
+        }
+
+        OrdenCompra orden = ordenCompraRepository.findByIdWithDetalles(ordenId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO, "ORDEN_NO_ENCONTRADA"));
+
+        if (orden.getTipo() != TipoOrdenCompra.SERVICIOS) {
+            throw new CustomBusinessException(ApiErrorCode.OC_SERVICIO_INVALIDA, "OC_NO_ES_DE_SERVICIOS");
+        }
+
+        if (!(orden.getEstado() == EstadoOrdenCompra.ENVIADA || orden.getEstado() == EstadoOrdenCompra.PARCIALMENTE_RECIBIDA)) {
+            throw new CustomBusinessException(ApiErrorCode.OC_TRANSICION_INVALIDA, "ESTADO_NO_PERMITE_EJECUTAR_SERVICIO");
+        }
+
+        if (orden.getDetalles() != null) {
+            for (OrdenCompraDetalle detalle : orden.getDetalles()) {
+                if (detalle != null) {
+                    detalle.setCantidadRecibida(detalle.getCantidad());
+                }
+            }
+        }
+
+        orden.setEstado(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE);
+        ordenCompraRepository.save(orden);
+
+        Usuario usuario = principal.getUsuario() != null ? principal.getUsuario() : new Usuario();
+        if (usuario.getId() == null) {
+            usuario.setId(principal.getId());
+        }
+
+        HistorialEstadoOrden historial = HistorialEstadoOrden.builder()
+                .ordenCompra(orden)
+                .estado(EstadoOrdenCompra.RECIBIDA_COMPLETAMENTE)
+                .fechaCambio(LocalDateTime.now())
+                .cambiadoPor(usuario)
+                .observaciones(observaciones)
+                .build();
+
+        return historialEstadoOrdenRepository.save(historial);
+    }
+
 }

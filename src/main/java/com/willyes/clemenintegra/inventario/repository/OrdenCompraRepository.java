@@ -45,6 +45,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
                 o.id,
                 o.codigoOrden,
                 o.estado,
+                o.tipo,
                 p.nombre,
                 o.fechaOrden,
                 o.fechaCompromisoEntrega,
@@ -55,7 +56,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
             from OrdenCompra o
             join o.proveedor p
             left join o.detalles d
-            group by o.id, o.codigoOrden, o.estado, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
+            group by o.id, o.codigoOrden, o.estado, o.tipo, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
             """,
             countQuery = "select count(o) from OrdenCompra o")
     Page<OrdenCompraResponseDTO> findListado(Pageable pageable);
@@ -65,6 +66,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
                 o.id,
                 o.codigoOrden,
                 o.estado,
+                o.tipo,
                 p.nombre,
                 o.fechaOrden,
                 o.fechaCompromisoEntrega,
@@ -76,7 +78,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
             join o.proveedor p
             left join o.detalles d
             where o.estado = :estado
-            group by o.id, o.codigoOrden, o.estado, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
+            group by o.id, o.codigoOrden, o.estado, o.tipo, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
             """,
             countQuery = "select count(o) from OrdenCompra o where o.estado = :estado")
     Page<OrdenCompraResponseDTO> findListadoPorEstado(@Param("estado") EstadoOrdenCompra estado, Pageable pageable);
@@ -86,6 +88,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
                 o.id,
                 o.codigoOrden,
                 o.estado,
+                o.tipo,
                 p.nombre,
                 o.fechaOrden,
                 o.fechaCompromisoEntrega,
@@ -103,7 +106,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
                   select 1 from OrdenCompraDetalle d1
                   where d1.ordenCompra = o and d1.cantidadRecibida < d1.cantidad
               )
-            group by o.id, o.codigoOrden, o.estado, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
+            group by o.id, o.codigoOrden, o.estado, o.tipo, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
             """,
             countQuery = """
             select count(o) from OrdenCompra o
@@ -123,6 +126,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
                 o.id,
                 o.codigoOrden,
                 o.estado,
+                o.tipo,
                 p.nombre,
                 o.fechaOrden,
                 o.fechaCompromisoEntrega,
@@ -134,6 +138,7 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
             join o.proveedor p
             left join o.detalles d
             where (:estado is null or o.estado = :estado)
+              and (:tipo is null or o.tipo = :tipo)
               and (:proveedor is null or lower(p.nombre) like lower(concat('%', :proveedor, '%')))
               and (:atrasadas = false
                     or (
@@ -145,12 +150,13 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
                             where d1.ordenCompra = o and d1.cantidadRecibida < d1.cantidad
                         )
                     ))
-            group by o.id, o.codigoOrden, o.estado, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
+            group by o.id, o.codigoOrden, o.estado, o.tipo, p.nombre, o.fechaOrden, o.fechaCompromisoEntrega, o.descuento
             """,
             countQuery = """
             select count(o) from OrdenCompra o
             join o.proveedor p
             where (:estado is null or o.estado = :estado)
+              and (:tipo is null or o.tipo = :tipo)
               and (:proveedor is null or lower(p.nombre) like lower(concat('%', :proveedor, '%')))
               and (:atrasadas = false
                     or (
@@ -167,5 +173,6 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
                                                      @Param("atrasadas") boolean atrasadas,
                                                      @Param("estadosAtrasadas") Set<EstadoOrdenCompra> estadosAtrasadas,
                                                      @Param("estado") EstadoOrdenCompra estado,
+                                                     @Param("tipo") com.willyes.clemenintegra.inventario.model.enums.TipoOrdenCompra tipo,
                                                      @Param("proveedor") String proveedor);
 }
