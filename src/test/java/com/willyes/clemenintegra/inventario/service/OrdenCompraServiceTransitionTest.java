@@ -30,10 +30,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OrdenCompraServiceTransitionTest {
@@ -108,11 +114,24 @@ class OrdenCompraServiceTransitionTest {
     @Test
     void atrasadasBranchUsesRepository() {
         Pageable pageable = Pageable.unpaged();
-        when(ordenCompraRepository.findListadoFiltrado(any(), anyBoolean(), any(Set.class), nullable(EstadoOrdenCompra.class), nullable(String.class)))
+        // Firma actual repo: findListadoFiltrado(Pageable, boolean, Set<EstadoOrdenCompra>, EstadoOrdenCompra, TipoOrdenCompra, String)
+        when(ordenCompraRepository.findListadoFiltrado(
+                any(Pageable.class),
+                anyBoolean(),
+                org.mockito.ArgumentMatchers.<Set<EstadoOrdenCompra>>any(),
+                nullable(EstadoOrdenCompra.class),
+                eq(TipoOrdenCompra.BIENES),
+                nullable(String.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         Page<?> result = ordenCompraService.listar(pageable, true);
         assertNotNull(result);
-        verify(ordenCompraRepository).findListadoFiltrado(eq(pageable), eq(true), any(Set.class), isNull(), isNull());
+        verify(ordenCompraRepository).findListadoFiltrado(
+                eq(pageable),
+                eq(true),
+                org.mockito.ArgumentMatchers.<Set<EstadoOrdenCompra>>any(),
+                isNull(),
+                eq(TipoOrdenCompra.BIENES),
+                isNull());
     }
 
     @Test
