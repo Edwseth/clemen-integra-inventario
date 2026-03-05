@@ -16,7 +16,9 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -201,13 +203,24 @@ public class ReporteInventarioServiceImpl implements ReporteInventarioService {
                                                             Long almacenId,
                                                             Long productoId,
                                                             boolean soloConDiferencia,
-                                                            Pageable pageable) {
+                                                            Integer page,
+                                                            Integer size,
+                                                            String sortField,
+                                                            String sortDir) {
+        String normalizedSortField = mapSortField(sortField);
+        Sort.Direction direction = Sort.Direction.fromOptionalString(sortDir).orElse(Sort.Direction.DESC);
+        String normalizedSortDir = direction.name().toLowerCase();
+        Sort sort = Sort.by(direction, normalizedSortField);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
         return conteoAjusteReporteRepository.findReporteConteosAjuste(
                 fechaInicio,
                 fechaFin,
                 almacenId,
                 productoId,
                 soloConDiferencia,
+                normalizedSortField,
+                normalizedSortDir,
                 pageable
         ).map(this::toConteoAjusteDto);
     }
@@ -225,6 +238,8 @@ public class ReporteInventarioServiceImpl implements ReporteInventarioService {
                         almacenId,
                         productoId,
                         soloConDiferencia,
+                        "fechaAplicacion",
+                        "desc",
                         Pageable.unpaged())
                 .map(this::toConteoAjusteDto)
                 .getContent();
@@ -263,6 +278,20 @@ public class ReporteInventarioServiceImpl implements ReporteInventarioService {
         }
 
         return workbook;
+    }
+
+    private String mapSortField(String sortField) {
+        if (sortField == null || sortField.isBlank()) {
+            return "fechaAplicacion";
+        }
+
+        return switch (sortField) {
+            case "fechaAplicacion" -> "fechaAplicacion";
+            case "fechaConteo" -> "fechaConteo";
+            case "productoNombre" -> "productoNombre";
+            case "loteCodigo" -> "loteCodigo";
+            default -> "fechaAplicacion";
+        };
     }
 
     private ConteoAjusteReporteDTO toConteoAjusteDto(ConteoAjusteReporteProjection p) {

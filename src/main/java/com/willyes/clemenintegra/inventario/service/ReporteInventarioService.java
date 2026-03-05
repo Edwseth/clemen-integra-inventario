@@ -3,7 +3,6 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.dto.reportes.ConteoAjusteReporteDTO;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,7 +30,10 @@ public interface ReporteInventarioService {
                                                      Long almacenId,
                                                      Long productoId,
                                                      boolean soloConDiferencia,
-                                                     Pageable pageable);
+                                                     Integer page,
+                                                     Integer size,
+                                                     String sortField,
+                                                     String sortDir);
 
     Workbook generarExcelConteosAjuste(LocalDateTime fechaInicio,
                                        LocalDateTime fechaFin,

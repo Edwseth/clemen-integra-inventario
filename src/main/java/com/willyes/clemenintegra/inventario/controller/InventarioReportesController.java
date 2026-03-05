@@ -6,10 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -46,26 +42,26 @@ public class InventarioReportesController {
             @RequestParam(required = false) Long productoId,
             @RequestParam(name = "soloDiferencias", required = false) Boolean soloDiferencias,
             @RequestParam(name = "soloConDiferencia", required = false) Boolean soloConDiferencia,
-            @PageableDefault(size = 20) Pageable pageable) {
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(defaultValue = "fechaAplicacion") String sortField,
+            @RequestParam(defaultValue = "desc") String sortDir) {
 
         boolean aplicarSoloDiferencias = Boolean.TRUE.equals(soloDiferencias)
                 || (soloDiferencias == null && Boolean.TRUE.equals(soloConDiferencia));
 
-        Pageable pageRequest = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                pageable.getSort().isSorted() ? pageable.getSort() : Sort.by(Sort.Direction.DESC, "fechaAplicacion")
-        );
-
-        Page<ConteoAjusteReporteDTO> page = reporteInventarioService.listarConteosAjuste(
+        Page<ConteoAjusteReporteDTO> pageResult = reporteInventarioService.listarConteosAjuste(
                 fechaInicio.atStartOfDay(),
                 fechaFin.atTime(LocalTime.MAX),
                 almacenId,
                 productoId,
                 aplicarSoloDiferencias,
-                pageRequest
+                page,
+                size,
+                sortField,
+                sortDir
         );
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(pageResult);
     }
 
     @GetMapping(value = "/conteos-ajuste/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
