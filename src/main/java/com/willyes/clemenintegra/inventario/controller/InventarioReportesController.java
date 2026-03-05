@@ -44,8 +44,12 @@ public class InventarioReportesController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) Long productoId,
-            @RequestParam(defaultValue = "false") boolean soloConDiferencia,
+            @RequestParam(name = "soloDiferencias", required = false) Boolean soloDiferencias,
+            @RequestParam(name = "soloConDiferencia", required = false) Boolean soloConDiferencia,
             @PageableDefault(size = 20) Pageable pageable) {
+
+        boolean aplicarSoloDiferencias = Boolean.TRUE.equals(soloDiferencias)
+                || (soloDiferencias == null && Boolean.TRUE.equals(soloConDiferencia));
 
         Pageable pageRequest = PageRequest.of(
                 pageable.getPageNumber(),
@@ -58,7 +62,7 @@ public class InventarioReportesController {
                 fechaFin.atTime(LocalTime.MAX),
                 almacenId,
                 productoId,
-                soloConDiferencia,
+                aplicarSoloDiferencias,
                 pageRequest
         );
         return ResponseEntity.ok(page);
@@ -71,13 +75,16 @@ public class InventarioReportesController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) Long productoId,
-            @RequestParam(defaultValue = "false") boolean soloConDiferencia) {
+            @RequestParam(name = "soloDiferencias", required = false) Boolean soloDiferencias,
+            @RequestParam(name = "soloConDiferencia", required = false) Boolean soloConDiferencia) {
+        boolean aplicarSoloDiferencias = Boolean.TRUE.equals(soloDiferencias)
+                || (soloDiferencias == null && Boolean.TRUE.equals(soloConDiferencia));
         try (Workbook workbook = reporteInventarioService.generarExcelConteosAjuste(
                 fechaInicio.atStartOfDay(),
                 fechaFin.atTime(LocalTime.MAX),
                 almacenId,
                 productoId,
-                soloConDiferencia
+                aplicarSoloDiferencias
         ); ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             workbook.write(baos);
             HttpHeaders headers = new HttpHeaders();
