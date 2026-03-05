@@ -1,6 +1,9 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.reportes.ConteoAjusteReporteDTO;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.inventario.repository.ConteoAjusteReporteProjection;
+import com.willyes.clemenintegra.inventario.repository.ConteoAjusteReporteRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.OrdenCompraDetalleRepository;
@@ -12,6 +15,8 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +33,7 @@ public class ReporteInventarioServiceImpl implements ReporteInventarioService {
     private final MovimientoInventarioRepository movimientoRepo;
     private final OrdenCompraDetalleRepository ordenRepo;
     private final LoteProductoRepository loteProductoRepository;
+    private final ConteoAjusteReporteRepository conteoAjusteReporteRepository;
 
     @Override
     public Workbook generarReporteAltaRotacion(LocalDate fechaInicio, LocalDate fechaFin) {
@@ -185,6 +191,100 @@ public class ReporteInventarioServiceImpl implements ReporteInventarioService {
             sheet.autoSizeColumn(i);
         }
         return wb;
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ConteoAjusteReporteDTO> listarConteosAjuste(LocalDateTime fechaInicio,
+                                                            LocalDateTime fechaFin,
+                                                            Long almacenId,
+                                                            Long productoId,
+                                                            boolean soloConDiferencia,
+                                                            Pageable pageable) {
+        return conteoAjusteReporteRepository.findReporteConteosAjuste(
+                fechaInicio,
+                fechaFin,
+                almacenId,
+                productoId,
+                soloConDiferencia,
+                pageable
+        ).map(this::toConteoAjusteDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Workbook generarExcelConteosAjuste(LocalDateTime fechaInicio,
+                                               LocalDateTime fechaFin,
+                                               Long almacenId,
+                                               Long productoId,
+                                               boolean soloConDiferencia) {
+        List<ConteoAjusteReporteDTO> filas = conteoAjusteReporteRepository.findReporteConteosAjuste(
+                        fechaInicio,
+                        fechaFin,
+                        almacenId,
+                        productoId,
+                        soloConDiferencia,
+                        Pageable.unpaged())
+                .map(this::toConteoAjusteDto)
+                .getContent();
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Conteos ajuste");
+        String[] columnas = {
+                "Fecha Conteo", "Fecha Aplicación", "Almacén", "Producto", "SKU", "Lote",
+                "Stock Antes", "Conteo Físico", "Diferencia", "Tipo Ajuste", "Stock Final", "Usuario"
+        };
+
+        Row header = sheet.createRow(0);
+        for (int i = 0; i < columnas.length; i++) {
+            header.createCell(i).setCellValue(columnas[i]);
+        }
+
+        int r = 1;
+        for (ConteoAjusteReporteDTO fila : filas) {
+            Row row = sheet.createRow(r++);
+            row.createCell(0).setCellValue(fila.fechaConteo() != null ? fila.fechaConteo().toString() : "");
+            row.createCell(1).setCellValue(fila.fechaAplicacion() != null ? fila.fechaAplicacion().toString() : "");
+            row.createCell(2).setCellValue(fila.almacenNombre() != null ? fila.almacenNombre() : "");
+            row.createCell(3).setCellValue(fila.productoNombre() != null ? fila.productoNombre() : "");
+            row.createCell(4).setCellValue(fila.productoSku() != null ? fila.productoSku() : "");
+            row.createCell(5).setCellValue(fila.loteCodigo() != null ? fila.loteCodigo() : "");
+            row.createCell(6).setCellValue(fila.stockAntes() != null ? fila.stockAntes().doubleValue() : 0d);
+            row.createCell(7).setCellValue(fila.conteoFisico() != null ? fila.conteoFisico().doubleValue() : 0d);
+            row.createCell(8).setCellValue(fila.diferencia() != null ? fila.diferencia().doubleValue() : 0d);
+            row.createCell(9).setCellValue(fila.tipoAjuste() != null ? fila.tipoAjuste() : "");
+            row.createCell(10).setCellValue(fila.stockFinal() != null ? fila.stockFinal().doubleValue() : 0d);
+            row.createCell(11).setCellValue(fila.usuarioConteoNombre() != null ? fila.usuarioConteoNombre() : "");
+        }
+
+        for (int i = 0; i < columnas.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        return workbook;
+    }
+
+    private ConteoAjusteReporteDTO toConteoAjusteDto(ConteoAjusteReporteProjection p) {
+        return new ConteoAjusteReporteDTO(
+                p.getConteoId(),
+                p.getFechaConteo(),
+                p.getFechaAplicacion(),
+                p.getAlmacenId(),
+                p.getAlmacenNombre(),
+                p.getProductoId(),
+                p.getProductoSku(),
+                p.getProductoNombre(),
+                p.getLoteId(),
+                p.getLoteCodigo(),
+                p.getStockAntes(),
+                p.getConteoFisico(),
+                p.getDiferencia(),
+                p.getTipoAjuste(),
+                p.getStockFinal(),
+                p.getUsuarioConteoId(),
+                p.getUsuarioConteoNombre()
+        );
     }
 
     private Workbook crearExcelRotacion(List<Object[]> datos, String nombreHoja) {
