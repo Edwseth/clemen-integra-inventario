@@ -45,7 +45,16 @@ public interface ConteoAjusteReporteRepository extends Repository<ConteoCiclicoD
               AND (:almacenId IS NULL OR a.id = :almacenId)
               AND (:productoId IS NULL OR p.id = :productoId)
               AND (:soloConDiferencia = FALSE OR ccd.diferencia <> 0)
-            ORDER BY cc.aplicado_en DESC, cc.id DESC, ccd.id DESC
+            ORDER BY
+              CASE WHEN :sortField = 'fechaAplicacion' AND :sortDir = 'asc' THEN cc.aplicado_en END ASC,
+              CASE WHEN :sortField = 'fechaAplicacion' AND :sortDir = 'desc' THEN cc.aplicado_en END DESC,
+              CASE WHEN :sortField = 'fechaConteo' AND :sortDir = 'asc' THEN cc.fecha_creacion END ASC,
+              CASE WHEN :sortField = 'fechaConteo' AND :sortDir = 'desc' THEN cc.fecha_creacion END DESC,
+              CASE WHEN :sortField = 'productoNombre' AND :sortDir = 'asc' THEN p.nombre END ASC,
+              CASE WHEN :sortField = 'productoNombre' AND :sortDir = 'desc' THEN p.nombre END DESC,
+              CASE WHEN :sortField = 'loteCodigo' AND :sortDir = 'asc' THEN lp.codigo_lote END ASC,
+              CASE WHEN :sortField = 'loteCodigo' AND :sortDir = 'desc' THEN lp.codigo_lote END DESC,
+              cc.id DESC, ccd.id DESC
             """,
             countQuery = """
             SELECT COUNT(*)
@@ -66,5 +75,7 @@ public interface ConteoAjusteReporteRepository extends Repository<ConteoCiclicoD
                                                                   @Param("almacenId") Long almacenId,
                                                                   @Param("productoId") Long productoId,
                                                                   @Param("soloConDiferencia") boolean soloConDiferencia,
+                                                                  @Param("sortField") String sortField,
+                                                                  @Param("sortDir") String sortDir,
                                                                   Pageable pageable);
 }

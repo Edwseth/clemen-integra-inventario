@@ -32,7 +32,7 @@ class InventarioReportesControllerTest {
     @Test
     @WithMockUser(authorities = "INV_REPORTES_EXPORT")
     void listarConteosAjuste_debeAplicarFiltroCuandoLlegaSoloDiferenciasTrue() throws Exception {
-        when(reporteInventarioService.listarConteosAjuste(any(), any(), any(), any(), anyBoolean(), any()))
+        when(reporteInventarioService.listarConteosAjuste(any(), any(), any(), any(), anyBoolean(), any(), any(), any(), any()))
                 .thenReturn(Page.empty());
 
         mockMvc.perform(get("/api/inventario/reportes/conteos-ajuste")
@@ -43,7 +43,7 @@ class InventarioReportesControllerTest {
 
         ArgumentCaptor<Boolean> soloConDiferenciaCaptor = ArgumentCaptor.forClass(Boolean.class);
         verify(reporteInventarioService).listarConteosAjuste(
-                any(), any(), any(), any(), soloConDiferenciaCaptor.capture(), any());
+                any(), any(), any(), any(), soloConDiferenciaCaptor.capture(), any(), any(), any(), any());
 
         assertThat(soloConDiferenciaCaptor.getValue()).isTrue();
     }
@@ -51,7 +51,7 @@ class InventarioReportesControllerTest {
     @Test
     @WithMockUser(authorities = "INV_REPORTES_EXPORT")
     void listarConteosAjuste_debeMantenerCompatibilidadConSoloConDiferencia() throws Exception {
-        when(reporteInventarioService.listarConteosAjuste(any(), any(), any(), any(), anyBoolean(), any()))
+        when(reporteInventarioService.listarConteosAjuste(any(), any(), any(), any(), anyBoolean(), any(), any(), any(), any()))
                 .thenReturn(Page.empty());
 
         mockMvc.perform(get("/api/inventario/reportes/conteos-ajuste")
@@ -62,7 +62,7 @@ class InventarioReportesControllerTest {
 
         ArgumentCaptor<Boolean> soloConDiferenciaCaptor = ArgumentCaptor.forClass(Boolean.class);
         verify(reporteInventarioService).listarConteosAjuste(
-                any(), any(), any(), any(), soloConDiferenciaCaptor.capture(), any());
+                any(), any(), any(), any(), soloConDiferenciaCaptor.capture(), any(), any(), any(), any());
 
         assertThat(soloConDiferenciaCaptor.getValue()).isTrue();
     }
@@ -70,7 +70,7 @@ class InventarioReportesControllerTest {
     @Test
     @WithMockUser(authorities = "INV_REPORTES_EXPORT")
     void listarConteosAjuste_cuandoNoLlegaParametroDebeEnviarFalse() throws Exception {
-        when(reporteInventarioService.listarConteosAjuste(any(), any(), any(), any(), anyBoolean(), any()))
+        when(reporteInventarioService.listarConteosAjuste(any(), any(), any(), any(), anyBoolean(), any(), any(), any(), any()))
                 .thenReturn(Page.empty());
 
         mockMvc.perform(get("/api/inventario/reportes/conteos-ajuste")
@@ -80,8 +80,32 @@ class InventarioReportesControllerTest {
 
         ArgumentCaptor<Boolean> soloConDiferenciaCaptor = ArgumentCaptor.forClass(Boolean.class);
         verify(reporteInventarioService).listarConteosAjuste(
-                any(), any(), any(), any(), soloConDiferenciaCaptor.capture(), any());
+                any(), any(), any(), any(), soloConDiferenciaCaptor.capture(), any(), any(), any(), any());
 
         assertThat(soloConDiferenciaCaptor.getValue()).isFalse();
     }
+    @Test
+    @WithMockUser(authorities = "INV_REPORTES_EXPORT")
+    void listarConteosAjuste_debeEnviarParametrosDeOrdenamiento() throws Exception {
+        when(reporteInventarioService.listarConteosAjuste(any(), any(), any(), any(), anyBoolean(), any(), any(), any(), any()))
+                .thenReturn(Page.empty());
+
+        mockMvc.perform(get("/api/inventario/reportes/conteos-ajuste")
+                        .param("fechaInicio", "2026-01-01")
+                        .param("fechaFin", "2026-03-05")
+                        .param("page", "0")
+                        .param("size", "100")
+                        .param("sortField", "fechaAplicacion")
+                        .param("sortDir", "asc"))
+                .andExpect(status().isOk());
+
+        verify(reporteInventarioService).listarConteosAjuste(
+                any(), any(), any(), any(), anyBoolean(),
+                org.mockito.ArgumentMatchers.eq(0),
+                org.mockito.ArgumentMatchers.eq(100),
+                org.mockito.ArgumentMatchers.eq("fechaAplicacion"),
+                org.mockito.ArgumentMatchers.eq("asc")
+        );
+    }
+
 }
