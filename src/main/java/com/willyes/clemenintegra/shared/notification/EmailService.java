@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.shared.notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,26 @@ public class EmailService {
             mensaje.setFrom(defaultFrom);
         }
 
-        mailSender.send(mensaje);
-        log.debug("Correo electrónico enviado a {} con asunto '{}'", destinatario, asunto);
+        int maxIntentos = 3;
+        for (int intento = 1; intento <= maxIntentos; intento++) {
+            try {
+                mailSender.send(mensaje);
+                log.debug("Correo electrónico enviado a {} con asunto '{}'", destinatario, asunto);
+                return;
+            } catch (MailException ex) {
+                log.warn("Intento {} de envío de correo falló: {}", intento, ex.getMessage());
+
+                if (intento == maxIntentos) {
+                    throw ex;
+                }
+
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException interruptedEx) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Retry de correo interrumpido en el intento {}", intento);
+                }
+            }
+        }
     }
 }
