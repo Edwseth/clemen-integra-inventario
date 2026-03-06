@@ -703,6 +703,19 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         validarUbicacionDestinoTransferenciaPt(dto, tipoMovimiento, clasificacion, almacenOrigen, almacenDestino);
 
         Long motivoMovimientoId = dto.motivoMovimientoId();
+        if (motivoMovimientoId == null && tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
+            ClasificacionMovimientoInventario clasificacionMotivo = clasificacion != null
+                    ? clasificacion
+                    : ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL;
+            motivoMovimientoId = motivoMovimientoRepository.findByMotivo(clasificacionMotivo)
+                    .or(() -> motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL))
+                    .map(MotivoMovimiento::getId)
+                    .orElseThrow(() -> new CustomBusinessException(
+                            ApiErrorCode.CATALOGO_FALTANTE,
+                            "No se encontró el motivo de movimiento para transferencias",
+                            Map.of("clasificacion", clasificacionMotivo.name())
+                    ));
+        }
         if (motivoMovimientoId == null && esRecepcionDevolucionCliente) {
             motivoMovimientoId = resolverMotivoDevolucionCliente(almacenDestino);
         }

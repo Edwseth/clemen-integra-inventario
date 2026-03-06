@@ -942,6 +942,54 @@ class MovimientoInventarioServiceTransferenciaTest {
         assertThat(captor.getValue().getCantidad()).isEqualByComparingTo(new BigDecimal("0.470000"));
     }
 
+    @Test
+    void transferenciaSinMotivoAsignaMotivoAutomaticamente() {
+        Producto producto = crearProducto(518, 2);
+        LoteProducto loteOrigen = crearLote(2846L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("10.000000"), BigDecimal.ZERO.setScale(6), false);
+
+        MovimientoInventarioDTO dto = buildTransferenciaDTO(
+                new BigDecimal("2.500000"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                "DOC-TR-AUTO-MOTIVO",
+                producto.getId(),
+                loteOrigen.getId(),
+                1,
+                6,
+                null,
+                5L,
+                null,
+                loteOrigen.getCodigoLote()
+        );
+
+        configurarMocksBasicos(producto, loteOrigen);
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(Usuario.builder().id(2L).build());
+
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(15L);
+        motivo.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        given(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL))
+                .willReturn(Optional.of(motivo));
+        given(motivoMovimientoRepository.findById(15L)).willReturn(Optional.of(motivo));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        movimientoEntidad.setCantidad(new BigDecimal("2.500000"));
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class))).willReturn(MovimientoInventarioResponseDTO.builder().id(1000L).build());
+
+        service.registrarMovimiento(dto, null);
+
+        ArgumentCaptor<MovimientoInventario> captor = ArgumentCaptor.forClass(MovimientoInventario.class);
+        verify(movimientoInventarioRepository).save(captor.capture());
+        assertThat(captor.getValue().getMotivoMovimiento()).isNotNull();
+        assertThat(captor.getValue().getMotivoMovimiento().getId()).isEqualTo(15L);
+        verify(motivoMovimientoRepository).findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+    }
+
     private void configurarMocksBasicos(Producto producto, LoteProducto lote) {
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(5L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
