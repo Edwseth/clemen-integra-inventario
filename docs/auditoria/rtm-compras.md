@@ -24,3 +24,12 @@
 ## Conclusión técnica
 
 Para los requisitos URS auditados (`COM-001` a `COM-004`), la cobertura backend es **completa** bajo el criterio solicitado (`IMPLEMENTADO_BACKEND`). No obstante, existe una desviación de organización respecto al directorio esperado: la funcionalidad de Compras no está en `.../compras`, sino implementada dentro del módulo `inventario`.
+
+## Resultado de Auditoría Backend
+
+Requisitos evaluados: 5
+IMPLEMENTADO_BACKEND: 5
+PARCIAL: 0
+NO_IMPLEMENTADO: 0
+
+Cobertura backend del módulo Inventarios: **100%**
