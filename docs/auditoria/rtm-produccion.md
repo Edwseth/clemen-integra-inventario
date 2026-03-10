@@ -15,3 +15,12 @@ Fuente URS auditada: `docs/auditoria/requisitos-erp.md` (Req IDs PROD-001 a PROD
 - El backend de Producción presenta cobertura funcional para los cinco requisitos auditados del URS (PROD-001 a PROD-005).
 - La trazabilidad se apoya fuertemente en integración con **BOM** (fórmula activa/aprobada) e **Inventarios** (FEFO, reservas, movimientos y lotes).
 - No se evidenció en esta auditoría ausencia total de endpoints o servicios para los requisitos listados; por eso no se clasificó ningún requisito como `PARCIAL` o `NO_IMPLEMENTADO` en alcance backend.
+
+## Resultado de Auditoría Backend
+
+Requisitos evaluados: 5
+IMPLEMENTADO_BACKEND: 5
+PARCIAL: 0
+NO_IMPLEMENTADO: 0
+
+Cobertura backend del módulo Inventarios: **100%**
