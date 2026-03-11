@@ -184,6 +184,35 @@ public class EspecificacionesCalidadServiceImpl implements EspecificacionesCalid
         return plantillaMapper.toDetalleDTO(guardada);
     }
 
+    @Transactional
+    @Override
+    public PlantillaAnalisisMicrobiologicoDetalleDTO clonarPlantillaMicroParaProducto(Long plantillaId, Long productoId) {
+        PlantillaAnalisisMicrobiologico plantillaOrigen = plantillaRepository.findById(plantillaId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,
+                        "Plantilla microbiológica no encontrada.", Map.of("plantillaId", plantillaId)));
+        Producto productoDestino = obtenerProducto(productoId);
+        validarTipoAnalisis(productoDestino, TipoEspecificacion.MICROBIOLOGICA);
+        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
+
+        PlantillaAnalisisMicrobiologico nuevaPlantilla = PlantillaAnalisisMicrobiologico.builder()
+                .nombre(plantillaOrigen.getNombre())
+                .descripcion(plantillaOrigen.getDescripcion())
+                .producto(productoDestino)
+                .version(1)
+                .vigente(true)
+                .activo(true)
+                .creadoPor(usuario)
+                .parametros(new ArrayList<>())
+                .build();
+
+        List<ParametroAnalisisMicrobiologico> parametrosClonados = clonarParametros(plantillaOrigen.getParametros());
+        parametrosClonados.forEach(parametro -> parametro.setPlantilla(nuevaPlantilla));
+        nuevaPlantilla.getParametros().addAll(parametrosClonados);
+
+        PlantillaAnalisisMicrobiologico guardada = plantillaRepository.save(nuevaPlantilla);
+        return plantillaMapper.toDetalleDTO(guardada);
+    }
+
     private Producto obtenerProducto(Long productoId) {
         return productoRepository.findById(productoId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,

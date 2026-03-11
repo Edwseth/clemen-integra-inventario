@@ -78,4 +78,13 @@ public class EspecificacionesCalidadController {
     public ResponseEntity<PlantillaAnalisisMicrobiologicoDetalleDTO> clonarPlantillaMicro(@PathVariable Long plantillaId) {
         return ResponseEntity.ok(service.clonarPlantillaMicroComoNuevaVersion(plantillaId));
     }
+
+    @PostMapping("/producto/{productoId}/micro/clonar-desde/{plantillaId}")
+    // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('QC_WRITE')")
+    public ResponseEntity<PlantillaAnalisisMicrobiologicoDetalleDTO> clonarPlantillaMicroParaProducto(
+            @PathVariable Long productoId,
+            @PathVariable Long plantillaId) {
+        return ResponseEntity.ok(service.clonarPlantillaMicroParaProducto(plantillaId, productoId));
+    }
 }

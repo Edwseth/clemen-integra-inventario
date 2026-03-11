@@ -20,4 +20,6 @@ public interface EspecificacionesCalidadService {
     PlantillaAnalisisMicrobiologicoDetalleDTO crearPlantillaMicro(Long productoId, PlantillaAnalisisMicrobiologicoRequest request);
 
     PlantillaAnalisisMicrobiologicoDetalleDTO clonarPlantillaMicroComoNuevaVersion(Long plantillaId);
+
+    PlantillaAnalisisMicrobiologicoDetalleDTO clonarPlantillaMicroParaProducto(Long plantillaId, Long productoId);
 }
