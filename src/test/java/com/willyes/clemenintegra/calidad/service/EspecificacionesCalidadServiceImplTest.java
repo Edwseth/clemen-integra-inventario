@@ -197,6 +197,63 @@ class EspecificacionesCalidadServiceImplTest {
         verify(productoRepository).save(producto);
     }
 
+
+    @Test
+    void debeClonarPlantillaParaOtroProductoConVersionUnoYVigente() {
+        Producto productoOrigen = Producto.builder().id(7).build();
+        productoOrigen.setTipoAnalisisCalidad(TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO);
+        Producto productoDestino = Producto.builder().id(8).codigoSku("SKU-D").nombre("Destino").build();
+        productoDestino.setTipoAnalisisCalidad(TipoAnalisisCalidad.QUIMICO_MICROBIOLOGICO);
+
+        ParametroAnalisisMicrobiologico parametroOrigen = ParametroAnalisisMicrobiologico.builder()
+                .id(1L)
+                .nombreEnsayo("Coliformes")
+                .metodo("ISO")
+                .unidad("UFC/g")
+                .especificacion("<10")
+                .tipoResultado(TipoResultadoAnalisis.NUMERICO)
+                .orden(1)
+                .build();
+
+        PlantillaAnalisisMicrobiologico plantillaOrigen = PlantillaAnalisisMicrobiologico.builder()
+                .id(800L)
+                .producto(productoOrigen)
+                .nombre("Plantilla origen")
+                .descripcion("Desc")
+                .version(4)
+                .vigente(true)
+                .parametros(List.of(parametroOrigen))
+                .build();
+
+        when(plantillaRepository.findById(800L)).thenReturn(Optional.of(plantillaOrigen));
+        when(productoRepository.findById(8L)).thenReturn(Optional.of(productoDestino));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(Usuario.builder().id(10L).build());
+        when(plantillaRepository.save(any())).thenAnswer(invocation -> {
+            PlantillaAnalisisMicrobiologico plantilla = invocation.getArgument(0);
+            plantilla.setId(801L);
+            return plantilla;
+        });
+
+        var detalle = service.clonarPlantillaMicroParaProducto(800L, 8L);
+
+        assertThat(detalle.getId()).isEqualTo(801L);
+        assertThat(detalle.getNumeroVersion()).isEqualTo(1);
+        assertThat(detalle.isVigente()).isTrue();
+        assertThat(detalle.getParametros()).hasSize(1);
+        assertThat(detalle.getParametros().get(0).getNombreParametro()).isEqualTo("Coliformes");
+
+        ArgumentCaptor<PlantillaAnalisisMicrobiologico> captor = ArgumentCaptor.forClass(PlantillaAnalisisMicrobiologico.class);
+        verify(plantillaRepository).save(captor.capture());
+        PlantillaAnalisisMicrobiologico guardada = captor.getValue();
+        assertThat(guardada.getProducto()).isSameAs(productoDestino);
+        assertThat(guardada.getParametros()).hasSize(1);
+        assertThat(guardada.getParametros().get(0)).isNotSameAs(parametroOrigen);
+        assertThat(plantillaOrigen.getVersion()).isEqualTo(4);
+        assertThat(plantillaOrigen.isVigente()).isTrue();
+        verify(plantillaRepository, never()).saveAll(any());
+        verify(productoRepository, never()).save(any());
+    }
+
     @Test
     void debeListarPlantillaLegacyCuandoNoHayPlantillasPorProducto() {
         Producto producto = Producto.builder()
