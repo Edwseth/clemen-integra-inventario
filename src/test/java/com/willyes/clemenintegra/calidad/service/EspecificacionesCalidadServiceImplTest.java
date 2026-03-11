@@ -137,6 +137,7 @@ class EspecificacionesCalidadServiceImplTest {
                 .nombre("Plantilla micro v1")
                 .parametros(List.of(ParametroAnalisisMicrobiologicoDTO.builder()
                         .nombreParametro("Mesofilos")
+                        .metodo("ISO 4833-1:2013 / USP <61>")
                         .criterioAceptacion("<100")
                         .tipoResultado(TipoResultadoAnalisis.NUMERICO)
                         .orden(1)
@@ -147,6 +148,8 @@ class EspecificacionesCalidadServiceImplTest {
 
         assertThat(detalle.getNumeroVersion()).isEqualTo(1);
         assertThat(detalle.isVigente()).isTrue();
+        assertThat(saved.get().getParametros()).hasSize(1);
+        assertThat(saved.get().getParametros().get(0).getMetodo()).isEqualTo("ISO 4833-1:2013 / USP <61>");
         verify(productoRepository).save(producto);
     }
 
