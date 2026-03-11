@@ -2896,10 +2896,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             "No se encontró el lote para la devolución",
                             Map.of("loteId", loteId)));
 
-            if (loteOrigen.getFechaVencimiento() == null && dto.fechaVencimiento() == null) {
-                throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_REQUERIDA,
-                        "Debe indicar fecha de vencimiento para la devolución",
-                        Map.of("loteId", loteId));
+            if (loteOrigen.getFechaVencimiento() == null) {
+                if (dto.fechaVencimiento() == null) {
+                    throw new CustomBusinessException(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_REQUERIDA,
+                            "Debe indicar fecha de vencimiento para la devolución",
+                            Map.of("loteId", loteId));
+                }
+                loteOrigen.setFechaVencimiento(dto.fechaVencimiento());
+                loteOrigen = loteProductoRepository.save(loteOrigen);
             }
             if (loteOrigen.getFechaVencimiento() != null && dto.fechaVencimiento() != null
                     && !mismaFechaCalendario(loteOrigen.getFechaVencimiento(), dto.fechaVencimiento())) {
