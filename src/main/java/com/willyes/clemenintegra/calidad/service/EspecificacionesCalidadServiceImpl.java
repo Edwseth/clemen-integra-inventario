@@ -300,6 +300,7 @@ public class EspecificacionesCalidadServiceImpl implements EspecificacionesCalid
         }
         return ParametroAnalisisMicrobiologico.builder()
                 .nombreEnsayo(dto.getNombreParametro())
+                .metodo(dto.getMetodo())
                 .unidad(dto.getUnidad())
                 .especificacion(dto.getCriterioAceptacion())
                 .tipoResultado(dto.getTipoResultado())
