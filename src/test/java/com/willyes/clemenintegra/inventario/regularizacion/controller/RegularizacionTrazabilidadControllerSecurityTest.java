@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadRequestDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadResponseDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.service.RegularizacionTrazabilidadService;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
@@ -35,6 +37,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(RegularizacionTrazabilidadController.class)
@@ -132,6 +135,22 @@ class RegularizacionTrazabilidadControllerSecurityTest {
                         .content(objectMapper.writeValueAsString(request()))
                         .with(SecurityMockMvcRequestPostProcessors.user("jefe").authorities(() -> "ROL_JEFE_ALMACENES")))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void retornaConflictCuandoOpYaFueRegularizada() throws Exception {
+        when(service.regularizarPorOP(any(), anyString(), any(Usuario.class)))
+                .thenThrow(new CustomBusinessException(
+                        ApiErrorCode.OPERACION_NO_PERMITIDA,
+                        "La orden de producción ya tiene una regularización registrada"));
+
+        mockMvc.perform(post("/api/produccion/regularizaciones")
+                        .header("Idempotency-Key", "k1")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request()))
+                        .with(SecurityMockMvcRequestPostProcessors.user("contador").authorities(() -> "PROD_TRAZABILIDAD_REGULARIZACION")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("La orden de producción ya tiene una regularización registrada"));
     }
 
     private RegularizacionTrazabilidadRequestDTO request() {

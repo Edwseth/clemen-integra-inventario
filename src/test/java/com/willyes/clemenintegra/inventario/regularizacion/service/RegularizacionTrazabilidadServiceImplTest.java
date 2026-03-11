@@ -60,6 +60,24 @@ class RegularizacionTrazabilidadServiceImplTest {
     @InjectMocks RegularizacionTrazabilidadServiceImpl service;
 
     @Test
+    void debeFallarCuandoOpYaTieneRegularizacion() {
+        Usuario u = Usuario.builder().id(1L).build();
+        RegularizacionTrazabilidadRequestDTO request =
+                new RegularizacionTrazabilidadRequestDTO(4L, new BigDecimal("10"), "ACTA", "duplicada", false);
+
+        when(regularizacionRepository.findByIdempotencyKey("idem-dup")).thenReturn(Optional.empty());
+        when(regularizacionRepository.existsByOrdenProduccionId(4L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.regularizarPorOP(request, "idem-dup", u))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessage("La orden de producción ya tiene una regularización registrada")
+                .extracting(ex -> ((CustomBusinessException) ex).getCode())
+                .isEqualTo(ApiErrorCode.OPERACION_NO_PERMITIDA);
+
+        verify(ordenProduccionRepository, never()).findById(any());
+    }
+
+    @Test
     void diferenciaPositiva_debeCrearSalidaAdicionalEmpaque() {
         Usuario u = Usuario.builder().id(1L).build();
         setupRegularizacionLifecycle("idem-pos", 10L);
