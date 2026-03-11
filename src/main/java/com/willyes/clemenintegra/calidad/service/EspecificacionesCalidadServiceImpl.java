@@ -134,6 +134,20 @@ public class EspecificacionesCalidadServiceImpl implements EspecificacionesCalid
 
     @Transactional(readOnly = true)
     @Override
+    public List<PlantillaMicrobiologicaReutilizableDTO> listarTodasLasPlantillasMicro() {
+        return plantillaRepository.findByVigenteTrueOrderByNombreAsc().stream()
+                .map(plantilla -> PlantillaMicrobiologicaReutilizableDTO.builder()
+                        .id(plantilla.getId())
+                        .nombre(plantilla.getNombre())
+                        .productoNombre(plantilla.getProducto() != null ? plantilla.getProducto().getNombre() : null)
+                        .version(plantilla.getVersion())
+                        .numeroParametros(plantilla.getParametros() != null ? plantilla.getParametros().size() : 0)
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
     public PlantillaAnalisisMicrobiologicoDetalleDTO obtenerDetallePlantillaMicro(Long plantillaId) {
         PlantillaAnalisisMicrobiologico plantilla = plantillaRepository.findById(plantillaId)
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.RECURSO_NO_ENCONTRADO,

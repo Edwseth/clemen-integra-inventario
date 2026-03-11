@@ -56,6 +56,13 @@ public class EspecificacionesCalidadController {
         return ResponseEntity.ok(service.listarPlantillasMicroPorProducto(productoId));
     }
 
+    @GetMapping("/micro")
+    // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
+    @PreAuthorize("hasAnyAuthority('QC_READ')")
+    public ResponseEntity<List<PlantillaMicrobiologicaReutilizableDTO>> listarTodasLasPlantillasMicro() {
+        return ResponseEntity.ok(service.listarTodasLasPlantillasMicro());
+    }
+
     @GetMapping("/micro/{plantillaId}")
     // TODO:REMOVE_AFTER_QC_FULL_MIGRATION
     @PreAuthorize("hasAnyAuthority('QC_READ')")

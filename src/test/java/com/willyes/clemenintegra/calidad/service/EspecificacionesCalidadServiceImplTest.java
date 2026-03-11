@@ -335,4 +335,37 @@ class EspecificacionesCalidadServiceImplTest {
         assertThat(detalle.getParametros().get(0).getCriterioAceptacion()).isEqualTo("<100");
         assertThat(detalle.getParametros().get(0).getTipoResultado()).isEqualTo(TipoResultadoAnalisis.NUMERICO);
     }
+
+    @Test
+    void debeListarPlantillasMicroReutilizablesVigentes() {
+        Producto producto = Producto.builder().id(9).nombre("Producto terminado").build();
+
+        PlantillaAnalisisMicrobiologico plantilla = PlantillaAnalisisMicrobiologico.builder()
+                .id(900L)
+                .nombre("Plantilla Micro PT")
+                .producto(producto)
+                .version(1)
+                .vigente(true)
+                .parametros(IntStream.rangeClosed(1, 5)
+                        .mapToObj(i -> ParametroAnalisisMicrobiologico.builder()
+                                .id((long) i)
+                                .nombreEnsayo("Parametro " + i)
+                                .tipoResultado(TipoResultadoAnalisis.NUMERICO)
+                                .orden(i)
+                                .build())
+                        .toList())
+                .build();
+
+        when(plantillaRepository.findByVigenteTrueOrderByNombreAsc()).thenReturn(List.of(plantilla));
+
+        var resultado = service.listarTodasLasPlantillasMicro();
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getId()).isEqualTo(900L);
+        assertThat(resultado.get(0).getNombre()).isEqualTo("Plantilla Micro PT");
+        assertThat(resultado.get(0).getProductoNombre()).isEqualTo("Producto terminado");
+        assertThat(resultado.get(0).getVersion()).isEqualTo(1);
+        assertThat(resultado.get(0).getNumeroParametros()).isEqualTo(5);
+    }
+
 }
