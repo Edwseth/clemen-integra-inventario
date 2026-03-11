@@ -249,7 +249,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         final boolean esEntradaPt = (tipoMovimiento == TipoMovimiento.ENTRADA);
 
         boolean esRegularizacionTrazabilidad = clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD
-                || clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT;
+                || clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT
+                || clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PS;
         if (esOpDesdeDto
                 && !esEntradaPt
                 && !esRegularizacionTrazabilidad
