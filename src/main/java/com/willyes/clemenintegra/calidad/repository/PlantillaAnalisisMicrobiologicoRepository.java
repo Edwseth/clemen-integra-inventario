@@ -12,6 +12,9 @@ public interface PlantillaAnalisisMicrobiologicoRepository extends JpaRepository
 
     Optional<PlantillaAnalisisMicrobiologico> findTopByProducto_IdOrderByVersionDesc(Long productoId);
 
+    @EntityGraph(attributePaths = {"producto", "parametros"})
+    List<PlantillaAnalisisMicrobiologico> findByVigenteTrueOrderByNombreAsc();
+
     @EntityGraph(attributePaths = "parametros")
     Optional<PlantillaAnalisisMicrobiologico> findById(Long id);
 }

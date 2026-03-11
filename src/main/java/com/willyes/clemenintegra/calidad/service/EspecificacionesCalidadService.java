@@ -15,6 +15,8 @@ public interface EspecificacionesCalidadService {
 
     List<PlantillaAnalisisMicrobiologicoResumenDTO> listarPlantillasMicroPorProducto(Long productoId);
 
+    List<PlantillaMicrobiologicaReutilizableDTO> listarTodasLasPlantillasMicro();
+
     PlantillaAnalisisMicrobiologicoDetalleDTO obtenerDetallePlantillaMicro(Long plantillaId);
 
     PlantillaAnalisisMicrobiologicoDetalleDTO crearPlantillaMicro(Long productoId, PlantillaAnalisisMicrobiologicoRequest request);
