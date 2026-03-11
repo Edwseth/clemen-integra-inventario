@@ -103,6 +103,12 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                     .build();
         }
 
+        boolean existeRegularizacionParaOp = regularizacionRepository.existsByOrdenProduccionId(request.ordenProduccionId());
+        if (existeRegularizacionParaOp) {
+            throw new CustomBusinessException(ApiErrorCode.OPERACION_NO_PERMITIDA,
+                    "La orden de producción ya tiene una regularización registrada");
+        }
+
         OrdenProduccion op = ordenProduccionRepository.findById(request.ordenProduccionId())
                 .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.ORDEN_PRODUCCION_NO_ENCONTRADA, "OP no encontrada"));
 
