@@ -280,6 +280,81 @@ class MovimientoInventarioServiceDevolucionClienteTest {
                         assertThat(ex.getCode()).isEqualTo(ApiErrorCode.DEVOLUCION_PT_FECHA_VENCIMIENTO_REQUERIDA));
     }
 
+
+    @Test
+    void shouldUpdateLoteOrigenFecha_whenNoLegacyAndLoteOrigenSinVencimiento() {
+        Producto producto = crearProducto(353);
+        LoteProducto lote = crearLote(653L, producto, 2, EstadoLote.LIBERADO);
+        lote.setFechaVencimiento(null);
+        LocalDateTime fecha = LocalDateTime.now().plusDays(95).withNano(0);
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("10"),
+                TipoMovimiento.RECEPCION,
+                ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE,
+                "DOC-DEV-1",
+                "Observaciones",
+                "Cliente Uno",
+                CausaDevolucionPT.TROCADO,
+                CondicionProductoDevuelto.OPTIMO,
+                producto.getId(),
+                lote.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                TIPO_DETALLE_EXPLICITO_ID,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                fecha,
+                null,
+                null,
+                null,
+                false,
+                null
+        );
+
+        stubCatalogosRecepcionDevolucion();
+        configurarMocksBasicos(producto, lote, ALMACEN_PT_ID, TIPO_DETALLE_EXPLICITO_ID);
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(17L).build());
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(17L);
+            return mov;
+        });
+
+        ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+        doAnswer(invocation -> {
+            LoteProducto lp = invocation.getArgument(0);
+            if (lp.getId() == null) {
+                lp.setId(1003L);
+            }
+            return lp;
+        }).when(loteProductoRepository).save(loteCaptor.capture());
+
+        service.registrarMovimiento(dto);
+
+        assertThat(lote.getFechaVencimiento()).isEqualTo(fecha);
+        assertThat(loteCaptor.getAllValues())
+                .anySatisfy(lp -> {
+                    assertThat(lp.getId()).isEqualTo(lote.getId());
+                    assertThat(lp.getFechaVencimiento()).isEqualTo(fecha);
+                });
+    }
+
     @Test
     void shouldReject_whenNotLegacy_andMissingLoteProductoId() {
         Producto producto = crearProducto(300);
