@@ -6,12 +6,15 @@ import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
+import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MotivoMovimiento;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.TipoMovimientoDetalle;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.MovimientoCreadoDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadRequestDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadResponseDTO;
@@ -24,6 +27,7 @@ import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MotivoMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
@@ -51,7 +55,6 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
     private static final long CATEGORIA_EMPAQUE_ID = 2L;
     private static final int ALMACEN_PRE_BODEGA = 6;
     private static final int ALMACEN_PRINCIPAL_EMPAQUE = 5;
-    private static final int ALMACEN_PT = 2;
 
     private final OrdenProduccionRepository ordenProduccionRepository;
     private final MovimientoInventarioRepository movimientoInventarioRepository;
@@ -62,6 +65,7 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
     private final RegularizacionTrazabilidadRepository regularizacionRepository;
     private final RegularizacionTrazabilidadDetalleRepository detalleRepository;
     private final FormulaProductoRepository formulaProductoRepository;
+    private final InventoryCatalogResolver inventoryCatalogResolver;
 
     @Override
     @Transactional
@@ -146,23 +150,40 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
             }
         }
 
-        if (Boolean.TRUE.equals(request.ajustarProductoTerminado()) && diferencia.signum() != 0) {
-            MovimientoInventario ptEntrada = movimientoInventarioRepository
-                    .findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                            op.getId(), TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO
+        boolean ajustoProductoResultado = false;
+        if (diferencia.signum() != 0) {
+            Producto productoResultado = op.getProducto();
+            Long productoResultadoId = Optional.ofNullable(productoResultado)
+                    .map(Producto::getId)
+                    .map(Integer::longValue)
+                    .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                            "Producto resultado de OP no válido"));
+            Long almacenProductoResultado = resolverAlmacenProductoResultado(productoResultado);
+            MovimientoInventario entradaBase = movimientoInventarioRepository
+                    .findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                            op.getId(), productoResultadoId, TipoMovimiento.ENTRADA
                     )
                     .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.REGULARIZACION_PT_SIN_ENTRADA_BASE,
-                            "No existe ENTRADA_PRODUCTO_TERMINADO base para OP " + op.getId()));
+                            "No existe movimiento de ENTRADA base para OP " + op.getId()));
+
+            Long almacenLote = Optional.ofNullable(entradaBase.getLote())
+                    .map(LoteProducto::getAlmacen)
+                    .map(a -> a.getId().longValue())
+                    .orElse(null);
+            int almacenMovimiento = Math.toIntExact(almacenLote != null ? almacenLote : almacenProductoResultado);
+            ClasificacionMovimientoInventario clasificacionProductoResultado =
+                    resolverClasificacionRegularizacionProductoResultado(productoResultado);
 
             planes.add(new MovimientoPlan(
-                    ptEntrada.getProducto().getId().longValue(),
-                    ptEntrada.getLote().getId(),
+                    entradaBase.getProducto().getId().longValue(),
+                    entradaBase.getLote().getId(),
                     diferencia.abs(),
                     diferencia.signum() < 0 ? TipoMovimiento.SALIDA : TipoMovimiento.ENTRADA,
-                    ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT,
-                    diferencia.signum() < 0 ? ALMACEN_PT : null,
-                    diferencia.signum() > 0 ? ALMACEN_PT : null
+                    clasificacionProductoResultado,
+                    diferencia.signum() < 0 ? almacenMovimiento : null,
+                    diferencia.signum() > 0 ? almacenMovimiento : null
             ));
+            ajustoProductoResultado = true;
         }
 
         if (planes.isEmpty()) {
@@ -175,7 +196,7 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                 .cantidadProgramada(programada)
                 .cantidadReal(request.cantidadRealProducida())
                 .diferencia(diferencia)
-                .ajustarPt(Boolean.TRUE.equals(request.ajustarProductoTerminado()))
+                .ajustarPt(ajustoProductoResultado)
                 .documentoReferencia(request.documentoReferencia())
                 .observaciones(request.observaciones())
                 .idempotencyKey(idempotencyKey)
@@ -344,6 +365,34 @@ public class RegularizacionTrazabilidadServiceImpl implements RegularizacionTraz
                 .map(MovimientoInventario::getClasificacion)
                 .map(Enum::name)
                 .orElse(null);
+    }
+
+    private ClasificacionMovimientoInventario resolverClasificacionRegularizacionProductoResultado(Producto producto) {
+        TipoCategoria tipo = Optional.ofNullable(producto)
+                .map(Producto::getCategoriaProducto)
+                .map(CategoriaProducto::getTipo)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "Producto resultado de OP sin categoría"));
+        return switch (tipo) {
+            case PRODUCTO_TERMINADO -> ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT;
+            case PRODUCTO_SEMI_ELABORADO -> ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PS;
+            default -> throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "La regularización solo aplica para PT/PS. Tipo actual: " + tipo);
+        };
+    }
+
+    private Long resolverAlmacenProductoResultado(Producto producto) {
+        TipoCategoria tipo = Optional.ofNullable(producto)
+                .map(Producto::getCategoriaProducto)
+                .map(CategoriaProducto::getTipo)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "Producto resultado de OP sin categoría"));
+        return switch (tipo) {
+            case PRODUCTO_TERMINADO -> inventoryCatalogResolver.getAlmacenPtId();
+            case PRODUCTO_SEMI_ELABORADO -> inventoryCatalogResolver.getAlmacenOrigenProductoSemiElaboradoId();
+            default -> throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "No existe almacén configurado para tipo de producto resultado: " + tipo);
+        };
     }
 
     private MovimientoCreadoDTO crearMovimiento(String idem, int sec, Long productoId, Long loteId, BigDecimal cantidad,

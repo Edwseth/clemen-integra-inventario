@@ -389,6 +389,11 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
             TipoMovimiento tipoMovimiento,
             ClasificacionMovimientoInventario clasificacion);
 
+    Optional<MovimientoInventario> findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+            Long ordenProduccionId,
+            Long productoId,
+            TipoMovimiento tipoMovimiento);
+
 
     @Query("""
             select coalesce(sum(case

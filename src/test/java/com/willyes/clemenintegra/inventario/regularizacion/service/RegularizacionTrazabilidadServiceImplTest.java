@@ -8,6 +8,7 @@ import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.model.*;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.regularizacion.dto.RegularizacionTrazabilidadRequestDTO;
 import com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionTrazabilidad;
@@ -15,6 +16,7 @@ import com.willyes.clemenintegra.inventario.regularizacion.model.RegularizacionT
 import com.willyes.clemenintegra.inventario.regularizacion.service.impl.RegularizacionTrazabilidadServiceImpl;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
+import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
@@ -51,6 +53,7 @@ class RegularizacionTrazabilidadServiceImplTest {
     @Mock MotivoMovimientoRepository motivoMovimientoRepository;
     @Mock TipoMovimientoDetalleRepository tipoMovimientoDetalleRepository;
     @Mock MovimientoInventarioService movimientoInventarioService;
+    @Mock InventoryCatalogResolver inventoryCatalogResolver;
     @Mock FormulaProductoRepository formulaProductoRepository;
     @Mock com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository regularizacionRepository;
     @Mock com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadDetalleRepository detalleRepository;
@@ -69,15 +72,23 @@ class RegularizacionTrazabilidadServiceImplTest {
         when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
                 4L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
         )).thenReturn(List.of(consumo(21, 100L, "6000", ALMACEN_PRE_BODEGA)));
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                4L, 10L, TipoMovimiento.ENTRADA
+        )).thenReturn(Optional.of(entradaBase(10, 901L, 2)));
 
         var respuesta = service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(4L, new BigDecimal("6030"), "ACTA", "regularizacion positiva", false), "idem-pos", u);
 
-        assertThat(respuesta.movimientos()).hasSize(1);
-        assertThat(respuesta.movimientos().get(0).tipoMovimiento()).isEqualTo(TipoMovimiento.SALIDA.name());
-        assertThat(respuesta.movimientos().get(0).cantidad()).isEqualByComparingTo("30");
+        assertThat(respuesta.movimientos()).hasSize(2);
+        assertThat(respuesta.movimientos()).anySatisfy(m -> {
+            assertThat(m.tipoMovimiento()).isEqualTo(TipoMovimiento.SALIDA.name());
+            assertThat(m.clasificacion()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD.name());
+        });
         ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
-        verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
-        assertThat(captor.getValue().clasificacionMovimientoInventario()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD);
+        verify(movimientoInventarioService, atLeastOnce()).registrarMovimiento(captor.capture(), anyString());
+        assertThat(captor.getAllValues())
+                .extracting(MovimientoInventarioDTO::clasificacionMovimientoInventario)
+                .contains(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD,
+                        ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT);
     }
 
     @Test
@@ -93,12 +104,17 @@ class RegularizacionTrazabilidadServiceImplTest {
         when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
                 8L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
         )).thenReturn(List.of(consumo(21, 200L, "30000", ALMACEN_PRE_BODEGA)));
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                8L, 10L, TipoMovimiento.ENTRADA
+        )).thenReturn(Optional.of(entradaBase(10, 902L, 2)));
 
         var respuesta = service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(8L, new BigDecimal("29900"), "ACTA", "regularizacion negativa", false), "idem-neg", u);
 
-        assertThat(respuesta.movimientos()).hasSize(1);
-        assertThat(respuesta.movimientos().get(0).tipoMovimiento()).isEqualTo(TipoMovimiento.ENTRADA.name());
-        assertThat(respuesta.movimientos().get(0).cantidad()).isEqualByComparingTo("100");
+        assertThat(respuesta.movimientos()).hasSize(2);
+        assertThat(respuesta.movimientos())
+                .extracting(m -> m.clasificacion())
+                .contains(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION.name(),
+                        ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT.name());
     }
 
     @Test
@@ -135,14 +151,114 @@ class RegularizacionTrazabilidadServiceImplTest {
         when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
                 10L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
         )).thenReturn(List.of(consumo(21, 500L, "6000", ALMACEN_PRE_BODEGA)));
-        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
-                10L, TipoMovimiento.ENTRADA, ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                10L, 10L, TipoMovimiento.ENTRADA
         )).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(10L, new BigDecimal("6030"), "ACTA", "pt sin base", true), "idem-pt", u))
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting(e -> ((CustomBusinessException) e).getCode())
                 .isEqualTo(ApiErrorCode.REGULARIZACION_PT_SIN_ENTRADA_BASE);
+    }
+
+    @Test
+    void regularizacionProductoResultadoPt_diferenciaPositiva_usaClasificacionYAlmacenPtDelLote() {
+        Usuario u = Usuario.builder().id(7L).build();
+        setupRegularizacionLifecycle("idem-pt-pos", 21L);
+        setupCatalogos();
+
+        OrdenProduccion op = op(21L, 10, "100", TipoCategoria.PRODUCTO_TERMINADO);
+        when(ordenProduccionRepository.findById(21L)).thenReturn(Optional.of(op));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(FormulaProducto.builder().detalles(List.of()).build()));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
+                21L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
+        )).thenReturn(List.of());
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                21L, 10L, TipoMovimiento.ENTRADA
+        )).thenReturn(Optional.of(entradaBase(10, 910L, 2)));
+
+        service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(21L, new BigDecimal("105"), "ACTA", "pt pos", false), "idem-pt-pos", u);
+
+        ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
+        assertThat(captor.getValue().clasificacionMovimientoInventario()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT);
+        assertThat(captor.getValue().almacenDestinoId()).isEqualTo(2);
+    }
+
+    @Test
+    void regularizacionProductoResultadoPt_diferenciaNegativa_usaAlmacenOrigenDelLote() {
+        Usuario u = Usuario.builder().id(7L).build();
+        setupRegularizacionLifecycle("idem-pt-neg", 22L);
+        setupCatalogos();
+
+        OrdenProduccion op = op(22L, 10, "100", TipoCategoria.PRODUCTO_TERMINADO);
+        when(ordenProduccionRepository.findById(22L)).thenReturn(Optional.of(op));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(FormulaProducto.builder().detalles(List.of()).build()));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
+                22L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
+        )).thenReturn(List.of());
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                22L, 10L, TipoMovimiento.ENTRADA
+        )).thenReturn(Optional.of(entradaBase(10, 911L, 2)));
+
+        service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(22L, new BigDecimal("95"), "ACTA", "pt neg", true), "idem-pt-neg", u);
+
+        ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
+        assertThat(captor.getValue().almacenOrigenId()).isEqualTo(2);
+        assertThat(captor.getValue().clasificacionMovimientoInventario()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT);
+    }
+
+    @Test
+    void regularizacionProductoResultadoPs_diferenciaPositiva_usaClasificacionYAlmacenPsDelLote() {
+        Usuario u = Usuario.builder().id(7L).build();
+        setupRegularizacionLifecycle("idem-ps-pos", 23L);
+        setupCatalogos();
+
+        OrdenProduccion op = op(23L, 11, "50", TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        when(ordenProduccionRepository.findById(23L)).thenReturn(Optional.of(op));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(11L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(FormulaProducto.builder().detalles(List.of()).build()));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
+                23L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
+        )).thenReturn(List.of());
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                23L, 11L, TipoMovimiento.ENTRADA
+        )).thenReturn(Optional.of(entradaBase(11, 912L, 7)));
+
+        service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(23L, new BigDecimal("55"), "ACTA", "ps pos", false), "idem-ps-pos", u);
+
+        ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
+        assertThat(captor.getValue().almacenDestinoId()).isEqualTo(7);
+        assertThat(captor.getValue().clasificacionMovimientoInventario()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PS);
+    }
+
+    @Test
+    void regularizacionProductoResultadoPs_diferenciaNegativa_usaClasificacionPsYAlmacenOrigenDelLote() {
+        Usuario u = Usuario.builder().id(7L).build();
+        setupRegularizacionLifecycle("idem-ps-neg", 24L);
+        setupCatalogos();
+
+        OrdenProduccion op = op(24L, 11, "50", TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        when(ordenProduccionRepository.findById(24L)).thenReturn(Optional.of(op));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(11L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(FormulaProducto.builder().detalles(List.of()).build()));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
+                24L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
+        )).thenReturn(List.of());
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                24L, 11L, TipoMovimiento.ENTRADA
+        )).thenReturn(Optional.of(entradaBase(11, 913L, 7)));
+
+        service.regularizarPorOP(new RegularizacionTrazabilidadRequestDTO(24L, new BigDecimal("45"), "ACTA", "ps neg", true), "idem-ps-neg", u);
+
+        ArgumentCaptor<MovimientoInventarioDTO> captor = ArgumentCaptor.forClass(MovimientoInventarioDTO.class);
+        verify(movimientoInventarioService).registrarMovimiento(captor.capture(), anyString());
+        assertThat(captor.getValue().almacenOrigenId()).isEqualTo(7);
+        assertThat(captor.getValue().clasificacionMovimientoInventario()).isEqualTo(ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PS);
     }
 
 
@@ -160,6 +276,9 @@ class RegularizacionTrazabilidadServiceImplTest {
         when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacionAndTipoMovimientoOrderByFechaIngresoAscIdAsc(
                 12L, ClasificacionMovimientoInventario.SALIDA_PRODUCCION, TipoMovimiento.SALIDA
         )).thenReturn(List.of(consumo(21, 300L, "100", ALMACEN_PRE_BODEGA)));
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndProductoIdAndTipoMovimientoOrderByIdAsc(
+                12L, 10L, TipoMovimiento.ENTRADA
+        )).thenReturn(Optional.of(entradaBase(10, 903L, 2)));
         when(movimientoInventarioRepository.sumarCostoMaterialRealOp(12L)).thenReturn(new BigDecimal("500.000000"));
 
         LoteProducto lotePt = new LoteProducto();
@@ -232,6 +351,8 @@ class RegularizacionTrazabilidadServiceImplTest {
     }
 
     private void setupCatalogos() {
+        when(inventoryCatalogResolver.getAlmacenPtId()).thenReturn(2L);
+        when(inventoryCatalogResolver.getAlmacenOrigenProductoSemiElaboradoId()).thenReturn(7L);
         when(tipoMovimientoDetalleRepository.findByDescripcion(anyString()))
                 .thenReturn(Optional.of(TipoMovimientoDetalle.builder().id(1L).descripcion("x").build()));
         when(motivoMovimientoRepository.findByMotivo(any()))
@@ -252,9 +373,15 @@ class RegularizacionTrazabilidadServiceImplTest {
     }
 
     private OrdenProduccion op(Long id, int productoId, String programada) {
+        return op(id, productoId, programada, TipoCategoria.PRODUCTO_TERMINADO);
+    }
+
+    private OrdenProduccion op(Long id, int productoId, String programada, TipoCategoria tipoCategoria) {
         Producto pt = new Producto();
         pt.setId(productoId);
-        pt.setCategoriaProducto(new CategoriaProducto());
+        CategoriaProducto categoriaProducto = new CategoriaProducto();
+        categoriaProducto.setTipo(tipoCategoria);
+        pt.setCategoriaProducto(categoriaProducto);
         return OrdenProduccion.builder().id(id).producto(pt).cantidadProgramada(new BigDecimal(programada)).build();
     }
 
@@ -284,6 +411,25 @@ class RegularizacionTrazabilidadServiceImplTest {
                 .lote(l)
                 .cantidad(new BigDecimal(cantidad))
                 .almacenOrigen(almacen)
+                .fechaIngreso(LocalDateTime.now())
+                .build();
+    }
+
+    private MovimientoInventario entradaBase(int productoId, long loteId, int almacenLote) {
+        Producto p = new Producto();
+        p.setId(productoId);
+        LoteProducto lote = new LoteProducto();
+        lote.setId(loteId);
+        Almacen almacen = new Almacen();
+        almacen.setId(almacenLote);
+        lote.setAlmacen(almacen);
+        return MovimientoInventario.builder()
+                .id(loteId)
+                .producto(p)
+                .lote(lote)
+                .cantidad(BigDecimal.ONE)
+                .tipoMovimiento(TipoMovimiento.ENTRADA)
+                .clasificacion(ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO)
                 .fechaIngreso(LocalDateTime.now())
                 .build();
     }
