@@ -10,7 +10,8 @@ import java.util.regex.Pattern;
 
 final class ResultadoMicroValidador {
 
-    private static final Pattern OPERADOR_NUMERICO = Pattern.compile("(?i)(<=|>=|<|>|=|≤|≥)?\\s*([0-9][0-9.,]*)");
+    private static final Pattern OPERADOR_NUMERICO =
+            Pattern.compile("(<=|>=|<|>|=|≤|≥)\\s*([0-9]+(?:[.,][0-9]+)?)");
     private static final Pattern SOLO_NUMERO = Pattern.compile("([0-9][0-9.,]*)");
     private static final Pattern MILES_PUNTO = Pattern.compile("^\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?$");
     private static final Pattern MILES_COMA = Pattern.compile("^\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?$");
