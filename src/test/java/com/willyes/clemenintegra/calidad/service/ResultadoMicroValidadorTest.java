@@ -68,8 +68,9 @@ class ResultadoMicroValidadorTest {
         assertThat(cumple).isTrue();
     }
 
+
     @Test
-    void validaResultadoIgualAlLimiteParaFormatoConUnidad() {
+    void validaOperadorConUnidadCuandoResultadoIgualAlLimiteCumple() {
         ParametroAnalisisMicrobiologico parametro = ParametroAnalisisMicrobiologico.builder()
                 .tipoResultado(TipoResultadoAnalisis.NUMERICO)
                 .especificacion("< 3 NMP/mL")
