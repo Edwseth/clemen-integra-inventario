@@ -122,38 +122,15 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         java.util.List<ArchivoEvaluacion> adjuntos = guardarAdjuntos(archivos, dto.getArchivosAdjuntos());
 
-        EvaluacionCalidad entidad;
-        if (dto.getTipoEvaluacion() == TipoEvaluacion.QUIMICO_MICROBIOLOGICO) {
-            entidad = repository.findFirstByLoteProductoIdAndTipoEvaluacion(lote.getId(), TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
-                    .map(existing -> {
-                        existing.setResultado(dto.getResultado());
-                        existing.setObservaciones(dto.getObservaciones());
-                        existing.setFechaEvaluacion(LocalDateTime.now());
-                        existing.setUsuarioEvaluador(user);
-                        existing.setTipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO);
-                        existing.setLoteProducto(lote);
-
-                        if (adjuntos != null && !adjuntos.isEmpty()) {
-                            java.util.List<ArchivoEvaluacion> actuales = existing.getArchivosAdjuntos();
-                            if (actuales == null) {
-                                actuales = new java.util.ArrayList<>();
-                            }
-                            actuales.addAll(adjuntos);
-                            existing.setArchivosAdjuntos(actuales);
-                        }
-                        return existing;
-                    })
-                    .orElseGet(() -> {
-                        EvaluacionCalidad nueva = mapper.toEntity(dto, lote, user);
-                        nueva.setFechaEvaluacion(LocalDateTime.now());
-                        nueva.setArchivosAdjuntos(adjuntos);
-                        return nueva;
-                    });
-        } else {
-            entidad = mapper.toEntity(dto, lote, user);
-            entidad.setFechaEvaluacion(LocalDateTime.now());
-            entidad.setArchivosAdjuntos(adjuntos);
+        if (repository.existsByLoteProductoIdAndTipoEvaluacion(lote.getId(), dto.getTipoEvaluacion())) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.EVALUACION_DUPLICADA,
+                    "Ya existe una evaluación registrada para este lote y tipo de análisis");
         }
+
+        EvaluacionCalidad entidad = mapper.toEntity(dto, lote, user);
+        entidad.setFechaEvaluacion(LocalDateTime.now());
+        entidad.setArchivosAdjuntos(adjuntos);
 
         entidad = repository.save(entidad);
 
