@@ -45,7 +45,7 @@ class ResultadoMicroValidadorTest {
     }
 
     @Test
-    void validaLimiteConMilesCuandoEsIgualNoCumplePorOperadorEstricto() {
+    void validaLimiteConMilesCuandoEsIgualCumpleParaOperadorMenorMicrobiologia() {
         ParametroAnalisisMicrobiologico parametro = ParametroAnalisisMicrobiologico.builder()
                 .tipoResultado(TipoResultadoAnalisis.NUMERICO)
                 .especificacion("<10.000 UFC/mL")
@@ -53,7 +53,7 @@ class ResultadoMicroValidadorTest {
 
         Boolean cumple = ResultadoMicroValidador.calcularCumplimiento(parametro, "10000", null);
 
-        assertThat(cumple).isFalse();
+        assertThat(cumple).isTrue();
     }
 
     @Test
@@ -64,6 +64,18 @@ class ResultadoMicroValidadorTest {
                 .build();
 
         Boolean cumple = ResultadoMicroValidador.calcularCumplimiento(parametro, "2", null);
+
+        assertThat(cumple).isTrue();
+    }
+
+    @Test
+    void validaResultadoIgualAlLimiteParaFormatoConUnidad() {
+        ParametroAnalisisMicrobiologico parametro = ParametroAnalisisMicrobiologico.builder()
+                .tipoResultado(TipoResultadoAnalisis.NUMERICO)
+                .especificacion("< 3 NMP/mL")
+                .build();
+
+        Boolean cumple = ResultadoMicroValidador.calcularCumplimiento(parametro, "3", null);
 
         assertThat(cumple).isTrue();
     }
