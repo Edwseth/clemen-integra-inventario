@@ -65,7 +65,8 @@ final class ResultadoMicroValidador {
 
         int comparacion = valorResultado.compareTo(limite);
         return switch (operador) {
-            case "<" -> comparacion < 0;
+            // En microbiología los resultados reportados como `<X` pueden aparecer como `X` en laboratorio y deben considerarse dentro del límite.
+            case "<" -> comparacion <= 0;
             case "<=" -> comparacion <= 0;
             case ">" -> comparacion > 0;
             case ">=" -> comparacion >= 0;
