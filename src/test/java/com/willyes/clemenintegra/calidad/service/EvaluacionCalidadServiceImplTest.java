@@ -18,6 +18,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.inventario.repository.AlmacenRepository;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.model.enums.RolUsuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -43,6 +44,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -106,7 +109,7 @@ class EvaluacionCalidadServiceImplTest {
     }
 
     @Test
-    void creaNuevaEvaluacionQMCuandoNoExiste() {
+    void creaNuevaEvaluacionCuandoNoExisteDuplicado() {
         EvaluacionCalidadRequestDTO dto = EvaluacionCalidadRequestDTO.builder()
                 .loteProductoId(10L)
                 .usuarioEvaluadorId(99L)
@@ -115,8 +118,8 @@ class EvaluacionCalidadServiceImplTest {
                 .observaciones("OK")
                 .build();
 
-        when(repository.findFirstByLoteProductoIdAndTipoEvaluacion(10L, TipoEvaluacion.QUIMICO_MICROBIOLOGICO))
-                .thenReturn(Optional.empty());
+        when(repository.existsByLoteProductoIdAndTipoEvaluacion(10L, TipoEvaluacion.QUIMICO_MICROBIOLOGICO))
+                .thenReturn(false);
         when(repository.save(any(EvaluacionCalidad.class))).thenAnswer(invocation -> {
             EvaluacionCalidad eval = invocation.getArgument(0);
             eval.setId(50L);
@@ -142,42 +145,24 @@ class EvaluacionCalidadServiceImplTest {
     }
 
     @Test
-    void reutilizaEvaluacionQMExistente() {
-        EvaluacionCalidad existente = EvaluacionCalidad.builder()
-                .id(60L)
-                .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
-                .observaciones("Inicial")
-                .resultado(ResultadoEvaluacion.CONDICIONADO)
-                .loteProducto(lote)
-                .usuarioEvaluador(evaluador)
-                .fechaEvaluacion(LocalDateTime.now().minusDays(1))
-                .archivosAdjuntos(new ArrayList<>(List.of(ArchivoEvaluacion.builder()
-                        .nombreVisible("Químico")
-                        .nombreArchivo("quim.pdf")
-                        .build())))
-                .build();
-
-        when(repository.findFirstByLoteProductoIdAndTipoEvaluacion(10L, TipoEvaluacion.QUIMICO_MICROBIOLOGICO))
-                .thenReturn(Optional.of(existente));
-        when(repository.save(any(EvaluacionCalidad.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(repository.findById(60L)).thenReturn(Optional.of(existente));
-
+    void lanzaErrorCuandoYaExisteEvaluacionParaLoteYTipo() {
         EvaluacionCalidadRequestDTO dto = EvaluacionCalidadRequestDTO.builder()
                 .loteProductoId(10L)
                 .usuarioEvaluadorId(99L)
                 .tipoEvaluacion(TipoEvaluacion.QUIMICO_MICROBIOLOGICO)
                 .resultado(ResultadoEvaluacion.CONFORME)
-                .observaciones("Actualizada")
+                .observaciones("Duplicada")
                 .build();
 
-        var respuesta = service.crear(dto, null);
+        when(repository.existsByLoteProductoIdAndTipoEvaluacion(10L, TipoEvaluacion.QUIMICO_MICROBIOLOGICO))
+                .thenReturn(true);
 
-        assertThat(respuesta.getId()).isEqualTo(60L);
-        assertThat(existente.getObservaciones()).isEqualTo("Actualizada");
-        assertThat(existente.getArchivosAdjuntos())
-                .extracting(ArchivoEvaluacion::getNombreVisible)
-                .contains("Químico");
-        verify(repository).findById(60L);
+        CustomBusinessException exception = assertThrows(CustomBusinessException.class,
+                () -> service.crear(dto, null));
+
+        assertThat(exception.getCode()).isEqualTo(com.willyes.clemenintegra.shared.exception.ApiErrorCode.EVALUACION_DUPLICADA);
+        assertThat(exception.getMessage()).isEqualTo("Ya existe una evaluación registrada para este lote y tipo de análisis");
+        verify(repository, never()).save(any(EvaluacionCalidad.class));
     }
 
     @Test

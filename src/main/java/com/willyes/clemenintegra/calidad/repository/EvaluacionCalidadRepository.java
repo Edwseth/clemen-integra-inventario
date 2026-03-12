@@ -25,6 +25,8 @@ public interface EvaluacionCalidadRepository extends JpaRepository<EvaluacionCal
 
     java.util.Optional<EvaluacionCalidad> findFirstByLoteProductoIdAndTipoEvaluacion(Long loteId, TipoEvaluacion tipoEvaluacion);
 
+    Optional<EvaluacionCalidad> findByLoteProductoIdAndTipoEvaluacion(Long loteId, TipoEvaluacion tipoEvaluacion);
+
     @EntityGraph(attributePaths = {"loteProducto.producto", "usuarioEvaluador"})
     @Query("SELECT e FROM EvaluacionCalidad e")
     java.util.List<EvaluacionCalidad> findAllWithRelations();
