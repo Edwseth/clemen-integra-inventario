@@ -19,7 +19,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -27,17 +26,6 @@ import java.util.Optional;
 public class AnalisisMicroPdfService {
 
     private static final DateTimeFormatter FECHA_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    private static final Map<String, String> METODOS_ISO = Map.ofEntries(
-            Map.entry("Recuento de mesófilos aerobios", "ISO 4833-1"),
-            Map.entry("Recuento de coliformes totales", "ISO 4832"),
-            Map.entry("Recuento de coliformes fecales", "ISO 4832"),
-            Map.entry("Recuento de Bacillus cereus", "ISO 7932"),
-            Map.entry("Presencia de Salmonella spp", "ISO 6579"),
-            Map.entry("Recuento de esporas de Clostridium sulfito reductor", "ISO 15213"),
-            Map.entry("Recuento de mohos y levaduras", "ISO 21527-1"),
-            Map.entry("Presencia de Staphylococcus aureus", "ISO 6888-1")
-    );
 
     private final EvaluacionCalidadRepository evaluacionRepository;
     private final ResultadoAnalisisMicrobiologicoRepository resultadoRepository;
@@ -110,7 +98,7 @@ public class AnalisisMicroPdfService {
                     ResultadoAnalisisMicrobiologico res = index.get(p.getId());
                     sb.append("<tr>")
                             .append("<td>").append(esc(p.getNombreEnsayo())).append("</td>")
-                            .append("<td>").append(esc(obtenerMetodoIso(p.getNombreEnsayo()))).append("</td>")
+                            .append("<td>").append(esc(p.getMetodo())).append("</td>")
                             .append("<td>").append(esc(p.getEspecificacion())).append("</td>")
                             .append("<td>").append(esc(formatearResultado(p, res))).append("</td>")
                             .append("</tr>");
@@ -124,10 +112,6 @@ public class AnalisisMicroPdfService {
 
     private String formatearFecha(EvaluacionCalidad evaluacion) {
         return evaluacion.getFechaEvaluacion() != null ? evaluacion.getFechaEvaluacion().format(FECHA_FORMATTER) : "";
-    }
-
-    private String obtenerMetodoIso(String nombreEnsayo) {
-        return METODOS_ISO.getOrDefault(nombreEnsayo, "");
     }
 
     private String formatearResultado(ParametroAnalisisMicrobiologico parametro, ResultadoAnalisisMicrobiologico resultado) {
@@ -177,4 +161,3 @@ public class AnalisisMicroPdfService {
         }
     }
 }
-
