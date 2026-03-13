@@ -38,6 +38,7 @@ class AnalisisMicroPdfServiceTest {
                 .id(2L)
                 .plantilla(plantilla)
                 .nombreEnsayo("Ensayo")
+                .metodo("USP <61>")
                 .tipoResultado(TipoResultadoAnalisis.TEXTO)
                 .orden(1)
                 .build();
@@ -72,6 +73,7 @@ class AnalisisMicroPdfServiceTest {
         assertThat(html).contains("LABORATORIO DE MICROBIOLOGÍA CLEMEN");
         assertThat(html).contains("CÓDIGO: FOR-MIC-009");
         assertThat(html).contains("Ensayo");
+        assertThat(html).contains("USP &lt;61&gt;");
 
         byte[] pdf = service.generarPdf(5L);
 
@@ -79,4 +81,3 @@ class AnalisisMicroPdfServiceTest {
         assertThat(pdf.length).isGreaterThan(100);
     }
 }
-
