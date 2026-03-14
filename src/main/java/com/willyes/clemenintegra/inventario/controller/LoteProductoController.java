@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
@@ -134,6 +135,17 @@ public class LoteProductoController {
     @PreAuthorize("hasAnyAuthority('INV_READ')")
     public ResponseEntity<java.util.List<EvaluacionCalidadResponseDTO>> obtenerEvaluaciones(@PathVariable Long id) {
         return ResponseEntity.ok(evaluacionService.listarPorLote(id));
+    }
+
+
+    @GetMapping("/pendientes-ubicar")
+    @PreAuthorize("hasAnyAuthority('INV_LOTES_READ','INV_READ')")
+    public ResponseEntity<Page<LotePendienteUbicarResponseDTO>> listarPendientesUbicar(
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+
+        Pageable efectivo = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        Page<LotePendienteUbicarResponseDTO> lotes = service.obtenerPendientesUbicar(efectivo);
+        return ResponseEntity.ok(lotes);
     }
 
 
