@@ -400,7 +400,7 @@ WHERE lp.codigoLote = :codigoLote
 
 
     @Query(value = """
-        SELECT lp.id AS loteId,
+        SELECT DISTINCT lp.id AS loteId,
                lp.codigo_lote AS codigoLote,
                p.id AS productoId,
                p.nombre AS nombreProducto,
