@@ -409,15 +409,11 @@ WHERE lp.codigoLote = :codigoLote
                lp.fecha_vencimiento AS fechaVencimiento,
                lp.estado AS estado,
                lp.almacenes_id AS almacenIdActual,
-               a.nombre AS nombreAlmacenActual,
-               p.almacen_destino_sugerido_id AS almacenDestinoSugeridoId,
-               ad.nombre AS nombreAlmacenDestinoSugerido,
-               p.requiere_ubicacion_destino AS requiereUbicacionDestino
+               a.nombre AS nombreAlmacenActual
         FROM lotes_productos lp
                  JOIN productos p ON lp.productos_id = p.id
                  JOIN categorias_producto cp ON p.categorias_producto_id = cp.id
                  JOIN almacenes a ON lp.almacenes_id = a.id
-                 LEFT JOIN almacenes ad ON p.almacen_destino_sugerido_id = ad.id
         WHERE lp.estado = 'LIBERADO'
           AND lp.almacenes_id = :almacenCuarentenaId
           AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
@@ -429,7 +425,6 @@ WHERE lp.codigoLote = :codigoLote
                  JOIN productos p ON lp.productos_id = p.id
                  JOIN categorias_producto cp ON p.categorias_producto_id = cp.id
                  JOIN almacenes a ON lp.almacenes_id = a.id
-                 LEFT JOIN almacenes ad ON p.almacen_destino_sugerido_id = ad.id
         WHERE lp.estado = 'LIBERADO'
           AND lp.almacenes_id = :almacenCuarentenaId
           AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0

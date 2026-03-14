@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.calidad.service.RetencionLoteService;
 import com.willyes.clemenintegra.calidad.service.PlantillaAnalisisMicroService;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarProjection;
 import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtProjection;
 import com.willyes.clemenintegra.inventario.mapper.LoteProductoMapper;
 import com.willyes.clemenintegra.inventario.model.Almacen;
@@ -581,6 +582,40 @@ class LoteProductoServiceImplTest {
         assertThat(ex.getReason()).isEqualTo("Faltan resultados microbiológicos");
     }
 
+
+
+    @Test
+    @DisplayName("Debe listar pendientes por ubicar en cuarentena")
+    void obtenerPendientesUbicar_devuelveBandeja() {
+        Pageable pageable = PageRequest.of(0, 10);
+        LotePendienteUbicarProjection projection = org.mockito.Mockito.mock(LotePendienteUbicarProjection.class);
+        when(projection.getLoteId()).thenReturn(11L);
+        when(projection.getCodigoLote()).thenReturn("LP-001");
+        when(projection.getProductoId()).thenReturn(33L);
+        when(projection.getNombreProducto()).thenReturn("PT A");
+        when(projection.getTipoProducto()).thenReturn("PRODUCTO_TERMINADO");
+        when(projection.getStockDisponible()).thenReturn(new BigDecimal("4.20"));
+        when(projection.getFechaVencimiento()).thenReturn(LocalDateTime.now().plusDays(5));
+        when(projection.getEstado()).thenReturn("LIBERADO");
+        when(projection.getAlmacenIdActual()).thenReturn(7L);
+        when(projection.getNombreAlmacenActual()).thenReturn("Cuarentena");
+
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
+        Almacen destino = almacenConId(2);
+        destino.setNombre("Principal PT");
+        when(almacenRepo.findById(2L)).thenReturn(Optional.of(destino));
+        when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(2)).thenReturn(true);
+        when(loteProductoRepository.findPendientesUbicar(7L, pageable))
+                .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
+
+        var resultado = service.obtenerPendientesUbicar(pageable);
+
+        assertThat(resultado.getTotalElements()).isEqualTo(1);
+        assertThat(resultado.getContent().get(0).loteId()).isEqualTo(11L);
+        assertThat(resultado.getContent().get(0).almacenDestinoSugeridoId()).isEqualTo(2L);
+        assertThat(resultado.getContent().get(0).requiereUbicacionDestino()).isTrue();
+    }
 
     @Test
     @DisplayName("Debe listar pendientes por ubicar PT en cuarentena")
