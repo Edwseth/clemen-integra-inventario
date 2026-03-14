@@ -620,6 +620,8 @@ class LoteProductoServiceImplTest {
     void obtenerPendientesUbicarPt_devuelveBandeja() {
         Pageable pageable = PageRequest.of(0, 10);
         LotePendienteUbicarPtProjection projection = org.mockito.Mockito.mock(LotePendienteUbicarPtProjection.class);
+        Almacen almacenPt = almacenConId(2);
+        almacenPt.setNombre("Principal PT");
         when(projection.getLoteId()).thenReturn(11L);
         when(projection.getCodigoLote()).thenReturn("LP-PT-001");
         when(projection.getProductoId()).thenReturn(33);
@@ -629,10 +631,10 @@ class LoteProductoServiceImplTest {
         when(projection.getEstado()).thenReturn("LIBERADO");
         when(projection.getAlmacenIdActual()).thenReturn(7);
         when(projection.getNombreAlmacenActual()).thenReturn("Cuarentena");
-        when(projection.getAlmacenDestinoSugeridoId()).thenReturn(2L);
-        when(projection.getNombreAlmacenDestinoSugerido()).thenReturn("Principal PT");
 
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
+        when(almacenRepo.findById(2L)).thenReturn(Optional.of(almacenPt));
         when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(2)).thenReturn(true);
         when(loteProductoRepository.findPendientesUbicarPt(7L, pageable))
                 .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
