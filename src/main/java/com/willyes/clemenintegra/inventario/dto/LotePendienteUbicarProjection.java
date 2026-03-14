@@ -23,10 +23,4 @@ public interface LotePendienteUbicarProjection {
     Long getAlmacenIdActual();
 
     String getNombreAlmacenActual();
-
-    Long getAlmacenDestinoSugeridoId();
-
-    String getNombreAlmacenDestinoSugerido();
-
-    Boolean getRequiereUbicacionDestino();
 }

@@ -442,7 +442,21 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             return org.springframework.data.domain.Page.empty(pageable);
         }
 
+        Long almacenDestinoSugeridoId = catalogResolver.getAlmacenPtId();
+        String nombreAlmacenDestinoSugerido = null;
+        boolean requiereUbicacionDestino = false;
+        if (almacenDestinoSugeridoId != null) {
+            nombreAlmacenDestinoSugerido = almacenRepo.findById(almacenDestinoSugeridoId)
+                    .map(Almacen::getNombre)
+                    .orElse(null);
+            Integer destinoInt = Math.toIntExact(almacenDestinoSugeridoId);
+            requiereUbicacionDestino = ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(destinoInt);
+        }
+
         Page<LotePendienteUbicarProjection> page = loteProductoRepository.findPendientesUbicar(almacenCuarentenaId, pageable);
+        final Long destinoIdFinal = almacenDestinoSugeridoId;
+        final String destinoNombreFinal = nombreAlmacenDestinoSugerido;
+        final boolean requiereUbicacionFinal = requiereUbicacionDestino;
         return page.map(item -> LotePendienteUbicarResponseDTO.builder()
                 .loteId(item.getLoteId())
                 .codigoLote(item.getCodigoLote())
@@ -454,9 +468,9 @@ public class LoteProductoServiceImpl implements LoteProductoService {
                 .estado(item.getEstado())
                 .almacenIdActual(item.getAlmacenIdActual())
                 .nombreAlmacenActual(item.getNombreAlmacenActual())
-                .almacenDestinoSugeridoId(item.getAlmacenDestinoSugeridoId())
-                .nombreAlmacenDestinoSugerido(item.getNombreAlmacenDestinoSugerido())
-                .requiereUbicacionDestino(Boolean.TRUE.equals(item.getRequiereUbicacionDestino()))
+                .almacenDestinoSugeridoId(destinoIdFinal)
+                .nombreAlmacenDestinoSugerido(destinoNombreFinal)
+                .requiereUbicacionDestino(requiereUbicacionFinal)
                 .build());
     }
 
