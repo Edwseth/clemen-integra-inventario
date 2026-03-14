@@ -402,26 +402,34 @@ WHERE lp.codigoLote = :codigoLote
     @Query(value = """
         SELECT lp.id AS loteId,
                lp.codigo_lote AS codigoLote,
-               lp.productos_id AS productoId,
+               p.id AS productoId,
                p.nombre AS nombreProducto,
                cp.tipo AS tipoProducto,
-               a.nombre AS nombreAlmacen,
-               (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) AS stockDisponible
+               (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) AS stockDisponible,
+               lp.fecha_vencimiento AS fechaVencimiento,
+               lp.estado AS estado,
+               lp.almacenes_id AS almacenIdActual,
+               a.nombre AS nombreAlmacenActual,
+               p.almacen_destino_sugerido_id AS almacenDestinoSugeridoId,
+               ad.nombre AS nombreAlmacenDestinoSugerido,
+               p.requiere_ubicacion_destino AS requiereUbicacionDestino
         FROM lotes_productos lp
-                 JOIN productos p ON p.id = lp.productos_id
-                 JOIN categorias_producto cp ON cp.id = p.categorias_producto_id
-                 JOIN almacenes a ON a.id = lp.almacenes_id
+                 JOIN productos p ON lp.productos_id = p.id
+                 JOIN categorias_producto cp ON p.categorias_producto_id = cp.id
+                 JOIN almacenes a ON lp.almacenes_id = a.id
+                 LEFT JOIN almacenes ad ON p.almacen_destino_sugerido_id = ad.id
         WHERE lp.estado = 'LIBERADO'
           AND lp.almacenes_id = :almacenCuarentenaId
           AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
-        ORDER BY lp.id ASC
+        ORDER BY (lp.fecha_vencimiento IS NULL) ASC, lp.fecha_vencimiento ASC, lp.id ASC
         """,
             countQuery = """
         SELECT COUNT(*)
         FROM lotes_productos lp
-                 JOIN productos p ON p.id = lp.productos_id
-                 JOIN categorias_producto cp ON cp.id = p.categorias_producto_id
-                 JOIN almacenes a ON a.id = lp.almacenes_id
+                 JOIN productos p ON lp.productos_id = p.id
+                 JOIN categorias_producto cp ON p.categorias_producto_id = cp.id
+                 JOIN almacenes a ON lp.almacenes_id = a.id
+                 LEFT JOIN almacenes ad ON p.almacen_destino_sugerido_id = ad.id
         WHERE lp.estado = 'LIBERADO'
           AND lp.almacenes_id = :almacenCuarentenaId
           AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0

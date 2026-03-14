@@ -446,11 +446,17 @@ public class LoteProductoServiceImpl implements LoteProductoService {
         return page.map(item -> LotePendienteUbicarResponseDTO.builder()
                 .loteId(item.getLoteId())
                 .codigoLote(item.getCodigoLote())
-                .productoId(item.getProductoId() != null ? item.getProductoId().longValue() : null)
+                .productoId(item.getProductoId())
                 .nombreProducto(item.getNombreProducto())
                 .tipoProducto(item.getTipoProducto())
-                .nombreAlmacen(item.getNombreAlmacen())
                 .stockDisponible(item.getStockDisponible())
+                .fechaVencimiento(item.getFechaVencimiento())
+                .estado(item.getEstado())
+                .almacenIdActual(item.getAlmacenIdActual())
+                .nombreAlmacenActual(item.getNombreAlmacenActual())
+                .almacenDestinoSugeridoId(item.getAlmacenDestinoSugeridoId())
+                .nombreAlmacenDestinoSugerido(item.getNombreAlmacenDestinoSugerido())
+                .requiereUbicacionDestino(Boolean.TRUE.equals(item.getRequiereUbicacionDestino()))
                 .build());
     }
 
