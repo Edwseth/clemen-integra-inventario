@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.calidad.model.enums.EstadoCondicionUso;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoPorLoteDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO;
@@ -26,6 +27,7 @@ public interface LoteProductoService {
     ByteArrayOutputStream generarReporteAlertasActivasExcel();
     Page<LoteProductoResponseDTO> listarTodos(String producto, Long productoId, EstadoLote estado, String almacen, Long almacenId, Boolean vencidos, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);
     Page<LotePendienteUbicarPtResponseDTO> obtenerPendientesUbicarPt(Pageable pageable);
+    Page<LotePendienteUbicarResponseDTO> obtenerPendientesUbicar(Pageable pageable);
 
     LoteProductoResponseDTO liberarLote(Long id, String observacion);
     LoteProductoResponseDTO rechazarLote(Long id, String observacion);

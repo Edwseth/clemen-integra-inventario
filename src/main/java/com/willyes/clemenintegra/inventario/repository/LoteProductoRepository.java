@@ -398,4 +398,37 @@ WHERE lp.codigoLote = :codigoLote
             @Param("almacenCuarentenaId") Long almacenCuarentenaId,
             org.springframework.data.domain.Pageable pageable);
 
+
+    @Query(value = """
+        SELECT lp.id AS loteId,
+               lp.codigo_lote AS codigoLote,
+               lp.productos_id AS productoId,
+               p.nombre AS nombreProducto,
+               cp.tipo AS tipoProducto,
+               a.nombre AS nombreAlmacen,
+               (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) AS stockDisponible
+        FROM lotes_productos lp
+                 JOIN productos p ON p.id = lp.productos_id
+                 JOIN categorias_producto cp ON cp.id = p.categorias_producto_id
+                 JOIN almacenes a ON a.id = lp.almacenes_id
+        WHERE lp.estado = 'LIBERADO'
+          AND lp.almacenes_id = :almacenCuarentenaId
+          AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
+        ORDER BY lp.id ASC
+        """,
+            countQuery = """
+        SELECT COUNT(*)
+        FROM lotes_productos lp
+                 JOIN productos p ON p.id = lp.productos_id
+                 JOIN categorias_producto cp ON cp.id = p.categorias_producto_id
+                 JOIN almacenes a ON a.id = lp.almacenes_id
+        WHERE lp.estado = 'LIBERADO'
+          AND lp.almacenes_id = :almacenCuarentenaId
+          AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
+        """,
+            nativeQuery = true)
+    org.springframework.data.domain.Page<com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarProjection> findPendientesUbicar(
+            @Param("almacenCuarentenaId") Long almacenCuarentenaId,
+            org.springframework.data.domain.Pageable pageable);
+
 }

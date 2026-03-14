@@ -10,7 +10,9 @@ import com.willyes.clemenintegra.inventario.dto.BitacoraCambiosInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.LoteProductoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtProjection;
+import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarProjection;
 import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarPtResponseDTO;
+import com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoPorLoteDTO;
 import com.willyes.clemenintegra.calidad.dto.EstadoCalidadLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.dto.ReaperturaLoteRequestDTO;
@@ -429,6 +431,27 @@ public class LoteProductoServiceImpl implements LoteProductoService {
 
         Page<LoteProducto> lotes = loteProductoRepository.findAll(spec, pageable);
         return lotes.map(loteProductoMapper::toResponseDTO);
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LotePendienteUbicarResponseDTO> obtenerPendientesUbicar(Pageable pageable) {
+        Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+        if (almacenCuarentenaId == null) {
+            return org.springframework.data.domain.Page.empty(pageable);
+        }
+
+        Page<LotePendienteUbicarProjection> page = loteProductoRepository.findPendientesUbicar(almacenCuarentenaId, pageable);
+        return page.map(item -> LotePendienteUbicarResponseDTO.builder()
+                .loteId(item.getLoteId())
+                .codigoLote(item.getCodigoLote())
+                .productoId(item.getProductoId() != null ? item.getProductoId().longValue() : null)
+                .nombreProducto(item.getNombreProducto())
+                .tipoProducto(item.getTipoProducto())
+                .nombreAlmacen(item.getNombreAlmacen())
+                .stockDisponible(item.getStockDisponible())
+                .build());
     }
 
     @Override
