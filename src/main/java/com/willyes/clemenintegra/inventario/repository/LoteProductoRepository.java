@@ -416,8 +416,12 @@ WHERE lp.codigoLote = :codigoLote
                  JOIN productos p ON lp.productos_id = p.id
                  JOIN categorias_producto cp ON p.categorias_producto_id = cp.id
                  JOIN almacenes a ON lp.almacenes_id = a.id
-                 LEFT JOIN almacenes ad ON ad.categoria_almacen = cp.tipo
-                     AND ad.tipo_almacen = 'PRINCIPAL'
+                 LEFT JOIN almacenes ad ON ad.id = (
+                     SELECT MIN(ad2.id)
+                     FROM almacenes ad2
+                     WHERE ad2.categoria_almacen = cp.tipo
+                       AND ad2.nombre LIKE 'Principal%'
+                 )
         WHERE lp.estado = 'LIBERADO'
           AND lp.almacenes_id = :almacenCuarentenaId
           AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
