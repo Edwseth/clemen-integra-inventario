@@ -599,12 +599,10 @@ class LoteProductoServiceImplTest {
         when(projection.getEstado()).thenReturn("LIBERADO");
         when(projection.getAlmacenIdActual()).thenReturn(7L);
         when(projection.getNombreAlmacenActual()).thenReturn("Cuarentena");
+        when(projection.getAlmacenDestinoSugeridoId()).thenReturn(2L);
+        when(projection.getNombreAlmacenDestinoSugerido()).thenReturn("Principal PT");
 
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
-        when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
-        Almacen destino = almacenConId(2);
-        destino.setNombre("Principal PT");
-        when(almacenRepo.findById(2L)).thenReturn(Optional.of(destino));
         when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(2)).thenReturn(true);
         when(loteProductoRepository.findPendientesUbicar(7L, pageable))
                 .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
@@ -631,12 +629,10 @@ class LoteProductoServiceImplTest {
         when(projection.getEstado()).thenReturn("LIBERADO");
         when(projection.getAlmacenIdActual()).thenReturn(7);
         when(projection.getNombreAlmacenActual()).thenReturn("Cuarentena");
+        when(projection.getAlmacenDestinoSugeridoId()).thenReturn(2L);
+        when(projection.getNombreAlmacenDestinoSugerido()).thenReturn("Principal PT");
 
         when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(7L);
-        when(catalogResolver.getAlmacenPtId()).thenReturn(2L);
-        Almacen destino = almacenConId(2);
-        destino.setNombre("Principal PT");
-        when(almacenRepo.findById(2L)).thenReturn(Optional.of(destino));
         when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(2)).thenReturn(true);
         when(loteProductoRepository.findPendientesUbicarPt(7L, pageable))
                 .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));

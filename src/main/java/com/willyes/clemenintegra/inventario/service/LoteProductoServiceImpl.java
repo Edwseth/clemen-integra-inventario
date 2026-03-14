@@ -442,36 +442,32 @@ public class LoteProductoServiceImpl implements LoteProductoService {
             return org.springframework.data.domain.Page.empty(pageable);
         }
 
-        Long almacenDestinoSugeridoId = catalogResolver.getAlmacenPtId();
-        String nombreAlmacenDestinoSugerido = null;
-        boolean requiereUbicacionDestino = false;
-        if (almacenDestinoSugeridoId != null) {
-            nombreAlmacenDestinoSugerido = almacenRepo.findById(almacenDestinoSugeridoId)
-                    .map(Almacen::getNombre)
-                    .orElse(null);
-            Integer destinoInt = Math.toIntExact(almacenDestinoSugeridoId);
-            requiereUbicacionDestino = ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(destinoInt);
-        }
-
+        java.util.Map<Long, Boolean> requiereUbicacionByDestino = new java.util.HashMap<>();
         Page<LotePendienteUbicarProjection> page = loteProductoRepository.findPendientesUbicar(almacenCuarentenaId, pageable);
-        final Long destinoIdFinal = almacenDestinoSugeridoId;
-        final String destinoNombreFinal = nombreAlmacenDestinoSugerido;
-        final boolean requiereUbicacionFinal = requiereUbicacionDestino;
-        return page.map(item -> LotePendienteUbicarResponseDTO.builder()
-                .loteId(item.getLoteId())
-                .codigoLote(item.getCodigoLote())
-                .productoId(item.getProductoId())
-                .nombreProducto(item.getNombreProducto())
-                .tipoProducto(item.getTipoProducto())
-                .stockDisponible(item.getStockDisponible())
-                .fechaVencimiento(item.getFechaVencimiento())
-                .estado(item.getEstado())
-                .almacenIdActual(item.getAlmacenIdActual())
-                .nombreAlmacenActual(item.getNombreAlmacenActual())
-                .almacenDestinoSugeridoId(destinoIdFinal)
-                .nombreAlmacenDestinoSugerido(destinoNombreFinal)
-                .requiereUbicacionDestino(requiereUbicacionFinal)
-                .build());
+        return page.map(item -> {
+            Long destinoId = item.getAlmacenDestinoSugeridoId();
+            boolean requiereUbicacionDestino = false;
+            if (destinoId != null) {
+                requiereUbicacionDestino = requiereUbicacionByDestino.computeIfAbsent(destinoId,
+                        id -> ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(Math.toIntExact(id)));
+            }
+
+            return LotePendienteUbicarResponseDTO.builder()
+                    .loteId(item.getLoteId())
+                    .codigoLote(item.getCodigoLote())
+                    .productoId(item.getProductoId())
+                    .nombreProducto(item.getNombreProducto())
+                    .tipoProducto(item.getTipoProducto())
+                    .stockDisponible(item.getStockDisponible())
+                    .fechaVencimiento(item.getFechaVencimiento())
+                    .estado(item.getEstado())
+                    .almacenIdActual(item.getAlmacenIdActual())
+                    .nombreAlmacenActual(item.getNombreAlmacenActual())
+                    .almacenDestinoSugeridoId(destinoId)
+                    .nombreAlmacenDestinoSugerido(item.getNombreAlmacenDestinoSugerido())
+                    .requiereUbicacionDestino(requiereUbicacionDestino)
+                    .build();
+        });
     }
 
     @Override
