@@ -741,6 +741,28 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (tipoMovimiento == TipoMovimiento.RECEPCION
                 && motivoMovimiento != null
                 && motivoMovimiento.getMotivo() == ClasificacionMovimientoInventario.RECEPCION_COMPRA) {
+            if (requiereControlCalidad(producto)) {
+                Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+                if (cuarentenaId == null) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_CUARENTENA_NO_CONFIGURADO");
+                }
+                almacenDestino = entityManager.getReference(Almacen.class, cuarentenaId);
+                almacenDestinoIdNormalizado = almacenDestino.getId();
+                almacenParaUbicacion = almacenDestino.getId();
+                if (ubicacionFisicaDestino != null
+                        && ubicacionFisicaDestino.getAlmacen() != null
+                        && !Objects.equals(ubicacionFisicaDestino.getAlmacen().getId(), almacenParaUbicacion)) {
+                    throw new CustomBusinessException(
+                            ApiErrorCode.UBICACION_NO_PERTENECE_ALMACEN,
+                            "La ubicación no pertenece al almacén indicado",
+                            Map.of(
+                                    "ubicacionId", ubicacionFisicaDestino.getId(),
+                                    "almacenDestinoId", almacenDestinoIdNormalizado,
+                                    "almacenUbicacionId", ubicacionFisicaDestino.getAlmacen().getId()
+                            )
+                    );
+                }
+            }
             if (dto.ordenCompraId() == null) {
                 throw new IllegalArgumentException("Se requiere una orden de compra para la recepción de compra");
             }
@@ -2164,7 +2186,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         validarFechaVencimientoRecepcion(dto.fechaVencimiento());
 
-        boolean requiereAnalisis = requiereFisico(producto) || requiereQuimico(producto) || requiereMicro(producto);
+        boolean requiereAnalisis = requiereControlCalidad(producto);
         if (requiereAnalisis) {
             // Regla de negocio: un lote con análisis requerido no puede ingresar a almacenes operativos.
             Long cuarentenaId = catalogResolver.getAlmacenCuarentenaId();
@@ -3549,8 +3571,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     }
 
     private EstadoLote obtenerEstadoInicial(Producto producto) {
-        boolean requiereAnalisis = requiereFisico(producto) || requiereQuimico(producto) || requiereMicro(producto);
+        boolean requiereAnalisis = requiereControlCalidad(producto);
         return requiereAnalisis ? EstadoLote.EN_CUARENTENA : EstadoLote.DISPONIBLE;
+    }
+
+    private boolean requiereControlCalidad(Producto producto) {
+        return requiereFisico(producto) || requiereQuimico(producto) || requiereMicro(producto);
     }
 
     /**

@@ -639,6 +639,79 @@ class MovimientoInventarioServiceDevolucionClienteTest {
                         .isEqualTo(ApiErrorCode.OC_SERVICIO_NO_RECEPCIONABLE));
     }
 
+
+    @Test
+    void shouldForceDestinoCuarentena_whenRecepcionCompraRequiresControlCalidad() {
+        Producto producto = crearProducto(432);
+        producto.setRequiereAnalisisFisico(true);
+        MovimientoInventarioDTO dto = construirDtoRecepcionCompra(producto.getId());
+
+        given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
+        given(motivoMovimientoRepository.findById(dto.motivoMovimientoId()))
+                .willReturn(Optional.of(MotivoMovimiento.builder()
+                        .id(dto.motivoMovimientoId())
+                        .motivo(ClasificacionMovimientoInventario.RECEPCION_COMPRA)
+                        .descripcion("Recepción compra")
+                        .build()));
+
+        OrdenCompra orden = OrdenCompra.builder()
+                .id(dto.ordenCompraId())
+                .tipo(TipoOrdenCompra.BIENES)
+                .estado(com.willyes.clemenintegra.inventario.model.enums.EstadoOrdenCompra.ENVIADA)
+                .build();
+        orden.setDetalles(new java.util.ArrayList<>());
+        orden.getDetalles().add(com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle.builder()
+                .id(901L)
+                .producto(producto)
+                .cantidad(new BigDecimal("10"))
+                .cantidadRecibida(BigDecimal.ZERO)
+                .valorUnitario(new BigDecimal("2.000"))
+                .iva(BigDecimal.ZERO)
+                .build());
+        given(ordenCompraRepository.findById(dto.ordenCompraId().longValue())).willReturn(Optional.of(orden));
+
+        Almacen cuarentena = new Almacen((int) ALMACEN_CUARENTENA_ID);
+        given(catalogResolver.getAlmacenCuarentenaId()).willReturn(ALMACEN_CUARENTENA_ID);
+        given(almacenRepository.findById(ALMACEN_CUARENTENA_ID)).willReturn(Optional.of(cuarentena));
+        given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation ->
+                new Almacen(((Number) invocation.getArgument(1)).intValue()));
+        given(entityManager.getReference(eq(com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle.class), any()))
+                .willAnswer(invocation -> {
+                    com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle d = new com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle();
+                    d.setId(((Number) invocation.getArgument(1)).longValue());
+                    d.setCantidad(new BigDecimal("10"));
+                    d.setCantidadRecibida(BigDecimal.ZERO);
+                    return d;
+                });
+        given(entityManager.merge(any(com.willyes.clemenintegra.inventario.model.OrdenCompraDetalle.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        given(recepcionOCService.findOrCreateCabecera(any(), any(), any(), any(), any(), any()))
+                .willReturn(com.willyes.clemenintegra.inventario.model.RecepcionOC.builder()
+                        .id(55L)
+                        .codigo("RC-TEST-55")
+                        .build());
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setFechaIngreso(LocalDateTime.now());
+        movimientoEntidad.setTipoMovimiento(dto.tipoMovimiento());
+        movimientoEntidad.setClasificacion(dto.clasificacionMovimientoInventario());
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(99L).build());
+        ArgumentCaptor<MovimientoInventario> movimientoCaptor = ArgumentCaptor.forClass(MovimientoInventario.class);
+        given(movimientoInventarioRepository.save(movimientoCaptor.capture())).willAnswer(invocation -> {
+            MovimientoInventario mov = invocation.getArgument(0);
+            mov.setId(99L);
+            return mov;
+        });
+
+        service.registrarMovimiento(dto);
+
+        assertThat(movimientoCaptor.getValue().getAlmacenDestino().getId()).isEqualTo((int) ALMACEN_CUARENTENA_ID);
+    }
+
     @Test
     void shouldRespectExplicitTipoDetalleId_whenProvided() {
         Producto producto = crearProducto(500);
