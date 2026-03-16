@@ -44,7 +44,7 @@ public class MovimientoSignosResolver {
         ClasificacionMovimientoInventario clasificacion = movimiento.getClasificacion();
         TipoMovimiento tipoMovimiento = movimiento.getTipoMovimiento();
 
-        if (esTransferencia(clasificacion, tipoMovimiento)) {
+        if (esTransferencia(movimiento, clasificacion, tipoMovimiento)) {
             if (mismoAlmacen(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null, almacenId)) {
                 return obtenerCantidad(movimiento);
             }
@@ -68,7 +68,7 @@ public class MovimientoSignosResolver {
         ClasificacionMovimientoInventario clasificacion = movimiento.getClasificacion();
         TipoMovimiento tipoMovimiento = movimiento.getTipoMovimiento();
 
-        if (esTransferencia(clasificacion, tipoMovimiento)) {
+        if (esTransferencia(movimiento, clasificacion, tipoMovimiento)) {
             if (mismoAlmacen(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null, almacenId)) {
                 return obtenerCantidad(movimiento);
             }
@@ -96,7 +96,7 @@ public class MovimientoSignosResolver {
         TipoMovimiento tipo = movimiento.getTipoMovimiento();
         List<AporteInventario> aportes = new ArrayList<>(2);
 
-        if (esTransferencia(clasificacion, tipo)) {
+        if (esTransferencia(movimiento, clasificacion, tipo)) {
             Integer origenId = movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null;
             Integer destinoId = movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null;
             if (origenId != null) {
@@ -129,8 +129,13 @@ public class MovimientoSignosResolver {
         return aportes;
     }
 
-    private boolean esTransferencia(ClasificacionMovimientoInventario clasificacion, TipoMovimiento tipoMovimiento) {
-        return CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion) || tipoMovimiento == TipoMovimiento.TRANSFERENCIA;
+    private boolean esTransferencia(MovimientoInventario movimiento,
+                                    ClasificacionMovimientoInventario clasificacion,
+                                    TipoMovimiento tipoMovimiento) {
+        if (CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion) || tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
+            return true;
+        }
+        return movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenDestino() != null;
     }
 
     private Long preferirDestino(MovimientoInventario movimiento) {
@@ -167,4 +172,3 @@ public class MovimientoSignosResolver {
     public record AporteInventario(Long almacenId, BigDecimal cantidadFirmada) {
     }
 }
-
