@@ -1,7 +1,6 @@
 package com.willyes.clemenintegra.inventario.repository;
 
 import com.willyes.clemenintegra.inventario.dto.LoteAlertaActivaProjection;
-import com.willyes.clemenintegra.inventario.dto.StockDisponibleListadoProjection;
 import com.willyes.clemenintegra.inventario.dto.LoteUbicacionPicklistProjection;
 import com.willyes.clemenintegra.inventario.dto.StockAlertaProjection;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
@@ -440,54 +439,6 @@ WHERE lp.codigoLote = :codigoLote
             nativeQuery = true)
     org.springframework.data.domain.Page<com.willyes.clemenintegra.inventario.dto.LotePendienteUbicarProjection> findPendientesUbicar(
             @Param("almacenCuarentenaId") Long almacenCuarentenaId,
-            org.springframework.data.domain.Pageable pageable);
-
-    @Query(value = """
-        SELECT p.codigo_sku AS sku,
-               p.nombre AS nombre,
-               cp.nombre AS categoria,
-               (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) AS cantidadActual,
-               lp.codigo_lote AS lote,
-               lp.fecha_vencimiento AS fechaVencimiento,
-               a.nombre AS almacenNombre,
-               uf.codigo AS ubicacionCodigo,
-               uf.descripcion AS ubicacionDescripcion
-        FROM lotes_productos lp
-                 JOIN productos p ON p.id = lp.productos_id
-                 LEFT JOIN categorias_producto cp ON cp.id = p.categorias_producto_id
-                 LEFT JOIN almacenes a ON a.id = lp.almacenes_id
-                 LEFT JOIN ubicaciones_fisicas uf ON uf.id = lp.ubicaciones_fisicas_id
-        WHERE lp.estado IN ('DISPONIBLE','LIBERADO')
-          AND lp.agotado = false
-          AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
-          AND (:categoriaId IS NULL OR p.categorias_producto_id = :categoriaId)
-          AND (
-                :q IS NULL OR :q = ''
-                OR UPPER(p.nombre) LIKE CONCAT('%', UPPER(:q), '%')
-                OR UPPER(p.codigo_sku) LIKE CONCAT('%', UPPER(:q), '%')
-                OR UPPER(lp.codigo_lote) LIKE CONCAT('%', UPPER(:q), '%')
-          )
-        ORDER BY p.nombre ASC, lp.codigo_lote ASC, lp.fecha_vencimiento ASC
-        """,
-            countQuery = """
-        SELECT COUNT(*)
-        FROM lotes_productos lp
-                 JOIN productos p ON p.id = lp.productos_id
-        WHERE lp.estado IN ('DISPONIBLE','LIBERADO')
-          AND lp.agotado = false
-          AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
-          AND (:categoriaId IS NULL OR p.categorias_producto_id = :categoriaId)
-          AND (
-                :q IS NULL OR :q = ''
-                OR UPPER(p.nombre) LIKE CONCAT('%', UPPER(:q), '%')
-                OR UPPER(p.codigo_sku) LIKE CONCAT('%', UPPER(:q), '%')
-                OR UPPER(lp.codigo_lote) LIKE CONCAT('%', UPPER(:q), '%')
-          )
-        """,
-            nativeQuery = true)
-    org.springframework.data.domain.Page<StockDisponibleListadoProjection> findStockDisponibleListado(
-            @Param("q") String q,
-            @Param("categoriaId") Long categoriaId,
             org.springframework.data.domain.Pageable pageable);
 
 }

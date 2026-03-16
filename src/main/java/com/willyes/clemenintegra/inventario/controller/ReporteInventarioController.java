@@ -7,13 +7,11 @@ import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.InventarioGeneralCorteReportService;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.dto.InventarioGeneralPreviewRowDTO;
-import com.willyes.clemenintegra.inventario.dto.StockDisponibleDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -192,20 +190,6 @@ public class ReporteInventarioController {
             log.error("Error generando reporte de stock disponible", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
-
-    @GetMapping("/stock-disponible/listado")
-    @PreAuthorize("hasAnyAuthority('INV_READ','INV_REPORTES_READ','INV_EXPORT','INV_REPORTES_EXPORT')")
-    public ResponseEntity<Page<StockDisponibleDTO>> listarStockDisponible(
-            @RequestParam(name = "q", required = false) String q,
-            @RequestParam(name = "categoriaId", required = false) Long categoriaId,
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "25") int size) {
-        int safePage = Math.max(0, page);
-        int safeSize = Math.max(1, Math.min(size, 200));
-        Pageable pageable = PageRequest.of(safePage, safeSize);
-        Page<StockDisponibleDTO> result = productoService.obtenerStockDisponibleListado(q, categoriaId, pageable);
-        return ResponseEntity.ok(result);
     }
 
     @GetMapping(value = "/productos-por-vencer", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

@@ -25,7 +25,6 @@ public interface ProductoService {
     List<ProductoConEstadoLoteDTO> buscarProductosConLotesPorEstado(String estado);
     List<ProductoConLotesDTO> buscarProductosConLotesAgrupadosPorEstado(String estado);
     Workbook generarReporteStockDisponibleExcel();
-    Page<StockDisponibleDTO> obtenerStockDisponibleListado(String q, Long categoriaId, Pageable pageable);
 
     /**
      * Obtiene el producto como entidad para uso interno de otros módulos.
