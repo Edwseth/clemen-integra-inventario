@@ -31,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -469,46 +468,6 @@ public class ProductoServiceImpl implements ProductoService {
         }
 
         return workbook;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<StockDisponibleDTO> obtenerStockDisponibleListado(String q, Long categoriaId, Pageable pageable) {
-        String filtro = q == null ? null : q.trim();
-        Page<StockDisponibleListadoProjection> page = loteProductoRepository
-                .findStockDisponibleListado(filtro, categoriaId, pageable);
-
-        return page.map(row -> {
-            LocalDate fechaVencimiento = row.getFechaVencimiento() != null
-                    ? row.getFechaVencimiento().toLocalDate()
-                    : null;
-            String ubicacion = resolverUbicacion(row.getAlmacenNombre(), row.getUbicacionCodigo(), row.getUbicacionDescripcion());
-            return new StockDisponibleDTO(
-                    row.getSku(),
-                    row.getNombre(),
-                    row.getCategoria(),
-                    row.getCantidadActual(),
-                    row.getLote(),
-                    fechaVencimiento,
-                    ubicacion
-            );
-        });
-    }
-
-    private String resolverUbicacion(String almacenNombre, String ubicacionCodigo, String ubicacionDescripcion) {
-        String almacen = texto(almacenNombre);
-        String detalle = !texto(ubicacionCodigo).isBlank() ? texto(ubicacionCodigo) : texto(ubicacionDescripcion);
-        if (detalle.isBlank()) {
-            return almacen;
-        }
-        if (almacen.isBlank()) {
-            return detalle;
-        }
-        return almacen + " / " + detalle;
-    }
-
-    private String texto(String value) {
-        return value == null ? "" : value.trim();
     }
 
     private void validarDuplicados(String sku, String nombre) {
