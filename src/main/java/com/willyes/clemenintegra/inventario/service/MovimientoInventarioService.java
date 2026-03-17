@@ -39,6 +39,8 @@ public interface MovimientoInventarioService {
 
     MovimientoInventario registrarRetiroPorVencimiento(LoteProducto lote,
                                                        InventoryVencidosProperties properties,
+                                                       Long almacenDestinoId,
+                                                       com.willyes.clemenintegra.shared.model.Usuario usuarioSistema,
                                                        java.time.LocalDateTime fechaMovimiento);
 
     boolean existeMovimientoVencimientoHoy(Long loteId,

@@ -1881,6 +1881,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
     @Override
     public MovimientoInventario registrarRetiroPorVencimiento(LoteProducto lote,
                                                                InventoryVencidosProperties properties,
+                                                               Long almacenDestinoId,
+                                                               Usuario usuarioSistema,
                                                                LocalDateTime fechaMovimiento) {
         if (lote == null) {
             throw new IllegalArgumentException("El lote es requerido para registrar el retiro por vencimiento");
@@ -1894,16 +1896,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new IllegalStateException("El registro de movimientos por vencimiento está deshabilitado");
         }
 
-        Usuario usuario;
-        try {
-            usuario = usuarioService.obtenerUsuarioAutenticado();
-        } catch (AuthenticationCredentialsNotFoundException ex) {
-            usuario = usuarioService.obtenerUsuarioSistemaJobVencimientos();
-        }
+        Usuario usuario = usuarioSistema != null ? usuarioSistema : usuarioService.obtenerUsuarioSistemaJobVencimientos();
 
-        if (usuario == null) {
-            throw new IllegalStateException("No se pudo resolver un usuario para registrar el movimiento por vencimiento");
-        }
 
         Long motivoId = movimientoCfg.getMotivoId();
         MotivoMovimiento motivoMovimiento = entityManager.getReference(MotivoMovimiento.class, motivoId);
@@ -1924,7 +1918,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             throw new IllegalStateException("El lote no tiene un producto asociado");
         }
 
-        Long destinoId = properties.requireAlmacenDestinoId();
+        Long destinoId = almacenDestinoId != null ? almacenDestinoId : properties.requireAlmacenDestinoId();
         Almacen destino = entityManager.getReference(Almacen.class, Math.toIntExact(destinoId));
 
         LocalDateTime fecha = fechaMovimiento != null
@@ -2380,7 +2374,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     dto != null ? dto.tipoMovimientoDetalleId() : null);
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
-        validarLoteNoVencidoTiempoReal(lote);
         loteCalidadValidator.validarLoteUtilizable(lote);
         if (!estadosElegibles.contains(lote.getEstado())) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ESTADO_NO_ELEGIBLE");
@@ -2437,7 +2430,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean esAjusteNegativo = tipo == TipoMovimiento.AJUSTE
                 && clasificacion == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
         if (esLoteOrigen) {
-            validarLoteNoVencidoTiempoReal(loteOrigen);
             loteCalidadValidator.validarLoteUtilizable(loteOrigen);
         }
 
@@ -3949,6 +3941,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (lotes == null || lotes.isEmpty()) {
             return List.of();
         }
+        LocalDate hoy = LocalDate.now();
+        lotes = lotes.stream()
+                .filter(lote -> esLoteVigenteParaConsumo(lote, hoy))
+                .toList();
+        if (lotes.isEmpty()) {
+            return List.of();
+        }
         Comparator<LoteProducto> comparator = Comparator
                 .comparing((LoteProducto l) -> Optional.ofNullable(l.getFechaVencimiento())
                         .orElse(LocalDateTime.MAX))
@@ -3957,6 +3956,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .thenComparing(LoteProducto::getId);
         lotes.sort(comparator);
         return lotes;
+    }
+
+
+    private boolean esLoteVigenteParaConsumo(LoteProducto lote, LocalDate hoy) {
+        if (lote == null || lote.getFechaVencimiento() == null) {
+            return false;
+        }
+        return lote.getFechaVencimiento().toLocalDate().isAfter(hoy);
     }
 
     private boolean hayLotesNoElegiblesConStock(Long productoId, Long almacenId) {
@@ -4017,24 +4024,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             return BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING);
         }
         return disponible.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING);
-    }
-
-    private void validarLoteNoVencidoTiempoReal(LoteProducto lote) {
-        if (lote == null || lote.getFechaVencimiento() == null) {
-            return;
-        }
-        LocalDate fechaVencimiento = lote.getFechaVencimiento().toLocalDate();
-        if (fechaVencimiento.isBefore(LocalDate.now())) {
-            throw new CustomBusinessException(
-                    ApiErrorCode.LOTE_VENCIDO,
-                    "El lote " + lote.getCodigoLote() + " está vencido desde " + fechaVencimiento,
-                    Map.of(
-                            "loteId", lote.getId(),
-                            "codigoLote", lote.getCodigoLote(),
-                            "fechaVencimiento", fechaVencimiento
-                    )
-            );
-        }
     }
 
     private Long obtenerAlmacenActualLoteId(LoteProducto lote) {
@@ -4200,7 +4189,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 }
                 final LoteProducto lotePreBodega = lotePreBodegaOpt.get();
 
-                validarLoteNoVencidoTiempoReal(lotePreBodega);
                 loteCalidadValidator.validarLoteUtilizable(lotePreBodega);
 
                 // Idempotencia: resta SALIDAS ya emitidas para esta solicitud/producto/lote y tipo-detalle

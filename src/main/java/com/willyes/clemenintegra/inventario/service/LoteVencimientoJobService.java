@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.config.InventoryVencidosProperties;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -27,12 +28,13 @@ public class LoteVencimientoJobService {
     private final InventoryVencidosProperties properties;
     private final LoteProductoRepository loteProductoRepository;
     private final LoteVencimientoChunkProcessor chunkProcessor;
+    private final LoteVencimientoContextResolver contextResolver;
 
     public LoteVencimientoPreview dryRun() {
         properties.validateForExecution();
         ZoneId zoneId = properties.resolveZoneId();
         LocalDate today = LocalDate.now(zoneId);
-        LocalDateTime cutoff = today.atStartOfDay();
+        LocalDateTime cutoff = today.plusDays(1).atStartOfDay();
 
         List<Long> ids = new ArrayList<>();
         int page = 0;
@@ -60,7 +62,15 @@ public class LoteVencimientoJobService {
         ZoneId zoneId = properties.resolveZoneId();
         LocalDate today = LocalDate.now(zoneId);
         LocalDateTime inicioDia = today.atStartOfDay();
+        LocalDateTime cutoff = today.plusDays(1).atStartOfDay();
         LocalDateTime finDia = inicioDia.plusDays(1).minusNanos(1);
+
+        Long destinoId = properties.getMovimiento().isEnabled()
+                ? contextResolver.resolveAlmacenDestinoId(properties)
+                : null;
+        Usuario usuarioSistema = properties.getMovimiento().isEnabled()
+                ? contextResolver.resolveUsuarioSistema()
+                : null;
 
         long totalActualizados = 0L;
         long totalMovimientos = 0L;
@@ -68,13 +78,13 @@ public class LoteVencimientoJobService {
         Pageable pageable = PageRequest.of(0, chunkSize, Sort.by(Sort.Direction.ASC, "id"));
 
         while (true) {
-            List<Long> ids = loteProductoRepository.findIdsParaExpirar(inicioDia, ESTADOS_EXCLUIDOS, pageable);
+            List<Long> ids = loteProductoRepository.findIdsParaExpirar(cutoff, ESTADOS_EXCLUIDOS, pageable);
             if (ids.isEmpty()) {
                 break;
             }
             LocalDateTime fechaMovimiento = LocalDateTime.now(zoneId);
             LoteVencimientoChunkProcessor.ChunkResult result = chunkProcessor
-                    .process(ids, inicioDia, inicioDia, finDia, fechaMovimiento);
+                    .process(ids, cutoff, inicioDia, finDia, fechaMovimiento, destinoId, usuarioSistema);
             totalActualizados += result.actualizados();
             totalMovimientos += result.movimientos();
         }

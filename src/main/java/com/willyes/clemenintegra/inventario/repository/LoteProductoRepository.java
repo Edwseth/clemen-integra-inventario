@@ -210,7 +210,8 @@ WHERE lp.codigoLote = :codigoLote
         LEFT JOIN almacenes a ON lp.almacenes_id = a.id
         WHERE lp.productos_id = :productoId
           AND lp.estado IN ('DISPONIBLE','LIBERADO')
-          AND lp.fecha_vencimiento >= CURRENT_DATE
+          AND lp.fecha_vencimiento IS NOT NULL
+          AND lp.fecha_vencimiento > CURRENT_DATE
           AND lp.agotado = false
           AND (lp.stock_lote - COALESCE(lp.stock_reservado, 0)) > 0
         ORDER BY lp.fecha_vencimiento ASC

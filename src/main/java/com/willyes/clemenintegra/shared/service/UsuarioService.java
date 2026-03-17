@@ -59,12 +59,9 @@ public class UsuarioService {
 
     public Usuario obtenerUsuarioSistemaJobVencimientos() {
         Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase("SYSTEM")
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "USUARIO_SISTEMA_NO_CONFIGURADO"
-                ));
+                .orElseThrow(() -> new IllegalStateException("USUARIO_SISTEMA_NO_CONFIGURADO: nombre_usuario=SYSTEM no existe"));
         if (!usuario.isActivo()) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "USUARIO_SISTEMA_NO_CONFIGURADO");
+            throw new IllegalStateException("USUARIO_SISTEMA_NO_CONFIGURADO: nombre_usuario=SYSTEM está inactivo");
         }
         return usuario;
     }

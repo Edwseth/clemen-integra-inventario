@@ -177,4 +177,37 @@ class LoteCalidadValidatorTest {
 
         assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
     }
+
+    @Test
+    void bloqueaLoteSinFechaVencimiento() {
+        LoteProducto lote = new LoteProducto();
+        lote.setId(82L);
+        lote.setCodigoLote("LOT-SIN-FECHA");
+        lote.setEstado(EstadoLote.LIBERADO);
+
+        when(noConformidadService.obtenerActivaPorLote(82L)).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(82L)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> validator.validarLoteUtilizable(lote))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasFieldOrPropertyWithValue("code", ApiErrorCode.LOTE_VENCIDO)
+                .hasMessageContaining("no tiene fecha de vencimiento");
+    }
+
+    @Test
+    void bloqueaLoteQueVenceHoy() {
+        LoteProducto lote = new LoteProducto();
+        lote.setId(83L);
+        lote.setCodigoLote("LOT-HOY");
+        lote.setEstado(EstadoLote.LIBERADO);
+        lote.setFechaVencimiento(LocalDateTime.now().withHour(0).withMinute(0));
+
+        when(noConformidadService.obtenerActivaPorLote(83L)).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(83L)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> validator.validarLoteUtilizable(lote))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasFieldOrPropertyWithValue("code", ApiErrorCode.LOTE_VENCIDO);
+    }
+
 }
