@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.inventario.service.StockDisponibleComparativoSe
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/inventario/reportes/stock-disponible")
@@ -33,14 +33,28 @@ public class StockDisponibleComparativoController {
 
     @GetMapping("/comparativo")
     @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT')")
-    public ResponseEntity<List<StockDisponibleComparativoResponseDTO>> obtenerComparativo(
+    public ResponseEntity<Page<StockDisponibleComparativoResponseDTO>> obtenerComparativo(
             @RequestParam(name = "fecha")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
             @RequestParam(name = "categoriaId", required = false) Long categoriaId,
             @RequestParam(name = "orden", required = false) String orden,
-            @RequestParam(name = "direccion", required = false) String direccion) {
-        List<StockDisponibleComparativoResponseDTO> respuesta =
-                stockDisponibleComparativoService.obtenerComparativo(fecha, categoriaId, orden, direccion);
+            @RequestParam(name = "direccion", required = false) String direccion,
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "size", required = false) Integer size,
+            @RequestParam(name = "sortField", required = false) String sortField,
+            @RequestParam(name = "sortDir", required = false) String sortDir) {
+        String ordenFinal = sortField != null && !sortField.isBlank() ? sortField : orden;
+        String direccionFinal = sortDir != null && !sortDir.isBlank() ? sortDir : direccion;
+
+        Page<StockDisponibleComparativoResponseDTO> respuesta =
+                stockDisponibleComparativoService.obtenerComparativoPaginado(
+                        fecha,
+                        categoriaId,
+                        ordenFinal,
+                        direccionFinal,
+                        page,
+                        size
+                );
         return ResponseEntity.ok(respuesta);
     }
 
