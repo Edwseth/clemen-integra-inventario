@@ -10,6 +10,9 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +60,26 @@ public class StockDisponibleComparativoService {
                 .map(BaseComparativo::toDto)
                 .sorted(comparador)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StockDisponibleComparativoResponseDTO> obtenerComparativoPaginado(LocalDate fechaIndicada,
+                                                                                   Long categoriaId,
+                                                                                   String sortField,
+                                                                                   String sortDir,
+                                                                                   Integer page,
+                                                                                   Integer size) {
+        int pageNumber = page == null ? 0 : Math.max(page, 0);
+        int pageSize = size == null ? 20 : Math.min(Math.max(size, 1), 100);
+
+        List<StockDisponibleComparativoResponseDTO> resultados =
+                obtenerComparativo(fechaIndicada, categoriaId, sortField, sortDir);
+
+        int total = resultados.size();
+        int desde = Math.min(pageNumber * pageSize, total);
+        int hasta = Math.min(desde + pageSize, total);
+
+        return new PageImpl<>(resultados.subList(desde, hasta), PageRequest.of(pageNumber, pageSize), total);
     }
 
     @Transactional(readOnly = true)

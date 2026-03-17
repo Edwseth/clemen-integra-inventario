@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -53,18 +55,26 @@ class StockDisponibleComparativoControllerSmokeTest {
     @Test
     @DisplayName("GET /api/inventario/reportes/stock-disponible/comparativo responde 200 con datos")
     void obtenerComparativo_devuelveOk() throws Exception {
-        when(stockDisponibleComparativoService.obtenerComparativo(any(LocalDate.class), any(), any(), any()))
-                .thenReturn(List.of(new StockDisponibleComparativoResponseDTO(
-                        "SKU-1", "Producto", "KG",
-                        new BigDecimal("10.00"), new BigDecimal("12.00"), new BigDecimal("2.00"),
-                        "LOTE-1", LocalDate.of(2025, 1, 1), "A1"
-                )));
+        when(stockDisponibleComparativoService.obtenerComparativoPaginado(any(LocalDate.class), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(
+                        List.of(new StockDisponibleComparativoResponseDTO(
+                                "SKU-1", "Producto", "KG",
+                                new BigDecimal("10.00"), new BigDecimal("12.00"), new BigDecimal("2.00"),
+                                "LOTE-1", LocalDate.of(2025, 1, 1), "A1"
+                        )),
+                        PageRequest.of(1, 20),
+                        500
+                ));
 
         mockMvc.perform(get("/api/inventario/reportes/stock-disponible/comparativo")
                         .with(TestAuth.auth("almacen", "INV_EXPORT"))
                         .param("fecha", "2024-01-31"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].sku").value("SKU-1"))
-                .andExpect(jsonPath("$[0].cantidadActual").value(12.00));
+                .andExpect(jsonPath("$.content[0].sku").value("SKU-1"))
+                .andExpect(jsonPath("$.content[0].cantidadActual").value(12.00))
+                .andExpect(jsonPath("$.totalElements").value(500))
+                .andExpect(jsonPath("$.totalPages").value(25))
+                .andExpect(jsonPath("$.number").value(1))
+                .andExpect(jsonPath("$.size").value(20));
     }
 }
