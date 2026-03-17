@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.Map;
 
@@ -31,6 +32,8 @@ public class LoteCalidadValidator {
 
     public void validarLoteUtilizable(LoteProducto lote) {
         EstadoLote estado = lote != null ? lote.getEstado() : null;
+
+        validarVencimientoTiempoReal(lote);
 
         if (lote != null && lote.getId() != null) {
             noConformidadService.obtenerActivaPorLote(lote.getId()).ifPresent(nc -> {
@@ -64,5 +67,25 @@ public class LoteCalidadValidator {
                 "El lote aún no está liberado por Calidad y no puede utilizarse en esta operación.",
                 Map.of("loteId", lote != null ? lote.getId() : null,
                         "estado", estado != null ? estado.name() : null));
+    }
+
+    public void validarVencimientoTiempoReal(LoteProducto lote) {
+        if (lote == null || lote.getFechaVencimiento() == null) {
+            return;
+        }
+
+        LocalDate fechaVencimiento = lote.getFechaVencimiento().toLocalDate();
+        LocalDate hoy = LocalDate.now();
+        if (fechaVencimiento.isBefore(hoy)) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.LOTE_VENCIDO,
+                    "El lote " + lote.getCodigoLote() + " está vencido desde " + fechaVencimiento,
+                    Map.of(
+                            "loteId", lote.getId(),
+                            "codigoLote", lote.getCodigoLote(),
+                            "fechaVencimiento", fechaVencimiento
+                    )
+            );
+        }
     }
 }

@@ -17,9 +17,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -138,5 +141,40 @@ class LoteCalidadValidatorTest {
                 .isInstanceOf(CustomBusinessException.class)
                 .extracting("code")
                 .isEqualTo(ApiErrorCode.CALIDAD_LOTE_NO_LIBERADO);
+    }
+
+    @Test
+    void bloqueaLoteVencidoAunqueEsteLiberadoYConStock() {
+        LoteProducto lote = new LoteProducto();
+        lote.setId(80L);
+        lote.setCodigoLote("LOT-EXP-01");
+        lote.setEstado(EstadoLote.LIBERADO);
+        lote.setStockLote(new BigDecimal("15.000000"));
+        lote.setFechaVencimiento(LocalDateTime.now().minusDays(2));
+
+        when(noConformidadService.obtenerActivaPorLote(80L)).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(80L)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> validator.validarLoteUtilizable(lote))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasFieldOrPropertyWithValue("code", ApiErrorCode.LOTE_VENCIDO)
+                .hasMessageContaining("está vencido");
+    }
+
+    @Test
+    void permiteLoteVigenteEnEstadoLiberado() {
+        LoteProducto lote = new LoteProducto();
+        lote.setId(81L);
+        lote.setCodigoLote("LOT-VIG-01");
+        lote.setEstado(EstadoLote.LIBERADO);
+        lote.setStockLote(new BigDecimal("8.000000"));
+        lote.setFechaVencimiento(LocalDateTime.now().plusDays(5));
+
+        when(noConformidadService.obtenerActivaPorLote(81L)).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(81L)).thenReturn(List.of());
+
+        validator.validarLoteUtilizable(lote);
+
+        assertThat(lote.getEstado()).isEqualTo(EstadoLote.LIBERADO);
     }
 }
