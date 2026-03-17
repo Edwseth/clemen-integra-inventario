@@ -24,6 +24,7 @@ public class InventoryVencidosProperties {
     private int chunkSize = 500;
     private final Movimiento movimiento = new Movimiento();
     private Long almacenDestinoId;
+    private String almacenDestinoNombre = "Obsoletos";
 
     public ZoneId resolveZoneId() {
         try {
@@ -45,6 +46,13 @@ public class InventoryVencidosProperties {
             throw new IllegalStateException("inventory.vencidos.almacenDestinoId es obligatorio cuando movimiento.enabled=true");
         }
         return almacenDestinoId;
+    }
+
+    public String requireAlmacenDestinoNombre() {
+        if (almacenDestinoNombre == null || almacenDestinoNombre.isBlank()) {
+            throw new IllegalStateException("inventory.vencidos.almacenDestinoNombre es obligatorio cuando no se configura almacenDestinoId");
+        }
+        return almacenDestinoNombre.trim();
     }
 
     @AssertTrue(message = "inventory.vencidos.estadoObjetivo solo admite VENCIDO o RECHAZADO")
@@ -87,9 +95,6 @@ public class InventoryVencidosProperties {
             }
             if (clasificacion == null || clasificacion.isBlank()) {
                 throw new IllegalStateException("inventory.vencidos.movimiento.clasificacion es obligatorio cuando movimiento.enabled=true");
-            }
-            if (almacenDestinoId == null) {
-                throw new IllegalStateException("inventory.vencidos.almacenDestinoId es obligatorio cuando movimiento.enabled=true");
             }
         }
     }

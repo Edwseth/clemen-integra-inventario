@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.config.InventoryVencidosProperties;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
+import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -31,13 +32,13 @@ class LoteVencimientoChunkProcessor {
                                LocalDateTime cutoff,
                                LocalDateTime inicioDia,
                                LocalDateTime finDia,
-                               LocalDateTime fechaMovimiento) {
+                               LocalDateTime fechaMovimiento,
+                               Long destinoIdResuelto,
+                               Usuario usuarioSistema) {
         long actualizados = 0L;
         long movimientos = 0L;
 
-        Long destinoIdConfig = properties.getMovimiento().isEnabled()
-                ? properties.requireAlmacenDestinoId()
-                : null;
+        Long destinoIdConfig = properties.getMovimiento().isEnabled() ? destinoIdResuelto : null;
 
         for (Long loteId : loteIds) {
             if (loteId == null) {
@@ -71,7 +72,7 @@ class LoteVencimientoChunkProcessor {
                 Integer destinoId = destinoIdConfig != null ? Math.toIntExact(destinoIdConfig) : null;
 
                 if (!existeMovimiento) {
-                    movimientoInventarioService.registrarRetiroPorVencimiento(lote, properties, fechaMovimiento);
+                    movimientoInventarioService.registrarRetiroPorVencimiento(lote, properties, destinoIdConfig, usuarioSistema, fechaMovimiento);
                     movimientos++;
                     if (destinoId != null) {
                         lote.setAlmacen(entityManager.getReference(Almacen.class, destinoId));

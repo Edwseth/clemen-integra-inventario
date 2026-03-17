@@ -71,12 +71,20 @@ public class LoteCalidadValidator {
 
     public void validarVencimientoTiempoReal(LoteProducto lote) {
         if (lote == null || lote.getFechaVencimiento() == null) {
-            return;
+            throw new CustomBusinessException(
+                    ApiErrorCode.LOTE_VENCIDO,
+                    "El lote " + (lote != null ? lote.getCodigoLote() : "") + " no tiene fecha de vencimiento configurada",
+                    Map.of(
+                            "loteId", lote != null ? lote.getId() : null,
+                            "codigoLote", lote != null ? lote.getCodigoLote() : null,
+                            "fechaVencimiento", null
+                    )
+            );
         }
 
         LocalDate fechaVencimiento = lote.getFechaVencimiento().toLocalDate();
         LocalDate hoy = LocalDate.now();
-        if (fechaVencimiento.isBefore(hoy)) {
+        if (!fechaVencimiento.isAfter(hoy)) {
             throw new CustomBusinessException(
                     ApiErrorCode.LOTE_VENCIDO,
                     "El lote " + lote.getCodigoLote() + " está vencido desde " + fechaVencimiento,

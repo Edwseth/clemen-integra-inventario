@@ -15,6 +15,7 @@ public interface AlmacenRepository extends JpaRepository<Almacen, Long> {
     boolean existsByNombre(String nombre);
 
     Optional<Almacen> findByNombre(String nombre);
+    Optional<Almacen> findByNombreIgnoreCase(String nombre);
 
 }
 

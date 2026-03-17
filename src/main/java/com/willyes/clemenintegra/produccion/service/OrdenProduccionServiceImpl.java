@@ -34,6 +34,7 @@ import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
 import com.willyes.clemenintegra.produccion.service.spec.OrdenProduccionSpecifications;
 import com.willyes.clemenintegra.produccion.repository.ChecklistEtapaItemRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.service.LoteCalidadValidator;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoRequestDTO;
 import com.willyes.clemenintegra.inventario.dto.SolicitudMovimientoResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
@@ -142,6 +143,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final SolicitudMovimientoRepository solicitudMovimientoRepository;
     private final InventoryCatalogResolver catalogResolver;
     private final UmValidator umValidator;
+    private final LoteCalidadValidator loteCalidadValidator;
     private final VidaUtilProductoService vidaUtilProductoService;
     private final ReservaLoteService reservaLoteService;
     private final ReservaLoteRepository reservaLoteRepository;
@@ -1968,7 +1970,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                                 "No se encontró el lote indicado para la reserva de OP",
                                 Map.of("loteId", loteId, "ordenProduccionId", orden.getId())
                         ));
-                validarLoteNoVencidoTiempoReal(lote);
+                loteCalidadValidator.validarVencimientoTiempoReal(lote);
 
                 SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()
                         .tipoMovimiento(TipoMovimiento.SALIDA)
@@ -2036,24 +2038,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 solicitudMovimientoRepository.saveAndFlush(solicitud);
                 reservaLoteService.sincronizarReservasSolicitud(solicitud);
             }
-        }
-    }
-
-    private void validarLoteNoVencidoTiempoReal(LoteProducto lote) {
-        if (lote == null || lote.getFechaVencimiento() == null) {
-            return;
-        }
-        LocalDate fechaVencimiento = lote.getFechaVencimiento().toLocalDate();
-        if (fechaVencimiento.isBefore(LocalDate.now())) {
-            throw new CustomBusinessException(
-                    ApiErrorCode.LOTE_VENCIDO,
-                    "El lote " + lote.getCodigoLote() + " está vencido desde " + fechaVencimiento,
-                    Map.of(
-                            "loteId", lote.getId(),
-                            "codigoLote", lote.getCodigoLote(),
-                            "fechaVencimiento", fechaVencimiento
-                    )
-            );
         }
     }
 

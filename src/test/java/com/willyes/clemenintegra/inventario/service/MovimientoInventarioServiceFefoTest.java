@@ -132,6 +132,34 @@ class MovimientoInventarioServiceFefoTest {
         assertThat(segundoDto.getDisponibleDespues()).isEqualByComparingTo(new BigDecimal("20.000000"));
     }
 
+
+    @Test
+    void simulateFefo_excluyeLotesVencidosYQueVencenHoy() {
+        Producto producto = new Producto();
+        producto.setId(2);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setId(10L);
+        producto.setUnidadMedida(unidad);
+
+        when(productoRepository.findById(2L)).thenReturn(Optional.of(producto));
+        when(catalogResolver.decimals(unidad)).thenReturn(2);
+
+        LoteProducto venceHoy = crearLote(2001L, "L-HOY", EstadoLote.LIBERADO,
+                LocalDateTime.now().withHour(0).withMinute(0), new BigDecimal("50"), BigDecimal.ZERO, 1);
+        LoteProducto futuro = crearLote(2002L, "L-FUT", EstadoLote.LIBERADO,
+                LocalDateTime.now().plusDays(3), new BigDecimal("50"), BigDecimal.ZERO, 1);
+
+        when(loteProductoRepository.findByProductoIdAndEstadoInOrderByFechaVencimientoAscIdAsc(eq(2L), any()))
+                .thenReturn(List.of(venceHoy, futuro));
+        lenient().when(loteProductoRepository.findByProductoIdAndEstadoIn(eq(2L), any()))
+                .thenReturn(List.of());
+
+        List<LoteConsumoDTO> resultado = service.simulateFefo(2L, new BigDecimal("25"), null);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getLoteId()).isEqualTo(2002L);
+    }
+
     private LoteProducto crearLote(Long id,
                                    String codigo,
                                    EstadoLote estado,
