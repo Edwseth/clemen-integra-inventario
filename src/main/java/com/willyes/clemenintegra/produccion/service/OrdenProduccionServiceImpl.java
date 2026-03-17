@@ -1962,6 +1962,14 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     manejarStockInsuficiente(insumo.getInsumo(), distribucion);
                 }
 
+                LoteProducto lote = loteProductoRepository.findById(loteId)
+                        .orElseThrow(() -> new CustomBusinessException(
+                                ApiErrorCode.LOTE_NO_ENCONTRADO,
+                                "No se encontró el lote indicado para la reserva de OP",
+                                Map.of("loteId", loteId, "ordenProduccionId", orden.getId())
+                        ));
+                validarLoteNoVencidoTiempoReal(lote);
+
                 SolicitudMovimientoRequestDTO solicitudReq = SolicitudMovimientoRequestDTO.builder()
                         .tipoMovimiento(TipoMovimiento.SALIDA)
                         .productoId(insumoId)
@@ -2028,6 +2036,24 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 solicitudMovimientoRepository.saveAndFlush(solicitud);
                 reservaLoteService.sincronizarReservasSolicitud(solicitud);
             }
+        }
+    }
+
+    private void validarLoteNoVencidoTiempoReal(LoteProducto lote) {
+        if (lote == null || lote.getFechaVencimiento() == null) {
+            return;
+        }
+        LocalDate fechaVencimiento = lote.getFechaVencimiento().toLocalDate();
+        if (fechaVencimiento.isBefore(LocalDate.now())) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.LOTE_VENCIDO,
+                    "El lote " + lote.getCodigoLote() + " está vencido desde " + fechaVencimiento,
+                    Map.of(
+                            "loteId", lote.getId(),
+                            "codigoLote", lote.getCodigoLote(),
+                            "fechaVencimiento", fechaVencimiento
+                    )
+            );
         }
     }
 

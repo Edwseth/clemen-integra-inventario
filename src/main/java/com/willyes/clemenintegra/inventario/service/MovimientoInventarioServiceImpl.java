@@ -2380,6 +2380,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     dto != null ? dto.tipoMovimientoDetalleId() : null);
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_PERTENECE_ALMACEN_ORIGEN");
         }
+        validarLoteNoVencidoTiempoReal(lote);
         loteCalidadValidator.validarLoteUtilizable(lote);
         if (!estadosElegibles.contains(lote.getEstado())) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_ESTADO_NO_ELEGIBLE");
@@ -2436,6 +2437,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean esAjusteNegativo = tipo == TipoMovimiento.AJUSTE
                 && clasificacion == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
         if (esLoteOrigen) {
+            validarLoteNoVencidoTiempoReal(loteOrigen);
             loteCalidadValidator.validarLoteUtilizable(loteOrigen);
         }
 
@@ -4017,6 +4019,24 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return disponible.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING);
     }
 
+    private void validarLoteNoVencidoTiempoReal(LoteProducto lote) {
+        if (lote == null || lote.getFechaVencimiento() == null) {
+            return;
+        }
+        LocalDate fechaVencimiento = lote.getFechaVencimiento().toLocalDate();
+        if (fechaVencimiento.isBefore(LocalDate.now())) {
+            throw new CustomBusinessException(
+                    ApiErrorCode.LOTE_VENCIDO,
+                    "El lote " + lote.getCodigoLote() + " está vencido desde " + fechaVencimiento,
+                    Map.of(
+                            "loteId", lote.getId(),
+                            "codigoLote", lote.getCodigoLote(),
+                            "fechaVencimiento", fechaVencimiento
+                    )
+            );
+        }
+    }
+
     private Long obtenerAlmacenActualLoteId(LoteProducto lote) {
         if (lote == null || lote.getAlmacen() == null || lote.getAlmacen().getId() == null) {
             return null;
@@ -4180,6 +4200,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 }
                 final LoteProducto lotePreBodega = lotePreBodegaOpt.get();
 
+                validarLoteNoVencidoTiempoReal(lotePreBodega);
                 loteCalidadValidator.validarLoteUtilizable(lotePreBodega);
 
                 // Idempotencia: resta SALIDAS ya emitidas para esta solicitud/producto/lote y tipo-detalle
