@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.inventario.service.InventoryCatalogResolver;
+import com.willyes.clemenintegra.inventario.service.LoteCalidadValidator;
 import com.willyes.clemenintegra.inventario.service.SolicitudMovimientoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ReservaLoteService;
@@ -55,6 +56,7 @@ class OrdenProduccionServiceChecklistTest {
         SolicitudMovimientoRepository solicitudMovimientoRepository = mock(SolicitudMovimientoRepository.class);
         InventoryCatalogResolver catalogResolver = mock(InventoryCatalogResolver.class);
         com.willyes.clemenintegra.inventario.service.UmValidator umValidator = mock(com.willyes.clemenintegra.inventario.service.UmValidator.class);
+        LoteCalidadValidator loteCalidadValidator = mock(LoteCalidadValidator.class);
         VidaUtilProductoService vidaUtilProductoService = mock(VidaUtilProductoService.class);
         ReservaLoteService reservaLoteService = mock(ReservaLoteService.class);
         ReservaLoteRepository reservaLoteRepository = mock(ReservaLoteRepository.class);
@@ -91,6 +93,7 @@ class OrdenProduccionServiceChecklistTest {
                 solicitudMovimientoRepository,
                 catalogResolver,
                 umValidator,
+                loteCalidadValidator,
                 vidaUtilProductoService,
                 reservaLoteService,
                 reservaLoteRepository,

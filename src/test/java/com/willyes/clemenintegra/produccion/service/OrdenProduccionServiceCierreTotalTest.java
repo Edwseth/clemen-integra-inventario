@@ -69,6 +69,7 @@ class OrdenProduccionServiceCierreTotalTest {
     private SolicitudMovimientoRepository solicitudMovimientoRepository;
     private InventoryCatalogResolver catalogResolver;
     private UmValidator umValidator;
+    private LoteCalidadValidator loteCalidadValidator;
     private com.willyes.clemenintegra.calidad.service.VidaUtilProductoService vidaUtilProductoService;
     private ReservaLoteService reservaLoteService;
     private ReservaLoteRepository reservaLoteRepository;
@@ -100,6 +101,7 @@ class OrdenProduccionServiceCierreTotalTest {
         solicitudMovimientoRepository = mock(SolicitudMovimientoRepository.class);
         catalogResolver = mock(InventoryCatalogResolver.class);
         umValidator = mock(UmValidator.class);
+        loteCalidadValidator = mock(LoteCalidadValidator.class);
         vidaUtilProductoService = mock(com.willyes.clemenintegra.calidad.service.VidaUtilProductoService.class);
         reservaLoteService = mock(ReservaLoteService.class);
         reservaLoteRepository = mock(ReservaLoteRepository.class);
@@ -135,6 +137,7 @@ class OrdenProduccionServiceCierreTotalTest {
                 solicitudMovimientoRepository,
                 catalogResolver,
                 umValidator,
+                loteCalidadValidator,
                 vidaUtilProductoService,
                 reservaLoteService,
                 reservaLoteRepository,
