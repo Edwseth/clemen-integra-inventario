@@ -344,15 +344,49 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
            and (:almacenId is null or m.almacenOrigen.id = :almacenId or m.almacenDestino.id = :almacenId)
            and (:ordenProduccionId is null or m.ordenProduccion.id = :ordenProduccionId)
            and (:etapaProduccionId is null or m.ordenProduccionEtapa.id = :etapaProduccionId)
-         order by m.fechaIngreso asc, m.id asc
     """)
-    List<MovimientoInventario> buscarParaKardex(@Param("inicio") LocalDateTime inicio,
+    Page<MovimientoInventario> buscarParaKardex(@Param("inicio") LocalDateTime inicio,
                                                 @Param("fin") LocalDateTime fin,
                                                 @Param("productoId") Long productoId,
                                                 @Param("loteId") Long loteId,
                                                 @Param("almacenId") Long almacenId,
                                                 @Param("ordenProduccionId") Long ordenProduccionId,
-                                                @Param("etapaProduccionId") Long etapaProduccionId);
+                                                @Param("etapaProduccionId") Long etapaProduccionId,
+                                                Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "producto",
+            "lote",
+            "almacenOrigen",
+            "almacenDestino",
+            "registradoPor",
+            "motivoMovimiento",
+            "ordenProduccion"
+    })
+    @Query("""
+        select m
+          from MovimientoInventario m
+         where (:productoId is null or m.producto.id = :productoId)
+           and (:loteId is null or m.lote.id = :loteId)
+           and (:inicio is null or m.fechaIngreso >= :inicio)
+           and (:fin is null or m.fechaIngreso <= :fin)
+           and (:almacenId is null or m.almacenOrigen.id = :almacenId or m.almacenDestino.id = :almacenId)
+           and (:ordenProduccionId is null or m.ordenProduccion.id = :ordenProduccionId)
+           and (:etapaProduccionId is null or m.ordenProduccionEtapa.id = :etapaProduccionId)
+           and ((:asc = true and (m.fechaIngreso < :cursorFecha or (m.fechaIngreso = :cursorFecha and m.id < :cursorId)))
+             or (:asc = false and (m.fechaIngreso > :cursorFecha or (m.fechaIngreso = :cursorFecha and m.id > :cursorId))))
+         order by m.fechaIngreso asc, m.id asc
+    """)
+    List<MovimientoInventario> buscarPreviosParaKardex(@Param("inicio") LocalDateTime inicio,
+                                                       @Param("fin") LocalDateTime fin,
+                                                       @Param("productoId") Long productoId,
+                                                       @Param("loteId") Long loteId,
+                                                       @Param("almacenId") Long almacenId,
+                                                       @Param("ordenProduccionId") Long ordenProduccionId,
+                                                       @Param("etapaProduccionId") Long etapaProduccionId,
+                                                       @Param("cursorFecha") LocalDateTime cursorFecha,
+                                                       @Param("cursorId") Long cursorId,
+                                                       @Param("asc") boolean asc);
 
     @EntityGraph(attributePaths = {
             "producto", "producto.unidadMedida", "lote", "lote.producto",

@@ -12,6 +12,10 @@ import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -33,6 +37,11 @@ public class KardexServiceImpl implements KardexService {
 
     @Override
     public List<KardexItemDTO> obtenerKardex(KardexFiltro filtro) {
+        return obtenerKardex(filtro, Pageable.unpaged()).getContent();
+    }
+
+    @Override
+    public Page<KardexItemDTO> obtenerKardex(KardexFiltro filtro, Pageable pageable) {
         if ((filtro.getProductoId() == null) && !StringUtils.hasText(filtro.getCodigoSku())) {
             throw new IllegalArgumentException("Se requiere productoId o codigoSku");
         }
@@ -46,17 +55,21 @@ public class KardexServiceImpl implements KardexService {
                 filtro.getAlmacenId(),
                 filtro.getOrdenProduccionId());
 
-        List<MovimientoInventario> movimientos = movimientoInventarioRepository.buscarParaKardex(
+        Pageable efectivo = normalizarPageable(pageable);
+        Page<MovimientoInventario> movimientosPage = movimientoInventarioRepository.buscarParaKardex(
                 filtro.getFechaDesde(),
                 filtro.getFechaHasta(),
                 productoId,
                 lote != null ? lote.getId() : null,
                 filtro.getAlmacenId(),
                 filtro.getOrdenProduccionId(),
-                filtro.getEtapaProduccionId()
+                filtro.getEtapaProduccionId(),
+                efectivo
         );
 
-        return calcularSaldo(movimientos, producto, lote, filtro.getAlmacenId());
+        BigDecimal saldoInicial = obtenerSaldoInicial(filtro, lote, movimientosPage, efectivo, productoId);
+        List<KardexItemDTO> content = calcularSaldo(movimientosPage.getContent(), producto, lote, filtro.getAlmacenId(), saldoInicial, esAscendente(efectivo));
+        return new PageImpl<>(content, efectivo, movimientosPage.getTotalElements());
     }
 
     private Producto resolverProducto(Long productoId, String codigoSku) {
@@ -141,15 +154,19 @@ public class KardexServiceImpl implements KardexService {
     private List<KardexItemDTO> calcularSaldo(List<MovimientoInventario> movimientos,
                                               Producto producto,
                                               LoteProducto lote,
-                                              Long almacenId) {
-        BigDecimal saldo = BigDecimal.ZERO;
+                                              Long almacenId,
+                                              BigDecimal saldoInicial,
+                                              boolean ascendente) {
+        BigDecimal saldo = saldoInicial;
         List<MovimientoConTotales> items = movimientos.stream()
                 .map(mov -> new MovimientoConTotales(mov, movimientoSignosResolver.calcularEntrada(mov, almacenId), movimientoSignosResolver.calcularSalida(mov, almacenId)))
                 .collect(Collectors.toList());
 
         List<KardexItemDTO> resultado = new java.util.ArrayList<>(items.size());
         for (MovimientoConTotales item : items) {
-            saldo = saldo.add(item.entrada()).subtract(item.salida());
+            if (ascendente) {
+                saldo = saldo.add(item.entrada()).subtract(item.salida());
+            }
             MovimientoInventario mov = item.movimiento();
             resultado.add(KardexItemDTO.builder()
                     .fechaMovimiento(mov.getFechaIngreso())
@@ -166,9 +183,75 @@ public class KardexServiceImpl implements KardexService {
                     .saldo(saldo)
                     .usuario(mov.getRegistradoPor() != null ? mov.getRegistradoPor().getNombreCompleto() : null)
                     .build());
+            if (!ascendente) {
+                saldo = saldo.subtract(item.entrada()).add(item.salida());
+            }
         }
         return resultado;
     }
 
+
+    private Pageable normalizarPageable(Pageable pageable) {
+        if (pageable == null || pageable.isUnpaged()) {
+            return Pageable.unpaged();
+        }
+        if (pageable.getSort().isUnsorted()) {
+            return org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                    Sort.by(Sort.Direction.ASC, "fechaIngreso", "id"));
+        }
+        return pageable;
+    }
+
+    private boolean esAscendente(Pageable pageable) {
+        if (pageable == null || pageable.isUnpaged() || pageable.getSort().isUnsorted()) {
+            return true;
+        }
+        Sort.Order order = pageable.getSort().getOrderFor("fechaIngreso");
+        if (order == null) {
+            return true;
+        }
+        return order.isAscending();
+    }
+
+    private BigDecimal obtenerSaldoInicial(KardexFiltro filtro,
+                                           LoteProducto lote,
+                                           Page<MovimientoInventario> movimientosPage,
+                                           Pageable pageable,
+                                           Long productoId) {
+        if (movimientosPage.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        MovimientoInventario cursor = movimientosPage.getContent().get(0);
+        boolean asc = esAscendente(pageable);
+
+        List<MovimientoInventario> previos = movimientoInventarioRepository.buscarPreviosParaKardex(
+                filtro.getFechaDesde(),
+                filtro.getFechaHasta(),
+                productoId,
+                lote != null ? lote.getId() : null,
+                filtro.getAlmacenId(),
+                filtro.getOrdenProduccionId(),
+                filtro.getEtapaProduccionId(),
+                cursor.getFechaIngreso(),
+                cursor.getId(),
+                asc
+        );
+
+        BigDecimal saldo = BigDecimal.ZERO;
+        for (MovimientoInventario mov : previos) {
+            saldo = saldo.add(movimientoSignosResolver.calcularEntrada(mov, filtro.getAlmacenId()))
+                    .subtract(movimientoSignosResolver.calcularSalida(mov, filtro.getAlmacenId()));
+        }
+
+        if (!asc) {
+            saldo = saldo.add(movimientoSignosResolver.calcularEntrada(cursor, filtro.getAlmacenId()))
+                    .subtract(movimientoSignosResolver.calcularSalida(cursor, filtro.getAlmacenId()));
+        }
+
+        return saldo;
+    }
+
     private record MovimientoConTotales(MovimientoInventario movimiento, BigDecimal entrada, BigDecimal salida) {}
 }
+

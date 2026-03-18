@@ -5,6 +5,10 @@ import com.willyes.clemenintegra.inventario.dto.KardexItemDTO;
 import com.willyes.clemenintegra.inventario.service.KardexService;
 import com.willyes.clemenintegra.shared.util.DateParser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -16,7 +20,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/inventario/kardex")
@@ -27,7 +30,7 @@ public class KardexController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('INV_KARDEX_READ')")
-    public ResponseEntity<List<KardexItemDTO>> obtenerKardex(
+    public ResponseEntity<Page<KardexItemDTO>> obtenerKardex(
             @RequestParam(required = false) Long productoId,
             @RequestParam(required = false) String codigoSku,
             @RequestParam(required = false) Long loteId,
@@ -36,7 +39,11 @@ public class KardexController {
             @RequestParam(required = false) String fechaHasta,
             @RequestParam(required = false) Long almacenId,
             @RequestParam(required = false) Long ordenProduccionId,
-            @RequestParam(required = false) Long etapaProduccionId
+            @RequestParam(required = false) Long etapaProduccionId,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "25") Integer size,
+            @RequestParam(defaultValue = "fechaMovimiento") String sortField,
+            @RequestParam(defaultValue = "asc") String sortDir
     ) {
         if (productoId == null && !StringUtils.hasText(codigoSku)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requiere productoId o codigoSku");
@@ -57,12 +64,31 @@ public class KardexController {
                 .etapaProduccionId(etapaProduccionId)
                 .build();
 
+        Pageable pageable = construirPageable(page, size, sortField, sortDir);
+
         try {
-            List<KardexItemDTO> resultado = kardexService.obtenerKardex(filtro);
+            Page<KardexItemDTO> resultado = kardexService.obtenerKardex(filtro, pageable);
             return ResponseEntity.ok(resultado);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+    }
+
+    private Pageable construirPageable(Integer page, Integer size, String sortField, String sortDir) {
+        int pagina = page == null ? 0 : Math.max(page, 0);
+        int tamanio = size == null ? 25 : Math.min(Math.max(size, 1), 500);
+
+        Sort.Direction direction = "desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+
+        String campo = switch (sortField) {
+            case "id" -> "id";
+            case "fechaIngreso" -> "fechaIngreso";
+            case "fechaMovimiento" -> "fechaIngreso";
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sortField no soportado");
+        };
+
+        Sort sort = Sort.by(direction, campo).and(Sort.by(direction, "id"));
+        return PageRequest.of(pagina, tamanio, sort);
     }
 
     private LocalDateTime parseFecha(String fechaTexto, boolean isInicio) {
