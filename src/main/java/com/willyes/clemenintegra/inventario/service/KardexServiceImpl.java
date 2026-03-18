@@ -234,8 +234,7 @@ public class KardexServiceImpl implements KardexService {
                 filtro.getOrdenProduccionId(),
                 filtro.getEtapaProduccionId(),
                 cursor.getFechaIngreso(),
-                cursor.getId(),
-                asc
+                cursor.getId()
         );
 
         BigDecimal saldo = BigDecimal.ZERO;

@@ -122,6 +122,17 @@ class KardexControllerSecurityTest {
         verify(kardexService).obtenerKardex(any(), any(Pageable.class));
     }
 
+
+    @Test
+    void rechazaSortFieldIdPorqueRompeSemanticaCronologicaDelSaldo() throws Exception {
+        mockMvc.perform(get("/api/inventario/kardex")
+                        .param("productoId", "1")
+                        .param("sortField", "id")
+                        .with(SecurityMockMvcRequestPostProcessors.user("jefe-produccion")
+                                .authorities(() -> "INV_KARDEX_READ")))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void rechazaRolNoAutorizado() throws Exception {
         mockMvc.perform(get("/api/inventario/kardex")
