@@ -20,6 +20,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
@@ -90,7 +92,7 @@ class KardexControllerSecurityTest {
 
     @Test
     void permiteAccesoConRolJefeProduccion() throws Exception {
-        when(kardexService.obtenerKardex(any())).thenReturn(Collections.emptyList());
+        when(kardexService.obtenerKardex(any(), any(Pageable.class))).thenReturn(new PageImpl<>(Collections.emptyList()));
 
         mockMvc.perform(get("/api/inventario/kardex")
                         .param("productoId", "1")
@@ -102,14 +104,14 @@ class KardexControllerSecurityTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<KardexFiltro> captor = ArgumentCaptor.forClass(KardexFiltro.class);
-        verify(kardexService).obtenerKardex(captor.capture());
+        verify(kardexService).obtenerKardex(captor.capture(), any(Pageable.class));
         assertThat(captor.getValue().getOrdenProduccionId()).isEqualTo(7L);
         assertThat(captor.getValue().getEtapaProduccionId()).isEqualTo(11L);
     }
 
     @Test
     void permiteAccesoConRolSuperAdmin() throws Exception {
-        when(kardexService.obtenerKardex(any())).thenReturn(Collections.singletonList(KardexItemDTO.builder().build()));
+        when(kardexService.obtenerKardex(any(), any(Pageable.class))).thenReturn(new PageImpl<>(Collections.singletonList(KardexItemDTO.builder().build())));
 
         mockMvc.perform(get("/api/inventario/kardex")
                         .param("productoId", "9")
@@ -117,7 +119,7 @@ class KardexControllerSecurityTest {
                                 .authorities(() -> "INV_KARDEX_READ")))
                 .andExpect(status().isOk());
 
-        verify(kardexService).obtenerKardex(any());
+        verify(kardexService).obtenerKardex(any(), any(Pageable.class));
     }
 
     @Test
