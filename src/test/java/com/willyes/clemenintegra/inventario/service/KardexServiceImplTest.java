@@ -61,7 +61,7 @@ class KardexServiceImplTest {
                     MovimientoInventario mov = invocation.getArgument(0);
                     return mov.getTipoMovimiento() == TipoMovimiento.SALIDA ? mov.getCantidad() : BigDecimal.ZERO;
                 });
-        lenient().when(movimientoInventarioRepository.buscarPreviosParaKardex(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        lenient().when(movimientoInventarioRepository.buscarPreviosParaKardex(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(Collections.emptyList());
     }
 
@@ -242,6 +242,77 @@ class KardexServiceImplTest {
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).getCantidadEntrada()).isEqualByComparingTo("5");
         assertThat(resultado.get(0).getSaldo()).isEqualByComparingTo("5");
+    }
+
+
+    @Test
+    void mantieneContinuidadDeSaldoEnPaginaPosteriorAsc() {
+        Producto producto = crearProducto(20, "SKU-20", "Producto ASC");
+        when(productoRepository.findById(20L)).thenReturn(Optional.of(producto));
+
+        LocalDateTime base = LocalDateTime.of(2024, 1, 10, 8, 0);
+        MovimientoInventario paginaDos = movimiento(base.plusDays(2), new BigDecimal("3"),
+                TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        paginaDos.setId(103L);
+        MovimientoInventario paginaDosSiguiente = movimiento(base.plusDays(3), new BigDecimal("2"),
+                TipoMovimiento.RECEPCION, ClasificacionMovimientoInventario.RECEPCION_COMPRA);
+        paginaDosSiguiente.setId(104L);
+
+        MovimientoInventario previoEntrada = movimiento(base, new BigDecimal("10"),
+                TipoMovimiento.RECEPCION, ClasificacionMovimientoInventario.RECEPCION_COMPRA);
+        previoEntrada.setId(101L);
+        MovimientoInventario previoSalida = movimiento(base.plusDays(1), new BigDecimal("4"),
+                TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        previoSalida.setId(102L);
+
+        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(20L), any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(paginaDos, paginaDosSiguiente)));
+        when(movimientoInventarioRepository.buscarPreviosParaKardex(any(), any(), eq(20L), any(), any(), any(), any(), eq(paginaDos.getFechaIngreso()), eq(103L)))
+                .thenReturn(List.of(previoEntrada, previoSalida));
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(1, 2,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "fechaIngreso").and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "id")));
+
+        List<KardexItemDTO> resultado = kardexService.obtenerKardex(KardexFiltro.builder().productoId(20L).build(), pageable).getContent();
+
+        assertThat(resultado).hasSize(2);
+        assertThat(resultado.get(0).getSaldo()).isEqualByComparingTo("3");
+        assertThat(resultado.get(1).getSaldo()).isEqualByComparingTo("5");
+    }
+
+    @Test
+    void mantieneContinuidadDeSaldoEnPaginaPosteriorDesc() {
+        Producto producto = crearProducto(21, "SKU-21", "Producto DESC");
+        when(productoRepository.findById(21L)).thenReturn(Optional.of(producto));
+
+        LocalDateTime base = LocalDateTime.of(2024, 2, 1, 8, 0);
+        MovimientoInventario cursor = movimiento(base.plusDays(3), new BigDecimal("2"),
+                TipoMovimiento.RECEPCION, ClasificacionMovimientoInventario.RECEPCION_COMPRA);
+        cursor.setId(204L);
+        MovimientoInventario siguienteDesc = movimiento(base.plusDays(2), new BigDecimal("3"),
+                TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        siguienteDesc.setId(203L);
+
+        MovimientoInventario previoEntrada = movimiento(base, new BigDecimal("10"),
+                TipoMovimiento.RECEPCION, ClasificacionMovimientoInventario.RECEPCION_COMPRA);
+        previoEntrada.setId(201L);
+        MovimientoInventario previoSalida = movimiento(base.plusDays(1), new BigDecimal("4"),
+                TipoMovimiento.SALIDA, ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        previoSalida.setId(202L);
+
+        when(movimientoInventarioRepository.buscarParaKardex(any(), any(), eq(21L), any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(cursor, siguienteDesc)));
+        when(movimientoInventarioRepository.buscarPreviosParaKardex(any(), any(), eq(21L), any(), any(), any(), any(), eq(cursor.getFechaIngreso()), eq(204L)))
+                .thenReturn(List.of(previoEntrada, previoSalida));
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 2,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaIngreso").and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id")));
+
+        List<KardexItemDTO> resultado = kardexService.obtenerKardex(KardexFiltro.builder().productoId(21L).build(), pageable).getContent();
+
+        assertThat(resultado).hasSize(2);
+        assertThat(resultado.get(0).getSaldo()).isEqualByComparingTo("8");
+        assertThat(resultado.get(1).getSaldo()).isEqualByComparingTo("6");
     }
 
     @Test

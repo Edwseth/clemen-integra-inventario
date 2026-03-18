@@ -373,8 +373,7 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
            and (:almacenId is null or m.almacenOrigen.id = :almacenId or m.almacenDestino.id = :almacenId)
            and (:ordenProduccionId is null or m.ordenProduccion.id = :ordenProduccionId)
            and (:etapaProduccionId is null or m.ordenProduccionEtapa.id = :etapaProduccionId)
-           and ((:asc = true and (m.fechaIngreso < :cursorFecha or (m.fechaIngreso = :cursorFecha and m.id < :cursorId)))
-             or (:asc = false and (m.fechaIngreso > :cursorFecha or (m.fechaIngreso = :cursorFecha and m.id > :cursorId))))
+           and (m.fechaIngreso < :cursorFecha or (m.fechaIngreso = :cursorFecha and m.id < :cursorId))
          order by m.fechaIngreso asc, m.id asc
     """)
     List<MovimientoInventario> buscarPreviosParaKardex(@Param("inicio") LocalDateTime inicio,
@@ -385,8 +384,7 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
                                                        @Param("ordenProduccionId") Long ordenProduccionId,
                                                        @Param("etapaProduccionId") Long etapaProduccionId,
                                                        @Param("cursorFecha") LocalDateTime cursorFecha,
-                                                       @Param("cursorId") Long cursorId,
-                                                       @Param("asc") boolean asc);
+                                                       @Param("cursorId") Long cursorId);
 
     @EntityGraph(attributePaths = {
             "producto", "producto.unidadMedida", "lote", "lote.producto",

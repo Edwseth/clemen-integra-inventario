@@ -81,10 +81,9 @@ public class KardexController {
         Sort.Direction direction = "desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC;
 
         String campo = switch (sortField) {
-            case "id" -> "id";
             case "fechaIngreso" -> "fechaIngreso";
             case "fechaMovimiento" -> "fechaIngreso";
-            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sortField no soportado");
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sortField no soportado; use fechaIngreso o fechaMovimiento");
         };
 
         Sort sort = Sort.by(direction, campo).and(Sort.by(direction, "id"));
