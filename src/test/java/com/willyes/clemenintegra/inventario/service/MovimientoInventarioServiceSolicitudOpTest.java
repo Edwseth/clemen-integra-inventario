@@ -240,6 +240,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(tipoMovimientoDetalleRepository.findById(50L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
         given(solicitudMovimientoRepository.findByIdWithLock(200L)).willReturn(Optional.of(solicitud));
         given(solicitudMovimientoDetalleRepository.findById(detalle.getId())).willReturn(Optional.of(detalle));
+        given(loteProductoRepository.findById(lotePreBodega.getId())).willReturn(Optional.of(lotePreBodega));
         given(loteProductoRepository.findByIdForUpdate(lotePreBodega.getId())).willReturn(Optional.of(lotePreBodega));
         given(loteProductoRepository.findByIdForUpdate(loteOrigenReserva.getId())).willReturn(Optional.of(loteOrigenReserva));
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
@@ -280,6 +281,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         assertThat(guardado.getTipoMovimiento()).isEqualTo(TipoMovimiento.SALIDA);
         assertThat(guardado.getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
         verify(reservaLoteService).consumirReserva(solicitud, detalle, loteOrigenReserva, new BigDecimal("270.000000"));
+        verify(loteProductoRepository, never()).findByCodigoLoteAndProductoIdAndAlmacenId(anyString(), anyInt(), anyInt());
     }
 
     @Test

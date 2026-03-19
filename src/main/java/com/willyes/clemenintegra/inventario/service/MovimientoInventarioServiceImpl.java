@@ -223,6 +223,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         Long tipoMovimientoDetalleId = dto.tipoMovimientoDetalleId();
         Integer almacenDestinoIdNormalizado = dto.almacenDestinoId();
 
+        Long preBodegaProduccionId = resolverAlmacenPreBodegaId();
+        boolean dtoEsConsumoSalidaProduccionDesdePreBodega = salidaProduccionExplicita
+                && dto.loteProductoId() != null
+                && isLoteEnPreBodega(dto.loteProductoId(), preBodegaProduccionId);
+
         boolean esRecepcionDevolucionCliente = tipoMovimiento == TipoMovimiento.RECEPCION
                 && clasificacion == ClasificacionMovimientoInventario.RECEPCION_DEVOLUCION_CLIENTE;
         boolean loteLegacy = Boolean.TRUE.equals(dto.loteLegacy());
@@ -254,6 +259,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 || clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PT
                 || clasificacion == ClasificacionMovimientoInventario.REGULARIZACION_TRAZABILIDAD_PS;
         if (esOpDesdeDto
+                && !dtoEsConsumoSalidaProduccionDesdePreBodega
                 && !esEntradaPt
                 && !esRegularizacionTrazabilidad
                 && clasificacion != ClasificacionMovimientoInventario.SALIDA_PRODUCCION) {
@@ -576,6 +582,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
             boolean esTrasladoInsumosOP =
                     esOP
+                            && !dtoEsConsumoSalidaProduccionDesdePreBodega
                             && !esEntradaPorProduccion
                             && !esSalidaProduccion
                             && dto.tipoMovimiento() == TipoMovimiento.TRANSFERENCIA;
@@ -642,17 +649,17 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             ordenProduccionIdContexto = solicitud.getOrdenProduccion().getId();
         }
 
-        Long preBodegaProduccionId = resolverAlmacenPreBodegaId();
         boolean loteMovimientoYaEstaEnPreBodega = salidaProduccionExplicita
                 && isLoteEnPreBodega(dto.loteProductoId(), preBodegaProduccionId);
-        boolean esConsumoSalidaProduccionDesdePreBodega = salidaProduccionExplicita
+        boolean esConsumoSalidaProduccionDesdePreBodega = dtoEsConsumoSalidaProduccionDesdePreBodega
+                || (salidaProduccionExplicita
                 && (
                 dto.ordenProduccionEtapaId() != null
                         || loteMovimientoYaEstaEnPreBodega
                         || (dto.almacenOrigenId() != null
                         && preBodegaProduccionId != null
                         && Objects.equals(dto.almacenOrigenId().longValue(), preBodegaProduccionId))
-        );
+        ));
         boolean esTrasladoAPreBodega = !esConsumoSalidaProduccionDesdePreBodega && isTrasladoAPrebodega(
                 tipoMovimiento,
                 clasificacion,
