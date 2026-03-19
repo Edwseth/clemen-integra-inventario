@@ -2726,6 +2726,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             loteRetorno.getId(), loteOrigen.getId(), detalleOpGestionado);
                     return List.of(new MovimientoLoteDetalle(loteRetorno, cantidad));
                 }
+                if (esOpAtencion) {
+                    log.error("OP_SALIDA_ESTADO_INVALIDO: solicitudId={} loteOrigenId={} loteFisicoId={} detalleGestionado={} solicitudOpProcesada={}",
+                            solicitud.getId(), loteOrigen.getId(), loteFisicoMovimiento.getId(), detalleOpGestionado,
+                            solicitudOpProcesada != null && solicitudOpProcesada.get());
+                    throw new IllegalStateException("SALIDA_PRODUCCION_OP_NO_PROCESADA_EN_LOTE");
+                }
                 log.debug("MOV-SALIDA delegando ajuste de lote a la atención de solicitud solicitudId={} loteId={}",
                         solicitud.getId(), loteOrigen.getId());
                 return List.of(new MovimientoLoteDetalle(loteOrigen, cantidad));

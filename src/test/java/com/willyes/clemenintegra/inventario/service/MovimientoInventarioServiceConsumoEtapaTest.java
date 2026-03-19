@@ -1,5 +1,6 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.inventario.dto.AtencionDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioDTO;
 import com.willyes.clemenintegra.inventario.dto.MovimientoInventarioResponseDTO;
 import com.willyes.clemenintegra.inventario.mapper.MovimientoInventarioMapper;
@@ -218,6 +219,88 @@ class MovimientoInventarioServiceConsumoEtapaTest {
                 .containsOnly(20L);
         assertThat(detalle1.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
         assertThat(detalle2.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
+    }
+
+
+    @Test
+    void procesarMovimientoConLoteExistente_paraSalidaProduccionOpRetornaLoteFisicoPrebodega() {
+        SolicitudMovimiento solicitud = solicitudConDetalle();
+        SolicitudMovimientoDetalle detalle = solicitud.getDetalles().get(0);
+        Producto producto = solicitud.getProducto();
+
+        LoteProducto loteReservado = detalle.getLote();
+        loteReservado.setStockReservado(new BigDecimal("10"));
+
+        LoteProducto lotePrebodega = loteEnPrebodega(loteReservado, producto, 30);
+        lotePrebodega.setStockLote(new BigDecimal("10"));
+        lotePrebodega.setStockReservado(BigDecimal.ZERO);
+
+        when(loteProductoRepository.findByIdForUpdate(loteReservado.getId())).thenReturn(Optional.of(loteReservado));
+        when(loteProductoRepository.findByIdForUpdate(lotePrebodega.getId())).thenReturn(Optional.of(lotePrebodega));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(solicitudMovimientoDetalleRepository.save(any(SolicitudMovimientoDetalle.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(solicitudMovimientoRepository.saveAndFlush(any(SolicitudMovimiento.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("10"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lotePrebodega.getId(),
+                30,
+                null,
+                null,
+                null,
+                null,
+                null,
+                solicitud.getId(),
+                null,
+                solicitud.getOrdenProduccion().getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(crearAtencion(detalle.getId(), loteReservado.getId(), new BigDecimal("10"))),
+                null,
+                null
+        );
+
+        @SuppressWarnings("unchecked")
+        List<Object> resultado = (List<Object>) ReflectionTestUtils.invokeMethod(
+                service,
+                "procesarMovimientoConLoteExistente",
+                dto,
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                new Almacen(30),
+                null,
+                producto,
+                new BigDecimal("10"),
+                false,
+                solicitud,
+                null
+        );
+
+        assertThat(resultado).hasSize(1);
+        Object detalleResultado = resultado.get(0);
+        LoteProducto loteResultado = (LoteProducto) ReflectionTestUtils.getField(detalleResultado, "lote");
+        BigDecimal cantidadResultado = (BigDecimal) ReflectionTestUtils.getField(detalleResultado, "cantidad");
+
+        assertThat(loteResultado.getId()).isEqualTo(lotePrebodega.getId());
+        assertThat(cantidadResultado).isEqualByComparingTo("10");
+        assertThat(lotePrebodega.getStockLote()).isEqualByComparingTo("0");
+        assertThat(lotePrebodega.isAgotado()).isTrue();
+        verify(reservaLoteService).consumirReserva(solicitud, detalle, loteReservado, new BigDecimal("10.0000"));
     }
 
     @Test
@@ -606,6 +689,15 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         detalle.setAlmacenDestino(new Almacen(almacenDestinoId.intValue()));
 
         return detalle;
+    }
+
+
+    private AtencionDTO crearAtencion(Long detalleId, Long loteId, BigDecimal cantidad) {
+        AtencionDTO atencion = new AtencionDTO();
+        atencion.setDetalleId(detalleId);
+        atencion.setLoteId(loteId);
+        atencion.setCantidad(cantidad);
+        return atencion;
     }
 
     private LoteProducto loteEnPrebodega(LoteProducto base, Producto producto, int almacenId) {
