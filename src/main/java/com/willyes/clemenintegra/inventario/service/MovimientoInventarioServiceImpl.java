@@ -643,9 +643,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         Long preBodegaProduccionId = resolverAlmacenPreBodegaId();
+        boolean loteMovimientoYaEstaEnPreBodega = salidaProduccionExplicita
+                && isLoteEnPreBodega(dto.loteProductoId(), preBodegaProduccionId);
         boolean esConsumoSalidaProduccionDesdePreBodega = salidaProduccionExplicita
                 && (
                 dto.ordenProduccionEtapaId() != null
+                        || loteMovimientoYaEstaEnPreBodega
                         || (dto.almacenOrigenId() != null
                         && preBodegaProduccionId != null
                         && Objects.equals(dto.almacenOrigenId().longValue(), preBodegaProduccionId))
@@ -3719,6 +3722,18 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 || clasificacion == ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
                 || esTipoDetalleTraslado
                 || esTipoDetalleTransferencia;
+    }
+
+    private boolean isLoteEnPreBodega(Long loteProductoId, Long preBodegaProduccionId) {
+        if (loteProductoId == null || preBodegaProduccionId == null) {
+            return false;
+        }
+        return loteProductoRepository.findById(loteProductoId)
+                .map(LoteProducto::getAlmacen)
+                .map(Almacen::getId)
+                .map(Integer::longValue)
+                .filter(preBodegaProduccionId::equals)
+                .isPresent();
     }
 
     private boolean esTipoDetalleTrasladoPrebodega(TipoMovimientoDetalle tipoMovimientoDetalle) {
