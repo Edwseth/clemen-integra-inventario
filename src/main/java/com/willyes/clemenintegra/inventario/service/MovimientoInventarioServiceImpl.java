@@ -218,6 +218,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean esOpDesdeDto = dto.ordenProduccionId() != null;
         TipoMovimiento tipoMovimiento = dto.tipoMovimiento();
         ClasificacionMovimientoInventario clasificacion = dto.clasificacionMovimientoInventario();
+        boolean salidaProduccionExplicita = tipoMovimiento == TipoMovimiento.SALIDA
+                && clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
         Long tipoMovimientoDetalleId = dto.tipoMovimientoDetalleId();
         Integer almacenDestinoIdNormalizado = dto.almacenDestinoId();
 
@@ -546,7 +548,10 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
         }
 
-        if (dto.almacenDestinoId() == null && solicitud != null && solicitud.getAlmacenDestino() != null) {
+        if (!salidaProduccionExplicita
+                && dto.almacenDestinoId() == null
+                && solicitud != null
+                && solicitud.getAlmacenDestino() != null) {
             almacenDestino = solicitud.getAlmacenDestino();
         }
 
@@ -638,7 +643,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         Long preBodegaProduccionId = resolverAlmacenPreBodegaId();
-        boolean esTrasladoAPreBodega = isTrasladoAPrebodega(
+        boolean esTrasladoAPreBodega = !salidaProduccionExplicita && isTrasladoAPrebodega(
                 tipoMovimiento,
                 clasificacion,
                 tipoMovimientoDetalle,

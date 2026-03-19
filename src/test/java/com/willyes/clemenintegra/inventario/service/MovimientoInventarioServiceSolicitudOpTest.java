@@ -274,6 +274,11 @@ class MovimientoInventarioServiceSolicitudOpTest {
         assertThat(lotePreBodega.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
         assertThat(lotePreBodega.getStockReservado()).isEqualByComparingTo(BigDecimal.ZERO.setScale(2));
         assertThat(loteOrigenReserva.getStockLote()).isEqualByComparingTo(new BigDecimal("1000"));
+        ArgumentCaptor<MovimientoInventario> movimientoCaptor = ArgumentCaptor.forClass(MovimientoInventario.class);
+        verify(movimientoInventarioRepository).save(movimientoCaptor.capture());
+        MovimientoInventario guardado = movimientoCaptor.getValue();
+        assertThat(guardado.getTipoMovimiento()).isEqualTo(TipoMovimiento.SALIDA);
+        assertThat(guardado.getClasificacion()).isEqualTo(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
         verify(reservaLoteService).consumirReserva(solicitud, detalle, loteOrigenReserva, new BigDecimal("270.000000"));
     }
 
