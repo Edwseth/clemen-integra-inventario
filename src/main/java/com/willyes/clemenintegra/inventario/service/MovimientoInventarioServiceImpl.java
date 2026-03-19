@@ -2447,11 +2447,6 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean esSolicitudOp = solicitud != null && solicitud.getOrdenProduccion() != null;
 
         boolean esOpAtencion = esSolicitudOp;
-
-        SolicitudMovimientoDetalle detalleOp = esOpAtencion
-                ? resolverDetalleSolicitudOp(dto, solicitud, loteOrigen)
-                : null;
-        SolicitudMovimientoDetalle detalleSolicitudRelacionado = validarDetalleCompatibleConLote(detalleOp, loteOrigen);
         boolean esSalidaProduccionOp = esOpAtencion
                 && clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
         if (esSalidaProduccionOp
@@ -2462,6 +2457,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO"));
             loteCalidadValidator.validarLoteUtilizable(loteFisicoMovimiento);
         }
+
+        SolicitudMovimientoDetalle detalleOp = esOpAtencion
+                ? resolverDetalleSolicitudOp(dto, solicitud, loteOrigen)
+                : null;
+        SolicitudMovimientoDetalle detalleSolicitudRelacionado = validarDetalleCompatibleConLote(detalleOp, loteFisicoMovimiento);
 
         Long almacenActualLoteId = obtenerAlmacenActualLoteId(loteFisicoMovimiento);
         if (!esDevolucionInternaCalculada
@@ -2701,9 +2701,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             log.debug("MOV-SALIDA procesando prod={}, qty={}, solicitudId={}, opId={}",
                     dto.productoId(), cantidad, solicitud != null ? solicitud.getId() : null, dto.ordenProduccionId());
             if (solicitud != null) {
+                if (loteProcesadoOp != null) {
+                    if (solicitudOpProcesada != null) {
+                        solicitudOpProcesada.set(true);
+                    }
+                    return List.of(new MovimientoLoteDetalle(loteProcesadoOp, cantidad));
+                }
                 if (solicitudOpProcesada != null && solicitudOpProcesada.get()) {
-                    LoteProducto loteRespuesta = loteProcesadoOp != null ? loteProcesadoOp : loteOrigen;
-                    return List.of(new MovimientoLoteDetalle(loteRespuesta, cantidad));
+                    return List.of(new MovimientoLoteDetalle(loteOrigen, cantidad));
                 }
                 log.debug("MOV-SALIDA delegando ajuste de lote a la atención de solicitud solicitudId={} loteId={}",
                         solicitud.getId(), loteOrigen.getId());

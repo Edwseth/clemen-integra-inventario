@@ -377,7 +377,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
 
         assertThatThrownBy(() -> service.registrarMovimiento(dto))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("SOLICITUD_DETALLE_MISMATCH");
+                .hasMessageContaining("LOTE_NO_ENCONTRADO");
 
         verify(reservaLoteService, never()).consumirReserva(any(), any(), any(), any());
         verify(movimientoInventarioRepository, never()).save(any());
