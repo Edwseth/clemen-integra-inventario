@@ -643,7 +643,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         Long preBodegaProduccionId = resolverAlmacenPreBodegaId();
-        boolean esTrasladoAPreBodega = !salidaProduccionExplicita && isTrasladoAPrebodega(
+        boolean esConsumoSalidaProduccionDesdePreBodega = salidaProduccionExplicita
+                && (
+                dto.ordenProduccionEtapaId() != null
+                        || (dto.almacenOrigenId() != null
+                        && preBodegaProduccionId != null
+                        && Objects.equals(dto.almacenOrigenId().longValue(), preBodegaProduccionId))
+        );
+        boolean esTrasladoAPreBodega = !esConsumoSalidaProduccionDesdePreBodega && isTrasladoAPrebodega(
                 tipoMovimiento,
                 clasificacion,
                 tipoMovimientoDetalle,
