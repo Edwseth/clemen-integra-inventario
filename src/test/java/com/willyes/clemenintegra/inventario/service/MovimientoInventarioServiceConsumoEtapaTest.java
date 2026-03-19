@@ -158,6 +158,10 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         assertThat(dtoSalida.ordenProduccionId()).isEqualTo(10L);
         assertThat(dtoSalida.ordenProduccionEtapaId()).isEqualTo(20L);
         assertThat(dtoSalida.solicitudMovimientoId()).isEqualTo(solicitud.getId());
+        assertThat(dtoSalida.loteProductoId()).isEqualTo(lotePrebodega.getId());
+        assertThat(dtoSalida.atenciones()).hasSize(1);
+        assertThat(dtoSalida.atenciones().get(0).getDetalleId()).isEqualTo(detalle.getId());
+        assertThat(dtoSalida.atenciones().get(0).getLoteId()).isEqualTo(detalle.getLote().getId());
         assertThat(detalle.getEstado()).isEqualTo(EstadoSolicitudMovimientoDetalle.ATENDIDO);
     }
 

@@ -2473,6 +2473,16 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         boolean detalleOpGestionado = false;
         LoteProducto loteProcesadoOp = null;
 
+        if (esOpAtencion && detalleOp == null) {
+            log.warn("OP_DETALLE_NO_RESUELTO: solicitudId={} loteFisicoId={} loteDtoId={} detalleIdsDto={}",
+                    solicitud != null ? solicitud.getId() : null,
+                    loteOrigen.getId(),
+                    dto != null ? dto.loteProductoId() : null,
+                    dto != null && dto.atenciones() != null
+                            ? dto.atenciones().stream().filter(Objects::nonNull).map(AtencionDTO::getDetalleId).toList()
+                            : List.of());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_MISMATCH");
+        }
 
         if (esOpAtencion && detalleOp != null) {
             BigDecimal solicitadaDetalle = Optional.ofNullable(detalleOp.getCantidad())
@@ -2513,21 +2523,25 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 throw loteStockInsuficienteException(loteOrigen, producto, pendienteDetalle, stockActual, loteOrigen.getAlmacen());
             }
 
-            reservaLoteService.consumirReserva(solicitud, detalleOp, loteOrigen, pendienteDetalle);
+            LoteProducto loteReservaOp = resolverLoteReservaOp(detalleOp, loteOrigen);
+            reservaLoteService.consumirReserva(solicitud, detalleOp, loteReservaOp, pendienteDetalle);
 
             BigDecimal stockAntes = stockActual;
             BigDecimal reservadoAntes = reservadoActual;
-            log.debug("VAL-ACTUALIZA (OP) antes actualizarStockLote loteId={} stockAntes={} reservadoAntes={} req={}",
-                    loteOrigen.getId(), stockAntes, reservadoAntes, pendienteDetalle);
+            log.debug("VAL-ACTUALIZA (OP) antes actualizarStockLote loteId={} stockAntes={} reservadoAntes={} req={} loteReservaId={}",
+                    loteOrigen.getId(), stockAntes, reservadoAntes, pendienteDetalle, loteReservaOp.getId());
 
             BigDecimal nuevoStock = stockActual.subtract(pendienteDetalle);
             if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) {
                 throw loteStockInsuficienteException(loteOrigen, producto, pendienteDetalle, stockActual, loteOrigen.getAlmacen());
             }
 
-            BigDecimal nuevoReservado = reservadoActual.subtract(pendienteDetalle);
-            if (nuevoReservado.compareTo(BigDecimal.ZERO) < 0) {
-                nuevoReservado = BigDecimal.ZERO;
+            BigDecimal nuevoReservado = reservadoActual;
+            if (Objects.equals(loteReservaOp.getId(), loteOrigen.getId())) {
+                nuevoReservado = reservadoActual.subtract(pendienteDetalle);
+                if (nuevoReservado.compareTo(BigDecimal.ZERO) < 0) {
+                    nuevoReservado = BigDecimal.ZERO;
+                }
             }
 
             int escala = resolverEscalaProducto(producto);
@@ -4075,10 +4089,27 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (detalle.getLote() == null || detalle.getLote().getId() == null) {
             return null;
         }
-        if (!Objects.equals(detalle.getLote().getId(), loteOrigen.getId())) {
-            return null;
+        Long loteDetalleId = detalle.getLote().getId();
+        if (Objects.equals(loteDetalleId, loteOrigen.getId())) {
+            return detalle;
         }
-        return detalle;
+        if (loteOrigen.getLoteOrigen() != null && Objects.equals(loteDetalleId, loteOrigen.getLoteOrigen().getId())) {
+            return detalle;
+        }
+        return null;
+    }
+
+    private LoteProducto resolverLoteReservaOp(SolicitudMovimientoDetalle detalleOp,
+                                               LoteProducto loteFisico) {
+        if (detalleOp == null || detalleOp.getLote() == null || detalleOp.getLote().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "SOLICITUD_DETALLE_MISMATCH");
+        }
+        Long loteDetalleId = detalleOp.getLote().getId();
+        if (loteFisico != null && loteFisico.getId() != null && Objects.equals(loteDetalleId, loteFisico.getId())) {
+            return loteFisico;
+        }
+        return loteProductoRepository.findByIdForUpdate(loteDetalleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVA_NO_ENCONTRADA"));
     }
 
     // =====================================
@@ -4222,6 +4253,15 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                             ));
                 }
 
+                AtencionDTO atencion = new AtencionDTO();
+                atencion.setDetalleId(det.getId());
+                atencion.setLoteId(det.getLote() != null ? det.getLote().getId() : null);
+                atencion.setCantidad(pendiente);
+                atencion.setAlmacenOrigenId(det.getAlmacenOrigen() != null
+                        ? det.getAlmacenOrigen().getId()
+                        : (sol.getAlmacenOrigen() != null ? sol.getAlmacenOrigen().getId() : null));
+                atencion.setAlmacenDestinoId(preBodegaId.intValue());
+
                 // Registrar la SALIDA_PRODUCCION (desde Pre-Bodega). Dejamos ligada la solicitud para idempotencia.
                 final MovimientoInventarioDTO dtoSalida = new MovimientoInventarioDTO(
                         null,                               // id
@@ -4250,7 +4290,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         null,                               // fechaVencimiento
                         null,                               // estadoLote
                         null,                               // autoSplit
-                        null,                               // atenciones
+                        List.of(atencion),                  // atenciones
                         null,                               // loteLegacy
                         null                                // ubicacionDestinoId
                 );
