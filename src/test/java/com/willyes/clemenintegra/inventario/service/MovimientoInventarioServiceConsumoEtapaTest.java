@@ -301,7 +301,12 @@ class MovimientoInventarioServiceConsumoEtapaTest {
         assertThat(cantidadResultado).isEqualByComparingTo("10");
         assertThat(lotePrebodega.getStockLote()).isEqualByComparingTo("0");
         assertThat(lotePrebodega.isAgotado()).isTrue();
-        verify(reservaLoteService).consumirReserva(solicitud, detalle, loteReservado, new BigDecimal("10.0000"));
+        verify(reservaLoteService).consumirReserva(
+                same(solicitud),
+                same(detalle),
+                same(loteReservado),
+                argThat(cantidad -> cantidad != null && cantidad.compareTo(new BigDecimal("10")) == 0)
+        );
     }
 
     @Test
