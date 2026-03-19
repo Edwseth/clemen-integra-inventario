@@ -120,6 +120,21 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 .thenReturn(BigDecimal.ZERO.setScale(6));
         lenient().when(costeoInventarioService.calcularCostoTotalMovimiento(any(), any()))
                 .thenReturn(BigDecimal.ZERO.setScale(6));
+
+        MotivoMovimiento motivoTransferenciaProduccion = new MotivoMovimiento();
+        motivoTransferenciaProduccion.setId(910L);
+        motivoTransferenciaProduccion.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
+        lenient().when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION))
+                .thenReturn(Optional.of(motivoTransferenciaProduccion));
+
+        MotivoMovimiento motivoTransferenciaGeneral = new MotivoMovimiento();
+        motivoTransferenciaGeneral.setId(911L);
+        motivoTransferenciaGeneral.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        lenient().when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL))
+                .thenReturn(Optional.of(motivoTransferenciaGeneral));
+
+        lenient().when(motivoMovimientoRepository.findById(910L)).thenReturn(Optional.of(motivoTransferenciaProduccion));
+        lenient().when(motivoMovimientoRepository.findById(911L)).thenReturn(Optional.of(motivoTransferenciaGeneral));
     }
 
 
@@ -229,7 +244,14 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(loteProductoRepository.findByIdForUpdate(loteOrigenReserva.getId())).willReturn(Optional.of(loteOrigenReserva));
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(usuario);
         given(entityManager.getReference(eq(OrdenProduccion.class), eq(ordenProduccion.getId()))).willReturn(ordenProduccion);
-        given(entityManager.getReference(eq(EtapaProduccion.class), eq(77L))).willReturn(EtapaProduccion.builder().id(77L).build());
+        EtapaProduccion etapaActiva = EtapaProduccion.builder()
+                .id(77L)
+                .ordenProduccion(ordenProduccion)
+                .fechaInicio(LocalDateTime.now())
+                .estado(EstadoEtapa.EN_PROCESO)
+                .build();
+        given(etapaProduccionRepository.findById(77L)).willReturn(Optional.of(etapaActiva));
+        given(entityManager.getReference(eq(EtapaProduccion.class), eq(77L))).willReturn(etapaActiva);
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Object id = invocation.getArgument(1);
             return new Almacen(id instanceof Integer ? (Integer) id : ((Long) id).intValue());
@@ -339,7 +361,14 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(loteProductoRepository.findByIdForUpdate(lotePreBodega.getId())).willReturn(Optional.of(lotePreBodega));
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(Usuario.builder().id(99L).rol(RolUsuario.ROL_SUPER_ADMIN).build());
         given(entityManager.getReference(eq(OrdenProduccion.class), eq(400L))).willReturn(solicitud.getOrdenProduccion());
-        given(entityManager.getReference(eq(EtapaProduccion.class), eq(77L))).willReturn(EtapaProduccion.builder().id(77L).build());
+        EtapaProduccion etapaActiva = EtapaProduccion.builder()
+                .id(77L)
+                .ordenProduccion(solicitud.getOrdenProduccion())
+                .fechaInicio(LocalDateTime.now())
+                .estado(EstadoEtapa.EN_PROCESO)
+                .build();
+        given(etapaProduccionRepository.findById(77L)).willReturn(Optional.of(etapaActiva));
+        given(entityManager.getReference(eq(EtapaProduccion.class), eq(77L))).willReturn(etapaActiva);
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Object id = invocation.getArgument(1);
             return new Almacen(id instanceof Integer ? (Integer) id : ((Long) id).intValue());
