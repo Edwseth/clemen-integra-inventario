@@ -269,12 +269,57 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 .willReturn(MovimientoInventarioResponseDTO.builder().id(901L).build());
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
 
+        BigDecimal stockPreBodegaAntes = lotePreBodega.getStockLote();
+        int identidadPreBodegaAntes = System.identityHashCode(lotePreBodega);
+        System.out.printf(
+                "TEST_DEBUG pre-servicio lotePreBodega id=%s stockLote=%s stockReservado=%s identity=%s%n",
+                lotePreBodega.getId(),
+                lotePreBodega.getStockLote(),
+                lotePreBodega.getStockReservado(),
+                identidadPreBodegaAntes
+        );
+
         MovimientoInventarioResponseDTO respuesta = service.registrarMovimiento(dto);
 
+        System.out.printf(
+                "TEST_DEBUG post-servicio lotePreBodega id=%s stockLote=%s stockReservado=%s identity=%s%n",
+                lotePreBodega.getId(),
+                lotePreBodega.getStockLote(),
+                lotePreBodega.getStockReservado(),
+                System.identityHashCode(lotePreBodega)
+        );
+
         assertThat(respuesta.getId()).isEqualTo(901L);
+        assertThat(stockPreBodegaAntes).isEqualByComparingTo(new BigDecimal("270"));
         assertThat(lotePreBodega.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
         assertThat(lotePreBodega.getStockReservado()).isEqualByComparingTo(BigDecimal.ZERO.setScale(2));
         assertThat(loteOrigenReserva.getStockLote()).isEqualByComparingTo(new BigDecimal("1000"));
+        ArgumentCaptor<LoteProducto> loteSaveCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository, atLeastOnce()).save(loteSaveCaptor.capture());
+        List<LoteProducto> lotesGuardados = loteSaveCaptor.getAllValues();
+        LoteProducto loteFisicoGuardado = lotesGuardados.stream()
+                .filter(Objects::nonNull)
+                .filter(lote -> Objects.equals(lote.getId(), lotePreBodega.getId()))
+                .reduce((first, second) -> second)
+                .orElse(null);
+        System.out.printf("TEST_DEBUG save-invocations total=%s%n", lotesGuardados.size());
+        for (int i = 0; i < lotesGuardados.size(); i++) {
+            LoteProducto loteGuardado = lotesGuardados.get(i);
+            System.out.printf(
+                    "TEST_DEBUG save[%s] id=%s stockLote=%s stockReservado=%s identity=%s%n",
+                    i,
+                    loteGuardado != null ? loteGuardado.getId() : null,
+                    loteGuardado != null ? loteGuardado.getStockLote() : null,
+                    loteGuardado != null ? loteGuardado.getStockReservado() : null,
+                    loteGuardado != null ? System.identityHashCode(loteGuardado) : null
+            );
+        }
+        assertThat(lotesGuardados).isNotEmpty();
+        assertThat(loteFisicoGuardado).as("save(...) sobre lote físico 101").isNotNull();
+        assertThat(loteFisicoGuardado.getId()).isEqualTo(lotePreBodega.getId());
+        assertThat(loteFisicoGuardado.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
+        assertThat(loteFisicoGuardado.getStockReservado()).isEqualByComparingTo(new BigDecimal("270.00"));
+        assertThat(System.identityHashCode(loteFisicoGuardado)).isEqualTo(System.identityHashCode(lotePreBodega));
         ArgumentCaptor<MovimientoInventario> movimientoCaptor = ArgumentCaptor.forClass(MovimientoInventario.class);
         verify(movimientoInventarioRepository).save(movimientoCaptor.capture());
         MovimientoInventario guardado = movimientoCaptor.getValue();
