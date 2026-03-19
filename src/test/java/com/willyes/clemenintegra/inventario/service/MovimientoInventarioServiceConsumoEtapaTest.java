@@ -237,6 +237,7 @@ class MovimientoInventarioServiceConsumoEtapaTest {
 
         when(loteProductoRepository.findByIdForUpdate(loteReservado.getId())).thenReturn(Optional.of(loteReservado));
         when(loteProductoRepository.findByIdForUpdate(lotePrebodega.getId())).thenReturn(Optional.of(lotePrebodega));
+        when(solicitudMovimientoDetalleRepository.findById(detalle.getId())).thenReturn(Optional.of(detalle));
         when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(solicitudMovimientoDetalleRepository.save(any(SolicitudMovimientoDetalle.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
