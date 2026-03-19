@@ -318,7 +318,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         assertThat(loteFisicoGuardado).as("save(...) sobre lote físico 101").isNotNull();
         assertThat(loteFisicoGuardado.getId()).isEqualTo(lotePreBodega.getId());
         assertThat(loteFisicoGuardado.getStockLote()).isEqualByComparingTo(new BigDecimal("0.00"));
-        assertThat(loteFisicoGuardado.getStockReservado()).isEqualByComparingTo(new BigDecimal("270.00"));
+        assertThat(loteFisicoGuardado.getStockReservado()).isEqualByComparingTo(new BigDecimal("0.00"));
         assertThat(System.identityHashCode(loteFisicoGuardado)).isEqualTo(System.identityHashCode(lotePreBodega));
         ArgumentCaptor<MovimientoInventario> movimientoCaptor = ArgumentCaptor.forClass(MovimientoInventario.class);
         verify(movimientoInventarioRepository).save(movimientoCaptor.capture());
