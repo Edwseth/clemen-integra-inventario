@@ -358,7 +358,7 @@ class MovimientoInventarioServiceSolicitudOpTest {
         given(tipoMovimientoDetalleRepository.findById(50L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
         given(solicitudMovimientoRepository.findByIdWithLock(200L)).willReturn(Optional.of(solicitud));
         given(solicitudMovimientoDetalleRepository.findById(detalle.getId())).willReturn(Optional.of(detalle));
-        given(loteProductoRepository.findByIdForUpdate(lotePreBodega.getId())).willReturn(Optional.of(lotePreBodega));
+        given(loteProductoRepository.findByIdForUpdate(loteOrigenReserva.getId())).willReturn(Optional.of(loteOrigenReserva));
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(Usuario.builder().id(99L).rol(RolUsuario.ROL_SUPER_ADMIN).build());
         given(entityManager.getReference(eq(OrdenProduccion.class), eq(400L))).willReturn(solicitud.getOrdenProduccion());
         EtapaProduccion etapaActiva = EtapaProduccion.builder()
