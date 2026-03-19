@@ -250,8 +250,6 @@ class MovimientoInventarioServiceSolicitudOpTest {
                 .fechaInicio(LocalDateTime.now())
                 .estado(EstadoEtapa.EN_PROCESO)
                 .build();
-        given(etapaProduccionRepository.findById(77L)).willReturn(Optional.of(etapaActiva));
-        given(entityManager.getReference(eq(EtapaProduccion.class), eq(77L))).willReturn(etapaActiva);
         given(entityManager.getReference(eq(Almacen.class), any())).willAnswer(invocation -> {
             Object id = invocation.getArgument(1);
             return new Almacen(id instanceof Integer ? (Integer) id : ((Long) id).intValue());

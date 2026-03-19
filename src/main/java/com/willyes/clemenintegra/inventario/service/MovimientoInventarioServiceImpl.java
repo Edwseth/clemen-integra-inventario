@@ -2539,8 +2539,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
             BigDecimal stockAntes = stockActual;
             BigDecimal reservadoAntes = reservadoActual;
-            log.debug("VAL-ACTUALIZA (OP) antes actualizarStockLote loteId={} stockAntes={} reservadoAntes={} req={} loteReservaId={}",
-                    loteFisicoMovimiento.getId(), stockAntes, reservadoAntes, pendienteDetalle, loteReservaOp.getId());
+            log.debug("OP_SALIDA_FISICA antes descuento loteFisicoId={} stockAntes={} reservadoAntes={} cantidad={} loteReservaId={} loteOrigenId={}",
+                    loteFisicoMovimiento.getId(), stockAntes, reservadoAntes, pendienteDetalle, loteReservaOp.getId(),
+                    loteOrigen.getId());
 
             BigDecimal nuevoStock = stockActual.subtract(pendienteDetalle);
             if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) {
@@ -2558,6 +2559,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             int escala = resolverEscalaProducto(producto);
             loteFisicoMovimiento.setStockLote(nuevoStock.setScale(escala, RoundingMode.HALF_UP));
             loteFisicoMovimiento.setStockReservado(nuevoReservado.setScale(escala, RoundingMode.HALF_UP));
+            log.debug("OP_SALIDA_FISICA despues setStockLote loteFisicoId={} stockDespues={} reservadoDespues={} objetoEnMemoriaId={}",
+                    loteFisicoMovimiento.getId(), loteFisicoMovimiento.getStockLote(), loteFisicoMovimiento.getStockReservado(),
+                    System.identityHashCode(loteFisicoMovimiento));
             if (loteFisicoMovimiento.getStockLote().compareTo(BigDecimal.ZERO) <= 0) {
                 loteFisicoMovimiento.setAgotado(true);
                 if (loteFisicoMovimiento.getFechaAgotado() == null) {
@@ -2569,6 +2573,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             }
 
             loteProcesadoOp = loteProductoRepository.save(loteFisicoMovimiento);
+            log.debug("OP_SALIDA_FISICA despues save loteFisicoId={} stockPersistido={} reservadoPersistido={} objetoPersistidoId={}",
+                    loteProcesadoOp.getId(), loteProcesadoOp.getStockLote(), loteProcesadoOp.getStockReservado(),
+                    System.identityHashCode(loteProcesadoOp));
 
             actualizarDetalleSolicitud(detalleOp, pendienteDetalle);
             solicitudMovimientoDetalleRepository.save(detalleOp);
@@ -2592,7 +2599,8 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         if (detalleSolicitudRelacionado == null && solicitud != null) {
             SolicitudMovimientoDetalle posibleDetalle = resolverDetalleSolicitudOp(dto, solicitud, loteOrigen);
-            detalleSolicitudRelacionado = validarDetalleCompatibleConLote(posibleDetalle, loteOrigen);
+            LoteProducto loteCompatibilidad = detalleOpGestionado ? loteFisicoMovimiento : loteOrigen;
+            detalleSolicitudRelacionado = validarDetalleCompatibleConLote(posibleDetalle, loteCompatibilidad);
         }
 
         BigDecimal reservaPendiente = BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING);
@@ -2701,14 +2709,22 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             log.debug("MOV-SALIDA procesando prod={}, qty={}, solicitudId={}, opId={}",
                     dto.productoId(), cantidad, solicitud != null ? solicitud.getId() : null, dto.ordenProduccionId());
             if (solicitud != null) {
+                LoteProducto loteResultadoOp = loteProcesadoOp != null
+                        ? loteProcesadoOp
+                        : (detalleOpGestionado ? loteFisicoMovimiento : null);
                 if (loteProcesadoOp != null) {
                     if (solicitudOpProcesada != null) {
                         solicitudOpProcesada.set(true);
                     }
+                    log.debug("OP_SALIDA_FISICA retorno loteResultadoId={} loteOrigenId={} detalleOpGestionado={}",
+                            loteProcesadoOp.getId(), loteOrigen.getId(), detalleOpGestionado);
                     return List.of(new MovimientoLoteDetalle(loteProcesadoOp, cantidad));
                 }
                 if (solicitudOpProcesada != null && solicitudOpProcesada.get()) {
-                    return List.of(new MovimientoLoteDetalle(loteOrigen, cantidad));
+                    LoteProducto loteRetorno = loteResultadoOp != null ? loteResultadoOp : loteOrigen;
+                    log.debug("OP_SALIDA_FISICA retorno solicitudProcesada loteResultadoId={} loteOrigenId={} detalleOpGestionado={}",
+                            loteRetorno.getId(), loteOrigen.getId(), detalleOpGestionado);
+                    return List.of(new MovimientoLoteDetalle(loteRetorno, cantidad));
                 }
                 log.debug("MOV-SALIDA delegando ajuste de lote a la atención de solicitud solicitudId={} loteId={}",
                         solicitud.getId(), loteOrigen.getId());
