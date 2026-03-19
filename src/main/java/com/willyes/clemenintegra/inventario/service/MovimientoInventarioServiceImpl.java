@@ -2500,7 +2500,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         BigDecimal stockActual = Optional.ofNullable(loteFisicoMovimiento.getStockLote())
                 .orElse(BigDecimal.ZERO)
                 .setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING);
-        BigDecimal reservadoActual = Optional.ofNullable(loteOrigen.getStockReservado())
+        BigDecimal reservadoActual = Optional.ofNullable(loteFisicoMovimiento.getStockReservado())
                 .orElse(BigDecimal.ZERO)
                 .setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING);
         boolean detalleOpGestionado = false;
