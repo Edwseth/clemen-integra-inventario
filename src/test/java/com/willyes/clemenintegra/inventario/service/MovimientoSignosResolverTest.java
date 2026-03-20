@@ -117,4 +117,38 @@ class MovimientoSignosResolverTest {
                 new MovimientoSignosResolver.AporteInventario(2492L, 7L, new BigDecimal("1182"))
         );
     }
+
+    @Test
+    void devolucionDesdeProduccionSeReconstruyeComoMovimientoEntreAlmacenes() {
+        Almacen preBodega = new Almacen(6);
+        Almacen principal = new Almacen(5);
+
+        LoteProducto loteOrigen = new LoteProducto();
+        loteOrigen.setId(4101L);
+        loteOrigen.setAlmacen(preBodega);
+
+        LoteProducto loteDestino = new LoteProducto();
+        loteDestino.setId(5120L);
+        loteDestino.setAlmacen(principal);
+        loteDestino.setLoteOrigen(loteOrigen);
+
+        MovimientoInventario mov = new MovimientoInventario();
+        mov.setCantidad(new BigDecimal("23"));
+        mov.setTipoMovimiento(TipoMovimiento.DEVOLUCION);
+        mov.setClasificacion(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION);
+        mov.setAlmacenOrigen(preBodega);
+        mov.setAlmacenDestino(principal);
+        mov.setLote(loteDestino);
+
+        List<MovimientoSignosResolver.AporteInventario> aportes = resolver.resolverAportesPorAlmacen(mov);
+
+        assertThat(aportes).containsExactly(
+                new MovimientoSignosResolver.AporteInventario(4101L, 6L, new BigDecimal("-23")),
+                new MovimientoSignosResolver.AporteInventario(5120L, 5L, new BigDecimal("23"))
+        );
+        assertThat(resolver.calcularSalida(mov, 6L)).isEqualByComparingTo("23");
+        assertThat(resolver.calcularEntrada(mov, 5L)).isEqualByComparingTo("23");
+        assertThat(resolver.calcularEntrada(mov, 6L)).isEqualByComparingTo("0");
+        assertThat(resolver.calcularSalida(mov, 5L)).isEqualByComparingTo("0");
+    }
 }
