@@ -83,4 +83,41 @@ class StockDisponibleComparativoServiceTest {
         assertThat(sku3.cantidadActual()).isEqualByComparingTo("2.25");
         assertThat(sku3.diferencia()).isEqualByComparingTo("2.25");
     }
+
+    @Test
+    @DisplayName("Mantiene filas separadas por ubicación para lotes fragmentados con el mismo código")
+    void obtenerComparativo_lotesFragmentadosSeMantienenSeparadosPorUbicacion() {
+        LocalDate fecha = LocalDate.of(2026, 3, 20);
+        LocalDate hoy = LocalDate.now();
+
+        when(inventarioGeneralCorteReportService.calcularFilasInventarioGeneralCorte(eq(fecha.atTime(LocalTime.MAX)), any()))
+                .thenReturn(List.of(
+                        new InventarioGeneralCorteReportService.InventarioGeneralRow(
+                                "ME0114", "Material", "KG", new BigDecimal("1842"), "02E-0001", "2026-12-31", "Principal Empaque"
+                        ),
+                        new InventarioGeneralCorteReportService.InventarioGeneralRow(
+                                "ME0114", "Material", "KG", new BigDecimal("300"), "02E-0001", "2026-12-31", "Pre-Bodega Producción"
+                        )
+                ));
+        when(inventarioGeneralCorteReportService.calcularFilasInventarioGeneralCorte(eq(hoy.atTime(LocalTime.MAX)), any()))
+                .thenReturn(List.of(
+                        new InventarioGeneralCorteReportService.InventarioGeneralRow(
+                                "ME0114", "Material", "KG", new BigDecimal("1842"), "02E-0001", "2026-12-31", "Principal Empaque"
+                        ),
+                        new InventarioGeneralCorteReportService.InventarioGeneralRow(
+                                "ME0114", "Material", "KG", new BigDecimal("300"), "02E-0001", "2026-12-31", "Pre-Bodega Producción"
+                        )
+                ));
+
+        List<StockDisponibleComparativoResponseDTO> resultado = service.obtenerComparativo(fecha, null, "ubicacion", "asc");
+
+        assertThat(resultado).hasSize(2);
+        assertThat(resultado)
+                .extracting(StockDisponibleComparativoResponseDTO::ubicacion,
+                        StockDisponibleComparativoResponseDTO::cantidadActual)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("Pre-Bodega Producción", new BigDecimal("300")),
+                        org.assertj.core.groups.Tuple.tuple("Principal Empaque", new BigDecimal("1842"))
+                );
+    }
 }

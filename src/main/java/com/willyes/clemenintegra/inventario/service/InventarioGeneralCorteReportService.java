@@ -71,15 +71,16 @@ public class InventarioGeneralCorteReportService {
                 continue;
             }
             for (MovimientoSignosResolver.AporteInventario aporte : movimientoSignosResolver.resolverAportesPorAlmacen(mov)) {
-                if (aporte.almacenId() == null) {
+                Long loteId = aporte.loteId() != null ? aporte.loteId() : lote.getId();
+                if (aporte.almacenId() == null || loteId == null) {
                     continue;
                 }
                 ClaveInventario clave = new ClaveInventario(
                         producto.getId().longValue(),
-                        lote.getId(),
+                        loteId,
                         aporte.almacenId());
                 acumulado.merge(clave, aporte.cantidadFirmada(), BigDecimal::add);
-                metadata.putIfAbsent(clave, MetadataFila.from(producto, lote));
+                metadata.putIfAbsent(clave, MetadataFila.from(producto, resolverLoteMetadata(loteId, lote)));
             }
         }
 
@@ -149,6 +150,19 @@ public class InventarioGeneralCorteReportService {
 
     private static String valorTexto(String value) {
         return value == null ? "" : value;
+    }
+
+    private LoteProducto resolverLoteMetadata(Long loteId, LoteProducto loteActual) {
+        if (loteActual != null && loteActual.getId() != null && loteActual.getId().equals(loteId)) {
+            return loteActual;
+        }
+        if (loteActual != null
+                && loteActual.getLoteOrigen() != null
+                && loteActual.getLoteOrigen().getId() != null
+                && loteActual.getLoteOrigen().getId().equals(loteId)) {
+            return loteActual.getLoteOrigen();
+        }
+        return loteActual;
     }
 
     private record ClaveInventario(Long productoId, Long loteId, Long almacenId) {}

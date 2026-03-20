@@ -99,11 +99,17 @@ public class MovimientoSignosResolver {
         if (esTransferencia(movimiento, clasificacion, tipo)) {
             Integer origenId = movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null;
             Integer destinoId = movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null;
+            Long loteDestinoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
+            Long loteOrigenId = resolverLoteOrigenTransferencia(movimiento, origenId);
             if (origenId != null) {
-                aportes.add(new AporteInventario(origenId.longValue(), cantidad.negate()));
+                aportes.add(new AporteInventario(
+                        loteOrigenId != null ? loteOrigenId : loteDestinoId,
+                        origenId.longValue(),
+                        cantidad.negate()
+                ));
             }
             if (destinoId != null) {
-                aportes.add(new AporteInventario(destinoId.longValue(), cantidad));
+                aportes.add(new AporteInventario(loteDestinoId, destinoId.longValue(), cantidad));
             }
             return aportes;
         }
@@ -114,7 +120,11 @@ public class MovimientoSignosResolver {
                 || tipo == TipoMovimiento.DEVOLUCION))) {
             Long almacenId = preferirDestino(movimiento);
             if (almacenId != null) {
-                aportes.add(new AporteInventario(almacenId, cantidad));
+                aportes.add(new AporteInventario(
+                        movimiento.getLote() != null ? movimiento.getLote().getId() : null,
+                        almacenId,
+                        cantidad
+                ));
             }
             return aportes;
         }
@@ -123,10 +133,37 @@ public class MovimientoSignosResolver {
                 || (clasificacion == null && tipo == TipoMovimiento.SALIDA)) {
             Long almacenId = preferirOrigen(movimiento);
             if (almacenId != null) {
-                aportes.add(new AporteInventario(almacenId, cantidad.negate()));
+                aportes.add(new AporteInventario(
+                        movimiento.getLote() != null ? movimiento.getLote().getId() : null,
+                        almacenId,
+                        cantidad.negate()
+                ));
             }
         }
         return aportes;
+    }
+
+    private Long resolverLoteOrigenTransferencia(MovimientoInventario movimiento, Integer origenId) {
+        if (movimiento == null || movimiento.getLote() == null) {
+            return null;
+        }
+        if (origenId == null) {
+            return movimiento.getLote().getId();
+        }
+
+        if (movimiento.getLote().getAlmacen() != null
+                && Objects.equals(movimiento.getLote().getAlmacen().getId(), origenId)) {
+            return movimiento.getLote().getId();
+        }
+
+        if (movimiento.getLote().getLoteOrigen() != null
+                && movimiento.getLote().getLoteOrigen().getId() != null
+                && movimiento.getLote().getLoteOrigen().getAlmacen() != null
+                && Objects.equals(movimiento.getLote().getLoteOrigen().getAlmacen().getId(), origenId)) {
+            return movimiento.getLote().getLoteOrigen().getId();
+        }
+
+        return movimiento.getLote().getId();
     }
 
     private boolean esTransferencia(MovimientoInventario movimiento,
@@ -167,6 +204,6 @@ public class MovimientoSignosResolver {
         return Optional.ofNullable(movimientoInventario.getCantidad()).orElse(BigDecimal.ZERO);
     }
 
-    public record AporteInventario(Long almacenId, BigDecimal cantidadFirmada) {
+    public record AporteInventario(Long loteId, Long almacenId, BigDecimal cantidadFirmada) {
     }
 }
