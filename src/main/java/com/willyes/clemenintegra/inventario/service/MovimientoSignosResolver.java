@@ -44,7 +44,7 @@ public class MovimientoSignosResolver {
         ClasificacionMovimientoInventario clasificacion = movimiento.getClasificacion();
         TipoMovimiento tipoMovimiento = movimiento.getTipoMovimiento();
 
-        if (esTransferencia(movimiento, clasificacion, tipoMovimiento)) {
+        if (esMovimientoEntreAlmacenes(movimiento, clasificacion, tipoMovimiento)) {
             if (mismoAlmacen(movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null, almacenId)) {
                 return obtenerCantidad(movimiento);
             }
@@ -68,7 +68,7 @@ public class MovimientoSignosResolver {
         ClasificacionMovimientoInventario clasificacion = movimiento.getClasificacion();
         TipoMovimiento tipoMovimiento = movimiento.getTipoMovimiento();
 
-        if (esTransferencia(movimiento, clasificacion, tipoMovimiento)) {
+        if (esMovimientoEntreAlmacenes(movimiento, clasificacion, tipoMovimiento)) {
             if (mismoAlmacen(movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null, almacenId)) {
                 return obtenerCantidad(movimiento);
             }
@@ -96,7 +96,7 @@ public class MovimientoSignosResolver {
         TipoMovimiento tipo = movimiento.getTipoMovimiento();
         List<AporteInventario> aportes = new ArrayList<>(2);
 
-        if (esTransferencia(movimiento, clasificacion, tipo)) {
+        if (esMovimientoEntreAlmacenes(movimiento, clasificacion, tipo)) {
             Integer origenId = movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null;
             Integer destinoId = movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null;
             Long loteDestinoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
@@ -166,10 +166,11 @@ public class MovimientoSignosResolver {
         return movimiento.getLote().getId();
     }
 
-    private boolean esTransferencia(MovimientoInventario movimiento,
-                                    ClasificacionMovimientoInventario clasificacion,
-                                    TipoMovimiento tipoMovimiento) {
+    private boolean esMovimientoEntreAlmacenes(MovimientoInventario movimiento,
+                                               ClasificacionMovimientoInventario clasificacion,
+                                               TipoMovimiento tipoMovimiento) {
         return CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion)
+                || clasificacion == ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION
                 || tipoMovimiento == TipoMovimiento.TRANSFERENCIA;
     }
 
