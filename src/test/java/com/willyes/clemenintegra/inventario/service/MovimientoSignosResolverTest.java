@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
 import com.willyes.clemenintegra.inventario.model.Almacen;
+import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
@@ -28,8 +29,8 @@ class MovimientoSignosResolverTest {
 
         assertThat(aportes)
                 .containsExactlyInAnyOrder(
-                        new MovimientoSignosResolver.AporteInventario(10L, new BigDecimal("-5312")),
-                        new MovimientoSignosResolver.AporteInventario(20L, new BigDecimal("5312"))
+                        new MovimientoSignosResolver.AporteInventario(null, 10L, new BigDecimal("-5312")),
+                        new MovimientoSignosResolver.AporteInventario(null, 20L, new BigDecimal("5312"))
                 );
     }
 
@@ -67,7 +68,7 @@ class MovimientoSignosResolverTest {
         List<MovimientoSignosResolver.AporteInventario> aportes = resolver.resolverAportesPorAlmacen(mov);
 
         assertThat(aportes).containsExactly(
-                new MovimientoSignosResolver.AporteInventario(5L, new BigDecimal("-1"))
+                new MovimientoSignosResolver.AporteInventario(null, 5L, new BigDecimal("-1"))
         );
     }
 
@@ -83,7 +84,37 @@ class MovimientoSignosResolverTest {
         List<MovimientoSignosResolver.AporteInventario> aportes = resolver.resolverAportesPorAlmacen(mov);
 
         assertThat(aportes).containsExactly(
-                new MovimientoSignosResolver.AporteInventario(5L, new BigDecimal("-12.5"))
+                new MovimientoSignosResolver.AporteInventario(null, 5L, new BigDecimal("-12.5"))
+        );
+    }
+
+    @Test
+    void transferenciaFragmentadaUsaLoteOrigenRealParaElDescuento() {
+        Almacen origen = new Almacen(5);
+        Almacen destino = new Almacen(7);
+
+        LoteProducto loteOrigen = new LoteProducto();
+        loteOrigen.setId(2048L);
+        loteOrigen.setAlmacen(origen);
+
+        LoteProducto loteDestino = new LoteProducto();
+        loteDestino.setId(2492L);
+        loteDestino.setAlmacen(destino);
+        loteDestino.setLoteOrigen(loteOrigen);
+
+        MovimientoInventario mov = new MovimientoInventario();
+        mov.setCantidad(new BigDecimal("1182"));
+        mov.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        mov.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
+        mov.setAlmacenOrigen(origen);
+        mov.setAlmacenDestino(destino);
+        mov.setLote(loteDestino);
+
+        List<MovimientoSignosResolver.AporteInventario> aportes = resolver.resolverAportesPorAlmacen(mov);
+
+        assertThat(aportes).containsExactly(
+                new MovimientoSignosResolver.AporteInventario(2048L, 5L, new BigDecimal("-1182")),
+                new MovimientoSignosResolver.AporteInventario(2492L, 7L, new BigDecimal("1182"))
         );
     }
 }
