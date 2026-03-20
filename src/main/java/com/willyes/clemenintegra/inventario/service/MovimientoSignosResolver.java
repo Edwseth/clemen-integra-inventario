@@ -132,10 +132,8 @@ public class MovimientoSignosResolver {
     private boolean esTransferencia(MovimientoInventario movimiento,
                                     ClasificacionMovimientoInventario clasificacion,
                                     TipoMovimiento tipoMovimiento) {
-        if (CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion) || tipoMovimiento == TipoMovimiento.TRANSFERENCIA) {
-            return true;
-        }
-        return movimiento.getAlmacenOrigen() != null && movimiento.getAlmacenDestino() != null;
+        return CLASIFICACIONES_TRANSFERENCIA.contains(clasificacion)
+                || tipoMovimiento == TipoMovimiento.TRANSFERENCIA;
     }
 
     private Long preferirDestino(MovimientoInventario movimiento) {
