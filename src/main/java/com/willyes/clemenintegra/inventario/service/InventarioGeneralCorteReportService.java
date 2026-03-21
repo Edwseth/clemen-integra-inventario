@@ -77,12 +77,14 @@ public class InventarioGeneralCorteReportService {
                 if (aporte.almacenId() == null || loteId == null) {
                     continue;
                 }
+                MetadataFila data = MetadataFila.from(producto, resolverLoteMetadata(loteId, lote));
                 ClaveInventario clave = new ClaveInventario(
                         producto.getId().longValue(),
-                        loteId,
-                        aporte.almacenId());
+                        data.lote(),
+                        data.vence(),
+                        data.ubicacion());
                 acumulado.merge(clave, aporte.cantidadFirmada(), BigDecimal::add);
-                metadata.putIfAbsent(clave, MetadataFila.from(producto, resolverLoteMetadata(loteId, lote)));
+                metadata.putIfAbsent(clave, data);
             }
         }
 
@@ -167,7 +169,7 @@ public class InventarioGeneralCorteReportService {
         return loteProductoRepository.findById(loteId).orElse(loteActual);
     }
 
-    private record ClaveInventario(Long productoId, Long loteId, Long almacenId) {}
+    private record ClaveInventario(Long productoId, String lote, String vence, String ubicacion) {}
 
     public record InventarioGeneralRow(String sku, String nombre, String udm, BigDecimal cant, String lote,
                                        String vence, String ubicacion) {}

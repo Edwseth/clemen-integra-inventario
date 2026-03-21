@@ -169,13 +169,38 @@ class InventarioGeneralCorteReportServiceTest {
         devolucion.setAlmacenDestino(principal);
         devolucion.setFechaIngreso(LocalDateTime.now().minusDays(8));
 
+        LoteProducto lotePrincipalConsumido = new LoteProducto();
+        lotePrincipalConsumido.setId(3001L);
+        lotePrincipalConsumido.setProducto(producto);
+        lotePrincipalConsumido.setCodigoLote("02E-0001");
+        lotePrincipalConsumido.setAlmacen(principal);
+
+        MovimientoInventario salidaPrincipal = new MovimientoInventario();
+        salidaPrincipal.setProducto(producto);
+        salidaPrincipal.setLote(lotePrincipalConsumido);
+        salidaPrincipal.setCantidad(new BigDecimal("23"));
+        salidaPrincipal.setTipoMovimiento(TipoMovimiento.SALIDA);
+        salidaPrincipal.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        salidaPrincipal.setAlmacenOrigen(principal);
+        salidaPrincipal.setFechaIngreso(LocalDateTime.now().minusDays(7));
+
+        MovimientoInventario salidaPreBodega = new MovimientoInventario();
+        salidaPreBodega.setProducto(producto);
+        salidaPreBodega.setLote(lotePreBodega);
+        salidaPreBodega.setCantidad(new BigDecimal("851"));
+        salidaPreBodega.setTipoMovimiento(TipoMovimiento.SALIDA);
+        salidaPreBodega.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        salidaPreBodega.setAlmacenOrigen(preBodega);
+        salidaPreBodega.setFechaIngreso(LocalDateTime.now().minusDays(6));
+
         when(movimientoInventarioRepository.findAllByFechaIngresoLessThanEqual(any()))
-                .thenReturn(List.of(recepcion, transferencia, devolucion));
+                .thenReturn(List.of(recepcion, transferencia, devolucion, salidaPrincipal, salidaPreBodega));
         when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("02E-0001", 21, 6))
                 .thenReturn(Optional.of(lotePreBodega));
         when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("02E-0001", 21, 5))
                 .thenReturn(Optional.of(lotePrincipal));
         when(loteProductoRepository.findById(2492L)).thenReturn(Optional.of(lotePreBodega));
+        when(loteProductoRepository.findById(3001L)).thenReturn(Optional.of(lotePrincipalConsumido));
 
         List<InventarioGeneralCorteReportService.InventarioGeneralRow> filas =
                 service.calcularFilasInventarioGeneralCorte(LocalDateTime.now());
@@ -186,8 +211,71 @@ class InventarioGeneralCorteReportServiceTest {
                         InventarioGeneralCorteReportService.InventarioGeneralRow::ubicacion,
                         InventarioGeneralCorteReportService.InventarioGeneralRow::cant)
                 .containsExactlyInAnyOrder(
-                        org.assertj.core.groups.Tuple.tuple("02E-0001", "Principal Empaque", new BigDecimal("1865")),
-                        org.assertj.core.groups.Tuple.tuple("02E-0001", "Pre-Bodega Producción", new BigDecimal("1151"))
+                        org.assertj.core.groups.Tuple.tuple("02E-0001", "Principal Empaque", new BigDecimal("1842")),
+                        org.assertj.core.groups.Tuple.tuple("02E-0001", "Pre-Bodega Producción", new BigDecimal("300"))
+                );
+    }
+
+    @Test
+    void mantieneSaldoVisibleParaMe0105SinAlterarCasosNoRelacionados() {
+        InventarioGeneralCorteReportService service =
+                new InventarioGeneralCorteReportService(movimientoInventarioRepository, movimientoSignosResolver, loteProductoRepository);
+
+        Producto producto = new Producto();
+        producto.setId(22);
+        producto.setCodigoSku("ME0105");
+        producto.setNombre("Material 105");
+        UnidadMedida udm = new UnidadMedida();
+        udm.setNombre("KG");
+        producto.setUnidadMedida(udm);
+
+        Almacen principal = new Almacen(5);
+        principal.setNombre("Principal Empaque");
+
+        LoteProducto loteRecepcion = new LoteProducto();
+        loteRecepcion.setId(5105L);
+        loteRecepcion.setProducto(producto);
+        loteRecepcion.setCodigoLote("05E-0007");
+        loteRecepcion.setAlmacen(principal);
+
+        LoteProducto loteSalida = new LoteProducto();
+        loteSalida.setId(5106L);
+        loteSalida.setProducto(producto);
+        loteSalida.setCodigoLote("05E-0007");
+        loteSalida.setAlmacen(principal);
+
+        MovimientoInventario recepcion = new MovimientoInventario();
+        recepcion.setProducto(producto);
+        recepcion.setLote(loteRecepcion);
+        recepcion.setCantidad(new BigDecimal("600"));
+        recepcion.setTipoMovimiento(TipoMovimiento.RECEPCION);
+        recepcion.setClasificacion(ClasificacionMovimientoInventario.RECEPCION_COMPRA);
+        recepcion.setAlmacenDestino(principal);
+        recepcion.setFechaIngreso(LocalDateTime.now().minusDays(4));
+
+        MovimientoInventario salida = new MovimientoInventario();
+        salida.setProducto(producto);
+        salida.setLote(loteSalida);
+        salida.setCantidad(new BigDecimal("89"));
+        salida.setTipoMovimiento(TipoMovimiento.SALIDA);
+        salida.setClasificacion(ClasificacionMovimientoInventario.SALIDA_PRODUCCION);
+        salida.setAlmacenOrigen(principal);
+        salida.setFechaIngreso(LocalDateTime.now().minusDays(3));
+
+        when(movimientoInventarioRepository.findAllByFechaIngresoLessThanEqual(any()))
+                .thenReturn(List.of(recepcion, salida));
+        when(loteProductoRepository.findById(5106L)).thenReturn(Optional.of(loteSalida));
+
+        List<InventarioGeneralCorteReportService.InventarioGeneralRow> filas =
+                service.calcularFilasInventarioGeneralCorte(LocalDateTime.now());
+
+        assertThat(filas)
+                .extracting(InventarioGeneralCorteReportService.InventarioGeneralRow::sku,
+                        InventarioGeneralCorteReportService.InventarioGeneralRow::lote,
+                        InventarioGeneralCorteReportService.InventarioGeneralRow::ubicacion,
+                        InventarioGeneralCorteReportService.InventarioGeneralRow::cant)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("ME0105", "05E-0007", "Principal Empaque", new BigDecimal("511"))
                 );
     }
 }
