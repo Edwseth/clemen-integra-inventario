@@ -2944,35 +2944,91 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         }
 
         if (tipo == TipoMovimiento.DEVOLUCION && destino != null) {
-            loteOrigen.setStockLote(loteOrigen.getStockLote().subtract(cantidad));
-            loteProductoRepository.save(loteOrigen);
-
-            Optional<LoteProducto> destinoExistente = loteProductoRepository
-                    .findByCodigoLoteAndProductoIdAndAlmacenId(
-                            loteOrigen.getCodigoLote(),
-                            producto.getId(),
-                            destino.getId());
-
-            LoteProducto loteDestino = destinoExistente.orElseGet(() -> LoteProducto.builder()
-                    .producto(producto)
-                    .codigoLote(loteOrigen.getCodigoLote())
-                    .fechaFabricacion(loteOrigen.getFechaFabricacion())
-                    .fechaVencimiento(loteOrigen.getFechaVencimiento())
-                    .estado(loteOrigen.getEstado())
-                    .almacen(destino)
-                    .stockLote(BigDecimal.ZERO)
-                    .build());
-
-            if (loteDestino.getLoteOrigen() == null) {
-                loteDestino.setLoteOrigen(loteOrigen);
-            }
-            BigDecimal nuevoStock = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
-            loteDestino.setStockLote(nuevoStock);
-            LoteProducto actualizado = loteProductoRepository.save(loteDestino);
-            return List.of(new MovimientoLoteDetalle(actualizado, cantidad));
+            return List.of(procesarDevolucionConPersistenciaFuerte(loteOrigen, destino, producto, cantidad));
         }
 
         return List.of(new MovimientoLoteDetalle(loteOrigen, cantidad));
+    }
+
+    private MovimientoLoteDetalle procesarDevolucionConPersistenciaFuerte(LoteProducto loteOrigen,
+                                                                          Almacen destino,
+                                                                          Producto producto,
+                                                                          BigDecimal cantidad) {
+        int escala = resolverEscalaProducto(producto);
+        BigDecimal stockOrigenActual = Optional.ofNullable(loteOrigen.getStockLote())
+                .orElse(BigDecimal.ZERO)
+                .setScale(escala, RoundingMode.HALF_UP);
+        BigDecimal cantidadNormalizada = normalizarCantidad(cantidad).setScale(escala, RoundingMode.HALF_UP);
+
+        if (stockOrigenActual.compareTo(cantidadNormalizada) < 0) {
+            throw loteStockInsuficienteException(loteOrigen, producto, cantidadNormalizada, stockOrigenActual, loteOrigen.getAlmacen());
+        }
+
+        BigDecimal nuevoStockOrigen = stockOrigenActual.subtract(cantidadNormalizada)
+                .setScale(escala, RoundingMode.HALF_UP);
+        loteOrigen.setStockLote(nuevoStockOrigen);
+        if (loteOrigen.getStockReservado() == null) {
+            loteOrigen.setStockReservado(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING));
+        }
+        recalcularAgotadoSegunDisponibilidad(loteOrigen);
+        loteProductoRepository.saveAndFlush(loteOrigen);
+
+        LoteProducto loteDestino = resolverLoteDestinoDevolucionForUpdate(loteOrigen, destino, producto);
+        if (loteDestino.getLoteOrigen() == null) {
+            loteDestino.setLoteOrigen(loteOrigen);
+        }
+        if (loteDestino.getStockReservado() == null) {
+            loteDestino.setStockReservado(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING));
+        }
+
+        BigDecimal stockDestinoActual = Optional.ofNullable(loteDestino.getStockLote())
+                .orElse(BigDecimal.ZERO)
+                .setScale(escala, RoundingMode.HALF_UP);
+        BigDecimal nuevoStockDestino = stockDestinoActual.add(cantidadNormalizada)
+                .setScale(escala, RoundingMode.HALF_UP);
+        loteDestino.setStockLote(nuevoStockDestino);
+        recalcularAgotadoSegunDisponibilidad(loteDestino);
+
+        LoteProducto actualizado = loteProductoRepository.saveAndFlush(loteDestino);
+        log.info("DEVOLUCION_DESDE_PRODUCCION_PERSISTIDA loteOrigenId={} loteDestinoId={} codigoLote={} productoId={} almacenOrigenId={} almacenDestinoId={} cantidad={} stockOrigenAntes={} stockOrigenDespues={} stockDestinoAntes={} stockDestinoDespues={}",
+                loteOrigen.getId(),
+                actualizado.getId(),
+                loteOrigen.getCodigoLote(),
+                producto.getId(),
+                loteOrigen.getAlmacen() != null ? loteOrigen.getAlmacen().getId() : null,
+                destino.getId(),
+                cantidadNormalizada,
+                stockOrigenActual,
+                nuevoStockOrigen,
+                stockDestinoActual,
+                nuevoStockDestino);
+        return new MovimientoLoteDetalle(actualizado, cantidadNormalizada);
+    }
+
+    private LoteProducto resolverLoteDestinoDevolucionForUpdate(LoteProducto loteOrigen,
+                                                                Almacen destino,
+                                                                Producto producto) {
+        Optional<LoteProducto> destinoExistente = loteProductoRepository
+                .findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(
+                        producto.getId(),
+                        loteOrigen.getCodigoLote(),
+                        destino.getId());
+
+        if (destinoExistente.isPresent()) {
+            return destinoExistente.get();
+        }
+
+        LoteProducto nuevoDestino = LoteProducto.builder()
+                .producto(producto)
+                .codigoLote(loteOrigen.getCodigoLote())
+                .fechaFabricacion(loteOrigen.getFechaFabricacion())
+                .fechaVencimiento(loteOrigen.getFechaVencimiento())
+                .estado(loteOrigen.getEstado())
+                .almacen(destino)
+                .stockLote(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING))
+                .stockReservado(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING))
+                .build();
+        return loteProductoRepository.saveAndFlush(nuevoDestino);
     }
 
     private List<MovimientoLoteDetalle> procesarRecepcionDevolucionCliente(MovimientoInventarioDTO dto,
