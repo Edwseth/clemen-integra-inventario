@@ -3,6 +3,8 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -17,7 +19,6 @@ public class MovimientoSignosResolver {
 
     private static final EnumSet<ClasificacionMovimientoInventario> CLASIFICACIONES_ENTRADA = EnumSet.of(
             ClasificacionMovimientoInventario.AJUSTE_POSITIVO,
-            ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION,
             ClasificacionMovimientoInventario.DEVOLUCION_DE_PROVEEDOR,
             ClasificacionMovimientoInventario.ENTRADA_PRODUCTO_TERMINADO,
             ClasificacionMovimientoInventario.ENTRADA_REPROCESO,
@@ -39,6 +40,17 @@ public class MovimientoSignosResolver {
             ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
             ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
     );
+
+    private final LoteProductoRepository loteProductoRepository;
+
+    public MovimientoSignosResolver() {
+        this.loteProductoRepository = null;
+    }
+
+    @Autowired
+    public MovimientoSignosResolver(LoteProductoRepository loteProductoRepository) {
+        this.loteProductoRepository = loteProductoRepository;
+    }
 
     public BigDecimal calcularEntrada(MovimientoInventario movimiento, Long almacenId) {
         ClasificacionMovimientoInventario clasificacion = movimiento.getClasificacion();
@@ -99,8 +111,8 @@ public class MovimientoSignosResolver {
         if (esMovimientoEntreAlmacenes(movimiento, clasificacion, tipo)) {
             Integer origenId = movimiento.getAlmacenOrigen() != null ? movimiento.getAlmacenOrigen().getId() : null;
             Integer destinoId = movimiento.getAlmacenDestino() != null ? movimiento.getAlmacenDestino().getId() : null;
-            Long loteDestinoId = movimiento.getLote() != null ? movimiento.getLote().getId() : null;
-            Long loteOrigenId = resolverLoteOrigenTransferencia(movimiento, origenId);
+            Long loteDestinoId = resolverLotePorAlmacen(movimiento, destinoId);
+            Long loteOrigenId = resolverLotePorAlmacen(movimiento, origenId);
             if (origenId != null) {
                 aportes.add(new AporteInventario(
                         loteOrigenId != null ? loteOrigenId : loteDestinoId,
@@ -109,7 +121,11 @@ public class MovimientoSignosResolver {
                 ));
             }
             if (destinoId != null) {
-                aportes.add(new AporteInventario(loteDestinoId, destinoId.longValue(), cantidad));
+                aportes.add(new AporteInventario(
+                        loteDestinoId != null ? loteDestinoId : loteOrigenId,
+                        destinoId.longValue(),
+                        cantidad
+                ));
             }
             return aportes;
         }
@@ -143,24 +159,37 @@ public class MovimientoSignosResolver {
         return aportes;
     }
 
-    private Long resolverLoteOrigenTransferencia(MovimientoInventario movimiento, Integer origenId) {
+    private Long resolverLotePorAlmacen(MovimientoInventario movimiento, Integer almacenId) {
         if (movimiento == null || movimiento.getLote() == null) {
             return null;
         }
-        if (origenId == null) {
+        if (almacenId == null) {
             return movimiento.getLote().getId();
         }
 
         if (movimiento.getLote().getAlmacen() != null
-                && Objects.equals(movimiento.getLote().getAlmacen().getId(), origenId)) {
+                && Objects.equals(movimiento.getLote().getAlmacen().getId(), almacenId)) {
             return movimiento.getLote().getId();
         }
 
         if (movimiento.getLote().getLoteOrigen() != null
                 && movimiento.getLote().getLoteOrigen().getId() != null
                 && movimiento.getLote().getLoteOrigen().getAlmacen() != null
-                && Objects.equals(movimiento.getLote().getLoteOrigen().getAlmacen().getId(), origenId)) {
+                && Objects.equals(movimiento.getLote().getLoteOrigen().getAlmacen().getId(), almacenId)) {
             return movimiento.getLote().getLoteOrigen().getId();
+        }
+
+        if (loteProductoRepository != null
+                && movimiento.getLote().getCodigoLote() != null
+                && movimiento.getProducto() != null
+                && movimiento.getProducto().getId() != null) {
+            return loteProductoRepository
+                    .findByCodigoLoteAndProductoIdAndAlmacenId(
+                            movimiento.getLote().getCodigoLote(),
+                            movimiento.getProducto().getId(),
+                            almacenId)
+                    .map(lote -> lote.getId())
+                    .orElse(movimiento.getLote().getId());
         }
 
         return movimiento.getLote().getId();

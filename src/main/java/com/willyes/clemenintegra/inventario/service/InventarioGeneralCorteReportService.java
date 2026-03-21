@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UbicacionFisica;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -36,6 +37,7 @@ public class InventarioGeneralCorteReportService {
 
     private final MovimientoInventarioRepository movimientoInventarioRepository;
     private final MovimientoSignosResolver movimientoSignosResolver;
+    private final LoteProductoRepository loteProductoRepository;
 
     @Transactional(readOnly = true)
     public Workbook generarExcelInventarioGeneralCorte(LocalDateTime hasta) {
@@ -162,7 +164,7 @@ public class InventarioGeneralCorteReportService {
                 && loteActual.getLoteOrigen().getId().equals(loteId)) {
             return loteActual.getLoteOrigen();
         }
-        return loteActual;
+        return loteProductoRepository.findById(loteId).orElse(loteActual);
     }
 
     private record ClaveInventario(Long productoId, Long loteId, Long almacenId) {}

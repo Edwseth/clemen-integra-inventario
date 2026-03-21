@@ -2963,6 +2963,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                     .stockLote(BigDecimal.ZERO)
                     .build());
 
+            if (loteDestino.getLoteOrigen() == null) {
+                loteDestino.setLoteOrigen(loteOrigen);
+            }
             BigDecimal nuevoStock = Optional.ofNullable(loteDestino.getStockLote()).orElse(BigDecimal.ZERO).add(cantidad);
             loteDestino.setStockLote(nuevoStock);
             LoteProducto actualizado = loteProductoRepository.save(loteDestino);
