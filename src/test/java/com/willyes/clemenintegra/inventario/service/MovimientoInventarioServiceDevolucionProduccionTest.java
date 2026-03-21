@@ -252,7 +252,6 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
                 null,
                 null,
                 null,
-                null,
                 false,
                 null
         );
