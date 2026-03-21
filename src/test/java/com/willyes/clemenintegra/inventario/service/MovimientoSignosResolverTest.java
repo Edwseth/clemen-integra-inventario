@@ -3,21 +3,31 @@ package com.willyes.clemenintegra.inventario.service;
 import com.willyes.clemenintegra.inventario.model.Almacen;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.MovimientoInventario;
+import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.ClasificacionMovimientoInventario;
 import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
+import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class MovimientoSignosResolverTest {
 
-    private final MovimientoSignosResolver resolver = new MovimientoSignosResolver();
+    @Mock
+    private LoteProductoRepository loteProductoRepository;
 
     @Test
     void trataComoTransferenciaCuandoLaClasificacionEsDeTransferenciaAunqueTipoSeaEntrada() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver();
         MovimientoInventario mov = new MovimientoInventario();
         mov.setCantidad(new BigDecimal("5312"));
         mov.setTipoMovimiento(TipoMovimiento.ENTRADA);
@@ -36,6 +46,7 @@ class MovimientoSignosResolverTest {
 
     @Test
     void transferenciaConSoloDestinoCuentaComoEntradaEnDestino() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver();
         MovimientoInventario mov = new MovimientoInventario();
         mov.setCantidad(new BigDecimal("5312"));
         mov.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
@@ -47,6 +58,7 @@ class MovimientoSignosResolverTest {
 
     @Test
     void transferenciaConSoloOrigenCuentaComoSalidaEnOrigen() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver();
         MovimientoInventario mov = new MovimientoInventario();
         mov.setCantidad(new BigDecimal("5312"));
         mov.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
@@ -58,6 +70,7 @@ class MovimientoSignosResolverTest {
 
     @Test
     void salidaMuestraConOrigenYDestinoSigueSiendoSalidaReal() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver();
         MovimientoInventario mov = new MovimientoInventario();
         mov.setCantidad(BigDecimal.ONE);
         mov.setTipoMovimiento(TipoMovimiento.SALIDA);
@@ -74,6 +87,7 @@ class MovimientoSignosResolverTest {
 
     @Test
     void salidaProduccionConOrigenYDestinoSigueSiendoSalidaReal() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver();
         MovimientoInventario mov = new MovimientoInventario();
         mov.setCantidad(new BigDecimal("12.5"));
         mov.setTipoMovimiento(TipoMovimiento.SALIDA);
@@ -90,6 +104,7 @@ class MovimientoSignosResolverTest {
 
     @Test
     void transferenciaFragmentadaUsaLoteOrigenRealParaElDescuento() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver();
         Almacen origen = new Almacen(5);
         Almacen destino = new Almacen(7);
 
@@ -120,6 +135,7 @@ class MovimientoSignosResolverTest {
 
     @Test
     void devolucionDesdeProduccionSeReconstruyeComoMovimientoEntreAlmacenes() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver();
         Almacen preBodega = new Almacen(6);
         Almacen principal = new Almacen(5);
 
@@ -150,5 +166,48 @@ class MovimientoSignosResolverTest {
         assertThat(resolver.calcularEntrada(mov, 5L)).isEqualByComparingTo("23");
         assertThat(resolver.calcularEntrada(mov, 6L)).isEqualByComparingTo("0");
         assertThat(resolver.calcularSalida(mov, 5L)).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void devolucionDesdeProduccionBuscaLotesRealesCuandoElLoteDestinoNoTraeLoteOrigen() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver(loteProductoRepository);
+        Almacen preBodega = new Almacen(6);
+        Almacen principal = new Almacen(5);
+
+        Producto producto = new Producto();
+        producto.setId(21);
+
+        LoteProducto loteOrigen = new LoteProducto();
+        loteOrigen.setId(4101L);
+        loteOrigen.setCodigoLote("02E-0001");
+        loteOrigen.setProducto(producto);
+        loteOrigen.setAlmacen(preBodega);
+
+        LoteProducto loteDestino = new LoteProducto();
+        loteDestino.setId(5120L);
+        loteDestino.setCodigoLote("02E-0001");
+        loteDestino.setProducto(producto);
+        loteDestino.setAlmacen(principal);
+
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("02E-0001", 21, 6))
+                .thenReturn(Optional.of(loteOrigen));
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("02E-0001", 21, 5))
+                .thenReturn(Optional.of(loteDestino));
+
+        MovimientoInventario mov = new MovimientoInventario();
+        mov.setProducto(producto);
+        mov.setCantidad(new BigDecimal("23"));
+        mov.setTipoMovimiento(TipoMovimiento.DEVOLUCION);
+        mov.setClasificacion(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION);
+        mov.setAlmacenOrigen(preBodega);
+        mov.setAlmacenDestino(principal);
+        mov.setLote(loteDestino);
+
+        List<MovimientoSignosResolver.AporteInventario> aportes = resolver.resolverAportesPorAlmacen(mov);
+
+        assertThat(aportes).containsExactly(
+                new MovimientoSignosResolver.AporteInventario(4101L, 6L, new BigDecimal("-23")),
+                new MovimientoSignosResolver.AporteInventario(5120L, 5L, new BigDecimal("23"))
+        );
     }
 }
