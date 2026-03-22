@@ -134,7 +134,35 @@ class MovimientoSignosResolverTest {
     }
 
     @Test
-    void devolucionDesdeProduccionSeReconstruyeComoMovimientoEntreAlmacenes() {
+    void devolucionDesdeProduccionPersistidaComoEntradaSimpleSeReconstruyeComoEntradaDelLote() {
+        MovimientoSignosResolver resolver = new MovimientoSignosResolver();
+        Almacen preBodega = new Almacen(6);
+        Almacen principal = new Almacen(5);
+
+        LoteProducto lotePrincipal = new LoteProducto();
+        lotePrincipal.setId(5120L);
+        lotePrincipal.setAlmacen(principal);
+
+        MovimientoInventario mov = new MovimientoInventario();
+        mov.setCantidad(new BigDecimal("23"));
+        mov.setTipoMovimiento(TipoMovimiento.ENTRADA);
+        mov.setClasificacion(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION);
+        mov.setAlmacenOrigen(preBodega);
+        mov.setAlmacenDestino(principal);
+        mov.setLote(lotePrincipal);
+
+        List<MovimientoSignosResolver.AporteInventario> aportes = resolver.resolverAportesPorAlmacen(mov);
+
+        assertThat(aportes).containsExactly(
+                new MovimientoSignosResolver.AporteInventario(5120L, 5L, new BigDecimal("23"))
+        );
+        assertThat(resolver.calcularEntrada(mov, 5L)).isEqualByComparingTo("23");
+        assertThat(resolver.calcularSalida(mov, 6L)).isEqualByComparingTo("0");
+        assertThat(resolver.calcularEntrada(mov, 6L)).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void devolucionDesdeProduccionRealSeReconstruyeComoMovimientoEntreAlmacenes() {
         MovimientoSignosResolver resolver = new MovimientoSignosResolver();
         Almacen preBodega = new Almacen(6);
         Almacen principal = new Almacen(5);
