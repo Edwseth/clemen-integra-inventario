@@ -280,7 +280,9 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
 
         java.util.Map<LoteFamiliaKey, java.util.List<LoteProducto>> familias = lotesFiltrados.stream()
                 .collect(Collectors.groupingBy(l -> new LoteFamiliaKey(l.getCodigoLote(),
-                        l.getProducto() != null ? l.getProducto().getId() : null)));
+                        l.getProducto() != null && l.getProducto().getId() != null
+                                ? l.getProducto().getId().longValue()
+                                : null)));
 
         java.util.List<LoteFamiliaConRepresentante> familiasConRepresentante = familias.entrySet().stream()
                 .filter(entry -> entry.getKey().productoId() != null && entry.getKey().codigoLote() != null)
