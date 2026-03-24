@@ -256,8 +256,11 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                                                                        Pageable pageable) {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(LocalTime.MAX);
-        Pageable effective = pageable.getSort().isSorted() ? pageable
-                : org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+        Pageable effective = pageable.getSort().isSorted()
+                ? pageable
+                : org.springframework.data.domain.PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
                 org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaFabricacion"));
 
         java.util.List<com.willyes.clemenintegra.inventario.model.enums.EstadoLote> estados = java.util.List.of(
@@ -266,24 +269,43 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 com.willyes.clemenintegra.inventario.model.enums.EstadoLote.LIBERADO
         );
 
-        org.springframework.data.domain.Page<LoteProducto> lotes = loteRepository.findConsolidadoCalidad(
+        java.util.List<LoteProducto> lotesFiltrados = loteRepository.findConsolidadoCalidad(
                 inicio,
                 fin,
                 estados,
-                estadoLote,
-                effective);
-        if (lotes.isEmpty()) {
+                estadoLote);
+        if (lotesFiltrados.isEmpty()) {
             return org.springframework.data.domain.Page.empty(effective);
         }
 
-        java.util.List<Long> loteIds = lotes.getContent().stream()
-                .map(LoteProducto::getId)
+        java.util.Map<LoteFamiliaKey, java.util.List<LoteProducto>> familias = lotesFiltrados.stream()
+                .collect(Collectors.groupingBy(l -> new LoteFamiliaKey(l.getCodigoLote(),
+                        l.getProducto() != null ? l.getProducto().getId() : null)));
+
+        java.util.List<LoteFamiliaConRepresentante> familiasConRepresentante = familias.entrySet().stream()
+                .filter(entry -> entry.getKey().productoId() != null && entry.getKey().codigoLote() != null)
+                .map(entry -> {
+                    LoteProducto representante = seleccionarLoteRepresentativo(entry.getValue());
+                    return representante == null ? null : new LoteFamiliaConRepresentante(entry.getKey(), entry.getValue(), representante);
+                })
                 .filter(Objects::nonNull)
+                .sorted(java.util.Comparator
+                        .comparing((LoteFamiliaConRepresentante f) -> f.representante().getFechaFabricacion(),
+                                java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo))
+                        .reversed()
+                        .thenComparing(f -> f.representante().getId(), java.util.Comparator.nullsLast(Long::compareTo)).reversed())
                 .toList();
 
-        java.util.List<EvaluacionCalidad> evaluaciones = loteIds.isEmpty()
+        java.util.List<Long> loteIdsFamilia = familiasConRepresentante.stream()
+                .flatMap(f -> f.familia().stream())
+                .map(LoteProducto::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        java.util.List<EvaluacionCalidad> evaluaciones = loteIdsFamilia.isEmpty()
                 ? java.util.List.of()
-                : repository.findByLoteProductoIdInWithRelacion(loteIds);
+                : repository.findByLoteProductoIdInWithRelacion(loteIdsFamilia);
 
         java.util.Map<Long, java.util.List<EvaluacionCalidad>> evaluacionesPorLote = evaluaciones.stream()
                 .filter(e -> e.getLoteProducto() != null && e.getLoteProducto().getId() != null)
@@ -303,16 +325,30 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        java.util.List<ConsolidadoPorLoteDTO> content = lotes.getContent().stream()
-                .map(lote -> construirConsolidadoPorLote(lote,
-                        evaluacionesPorLote.getOrDefault(lote.getId(), java.util.List.of()),
-                        evaluacionesConResultadosMicro))
+        java.util.List<ConsolidadoPorLoteDTO> consolidados = familiasConRepresentante.stream()
+                .map(familia -> {
+                    java.util.List<EvaluacionCalidad> evaluacionesFamilia = familia.familia().stream()
+                            .map(LoteProducto::getId)
+                            .filter(Objects::nonNull)
+                            .flatMap(id -> evaluacionesPorLote.getOrDefault(id, java.util.List.of()).stream())
+                            .toList();
+                    return construirConsolidadoPorLote(
+                            familia.representante(),
+                            familia.familia(),
+                            evaluacionesFamilia,
+                            evaluacionesConResultadosMicro);
+                })
                 .toList();
 
-        return new org.springframework.data.domain.PageImpl<>(content, effective, lotes.getTotalElements());
+        int start = Math.min((int) effective.getOffset(), consolidados.size());
+        int end = Math.min(start + effective.getPageSize(), consolidados.size());
+        java.util.List<ConsolidadoPorLoteDTO> pageContent = consolidados.subList(start, end);
+
+        return new org.springframework.data.domain.PageImpl<>(pageContent, effective, consolidados.size());
     }
 
     private ConsolidadoPorLoteDTO construirConsolidadoPorLote(LoteProducto lote,
+                                                              java.util.List<LoteProducto> familia,
                                                               java.util.List<EvaluacionCalidad> evaluaciones,
                                                               java.util.Set<Long> evaluacionesConResultadosMicro) {
         Producto producto = lote.getProducto();
@@ -349,8 +385,25 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                         estadoDisciplinas.microbiologico().requerido(),
                         microCompleto);
 
+        Long loteIdHistoricoEvaluado = evaluaciones.stream()
+                .filter(e -> e.getLoteProducto() != null && e.getLoteProducto().getId() != null)
+                .max(java.util.Comparator.comparing(EvaluacionCalidad::getFechaEvaluacion,
+                        java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo)))
+                .map(e -> e.getLoteProducto().getId())
+                .orElse(null);
+
+        java.util.List<Long> loteIdsRelacionados = (familia == null ? java.util.List.<LoteProducto>of() : familia).stream()
+                .map(LoteProducto::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
+
         return ConsolidadoPorLoteDTO.builder()
                 .loteId(lote.getId())
+                .loteIdRepresentativo(lote.getId())
+                .loteIdsRelacionados(loteIdsRelacionados)
+                .loteIdHistoricoEvaluado(loteIdHistoricoEvaluado)
                 .codigoLote(lote.getCodigoLote())
                 .nombreProducto(lote.getProducto() != null ? lote.getProducto().getNombre() : null)
                 .tipoAnalisisCalidad(lote.getProducto() != null && lote.getProducto().getTipoAnalisisCalidad() != null
@@ -377,6 +430,47 @@ public class EvaluacionCalidadServiceImpl implements EvaluacionCalidadService {
                 .liberable(estadoEvaluacion == com.willyes.clemenintegra.calidad.model.enums.EstadoEvaluacionCalidad.EVALUADO)
                 .faltanEvaluaciones(validacion != null && !validacion.esValido())
                 .build();
+    }
+
+    private LoteProducto seleccionarLoteRepresentativo(java.util.List<LoteProducto> familia) {
+        if (familia == null || familia.isEmpty()) {
+            return null;
+        }
+        return familia.stream()
+                .max(java.util.Comparator
+                        .comparing((LoteProducto lote) -> esLoteActivo(lote) ? 1 : 0)
+                        .thenComparing(this::prioridadEstadoRepresentativo)
+                        .thenComparing(LoteProducto::getFechaFabricacion, java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo))
+                        .thenComparing(LoteProducto::getId, java.util.Comparator.nullsLast(Long::compareTo)))
+                .orElse(null);
+    }
+
+    private boolean esLoteActivo(LoteProducto lote) {
+        if (lote == null || lote.isAgotado()) {
+            return false;
+        }
+        java.math.BigDecimal stock = lote.getStockLote() == null ? java.math.BigDecimal.ZERO : lote.getStockLote();
+        return stock.compareTo(java.math.BigDecimal.ZERO) > 0;
+    }
+
+    private int prioridadEstadoRepresentativo(LoteProducto lote) {
+        if (lote == null || lote.getEstado() == null) {
+            return 0;
+        }
+        return switch (lote.getEstado()) {
+            case LIBERADO, DISPONIBLE -> 3;
+            case RETENIDO -> 2;
+            case EN_CUARENTENA -> 1;
+            default -> 0;
+        };
+    }
+
+    private record LoteFamiliaKey(String codigoLote, Long productoId) {
+    }
+
+    private record LoteFamiliaConRepresentante(LoteFamiliaKey key,
+                                               java.util.List<LoteProducto> familia,
+                                               LoteProducto representante) {
     }
 
     private ConsolidadoPorLoteDTO.DisciplinaConsolidadoDTO mapDisciplinaListado(AnalisisCalidadHelper.DisciplinaCalidadEstado estado) {

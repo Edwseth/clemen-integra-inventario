@@ -47,6 +47,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -307,5 +309,117 @@ class CalidadListadoIntegrationTest extends IntegrationTestMySqlContainer {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.loteId").value(loteProducto.getId()))
                 .andExpect(jsonPath("$.codigoLote").value("LP-CAL-1"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void consolidadoAgrupaFamiliaLogicaConHistoricoEvaluadoYVigenteActivo() throws Exception {
+        String codigo = "LP-DUP-HIST";
+        Producto producto = loteProducto.getProducto();
+        Almacen almacen = loteProducto.getAlmacen();
+
+        LoteProducto historico = loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote(codigo)
+                .fechaFabricacion(LocalDateTime.now().minusDays(3))
+                .stockLote(BigDecimal.ZERO)
+                .agotado(true)
+                .estado(EstadoLote.EN_CUARENTENA)
+                .producto(producto)
+                .almacen(almacen)
+                .usuarioLiberador(usuario)
+                .build());
+
+        LoteProducto vigente = loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote(codigo)
+                .fechaFabricacion(LocalDateTime.now().minusDays(1))
+                .stockLote(BigDecimal.valueOf(12))
+                .agotado(false)
+                .estado(EstadoLote.LIBERADO)
+                .producto(producto)
+                .almacen(almacen)
+                .usuarioLiberador(usuario)
+                .build());
+
+        evaluacionCalidadRepository.save(EvaluacionCalidad.builder()
+                .resultado(ResultadoEvaluacion.CONFORME)
+                .tipoEvaluacion(TipoEvaluacion.FISICO)
+                .fechaEvaluacion(LocalDateTime.now())
+                .observaciones("Histórico conforme")
+                .loteProducto(historico)
+                .usuarioEvaluador(usuario)
+                .build());
+
+        LocalDate hoy = LocalDate.now();
+        mockMvc.perform(get("/api/calidad/evaluaciones/consolidadas")
+                        .param("fechaInicio", hoy.minusDays(5).toString())
+                        .param("fechaFin", hoy.plusDays(1).toString())
+                        .param("page", "0")
+                        .param("size", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-HIST')]", hasSize(1)))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-HIST')][0].loteId").value(vigente.getId()))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-HIST')][0].loteIdRepresentativo").value(vigente.getId()))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-HIST')][0].loteIdHistoricoEvaluado").value(historico.getId()))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-HIST')][0].estadoFisico").value("EVALUADO"))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-HIST')][0].evaluacionFisicaId").value(notNullValue()))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-HIST')][0].loteIdsRelacionados[*]").value(hasItems(
+                        historico.getId().intValue(),
+                        vigente.getId().intValue()
+                )));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void consolidadoAgrupaFamiliaLogicaSinEvaluacionesComoPendiente() throws Exception {
+        String codigo = "LP-DUP-PEND";
+        Producto producto = loteProducto.getProducto();
+        Almacen almacen = loteProducto.getAlmacen();
+
+        loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote(codigo)
+                .fechaFabricacion(LocalDateTime.now().minusDays(2))
+                .stockLote(BigDecimal.ZERO)
+                .agotado(true)
+                .estado(EstadoLote.EN_CUARENTENA)
+                .producto(producto)
+                .almacen(almacen)
+                .usuarioLiberador(usuario)
+                .build());
+
+        loteProductoRepository.save(LoteProducto.builder()
+                .codigoLote(codigo)
+                .fechaFabricacion(LocalDateTime.now())
+                .stockLote(BigDecimal.valueOf(7))
+                .agotado(false)
+                .estado(EstadoLote.LIBERADO)
+                .producto(producto)
+                .almacen(almacen)
+                .usuarioLiberador(usuario)
+                .build());
+
+        LocalDate hoy = LocalDate.now();
+        mockMvc.perform(get("/api/calidad/evaluaciones/consolidadas")
+                        .param("fechaInicio", hoy.minusDays(5).toString())
+                        .param("fechaFin", hoy.plusDays(1).toString())
+                        .param("page", "0")
+                        .param("size", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-PEND')]", hasSize(1)))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-PEND')][0].estadoFisico").value("PENDIENTE"))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-DUP-PEND')][0].evaluacionFisicaId").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_CALIDAD")
+    void consolidadoSinDuplicidadMantieneComportamientoEsperado() throws Exception {
+        LocalDate hoy = LocalDate.now();
+        mockMvc.perform(get("/api/calidad/evaluaciones/consolidadas")
+                        .param("fechaInicio", hoy.minusDays(2).toString())
+                        .param("fechaFin", hoy.plusDays(1).toString())
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-CAL-1')]", hasSize(1)))
+                .andExpect(jsonPath("$.content[?(@.codigoLote == 'LP-CAL-1')][0].estadoFisico").value("EVALUADO"));
     }
 }
