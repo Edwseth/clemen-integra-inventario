@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -13,6 +14,9 @@ import java.time.LocalDateTime;
 public class ConsolidadoPorLoteDTO {
 
     private final Long loteId;
+    private final Long loteIdRepresentativo;
+    private final List<Long> loteIdsRelacionados;
+    private final Long loteIdHistoricoEvaluado;
     private final String codigoLote;
     private final String nombreProducto;
     private final String tipoAnalisisCalidad;
