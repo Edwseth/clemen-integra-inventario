@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -206,6 +207,55 @@ class LoteCalidadValidatorTest {
         when(condicionUsoService.getActivasByLote(83L)).thenReturn(List.of());
 
         assertThatThrownBy(() -> validator.validarLoteUtilizable(lote))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasFieldOrPropertyWithValue("code", ApiErrorCode.LOTE_VENCIDO);
+    }
+
+    @Test
+    void consumoOpPermiteCierreSiLoteEraVigenteEnFechaOperativaYHoyEstaVencido() {
+        LocalDate referenciaOperativa = LocalDate.now().minusDays(3);
+        LoteProducto lote = new LoteProducto();
+        lote.setId(84L);
+        lote.setCodigoLote("LOT-RETRO-OK");
+        lote.setEstado(EstadoLote.VENCIDO);
+        lote.setFechaVencimiento(referenciaOperativa.plusDays(1).atStartOfDay());
+
+        when(noConformidadService.obtenerActivaPorLote(84L)).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(84L)).thenReturn(List.of());
+
+        assertThatCode(() -> validator.validarLoteUtilizableParaConsumoOp(lote, referenciaOperativa))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void consumoOpPermiteUsoCuandoVenceElMismoDiaDeLaFechaOperativa() {
+        LocalDate referenciaOperativa = LocalDate.now().minusDays(1);
+        LoteProducto lote = new LoteProducto();
+        lote.setId(85L);
+        lote.setCodigoLote("LOT-MISMO-DIA");
+        lote.setEstado(EstadoLote.LIBERADO);
+        lote.setFechaVencimiento(referenciaOperativa.atStartOfDay());
+
+        when(noConformidadService.obtenerActivaPorLote(85L)).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(85L)).thenReturn(List.of());
+
+        assertThatCode(() -> validator.validarLoteUtilizableParaConsumoOp(lote, referenciaOperativa))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void consumoOpBloqueaSiLoteYaEstabaVencidoAntesDeFechaOperativa() {
+        LocalDate referenciaOperativa = LocalDate.now().minusDays(1);
+        LoteProducto lote = new LoteProducto();
+        lote.setId(86L);
+        lote.setCodigoLote("LOT-YA-VENCIDO");
+        lote.setEstado(EstadoLote.VENCIDO);
+        lote.setFechaVencimiento(referenciaOperativa.minusDays(1).atStartOfDay());
+
+        when(noConformidadService.obtenerActivaPorLote(86L)).thenReturn(Optional.empty());
+        when(condicionUsoService.getActivasByLote(86L)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> validator.validarLoteUtilizableParaConsumoOp(lote, referenciaOperativa))
                 .isInstanceOf(CustomBusinessException.class)
                 .hasFieldOrPropertyWithValue("code", ApiErrorCode.LOTE_VENCIDO);
     }

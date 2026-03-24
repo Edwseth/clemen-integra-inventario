@@ -84,6 +84,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereFisico;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereMicro;
 import static com.willyes.clemenintegra.calidad.service.AnalisisCalidadHelper.requiereQuimico;
@@ -2447,12 +2448,17 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         log.debug("VAL-GATE esPorLote={} solicitudId={} tipo={}", esPorLote,
                 solicitud != null ? solicitud.getId() : null, tipo);
 
+        boolean esSolicitudOp = solicitud != null && solicitud.getOrdenProduccion() != null;
+        boolean esOpAtencion = esSolicitudOp;
+        boolean esSalidaProduccionOp = esOpAtencion
+                && clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
+
         boolean esLoteOrigen = tipo != TipoMovimiento.ENTRADA;
         boolean esAjustePositivo = tipo == TipoMovimiento.AJUSTE
                 && clasificacion == ClasificacionMovimientoInventario.AJUSTE_POSITIVO;
         boolean esAjusteNegativo = tipo == TipoMovimiento.AJUSTE
                 && clasificacion == ClasificacionMovimientoInventario.AJUSTE_NEGATIVO;
-        if (esLoteOrigen) {
+        if (esLoteOrigen && !esSalidaProduccionOp) {
             loteCalidadValidator.validarLoteUtilizable(loteOrigen);
         }
 
@@ -2466,18 +2472,32 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 dto.tipoMovimiento() == TipoMovimiento.DEVOLUCION
                         && dto.clasificacionMovimientoInventario() == ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION;
 
-        boolean esSolicitudOp = solicitud != null && solicitud.getOrdenProduccion() != null;
-
-        boolean esOpAtencion = esSolicitudOp;
-        boolean esSalidaProduccionOp = esOpAtencion
-                && clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
+        LocalDate referenciaOperativaOp = null;
+        if (esSalidaProduccionOp) {
+            Long ordenIdOp = solicitud != null && solicitud.getOrdenProduccion() != null
+                    ? solicitud.getOrdenProduccion().getId()
+                    : (dto != null ? dto.ordenProduccionId() : null);
+            referenciaOperativaOp = resolverFechaReferenciaOperativaConsumoOp(
+                    ordenIdOp,
+                    dto != null ? dto.ordenProduccionEtapaId() : null,
+                    solicitud,
+                    loteOrigen
+            );
+        }
         if (esSalidaProduccionOp
                 && dto != null
                 && dto.loteProductoId() != null
                 && !Objects.equals(dto.loteProductoId(), loteOrigen.getId())) {
             loteFisicoMovimiento = loteProductoRepository.findByIdForUpdate(dto.loteProductoId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "LOTE_NO_ENCONTRADO"));
-            loteCalidadValidator.validarLoteUtilizable(loteFisicoMovimiento);
+            if (referenciaOperativaOp != null) {
+                loteCalidadValidator.validarLoteUtilizableParaConsumoOp(loteFisicoMovimiento, referenciaOperativaOp);
+            } else {
+                loteCalidadValidator.validarLoteUtilizable(loteFisicoMovimiento);
+            }
+        }
+        if (esSalidaProduccionOp && referenciaOperativaOp != null) {
+            loteCalidadValidator.validarLoteUtilizableParaConsumoOp(loteOrigen, referenciaOperativaOp);
         }
 
         SolicitudMovimientoDetalle detalleOp = esOpAtencion
@@ -4351,7 +4371,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 }
                 final LoteProducto lotePreBodega = lotePreBodegaOpt.get();
 
-                loteCalidadValidator.validarLoteUtilizable(lotePreBodega);
+                LocalDate referenciaOperativa = resolverFechaReferenciaOperativaConsumoOp(
+                        ordenProduccionId,
+                        etapaDestinoId,
+                        sol,
+                        lotePreBodega
+                );
+                loteCalidadValidator.validarLoteUtilizableParaConsumoOp(lotePreBodega, referenciaOperativa);
 
                 // Idempotencia: resta SALIDAS ya emitidas para esta solicitud/producto/lote y tipo-detalle
                 final BigDecimal yaConsumido = Optional.ofNullable(
@@ -4442,6 +4468,53 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return etapaProduccionRepository.findById(etapaId)
                 .map(EtapaProduccion::getNombre)
                 .orElse(null);
+    }
+
+    private LocalDate resolverFechaReferenciaOperativaConsumoOp(Long ordenProduccionId,
+                                                                Long etapaId,
+                                                                SolicitudMovimiento solicitud,
+                                                                LoteProducto lote) {
+        LocalDateTime referenciaMovimiento = null;
+        if (ordenProduccionId != null && lote != null && lote.getId() != null) {
+            Optional<MovimientoInventario> transferenciaInicial = repository
+                    .findFirstByOrdenProduccionIdAndLoteIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                            ordenProduccionId,
+                            lote.getId(),
+                            TipoMovimiento.TRANSFERENCIA,
+                            ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
+                    );
+            Optional<MovimientoInventario> consumoInicial = repository
+                    .findFirstByOrdenProduccionIdAndLoteIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                            ordenProduccionId,
+                            lote.getId(),
+                            TipoMovimiento.SALIDA,
+                            ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                    );
+            referenciaMovimiento = Stream.of(transferenciaInicial, consumoInicial)
+                    .flatMap(Optional::stream)
+                    .map(MovimientoInventario::getFechaIngreso)
+                    .filter(Objects::nonNull)
+                    .min(LocalDateTime::compareTo)
+                    .orElse(null);
+        }
+        if (referenciaMovimiento != null) {
+            return referenciaMovimiento.toLocalDate();
+        }
+        if (etapaId != null) {
+            LocalDateTime inicioEtapa = etapaProduccionRepository.findById(etapaId)
+                    .map(EtapaProduccion::getFechaInicio)
+                    .orElse(null);
+            if (inicioEtapa != null) {
+                return inicioEtapa.toLocalDate();
+            }
+        }
+        if (solicitud != null && solicitud.getFechaSolicitud() != null) {
+            return solicitud.getFechaSolicitud().toLocalDate();
+        }
+        if (solicitud != null && solicitud.getOrdenProduccion() != null && solicitud.getOrdenProduccion().getFechaInicio() != null) {
+            return solicitud.getOrdenProduccion().getFechaInicio().toLocalDate();
+        }
+        return LocalDate.now();
     }
 
     private Long resolverEtapaConsumo(Long ordenProduccionId, Long etapaId) {
