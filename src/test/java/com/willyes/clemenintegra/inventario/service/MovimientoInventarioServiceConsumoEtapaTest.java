@@ -30,9 +30,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -307,6 +309,159 @@ class MovimientoInventarioServiceConsumoEtapaTest {
                 same(loteReservado),
                 argThat(cantidad -> cantidad != null && cantidad.compareTo(new BigDecimal("10")) == 0)
         );
+    }
+
+    @Test
+    void procesarMovimientoConLoteExistente_salidaProduccionConOpSinSolicitudUsaValidadorOp() {
+        Producto producto = new Producto();
+        producto.setId(1);
+
+        LoteProducto lotePrebodega = new LoteProducto();
+        lotePrebodega.setId(901L);
+        lotePrebodega.setCodigoLote("C-8500");
+        lotePrebodega.setProducto(producto);
+        lotePrebodega.setAlmacen(new Almacen(30));
+        lotePrebodega.setEstado(EstadoLote.VENCIDO);
+        lotePrebodega.setStockLote(new BigDecimal("10"));
+        lotePrebodega.setStockReservado(BigDecimal.ZERO);
+        lotePrebodega.setFechaVencimiento(LocalDate.of(2026, 3, 21).atStartOfDay());
+
+        when(loteProductoRepository.findByIdForUpdate(901L)).thenReturn(Optional.of(lotePrebodega));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MovimientoInventario movInicial = new MovimientoInventario();
+        movInicial.setFechaIngreso(LocalDateTime.of(2026, 3, 19, 15, 43, 10));
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndLoteIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                596L,
+                901L,
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION
+        )).thenReturn(Optional.of(movInicial));
+        when(movimientoInventarioRepository.findFirstByOrdenProduccionIdAndLoteIdAndTipoMovimientoAndClasificacionOrderByIdAsc(
+                596L,
+                901L,
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+        )).thenReturn(Optional.empty());
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("1"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lotePrebodega.getId(),
+                30,
+                null,
+                null,
+                null,
+                null,
+                70L,
+                null,
+                5L,
+                596L,
+                20L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        ReflectionTestUtils.invokeMethod(
+                service,
+                "procesarMovimientoConLoteExistente",
+                dto,
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                new Almacen(30),
+                null,
+                producto,
+                new BigDecimal("1"),
+                false,
+                null,
+                new AtomicBoolean(false)
+        );
+
+        verify(loteCalidadValidator).validarLoteUtilizableParaConsumoOp(eq(lotePrebodega), eq(LocalDate.of(2026, 3, 19)));
+        verify(loteCalidadValidator, never()).validarLoteUtilizable(lotePrebodega);
+    }
+
+    @Test
+    void procesarMovimientoConLoteExistente_salidaProduccionSinOpUsaValidadorGlobal() {
+        Producto producto = new Producto();
+        producto.setId(1);
+
+        LoteProducto lotePrebodega = new LoteProducto();
+        lotePrebodega.setId(902L);
+        lotePrebodega.setCodigoLote("NO-OP-1");
+        lotePrebodega.setProducto(producto);
+        lotePrebodega.setAlmacen(new Almacen(30));
+        lotePrebodega.setEstado(EstadoLote.DISPONIBLE);
+        lotePrebodega.setStockLote(new BigDecimal("10"));
+        lotePrebodega.setStockReservado(BigDecimal.ZERO);
+        lotePrebodega.setFechaVencimiento(LocalDate.of(2026, 4, 1).atStartOfDay());
+
+        when(loteProductoRepository.findByIdForUpdate(902L)).thenReturn(Optional.of(lotePrebodega));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
+                null,
+                new BigDecimal("1"),
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                null,
+                null,
+                null,
+                null,
+                null,
+                producto.getId(),
+                lotePrebodega.getId(),
+                30,
+                null,
+                null,
+                null,
+                null,
+                70L,
+                null,
+                5L,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        ReflectionTestUtils.invokeMethod(
+                service,
+                "procesarMovimientoConLoteExistente",
+                dto,
+                TipoMovimiento.SALIDA,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                new Almacen(30),
+                null,
+                producto,
+                new BigDecimal("1"),
+                false,
+                null,
+                new AtomicBoolean(false)
+        );
+
+        verify(loteCalidadValidator).validarLoteUtilizable(lotePrebodega);
+        verify(loteCalidadValidator, never()).validarLoteUtilizableParaConsumoOp(any(), any());
     }
 
     @Test

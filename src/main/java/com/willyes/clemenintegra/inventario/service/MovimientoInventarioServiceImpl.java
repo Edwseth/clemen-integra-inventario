@@ -2450,8 +2450,11 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         boolean esSolicitudOp = solicitud != null && solicitud.getOrdenProduccion() != null;
         boolean esOpAtencion = esSolicitudOp;
-        boolean esSalidaProduccionOp = esOpAtencion
-                && clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION;
+        Long ordenIdOpContexto = esSolicitudOp
+                ? solicitud.getOrdenProduccion().getId()
+                : (dto != null ? dto.ordenProduccionId() : null);
+        boolean esSalidaProduccionOp = clasificacion == ClasificacionMovimientoInventario.SALIDA_PRODUCCION
+                && ordenIdOpContexto != null;
 
         boolean esLoteOrigen = tipo != TipoMovimiento.ENTRADA;
         boolean esAjustePositivo = tipo == TipoMovimiento.AJUSTE
@@ -2474,16 +2477,26 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
         LocalDate referenciaOperativaOp = null;
         if (esSalidaProduccionOp) {
-            Long ordenIdOp = solicitud != null && solicitud.getOrdenProduccion() != null
-                    ? solicitud.getOrdenProduccion().getId()
-                    : (dto != null ? dto.ordenProduccionId() : null);
             referenciaOperativaOp = resolverFechaReferenciaOperativaConsumoOp(
-                    ordenIdOp,
+                    ordenIdOpContexto,
                     dto != null ? dto.ordenProduccionEtapaId() : null,
                     solicitud,
                     loteOrigen
             );
         }
+        Long solicitudMovimientoId = solicitud != null ? solicitud.getId() : (dto != null ? dto.solicitudMovimientoId() : null);
+        String metodoValidador = esLoteOrigen
+                ? (esSalidaProduccionOp ? "validarLoteUtilizableParaConsumoOp" : "validarLoteUtilizable")
+                : "N/A_ENTRADA";
+        log.debug("VAL-GATE-LOTE opId={} solicitudId={} clasificacion={} loteId={} codigoLote={} esSalidaProduccionOp={} referenciaOperativa={} metodoValidador={}",
+                ordenIdOpContexto,
+                solicitudMovimientoId,
+                clasificacion,
+                loteOrigen != null ? loteOrigen.getId() : null,
+                loteOrigen != null ? loteOrigen.getCodigoLote() : null,
+                esSalidaProduccionOp,
+                referenciaOperativaOp,
+                metodoValidador);
         if (esSalidaProduccionOp
                 && dto != null
                 && dto.loteProductoId() != null
