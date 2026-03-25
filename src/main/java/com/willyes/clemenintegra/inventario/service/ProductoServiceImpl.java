@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.bom.dto.ComponenteImpactoResponseDTO;
+import com.willyes.clemenintegra.bom.service.ComponenteImpactoService;
 import com.willyes.clemenintegra.inventario.dto.*;
 import com.willyes.clemenintegra.inventario.mapper.ProductoMapper;
 import com.willyes.clemenintegra.inventario.model.LoteProducto;
@@ -51,6 +53,7 @@ public class ProductoServiceImpl implements ProductoService {
     private final ProductoMapper productoMapper;
     private final StockQueryService stockQueryService;
     private final PlantillaAnalisisMicrobiologicoRepository plantillaAnalisisMicrobiologicoRepository;
+    private final ComponenteImpactoService componenteImpactoService;
 
     private boolean esProductoFabricable(com.willyes.clemenintegra.inventario.model.CategoriaProducto categoria, String sku) {
         if (categoria == null || categoria.getTipo() == null || sku == null) {
@@ -319,6 +322,22 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Transactional
     public ProductoResponseDTO actualizarEstado(Long id, Boolean activo) {
+        if (!Boolean.TRUE.equals(activo)) {
+            ComponenteImpactoResponseDTO impacto = componenteImpactoService.obtenerImpactoPorProductoId(id);
+            int referenciasActivas = impacto != null && impacto.resumen != null
+                    ? impacto.resumen.referenciasActivas
+                    : 0;
+            if (referenciasActivas > 0) {
+                throw new CustomBusinessException(
+                        ApiErrorCode.REFERENCIADO_EN_FORMULA_ACTIVA,
+                        "No se puede inactivar el producto porque está referenciado en fórmulas activas.",
+                        Map.of(
+                                "productoId", id,
+                                "referenciasActivas", referenciasActivas
+                        )
+                );
+            }
+        }
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
         producto.setActivo(Boolean.TRUE.equals(activo));

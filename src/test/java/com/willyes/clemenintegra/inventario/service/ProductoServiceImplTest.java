@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.inventario.service;
 
+import com.willyes.clemenintegra.bom.dto.ComponenteImpactoResponseDTO;
+import com.willyes.clemenintegra.bom.service.ComponenteImpactoService;
 import com.willyes.clemenintegra.inventario.dto.InsumoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoAutocompleteDTO;
 import com.willyes.clemenintegra.inventario.dto.ProductoOptionDTO;
@@ -15,6 +17,8 @@ import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +69,7 @@ class ProductoServiceImplTest {
     @Mock private MovimientoInventarioRepository movimientoInventarioRepository;
     @Mock private ProductoMapper productoMapper;
     @Mock private StockQueryService stockQueryService;
+    @Mock private ComponenteImpactoService componenteImpactoService;
 
     @InjectMocks
     private ProductoServiceImpl service;
@@ -421,6 +426,55 @@ class ProductoServiceImplTest {
         verify(productoRepository).buscarParaConteo(termCaptor.capture(), almacenCaptor.capture(), any(Pageable.class));
         assertThat(termCaptor.getValue()).isEqualTo("Lote");
         assertThat(almacenCaptor.getValue()).isEqualTo(4L);
+    }
+
+    @Test
+    @DisplayName("actualizarEstado permite inactivar cuando no hay referencias activas")
+    void actualizarEstado_inactivarSinReferenciasActivas_permitido() {
+        Producto producto = Producto.builder()
+                .id(10)
+                .codigoSku("PS0001")
+                .nombre("Producto")
+                .activo(true)
+                .build();
+        when(productoRepository.findById(10L)).thenReturn(Optional.of(producto));
+        when(componenteImpactoService.obtenerImpactoPorProductoId(10L))
+                .thenReturn(impactoConReferencias(0, 1));
+
+        ProductoResponseDTO response = service.actualizarEstado(10L, false);
+
+        assertThat(response).isNotNull();
+        assertThat(producto.isActivo()).isFalse();
+        verify(productoRepository).save(producto);
+    }
+
+    @Test
+    @DisplayName("actualizarEstado bloquea inactivación cuando hay referencias activas")
+    void actualizarEstado_inactivarConReferenciasActivas_bloquea() {
+        when(componenteImpactoService.obtenerImpactoPorProductoId(10L))
+                .thenReturn(impactoConReferencias(2, 0));
+
+        assertThatThrownBy(() -> service.actualizarEstado(10L, false))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> {
+                    CustomBusinessException cbe = (CustomBusinessException) ex;
+                    assertThat(cbe.getCode()).isEqualTo(ApiErrorCode.REFERENCIADO_EN_FORMULA_ACTIVA);
+                });
+
+        verify(productoRepository, never()).save(any(Producto.class));
+    }
+
+    private ComponenteImpactoResponseDTO impactoConReferencias(int activas, int historicas) {
+        ComponenteImpactoResponseDTO impacto = new ComponenteImpactoResponseDTO();
+        ComponenteImpactoResponseDTO.ResumenImpactoDTO resumen = new ComponenteImpactoResponseDTO.ResumenImpactoDTO();
+        resumen.referenciasActivas = activas;
+        resumen.referenciasHistoricas = historicas;
+        resumen.totalReferencias = activas + historicas;
+        resumen.puedeInactivarse = activas == 0;
+        impacto.resumen = resumen;
+        impacto.formulasActivas = Collections.emptyList();
+        impacto.formulasHistoricas = Collections.emptyList();
+        return impacto;
     }
 
     private static Stream<Arguments> banderasCalidad() {
