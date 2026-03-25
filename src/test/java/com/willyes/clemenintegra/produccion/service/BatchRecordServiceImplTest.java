@@ -525,7 +525,7 @@ class BatchRecordServiceImplTest {
     }
 
     @Test
-    @DisplayName("mapConsumos explota componentes de PS y elimina el renglón del PS")
+    @DisplayName("mapConsumos de PS usa consumos reales de la OP origen y no el lote del PS")
     void mapConsumosConProductoSemiElaborado() {
         OrdenProduccion orden = buildOrdenProduccion();
         when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
@@ -535,23 +535,30 @@ class BatchRecordServiceImplTest {
         when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
                 .thenReturn(Optional.of(formulaPt));
 
-        Producto mp1 = productoConCategoria(40, "MP-1", "Materia 1", TipoCategoria.MATERIA_PRIMA);
-        Producto mp2 = productoConCategoria(41, "MP-2", "Materia 2", TipoCategoria.MATERIA_PRIMA);
-        FormulaProducto formulaPs = buildFormulaConDetalles(ps, List.of(
-                detalleFormula(mp1, new BigDecimal("0.50")),
-                detalleFormula(mp2, new BigDecimal("1.25"))
-        ));
-        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(30L, EstadoFormula.APROBADA))
-                .thenReturn(Optional.of(formulaPs));
-
         MovimientoInventario movimientoPs = movimientoProduccion(ps, "L-PS", "Principal Semi Elaborados", new BigDecimal("30"));
         LocalDateTime fechaMovimiento = LocalDateTime.now();
         movimientoPs.setFechaIngreso(fechaMovimiento);
+        OrdenProduccion opPs = new OrdenProduccion();
+        opPs.setId(2L);
+        movimientoPs.getLote().setOrdenProduccion(opPs);
+
+        Producto mp1 = productoConCategoria(40, "MP-1", "Materia 1", TipoCategoria.MATERIA_PRIMA);
+        Producto mp2 = productoConCategoria(41, "MP-2", "Materia 2", TipoCategoria.MATERIA_PRIMA);
+        MovimientoInventario consumoMp1 = movimientoProduccion(mp1, "L-MP-1", "Pre-Bodega MP", new BigDecimal("16"));
+        MovimientoInventario consumoMp2 = movimientoProduccion(mp2, "L-MP-2", "Pre-Bodega MP", new BigDecimal("39"));
+        consumoMp1.setFechaIngreso(fechaMovimiento.minusHours(2));
+        consumoMp2.setFechaIngreso(fechaMovimiento.minusHours(1));
+
         when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
                 1L,
                 ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
                 Pageable.unpaged()))
                 .thenReturn(new PageImpl<>(List.of(movimientoPs)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                2L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(consumoMp1, consumoMp2)));
 
         when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
                 .thenReturn(Collections.emptyList());
@@ -573,17 +580,65 @@ class BatchRecordServiceImplTest {
                 .collect(Collectors.toMap(c -> c.codigoSku, c -> c));
 
         assertThat(consumosPorSku.get("MP-1").cantidad)
-                .isEqualByComparingTo(new BigDecimal("15.00")); // 0.5 * 30
+                .isEqualByComparingTo(new BigDecimal("16"));
         assertThat(consumosPorSku.get("MP-2").cantidad)
-                .isEqualByComparingTo(new BigDecimal("37.50")); // 1.25 * 30
+                .isEqualByComparingTo(new BigDecimal("39"));
 
         assertThat(consumosPorSku.values())
                 .allSatisfy(consumo -> {
                     assertThat(consumo.fromPs).isTrue();
-                    assertThat(consumo.codigoLote).isEqualTo("L-PS");
-                    assertThat(consumo.almacenOrigen).isEqualTo("Principal Semi Elaborados");
-                    assertThat(consumo.fechaMovimiento).isEqualTo(fechaMovimiento);
+                    assertThat(consumo.codigoLote).isIn("L-MP-1", "L-MP-2");
+                    assertThat(consumo.almacenOrigen).isEqualTo("Pre-Bodega MP");
                 });
+    }
+
+    @Test
+    @DisplayName("mapConsumos de PS conserva múltiples filas cuando el mismo insumo se consume de dos lotes")
+    void mapConsumosPsConMismoInsumoEnDosLotes() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto ps = productoConCategoria(30, "PS-1", "Semi", TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        FormulaProducto formulaPt = buildFormulaConDetalle(orden.getProducto(), ps, BigDecimal.ONE);
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPt));
+
+        MovimientoInventario movimientoPs = movimientoProduccion(ps, "L-PS", "Principal Semi Elaborados", new BigDecimal("30"));
+        OrdenProduccion opPs = new OrdenProduccion();
+        opPs.setId(2L);
+        movimientoPs.getLote().setOrdenProduccion(opPs);
+
+        Producto mp = productoConCategoria(40, "MP-1", "Materia 1", TipoCategoria.MATERIA_PRIMA);
+        MovimientoInventario consumoLoteA = movimientoProduccion(mp, "L-MP-A", "Pre-Bodega MP", new BigDecimal("10"));
+        MovimientoInventario consumoLoteB = movimientoProduccion(mp, "L-MP-B", "Pre-Bodega MP", new BigDecimal("5"));
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(movimientoPs)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                2L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(consumoLoteA, consumoLoteB)));
+
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        assertThat(result.consumos).hasSize(2);
+        assertThat(result.consumos)
+                .extracting(c -> c.codigoLote)
+                .containsExactlyInAnyOrder("L-MP-A", "L-MP-B");
     }
 
     @Test
