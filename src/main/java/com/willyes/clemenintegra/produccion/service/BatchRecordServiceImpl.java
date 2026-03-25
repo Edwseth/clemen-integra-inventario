@@ -335,12 +335,38 @@ public class BatchRecordServiceImpl implements BatchRecordService {
         if (movimientoPs == null || movimientoPs.getLote() == null) {
             return null;
         }
-        return movimientoPs.getLote().getOrdenProduccion() != null
-                ? movimientoPs.getLote().getOrdenProduccion().getId()
-                : null;
+
+        LoteProducto lotePs = movimientoPs.getLote();
+        if (lotePs.getOrdenProduccion() != null && lotePs.getOrdenProduccion().getId() != null) {
+            return lotePs.getOrdenProduccion().getId();
+        }
+
+        if (lotePs.getLoteOrigen() != null
+                && lotePs.getLoteOrigen().getOrdenProduccion() != null
+                && lotePs.getLoteOrigen().getOrdenProduccion().getId() != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("BatchRecord PS: OP origen resuelta vía loteOrigen. movimientoId={}, loteId={}, loteOrigenId={}, opOrigenId={}",
+                        movimientoPs.getId(),
+                        lotePs.getId(),
+                        lotePs.getLoteOrigen().getId(),
+                        lotePs.getLoteOrigen().getOrdenProduccion().getId());
+            }
+            return lotePs.getLoteOrigen().getOrdenProduccion().getId();
+        }
+
+        return null;
     }
 
     private List<BatchRecordDTO.ConsumoDTO> expandirConsumoPsPorFormula(MovimientoInventario movimientoPs) {
+        if (log.isDebugEnabled()) {
+            Long loteId = movimientoPs != null && movimientoPs.getLote() != null ? movimientoPs.getLote().getId() : null;
+            String codigoLote = movimientoPs != null && movimientoPs.getLote() != null ? movimientoPs.getLote().getCodigoLote() : null;
+            log.debug("BatchRecord PS: usando fallback por fórmula. movimientoId={}, productoPsId={}, loteId={}, codigoLote={}",
+                    movimientoPs != null ? movimientoPs.getId() : null,
+                    movimientoPs != null && movimientoPs.getProducto() != null ? movimientoPs.getProducto().getId() : null,
+                    loteId,
+                    codigoLote);
+        }
         FormulaProducto formulaPs = obtenerFormulaProducto(movimientoPs.getProducto());
         if (formulaPs == null || formulaPs.getDetalles() == null || formulaPs.getDetalles().isEmpty()) {
             return null;

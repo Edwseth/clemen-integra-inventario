@@ -134,6 +134,9 @@ class MovimientoInventarioServiceTransferenciaTest {
         Producto producto = crearProducto(8, 2);
         LoteProducto lote = crearLote(30L, producto, 1, EstadoLote.LIBERADO,
                 new BigDecimal("4000"), BigDecimal.ZERO, false);
+        OrdenProduccion opOrigen = new OrdenProduccion();
+        opOrigen.setId(425L);
+        lote.setOrdenProduccion(opOrigen);
 
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
                 null,
@@ -207,6 +210,7 @@ class MovimientoInventarioServiceTransferenciaTest {
         assertThat(loteDestinoPersistido).isNotNull();
         assertThat(loteDestinoPersistido.getStockLote()).isEqualByComparingTo(new BigDecimal("1000.00"));
         assertThat(loteDestinoPersistido.getLoteOrigen()).isEqualTo(lote);
+        assertThat(loteDestinoPersistido.getOrdenProduccion()).isEqualTo(opOrigen);
         assertThat(movimientoCaptor.getValue().getLote()).isSameAs(loteDestinoPersistido);
     }
 
