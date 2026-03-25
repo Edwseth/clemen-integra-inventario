@@ -593,6 +593,108 @@ class BatchRecordServiceImplTest {
     }
 
     @Test
+    @DisplayName("mapConsumos de PS resuelve OP origen por loteOrigen cuando lote.ordenProduccion es null")
+    void mapConsumosConPsResuelveOpDesdeLoteOrigen() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto ps = productoConCategoria(30, "PS-1", "Semi", TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        FormulaProducto formulaPt = buildFormulaConDetalle(orden.getProducto(), ps, BigDecimal.ONE);
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPt));
+
+        MovimientoInventario movimientoPs = movimientoProduccion(ps, "L-PS", "Principal Semi Elaborados", new BigDecimal("30"));
+        movimientoPs.setId(900L);
+        LoteProducto lotePs = movimientoPs.getLote();
+        lotePs.setOrdenProduccion(null);
+        LoteProducto loteOrigen = new LoteProducto();
+        loteOrigen.setId(500L);
+        OrdenProduccion opPs = new OrdenProduccion();
+        opPs.setId(2L);
+        loteOrigen.setOrdenProduccion(opPs);
+        lotePs.setLoteOrigen(loteOrigen);
+
+        Producto mp1 = productoConCategoria(40, "MP-1", "Materia 1", TipoCategoria.MATERIA_PRIMA);
+        MovimientoInventario consumoMp1 = movimientoProduccion(mp1, "L-MP-1", "Pre-Bodega MP", new BigDecimal("16"));
+        consumoMp1.setId(1001L);
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(movimientoPs)));
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                2L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(consumoMp1)));
+
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        assertThat(result.consumos).hasSize(1);
+        BatchRecordDTO.ConsumoDTO consumo = result.consumos.get(0);
+        assertThat(consumo.movimientoId).isEqualTo(1001L);
+        assertThat(consumo.codigoLote).isEqualTo("L-MP-1");
+        assertThat(consumo.fromPs).isTrue();
+    }
+
+    @Test
+    @DisplayName("mapConsumos de PS usa fallback por fórmula cuando no existe OP origen y hereda lote del PS padre")
+    void mapConsumosConPsSinOpOrigenUsaFallbackFormula() {
+        OrdenProduccion orden = buildOrdenProduccion();
+        when(ordenProduccionRepository.findById(1L)).thenReturn(Optional.of(orden));
+
+        Producto ps = productoConCategoria(30, "PS-1", "Semi", TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        Producto mp = productoConCategoria(40, "MP-1", "Materia 1", TipoCategoria.MATERIA_PRIMA);
+        FormulaProducto formulaPt = buildFormulaConDetalle(orden.getProducto(), ps, BigDecimal.ONE);
+        FormulaProducto formulaPs = buildFormulaConDetalle(ps, mp, new BigDecimal("2"));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(10L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPt));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(30L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formulaPs));
+
+        MovimientoInventario movimientoPs = movimientoProduccion(ps, "L-PS-PADRE", "Principal Semi Elaborados", new BigDecimal("30"));
+        movimientoPs.setId(901L);
+        movimientoPs.getLote().setOrdenProduccion(null);
+        movimientoPs.getLote().setLoteOrigen(null);
+
+        when(movimientoInventarioRepository.findByOrdenProduccionIdAndClasificacion(
+                1L,
+                ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(movimientoPs)));
+
+        when(reservaLoteRepository.findBySolicitudMovimientoDetalle_SolicitudMovimiento_OrdenProduccionId(1L))
+                .thenReturn(Collections.emptyList());
+        when(cierreProduccionRepository.findByOrdenProduccionId(1L, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, 10L))
+                .thenReturn(Optional.empty());
+        when(controlProcesoProduccionRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(controlEmpaqueLoteRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+        when(observacionProcesoRepository.findByOrdenProduccionId(1L)).thenReturn(Collections.emptyList());
+
+        BatchRecordDTO result = service.buildByOrdenProduccion(1L);
+
+        assertThat(result.consumos).hasSize(1);
+        BatchRecordDTO.ConsumoDTO consumo = result.consumos.get(0);
+        assertThat(consumo.fromPs).isTrue();
+        assertThat(consumo.movimientoId).isEqualTo(901L);
+        assertThat(consumo.codigoLote).isEqualTo("L-PS-PADRE");
+        assertThat(consumo.psCodigoSku).isEqualTo("PS-1");
+    }
+
+    @Test
     @DisplayName("mapConsumos de PS conserva múltiples filas cuando el mismo insumo se consume de dos lotes")
     void mapConsumosPsConMismoInsumoEnDosLotes() {
         OrdenProduccion orden = buildOrdenProduccion();

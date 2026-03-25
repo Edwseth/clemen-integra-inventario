@@ -3325,6 +3325,12 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 existente.setLoteOrigen(loteOrigen);
                 modificado = true;
             }
+            if (existente.getOrdenProduccion() == null
+                    && loteOrigen != null
+                    && loteOrigen.getOrdenProduccion() != null) {
+                existente.setOrdenProduccion(loteOrigen.getOrdenProduccion());
+                modificado = true;
+            }
             LocalDateTime fechaAntes = existente.getFechaVencimiento();
             validarYAsignarFechaVencimientoDevolucion(existente, fechaVencimientoEsperada);
             if (!Objects.equals(fechaAntes, existente.getFechaVencimiento())) {
@@ -3348,6 +3354,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             nuevo.setFechaVencimiento(loteOrigen.getFechaVencimiento());
             nuevo.setTemperaturaAlmacenamiento(loteOrigen.getTemperaturaAlmacenamiento());
             nuevo.setLoteOrigen(loteOrigen);
+            nuevo.setOrdenProduccion(loteOrigen.getOrdenProduccion());
             // NO copiar stock: se ajustará por el movimiento
             nuevo.setStockLote(BigDecimal.ZERO);
             nuevo.setStockReservado(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING));
