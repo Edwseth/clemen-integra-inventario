@@ -304,6 +304,43 @@ public class BatchRecordServiceImpl implements BatchRecordService {
         if (movimientoPs == null || movimientoPs.getProducto() == null || movimientoPs.getProducto().getId() == null) {
             return null;
         }
+
+        Long opOrigenPsId = obtenerOrdenProduccionOrigenDelPs(movimientoPs);
+        if (opOrigenPsId == null) {
+            return expandirConsumoPsPorFormula(movimientoPs);
+        }
+
+        List<MovimientoInventario> movimientosPs = movimientoInventarioRepository
+                .findByOrdenProduccionIdAndClasificacion(
+                        opOrigenPsId,
+                        ClasificacionMovimientoInventario.SALIDA_PRODUCCION,
+                        Pageable.unpaged())
+                .getContent();
+
+        List<BatchRecordDTO.ConsumoDTO> consumos = new ArrayList<>();
+        for (MovimientoInventario movimientoPsHijo : movimientosPs) {
+            if (movimientoPsHijo.getTipoMovimiento() != TipoMovimiento.SALIDA) {
+                continue;
+            }
+            BatchRecordDTO.ConsumoDTO consumoDTO = crearConsumoDtoDesdeMovimiento(movimientoPsHijo);
+            consumoDTO.fromPs = true;
+            consumoDTO.psDescripcion = movimientoPs.getProducto() != null ? movimientoPs.getProducto().getNombre() : null;
+            consumoDTO.psCodigoSku = movimientoPs.getProducto() != null ? movimientoPs.getProducto().getCodigoSku() : null;
+            consumos.add(consumoDTO);
+        }
+        return consumos.isEmpty() ? null : consumos;
+    }
+
+    private Long obtenerOrdenProduccionOrigenDelPs(MovimientoInventario movimientoPs) {
+        if (movimientoPs == null || movimientoPs.getLote() == null) {
+            return null;
+        }
+        return movimientoPs.getLote().getOrdenProduccion() != null
+                ? movimientoPs.getLote().getOrdenProduccion().getId()
+                : null;
+    }
+
+    private List<BatchRecordDTO.ConsumoDTO> expandirConsumoPsPorFormula(MovimientoInventario movimientoPs) {
         FormulaProducto formulaPs = obtenerFormulaProducto(movimientoPs.getProducto());
         if (formulaPs == null || formulaPs.getDetalles() == null || formulaPs.getDetalles().isEmpty()) {
             return null;
@@ -314,7 +351,7 @@ public class BatchRecordServiceImpl implements BatchRecordService {
             BatchRecordDTO.ConsumoDTO consumoDTO = crearConsumoDesdeDetallePs(detalle, movimientoPs, cantidadTeorica);
             consumos.add(consumoDTO);
         }
-        return consumos;
+        return consumos.isEmpty() ? null : consumos;
     }
 
     private List<Long> obtenerProductosSemiElaboradosEnFormula(OrdenProduccion ordenProduccion) {
