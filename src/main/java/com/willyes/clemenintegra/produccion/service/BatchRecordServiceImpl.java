@@ -51,14 +51,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Slf4j
 public class BatchRecordServiceImpl implements BatchRecordService {
+    private static final int MAX_NIVELES_LOTE_ORIGEN_PS = 10;
 
     private final OrdenProduccionRepository ordenProduccionRepository;
     private final FormulaProductoRepository formulaProductoRepository;
@@ -336,22 +339,46 @@ public class BatchRecordServiceImpl implements BatchRecordService {
             return null;
         }
 
-        LoteProducto lotePs = movimientoPs.getLote();
-        if (lotePs.getOrdenProduccion() != null && lotePs.getOrdenProduccion().getId() != null) {
-            return lotePs.getOrdenProduccion().getId();
-        }
+        LoteProducto loteActual = movimientoPs.getLote();
+        Set<Long> lotesVisitados = new HashSet<>();
+        int profundidad = 0;
 
-        if (lotePs.getLoteOrigen() != null
-                && lotePs.getLoteOrigen().getOrdenProduccion() != null
-                && lotePs.getLoteOrigen().getOrdenProduccion().getId() != null) {
-            if (log.isDebugEnabled()) {
-                log.debug("BatchRecord PS: OP origen resuelta vía loteOrigen. movimientoId={}, loteId={}, loteOrigenId={}, opOrigenId={}",
-                        movimientoPs.getId(),
-                        lotePs.getId(),
-                        lotePs.getLoteOrigen().getId(),
-                        lotePs.getLoteOrigen().getOrdenProduccion().getId());
+        while (loteActual != null) {
+            if (profundidad > MAX_NIVELES_LOTE_ORIGEN_PS) {
+                if (log.isDebugEnabled()) {
+                    log.debug("BatchRecord PS: profundidad máxima agotada sin OP origen. movimientoId={}, loteInicioId={}, maxNiveles={}",
+                            movimientoPs.getId(),
+                            movimientoPs.getLote() != null ? movimientoPs.getLote().getId() : null,
+                            MAX_NIVELES_LOTE_ORIGEN_PS);
+                }
+                return null;
             }
-            return lotePs.getLoteOrigen().getOrdenProduccion().getId();
+
+            Long loteActualId = loteActual.getId();
+            if (loteActualId != null && !lotesVisitados.add(loteActualId)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("BatchRecord PS: ciclo detectado en cadena de loteOrigen. movimientoId={}, loteId={}, profundidad={}",
+                            movimientoPs.getId(),
+                            loteActualId,
+                            profundidad);
+                }
+                return null;
+            }
+
+            if (loteActual.getOrdenProduccion() != null && loteActual.getOrdenProduccion().getId() != null) {
+                if (log.isDebugEnabled() && profundidad > 0) {
+                    log.debug("BatchRecord PS: OP origen resuelta en nivel {} de loteOrigen. movimientoId={}, loteInicioId={}, loteResueltoId={}, opOrigenId={}",
+                            profundidad,
+                            movimientoPs.getId(),
+                            movimientoPs.getLote() != null ? movimientoPs.getLote().getId() : null,
+                            loteActualId,
+                            loteActual.getOrdenProduccion().getId());
+                }
+                return loteActual.getOrdenProduccion().getId();
+            }
+
+            loteActual = loteActual.getLoteOrigen();
+            profundidad++;
         }
 
         return null;
