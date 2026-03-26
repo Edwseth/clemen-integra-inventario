@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.web;
 
 import com.willyes.clemenintegra.inventario.controller.ReporteInventarioController;
+import com.willyes.clemenintegra.inventario.service.AlertaInventarioService;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
@@ -24,6 +25,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -44,6 +47,8 @@ class ReporteInventarioControllerSmokeTest extends BaseWebMvcSecurityTest {
     private ProductoService productoService;
     @MockBean
     private LoteProductoService loteProductoService;
+    @MockBean
+    private AlertaInventarioService alertaInventarioService;
     @MockBean
     private MovimientoInventarioService movimientoInventarioService;
     @MockBean
@@ -103,5 +108,20 @@ class ReporteInventarioControllerSmokeTest extends BaseWebMvcSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", Matchers.containsString("attachment")))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=lotes_por_vencer.xlsx"));
+    }
+
+    @Test
+    @DisplayName("GET /api/reportes/alertas-inventario respeta diasVencimiento y devuelve adjunto")
+    void alertasInventario_respetadiasVencimiento() throws Exception {
+        when(alertaInventarioService.generarReporteAlertasInventarioExcel(eq(15)))
+                .thenReturn("excel".getBytes());
+
+        mockMvc.perform(get("/api/reportes/alertas-inventario")
+                        .with(TestAuth.auth("almacen", "INV_EXPORT"))
+                        .param("diasVencimiento", "15"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=alertas_activas.xlsx"));
+
+        verify(alertaInventarioService).generarReporteAlertasInventarioExcel(15);
     }
 }

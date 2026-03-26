@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.calidad.controller;
 
 import com.willyes.clemenintegra.calidad.dto.AuditoriaLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLoteService;
+import com.willyes.clemenintegra.calidad.service.AlertasCalidadService;
 import com.willyes.clemenintegra.calidad.service.CarpetaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.calidad.service.ReporteInvimaBpmPdfService;
@@ -38,6 +39,8 @@ class ReportesCalidadControllerSmokeTest {
 
     @MockBean
     private EvaluacionCalidadService evaluacionCalidadService;
+    @MockBean
+    private AlertasCalidadService alertasCalidadService;
 
     @MockBean
     private CarpetaLotePdfService carpetaLotePdfService;
@@ -67,6 +70,18 @@ class ReportesCalidadControllerSmokeTest {
                 .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, Matchers.containsString("reporte-evaluaciones-")))
                 .andExpect(content().bytes("excel".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void exportarAlertasExcel_respondeExcelConNombreYUmbral() throws Exception {
+        given(alertasCalidadService.generarReporteAlertasExcel(eq(45)))
+                .willReturn("excel-alertas".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(get("/api/calidad/reportes/alertas/excel").param("diasUmbral", "45"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, Matchers.containsString("reporte-alertas-calidad-")))
+                .andExpect(content().bytes("excel-alertas".getBytes(StandardCharsets.UTF_8)));
     }
 
     @Test

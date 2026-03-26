@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.inventario.controller;
 
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
+import com.willyes.clemenintegra.inventario.service.AlertaInventarioService;
 import com.willyes.clemenintegra.inventario.service.InventarioGeneralCorteReportService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
@@ -44,6 +45,8 @@ class ReporteInventarioControllerSecurityTest {
     private ProductoService productoService;
     @MockBean
     private LoteProductoService loteProductoService;
+    @MockBean
+    private AlertaInventarioService alertaInventarioService;
     @MockBean
     private MovimientoInventarioService movimientoInventarioService;
     @MockBean

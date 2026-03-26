@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.AuditoriaLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLoteService;
+import com.willyes.clemenintegra.calidad.service.AlertasCalidadService;
 import com.willyes.clemenintegra.calidad.service.CarpetaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.calidad.service.ReporteInvimaBpmPdfService;
@@ -44,6 +45,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class ReportesCalidadController {
 
     private final EvaluacionCalidadService evaluacionCalidadService;
+    private final AlertasCalidadService alertasCalidadService;
     private final CarpetaLotePdfService carpetaLotePdfService;
     private final AuditoriaLoteService auditoriaLoteService;
     private final ResultadoAnalisisMicroService resultadoAnalisisMicroService;
@@ -56,6 +58,17 @@ public class ReportesCalidadController {
                                                             @RequestParam(required = false) EstadoLote estado) {
         byte[] excel = evaluacionCalidadService.generarReporteEvaluacionesExcel(fechaInicio, fechaFin, estado);
         String nombreArchivo = "reporte-evaluaciones-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")) + ".xlsx";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
+                .body(excel);
+    }
+
+    @GetMapping(path = "/alertas/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    @PreAuthorize("hasAnyAuthority('QC_EXPORT')")
+    public ResponseEntity<byte[]> exportarAlertasExcel(@RequestParam(defaultValue = "30") int diasUmbral) {
+        byte[] excel = alertasCalidadService.generarReporteAlertasExcel(diasUmbral);
+        String nombreArchivo = "reporte-alertas-calidad-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")) + ".xlsx";
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")

@@ -7,13 +7,19 @@ import com.willyes.clemenintegra.inventario.model.LoteProducto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import java.time.format.DateTimeFormatter;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -70,6 +76,52 @@ public class AlertasCalidadService {
                 .totalVencidos(lotesVencidos.size())
                 .totalPendientesLiberar(lotesPendientesLiberar.size())
                 .build();
+    }
+
+    public byte[] generarReporteAlertasExcel(int diasUmbral) {
+        ResumenAlertasCalidadDTO resumen = obtenerAlertas(diasUmbral);
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            crearHojaAlertas(workbook, "Próximos a vencer", resumen.getLotesProximosVencer(), dtf);
+            crearHojaAlertas(workbook, "Vencidos", resumen.getLotesVencidos(), dtf);
+            crearHojaAlertas(workbook, "Pendientes liberar", resumen.getLotesPendientesLiberar(), dtf);
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new IllegalStateException("No se pudo generar el Excel de alertas de calidad", e);
+        }
+    }
+
+    private void crearHojaAlertas(Workbook workbook, String nombre, List<AlertaLoteCalidadDTO> alertas, DateTimeFormatter dtf) {
+        Sheet sheet = workbook.createSheet(nombre);
+        String[] headers = {
+                "Tipo Alerta", "Código Lote", "SKU", "Producto", "Almacén", "Estado Lote", "Fecha Vencimiento", "Días para vencer"
+        };
+
+        Row header = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            header.createCell(i).setCellValue(headers[i]);
+        }
+
+        int rowIdx = 1;
+        List<AlertaLoteCalidadDTO> filas = alertas != null ? alertas : List.of();
+        for (AlertaLoteCalidadDTO alerta : filas) {
+            Row row = sheet.createRow(rowIdx++);
+            row.createCell(0).setCellValue(alerta.getTipoAlerta() != null ? alerta.getTipoAlerta().name() : "");
+            row.createCell(1).setCellValue(alerta.getCodigoLote() != null ? alerta.getCodigoLote() : "");
+            row.createCell(2).setCellValue(alerta.getCodigoSku() != null ? alerta.getCodigoSku() : "");
+            row.createCell(3).setCellValue(alerta.getNombreProducto() != null ? alerta.getNombreProducto() : "");
+            row.createCell(4).setCellValue(alerta.getNombreAlmacen() != null ? alerta.getNombreAlmacen() : "");
+            row.createCell(5).setCellValue(alerta.getEstadoLote() != null ? alerta.getEstadoLote().name() : "");
+            row.createCell(6).setCellValue(alerta.getFechaVencimiento() != null ? alerta.getFechaVencimiento().format(dtf) : "");
+            row.createCell(7).setCellValue(alerta.getDiasParaVencer() != null ? alerta.getDiasParaVencer() : 0);
+        }
+
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
     }
 
     private AlertaLoteCalidadDTO mapAlerta(LoteProducto lote, TipoAlertaLoteCalidad tipo, LocalDate hoy) {
