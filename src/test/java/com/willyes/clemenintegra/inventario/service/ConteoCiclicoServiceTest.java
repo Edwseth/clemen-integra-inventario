@@ -640,6 +640,7 @@ class ConteoCiclicoServiceTest {
         Almacen almacen = new Almacen(10);
         Producto producto = new Producto();
         producto.setId(15);
+        producto.setCodigoSku("SKU-0015");
         LoteProducto lote = LoteProducto.builder()
                 .id(401L)
                 .producto(producto)
@@ -667,5 +668,6 @@ class ConteoCiclicoServiceTest {
 
         assertThat(response.getDetalles()).hasSize(1);
         assertThat(response.getDetalles().getFirst().getLoteCodigo()).isEqualTo("L-0401");
+        assertThat(response.getDetalles().getFirst().getCodigoSku()).isEqualTo("SKU-0015");
     }
 }

@@ -11,6 +11,7 @@ public class ConteoCiclicoDetalleResponseDTO {
     Long id;
     Long productoId;
     String productoNombre;
+    String codigoSku;
     Long loteProductoId;
     String loteCodigo;
     Long ubicacionFisicaId;
