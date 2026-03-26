@@ -27,7 +27,7 @@ public interface DetalleFormulaRepository extends JpaRepository<DetalleFormula, 
                         THEN CONCAT(CONCAT('V', f.versionMajor), CONCAT('.', f.versionMinor))
                     ELSE f.version
                 END,
-                f.estado.name,
+                f.estado,
                 f.activo,
                 p.id,
                 p.codigoSku,
@@ -51,7 +51,7 @@ public interface DetalleFormulaRepository extends JpaRepository<DetalleFormula, 
                         THEN CONCAT(CONCAT('V', f.versionMajor), CONCAT('.', f.versionMinor))
                     ELSE f.version
                 END,
-                f.estado.name,
+                f.estado,
                 f.activo,
                 p.id,
                 p.codigoSku,
