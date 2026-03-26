@@ -99,6 +99,13 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
     }
 
     public List<AlertaInventarioResponseDTO> obtenerAlertasInventario(Integer diasVencimiento) {
+        return obtenerAlertasInventario(diasVencimiento, null, null);
+    }
+
+    @Override
+    public List<AlertaInventarioResponseDTO> obtenerAlertasInventario(Integer diasVencimiento,
+                                                                      AlertaInventarioTipo tipo,
+                                                                      Long almacenId) {
         int diasUmbral = (diasVencimiento == null || diasVencimiento < 0) ? DIAS_VENCIMIENTO_POR_DEFECTO : diasVencimiento;
         LocalDateTime ahora = LocalDateTime.now(clock);
         LocalDateTime corteProximoVencer = ahora.plusDays(diasUmbral);
@@ -183,7 +190,10 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
             }
         }
 
-        return alertas;
+        return alertas.stream()
+                .filter(alerta -> tipo == null || alerta.getTipo() == tipo)
+                .filter(alerta -> almacenId == null || Objects.equals(alerta.getAlmacenId(), almacenId))
+                .toList();
     }
 
     private BigDecimal defaultBigDecimal(BigDecimal value) {
@@ -192,7 +202,14 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
 
     @Override
     public byte[] generarReporteAlertasInventarioExcel(Integer diasVencimiento) {
-        List<AlertaInventarioResponseDTO> alertas = obtenerAlertasInventario(diasVencimiento);
+        return generarReporteAlertasInventarioExcel(diasVencimiento, null, null);
+    }
+
+    @Override
+    public byte[] generarReporteAlertasInventarioExcel(Integer diasVencimiento,
+                                                       AlertaInventarioTipo tipo,
+                                                       Long almacenId) {
+        List<AlertaInventarioResponseDTO> alertas = obtenerAlertasInventario(diasVencimiento, tipo, almacenId);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         try (Workbook workbook = new XSSFWorkbook();

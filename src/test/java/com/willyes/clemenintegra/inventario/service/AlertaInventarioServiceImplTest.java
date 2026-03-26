@@ -11,6 +11,7 @@ import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.io.ByteArrayInputStream;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -163,6 +165,52 @@ class AlertaInventarioServiceImplTest {
                 .filteredOn(a -> a.getTipo() == AlertaInventarioTipo.LOTE_VENCIDO)
                 .singleElement()
                 .satisfies(alerta -> assertThat(alerta.getStockActual()).isEqualByComparingTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    @DisplayName("Filtra alertas activas por tipo y almacén")
+    void filtraAlertasPorTipoYAlmacen() {
+        when(loteProductoRepository.sumarStockParaAlertas()).thenReturn(List.of(
+                new StockRow(1L, "Producto A", "SKU-A", 10L, "Almacén 1",
+                        BigDecimal.valueOf(5), BigDecimal.valueOf(20), BigDecimal.valueOf(3)),
+                new StockRow(2L, "Producto B", "SKU-B", 11L, "Almacén 2",
+                        BigDecimal.valueOf(1), BigDecimal.valueOf(8), BigDecimal.valueOf(10))
+        ));
+        when(loteProductoRepository.listarLotesConVencimiento()).thenReturn(List.of(
+                new LoteRow(101L, "L-1", LocalDateTime.parse("2025-01-10T00:00:00"), 1L, "Producto A", "SKU-A",
+                        10L, "Almacén 1", BigDecimal.ONE),
+                new LoteRow(102L, "L-2", LocalDateTime.parse("2025-01-08T00:00:00"), 2L, "Producto B", "SKU-B",
+                        11L, "Almacén 2", BigDecimal.ONE)
+        ));
+
+        List<AlertaInventarioResponseDTO> alertas = service.obtenerAlertasInventario(30, AlertaInventarioTipo.LOTE_VENCIDO, 10L);
+
+        assertThat(alertas).hasSize(1);
+        assertThat(alertas.get(0).getTipo()).isEqualTo(AlertaInventarioTipo.LOTE_VENCIDO);
+        assertThat(alertas.get(0).getAlmacenId()).isEqualTo(10L);
+    }
+
+    @Test
+    @DisplayName("Exporta Excel de inventario aplicando filtro tipo=LOTE_VENCIDO")
+    void exportaExcelAplicandoFiltroTipo() throws Exception {
+        when(loteProductoRepository.sumarStockParaAlertas()).thenReturn(List.of(
+                new StockRow(1L, "Producto A", "SKU-A", 10L, "Almacén 1",
+                        BigDecimal.valueOf(5), BigDecimal.valueOf(20), BigDecimal.valueOf(3))
+        ));
+        when(loteProductoRepository.listarLotesConVencimiento()).thenReturn(List.of(
+                new LoteRow(101L, "L-1", LocalDateTime.parse("2025-01-10T00:00:00"), 1L, "Producto A", "SKU-A",
+                        10L, "Almacén 1", BigDecimal.ONE),
+                new LoteRow(102L, "L-2", LocalDateTime.parse("2025-01-20T00:00:00"), 1L, "Producto A", "SKU-A",
+                        10L, "Almacén 1", BigDecimal.ONE)
+        ));
+
+        byte[] excel = service.generarReporteAlertasInventarioExcel(30, AlertaInventarioTipo.LOTE_VENCIDO, null);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(excel))) {
+            var sheet = workbook.getSheet("Alertas Inventario");
+            assertThat(sheet.getPhysicalNumberOfRows()).isEqualTo(2);
+            assertThat(sheet.getRow(1).getCell(0).getStringCellValue()).isEqualTo("LOTE_VENCIDO");
+        }
     }
 
     @Test

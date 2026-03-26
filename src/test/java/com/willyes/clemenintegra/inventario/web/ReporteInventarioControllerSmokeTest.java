@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -113,7 +114,7 @@ class ReporteInventarioControllerSmokeTest extends BaseWebMvcSecurityTest {
     @Test
     @DisplayName("GET /api/reportes/alertas-inventario respeta diasVencimiento y devuelve adjunto")
     void alertasInventario_respetadiasVencimiento() throws Exception {
-        when(alertaInventarioService.generarReporteAlertasInventarioExcel(eq(15)))
+        when(alertaInventarioService.generarReporteAlertasInventarioExcel(eq(15), isNull(), isNull()))
                 .thenReturn("excel".getBytes());
 
         mockMvc.perform(get("/api/reportes/alertas-inventario")
@@ -122,6 +123,21 @@ class ReporteInventarioControllerSmokeTest extends BaseWebMvcSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=alertas_activas.xlsx"));
 
-        verify(alertaInventarioService).generarReporteAlertasInventarioExcel(15);
+        verify(alertaInventarioService).generarReporteAlertasInventarioExcel(15, null, null);
+    }
+
+    @Test
+    @DisplayName("GET /api/reportes/alertas-inventario reenvía filtros tipo y almacenId al export")
+    void alertasInventario_reenviaFiltros() throws Exception {
+        when(alertaInventarioService.generarReporteAlertasInventarioExcel(eq(30), eq(com.willyes.clemenintegra.inventario.dto.AlertaInventarioTipo.LOTE_VENCIDO), eq(7L)))
+                .thenReturn("excel".getBytes());
+
+        mockMvc.perform(get("/api/reportes/alertas-inventario")
+                        .with(TestAuth.auth("almacen", "INV_EXPORT"))
+                        .param("tipo", "LOTE_VENCIDO")
+                        .param("almacenId", "7"))
+                .andExpect(status().isOk());
+
+        verify(alertaInventarioService).generarReporteAlertasInventarioExcel(30, com.willyes.clemenintegra.inventario.dto.AlertaInventarioTipo.LOTE_VENCIDO, 7L);
     }
 }

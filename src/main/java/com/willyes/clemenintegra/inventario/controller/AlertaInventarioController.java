@@ -19,8 +19,10 @@ public class AlertaInventarioController {
     @GetMapping
     @PreAuthorize("hasAnyAuthority('INV_ALERTAS_READ')")
     public ResponseEntity<List<AlertaInventarioResponseDTO>> obtenerAlertas(
-            @RequestParam(value = "diasVencimiento", required = false, defaultValue = "30") Integer diasVencimiento) {
-        return ResponseEntity.ok(alertaService.obtenerAlertasInventario(diasVencimiento));
+            @RequestParam(value = "diasVencimiento", required = false, defaultValue = "30") Integer diasVencimiento,
+            @RequestParam(value = "tipo", required = false) AlertaInventarioTipo tipo,
+            @RequestParam(value = "almacenId", required = false) String almacenId) {
+        return ResponseEntity.ok(alertaService.obtenerAlertasInventario(diasVencimiento, tipo, parseAlmacenId(almacenId)));
     }
 
     @GetMapping("/stock-bajo")
@@ -40,5 +42,12 @@ public class AlertaInventarioController {
     @PreAuthorize("hasAnyAuthority('INV_ALERTAS_READ')")
     public ResponseEntity<List<LoteEstadoProlongadoResponseDTO>> obtenerLotesEnCuarentenaORetenidosProlongados() {
         return ResponseEntity.ok(alertaService.obtenerLotesRetenidosOCuarentenaProlongados());
+    }
+
+    private Long parseAlmacenId(String almacenId) {
+        if (almacenId == null || almacenId.isBlank()) {
+            return null;
+        }
+        return Long.valueOf(almacenId);
     }
 }
