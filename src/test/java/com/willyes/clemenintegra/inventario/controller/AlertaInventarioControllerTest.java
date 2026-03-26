@@ -21,6 +21,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -60,7 +61,7 @@ class AlertaInventarioControllerTest {
                 .fechaVencimiento(LocalDateTime.parse("2025-01-10T00:00:00"))
                 .mensaje("Stock actual 1 por debajo del mínimo 10")
                 .build();
-        when(alertaInventarioService.obtenerAlertasInventario(45)).thenReturn(List.of(dto));
+        when(alertaInventarioService.obtenerAlertasInventario(45, null, null)).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/api/inventario/alertas")
                         .param("diasVencimiento", "45")
@@ -72,7 +73,7 @@ class AlertaInventarioControllerTest {
                 .andExpect(jsonPath("$[0].umbral").value(10));
 
         ArgumentCaptor<Integer> diasCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(alertaInventarioService).obtenerAlertasInventario(diasCaptor.capture());
+        verify(alertaInventarioService).obtenerAlertasInventario(diasCaptor.capture(), isNull(), isNull());
         assertThat(diasCaptor.getValue()).isEqualTo(45);
     }
 }

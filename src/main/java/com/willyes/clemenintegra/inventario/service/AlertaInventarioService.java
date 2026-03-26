@@ -10,5 +10,11 @@ public interface AlertaInventarioService {
     List<LoteAlertaResponseDTO> obtenerLotesVencidos();
     List<LoteEstadoProlongadoResponseDTO> obtenerLotesRetenidosOCuarentenaProlongados();
     List<AlertaInventarioResponseDTO> obtenerAlertasInventario(Integer diasVencimiento);
+    List<AlertaInventarioResponseDTO> obtenerAlertasInventario(Integer diasVencimiento,
+                                                               AlertaInventarioTipo tipo,
+                                                               Long almacenId);
     byte[] generarReporteAlertasInventarioExcel(Integer diasVencimiento);
+    byte[] generarReporteAlertasInventarioExcel(Integer diasVencimiento,
+                                                AlertaInventarioTipo tipo,
+                                                Long almacenId);
 }

@@ -7,6 +7,7 @@ import com.willyes.clemenintegra.inventario.service.AlertaInventarioService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.InventarioGeneralCorteReportService;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.inventario.dto.AlertaInventarioTipo;
 import com.willyes.clemenintegra.inventario.dto.InventarioGeneralPreviewRowDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -245,8 +246,10 @@ public class ReporteInventarioController {
     @GetMapping("/alertas-inventario")
     @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT')")
     public ResponseEntity<byte[]> exportarAlertasInventario(
-            @RequestParam(value = "diasVencimiento", required = false, defaultValue = "30") Integer diasVencimiento) {
-        byte[] stream = alertaInventarioService.generarReporteAlertasInventarioExcel(diasVencimiento);
+            @RequestParam(value = "diasVencimiento", required = false, defaultValue = "30") Integer diasVencimiento,
+            @RequestParam(value = "tipo", required = false) AlertaInventarioTipo tipo,
+            @RequestParam(value = "almacenId", required = false) String almacenId) {
+        byte[] stream = alertaInventarioService.generarReporteAlertasInventarioExcel(diasVencimiento, tipo, parseAlmacenId(almacenId));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=alertas_activas.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
@@ -387,6 +390,13 @@ public class ReporteInventarioController {
         } catch (DateTimeParseException ex) {
             return null;
         }
+    }
+
+    private Long parseAlmacenId(String almacenId) {
+        if (almacenId == null || almacenId.isBlank()) {
+            return null;
+        }
+        return Long.valueOf(almacenId);
     }
 
     @GetMapping(value = "/movimientos", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
