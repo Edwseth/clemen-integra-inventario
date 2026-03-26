@@ -1,5 +1,7 @@
 package com.willyes.clemenintegra.bom.dto;
 
+import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
+
 public class FormulaImpactoReferenciaDTO {
     public Long formulaId;
     public String formulaVersion;
@@ -11,14 +13,14 @@ public class FormulaImpactoReferenciaDTO {
 
     public FormulaImpactoReferenciaDTO(Long formulaId,
                                        String formulaVersion,
-                                       String formulaEstado,
+                                       EstadoFormula formulaEstado,
                                        Boolean formulaActivo,
                                        Integer productoId,
                                        String productoSku,
                                        String productoNombre) {
         this.formulaId = formulaId;
         this.formulaVersion = formulaVersion;
-        this.formulaEstado = formulaEstado;
+        this.formulaEstado = formulaEstado != null ? formulaEstado.name() : null;
         this.formulaActivo = formulaActivo;
         this.productoId = productoId != null ? productoId.longValue() : null;
         this.productoSku = productoSku;
