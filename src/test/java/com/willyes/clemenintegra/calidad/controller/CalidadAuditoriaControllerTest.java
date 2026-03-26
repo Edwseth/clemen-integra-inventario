@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.calidad.controller;
 import com.willyes.clemenintegra.calidad.dto.AuditoriaLoteResponseDTO;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.AuditoriaLoteService;
+import com.willyes.clemenintegra.calidad.service.AlertasCalidadService;
 import com.willyes.clemenintegra.calidad.service.CarpetaLotePdfService;
 import com.willyes.clemenintegra.calidad.service.EvaluacionCalidadService;
 import com.willyes.clemenintegra.calidad.service.ReporteInvimaBpmPdfService;
@@ -43,6 +44,8 @@ class CalidadAuditoriaControllerTest {
     private CarpetaLotePdfService carpetaLotePdfService;
     @MockBean
     private EvaluacionCalidadService evaluacionCalidadService;
+    @MockBean
+    private AlertasCalidadService alertasCalidadService;
     @MockBean
     private ReporteInvimaBpmPdfService reporteInvimaBpmPdfService;
     @MockBean

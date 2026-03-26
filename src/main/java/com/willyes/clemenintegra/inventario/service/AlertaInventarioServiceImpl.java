@@ -13,13 +13,19 @@ import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.service.StockQueryService;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -182,6 +188,50 @@ public class AlertaInventarioServiceImpl implements AlertaInventarioService {
 
     private BigDecimal defaultBigDecimal(BigDecimal value) {
         return Objects.requireNonNullElse(value, BigDecimal.ZERO);
+    }
+
+    @Override
+    public byte[] generarReporteAlertasInventarioExcel(Integer diasVencimiento) {
+        List<AlertaInventarioResponseDTO> alertas = obtenerAlertasInventario(diasVencimiento);
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Alertas Inventario");
+            String[] headers = {
+                    "Tipo Alerta", "Severidad", "SKU", "Producto", "Almacén",
+                    "Código Lote", "Fecha Vencimiento", "Stock Actual", "Umbral", "Mensaje"
+            };
+
+            Row header = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                header.createCell(i).setCellValue(headers[i]);
+            }
+
+            int rowIdx = 1;
+            for (AlertaInventarioResponseDTO alerta : alertas) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(alerta.getTipo() != null ? alerta.getTipo().name() : "");
+                row.createCell(1).setCellValue(alerta.getSeveridad() != null ? alerta.getSeveridad().name() : "");
+                row.createCell(2).setCellValue(alerta.getCodigoSku() != null ? alerta.getCodigoSku() : "");
+                row.createCell(3).setCellValue(alerta.getNombreProducto() != null ? alerta.getNombreProducto() : "");
+                row.createCell(4).setCellValue(alerta.getNombreAlmacen() != null ? alerta.getNombreAlmacen() : "");
+                row.createCell(5).setCellValue(alerta.getCodigoLote() != null ? alerta.getCodigoLote() : "");
+                row.createCell(6).setCellValue(alerta.getFechaVencimiento() != null ? alerta.getFechaVencimiento().format(dtf) : "");
+                row.createCell(7).setCellValue(alerta.getStockActual() != null ? alerta.getStockActual().toPlainString() : "");
+                row.createCell(8).setCellValue(alerta.getUmbral() != null ? alerta.getUmbral().toPlainString() : "");
+                row.createCell(9).setCellValue(alerta.getMensaje() != null ? alerta.getMensaje() : "");
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new IllegalStateException("No se pudo generar el Excel de alertas de inventario", e);
+        }
     }
 
     void setClock(Clock clock) {

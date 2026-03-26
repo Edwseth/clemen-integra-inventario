@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.willyes.clemenintegra.inventario.service.ReporteInventarioService;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.inventario.service.LoteProductoService;
+import com.willyes.clemenintegra.inventario.service.AlertaInventarioService;
 import com.willyes.clemenintegra.inventario.service.MovimientoInventarioService;
 import com.willyes.clemenintegra.inventario.service.InventarioGeneralCorteReportService;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
@@ -48,6 +49,7 @@ public class ReporteInventarioController {
     private final ReporteInventarioService service;
     private final ProductoService productoService;
     private final LoteProductoService loteProductoService;
+    private final AlertaInventarioService alertaInventarioService;
     private final MovimientoInventarioService movimientoService;
     private final InventarioGeneralCorteReportService inventarioGeneralCorteReportService;
     private final ProductoRepository productoRepository;
@@ -242,12 +244,13 @@ public class ReporteInventarioController {
 
     @GetMapping("/alertas-inventario")
     @PreAuthorize("hasAnyAuthority('INV_EXPORT','INV_REPORTES_EXPORT')")
-    public ResponseEntity<byte[]> exportarAlertasInventario() {
-        ByteArrayOutputStream stream = loteProductoService.generarReporteAlertasActivasExcel();
+    public ResponseEntity<byte[]> exportarAlertasInventario(
+            @RequestParam(value = "diasVencimiento", required = false, defaultValue = "30") Integer diasVencimiento) {
+        byte[] stream = alertaInventarioService.generarReporteAlertasInventarioExcel(diasVencimiento);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=alertas_activas.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(stream.toByteArray());
+                .body(stream);
     }
 
 
