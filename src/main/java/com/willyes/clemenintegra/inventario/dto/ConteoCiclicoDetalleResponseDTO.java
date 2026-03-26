@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 public class ConteoCiclicoDetalleResponseDTO {
     Long id;
     Long productoId;
+    String productoNombre;
     Long loteProductoId;
     String loteCodigo;
     Long ubicacionFisicaId;

@@ -3,6 +3,7 @@ package com.willyes.clemenintegra.inventario.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoLoteResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoRequestDTO;
+import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoDetalleResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResponseDTO;
 import com.willyes.clemenintegra.inventario.dto.ConteoCiclicoResumenResponseDTO;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoConteoCiclico;
@@ -75,16 +76,24 @@ class ConteoCiclicoControllerTest extends BaseWebMvcSecurityTest {
     @Test
     @WithTestSuperAdmin
     void obtenerPorIdDevuelve200() throws Exception {
+        ConteoCiclicoDetalleResponseDTO detalle = ConteoCiclicoDetalleResponseDTO.builder()
+                .id(100L)
+                .productoId(501L)
+                .productoNombre("Azúcar Refinada")
+                .build();
         ConteoCiclicoResponseDTO response = ConteoCiclicoResponseDTO.builder()
                 .id(15L)
                 .almacenId(2)
                 .estado(EstadoConteoCiclico.EN_CONTEO)
+                .detalles(List.of(detalle))
                 .build();
         when(conteoCiclicoService.obtenerPorId(15L)).thenReturn(response);
 
         mockMvc.perform(get("/api/inventario/conteos/15"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("EN_CONTEO"));
+                .andExpect(jsonPath("$.estado").value("EN_CONTEO"))
+                .andExpect(jsonPath("$.detalles[0].productoId").value(501))
+                .andExpect(jsonPath("$.detalles[0].productoNombre").value("Azúcar Refinada"));
     }
 
 
