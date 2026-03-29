@@ -18,6 +18,7 @@ public interface PlanProduccionSemanalRepository extends JpaRepository<PlanProdu
             "creadoPor",
             "detalles",
             "detalles.producto",
+            "detalles.producto.unidadMedida",
             "detalles.unidadMedida"
     })
     Optional<PlanProduccionSemanal> findWithDetallesById(Long id);

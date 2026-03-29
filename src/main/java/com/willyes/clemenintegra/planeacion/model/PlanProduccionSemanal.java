@@ -48,6 +48,9 @@ public class PlanProduccionSemanal {
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
+    @Column(name = "fecha_confirmacion")
+    private LocalDateTime fechaConfirmacion;
+
     @Builder.Default
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PlanProduccionDetalle> detalles = new ArrayList<>();
