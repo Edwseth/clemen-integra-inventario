@@ -188,6 +188,7 @@ class PlanProduccionControllerIntegrationTest extends IntegrationTestMySqlContai
         mockMvc.perform(get("/api/planeacion/planes-semanales/{id}", plan.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.detalles[0].producto.id").value(producto.getId().longValue()))
+                .andExpect(jsonPath("$.detalles[0].producto.unidadMedida").value(producto.getUnidadMedida().getSimbolo()))
                 .andExpect(jsonPath("$.detalles[0].unidadMedida.id").value(producto.getUnidadMedida().getId()));
     }
 
@@ -225,5 +226,55 @@ class PlanProduccionControllerIntegrationTest extends IntegrationTestMySqlContai
 
         PlanProduccionSemanal confirmado = planProduccionSemanalRepository.findById(plan.getId()).orElseThrow();
         assertThat(confirmado.getEstado()).isEqualTo(EstadoPlanProduccion.CONFIRMADO);
+        assertThat(confirmado.getFechaConfirmacion()).isNotNull();
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void listarPlanesIncluyeFechaConfirmacion() throws Exception {
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .semanaInicio(LocalDate.now())
+                .semanaFin(LocalDate.now().plusDays(6))
+                .estado(EstadoPlanProduccion.CONFIRMADO)
+                .creadoPor(usuario)
+                .fechaConfirmacion(LocalDateTime.now().withNano(0))
+                .build();
+        planProduccionSemanalRepository.save(plan);
+
+        mockMvc.perform(get("/api/planeacion/planes-semanales"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].fechaConfirmacion").isNotEmpty());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void crearPlanDerivaUnidadDesdeProductoCuandoNoLlegaEnRequest() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "semanaInicio", "2024-11-04",
+                "semanaFin", "2024-11-10",
+                "detalles", List.of(
+                        Map.of(
+                                "productoId", producto.getId().longValue(),
+                                "cantidadPlanificada", 12,
+                                "prioridad", 1,
+                                "origenDemanda", "Test",
+                                "observacion", "Sin unidad en request"
+                        )
+                )
+        );
+
+        mockMvc.perform(post("/api/planeacion/planes-semanales")
+                        .with(SecurityMockMvcRequestPostProcessors.user(new CustomUserDetails(usuario)))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.detalles[0].unidadMedidaId").value(producto.getUnidadMedida().getId()))
+                .andExpect(jsonPath("$.detalles[0].unidadMedida.id").value(producto.getUnidadMedida().getId()))
+                .andExpect(jsonPath("$.detalles[0].producto.unidadMedida").value(producto.getUnidadMedida().getSimbolo()));
+
+        List<PlanProduccionDetalle> detalles = planProduccionDetalleRepository.findAll();
+        assertThat(detalles).hasSize(1);
+        assertThat(detalles.getFirst().getUnidadMedida()).isNotNull();
+        assertThat(detalles.getFirst().getUnidadMedida().getId()).isEqualTo(producto.getUnidadMedida().getId());
     }
 }

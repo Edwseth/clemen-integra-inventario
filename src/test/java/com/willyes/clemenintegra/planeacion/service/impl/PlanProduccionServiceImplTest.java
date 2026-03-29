@@ -5,6 +5,7 @@ import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.repository.PlanProduccionSemanalRepository;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +36,8 @@ class PlanProduccionServiceImplTest {
 
     @Mock
     private PlanProduccionSemanalRepository planProduccionSemanalRepository;
+    @Mock
+    private ProductoRepository productoRepository;
 
     @InjectMocks
     private PlanProduccionServiceImpl service;
@@ -105,6 +109,25 @@ class PlanProduccionServiceImplTest {
         PlanProduccionSemanal confirmado = service.confirmar(20L);
 
         assertEquals(EstadoPlanProduccion.CONFIRMADO, confirmado.getEstado());
+        assertNotNull(confirmado.getFechaConfirmacion());
+    }
+
+    @Test
+    void confirmarConFechaExistenteLaConserva() {
+        LocalDateTime fechaOriginal = LocalDateTime.of(2026, 3, 1, 10, 30);
+        PlanProduccionSemanal existente = PlanProduccionSemanal.builder()
+                .id(21L)
+                .estado(EstadoPlanProduccion.BORRADOR)
+                .fechaConfirmacion(fechaOriginal)
+                .build();
+
+        when(planProduccionSemanalRepository.findWithDetallesById(21L)).thenReturn(Optional.of(existente));
+        when(planProduccionSemanalRepository.save(any(PlanProduccionSemanal.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PlanProduccionSemanal confirmado = service.confirmar(21L);
+
+        assertEquals(fechaOriginal, confirmado.getFechaConfirmacion());
     }
 
     @Test
@@ -201,6 +224,7 @@ class PlanProduccionServiceImplTest {
                 .semanaInicio(LocalDate.of(2024, 2, 5))
                 .semanaFin(LocalDate.of(2024, 2, 11))
                 .estado(EstadoPlanProduccion.CONFIRMADO)
+                .fechaConfirmacion(LocalDateTime.of(2026, 3, 29, 9, 0))
                 .build();
 
         when(planProduccionSemanalRepository.buscarPorFiltros(any(), any(), any(), any(Pageable.class)))
@@ -211,6 +235,25 @@ class PlanProduccionServiceImplTest {
         ArgumentCaptor<EstadoPlanProduccion> estadoCaptor = ArgumentCaptor.forClass(EstadoPlanProduccion.class);
         verify(planProduccionSemanalRepository).buscarPorFiltros(eq(null), eq(null), estadoCaptor.capture(), any(Pageable.class));
         assertEquals(EstadoPlanProduccion.CONFIRMADO, estadoCaptor.getValue());
+    }
+
+    @Test
+    void listarIncluyeFechaConfirmacionReal() {
+        LocalDateTime fechaConfirmacion = LocalDateTime.of(2026, 3, 29, 8, 45);
+        PlanProduccionSemanal planConfirmado = PlanProduccionSemanal.builder()
+                .id(31L)
+                .semanaInicio(LocalDate.of(2026, 3, 23))
+                .semanaFin(LocalDate.of(2026, 3, 29))
+                .estado(EstadoPlanProduccion.CONFIRMADO)
+                .fechaConfirmacion(fechaConfirmacion)
+                .build();
+
+        when(planProduccionSemanalRepository.buscarPorFiltros(any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(planConfirmado)));
+
+        Page<PlanProduccionResumenDTO> resultado = service.listar(null, null, null, PageRequest.of(0, 1));
+
+        assertEquals(fechaConfirmacion, resultado.getContent().get(0).getFechaConfirmacion());
     }
 
     @Test

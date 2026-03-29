@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.planeacion.service.impl;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionSemanalDTO;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
@@ -29,6 +30,7 @@ import java.util.Optional;
 public class PlanProduccionServiceImpl implements PlanProduccionService {
 
     private final PlanProduccionSemanalRepository planProduccionSemanalRepository;
+    private final ProductoRepository productoRepository;
 
     @Override
     public PlanProduccionSemanal crearOActualizar(PlanProduccionSemanalDTO dto) {
@@ -64,11 +66,16 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
         plan.getDetalles().clear();
         if (dto.getDetalles() != null) {
             dto.getDetalles().forEach(detalleDTO -> {
+                Long productoId = detalleDTO.getProductoId();
+                Producto producto = productoId != null
+                        ? productoRepository.findById(productoId.intValue()).orElse(new Producto(productoId.intValue()))
+                        : null;
+                Long unidadMedidaId = resolveUnidadMedidaId(detalleDTO, producto);
                 PlanProduccionDetalle detalle = PlanProduccionDetalle.builder()
                         .plan(plan)
-                        .producto(detalleDTO.getProductoId() != null ? new Producto(detalleDTO.getProductoId().intValue()) : null)
+                        .producto(producto)
                         .cantidadPlanificada(detalleDTO.getCantidadPlanificada())
-                        .unidadMedida(detalleDTO.getUnidadMedidaId() != null ? new UnidadMedida(detalleDTO.getUnidadMedidaId()) : null)
+                        .unidadMedida(unidadMedidaId != null ? new UnidadMedida(unidadMedidaId) : null)
                         .prioridad(detalleDTO.getPrioridad())
                         .origenDemanda(detalleDTO.getOrigenDemanda())
                         .observacion(detalleDTO.getObservacion())
@@ -94,6 +101,9 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
             throw new IllegalStateException("Solo los planes en BORRADOR pueden confirmarse");
         }
         plan.setEstado(EstadoPlanProduccion.CONFIRMADO);
+        if (plan.getFechaConfirmacion() == null) {
+            plan.setFechaConfirmacion(LocalDateTime.now());
+        }
         return planProduccionSemanalRepository.save(plan);
     }
 
@@ -145,7 +155,17 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
                 .estado(plan.getEstado())
                 .creadoPorNombre(creadoPorNombre)
                 .fechaCreacion(plan.getFechaCreacion())
-                .fechaConfirmacion(null)
+                .fechaConfirmacion(plan.getFechaConfirmacion())
                 .build();
+    }
+
+    private Long resolveUnidadMedidaId(PlanProduccionSemanalDTO.PlanProduccionDetalleDTO detalleDTO, Producto producto) {
+        if (detalleDTO.getUnidadMedidaId() != null) {
+            return detalleDTO.getUnidadMedidaId();
+        }
+        if (producto != null && producto.getUnidadMedida() != null) {
+            return producto.getUnidadMedida().getId();
+        }
+        return null;
     }
 }

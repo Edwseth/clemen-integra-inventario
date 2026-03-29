@@ -96,10 +96,18 @@ public class PlanProduccionController {
         UnidadMedida unidad = detalle.getUnidadMedida();
         ProductoResumenDTO productoDto = null;
         if (producto != null) {
+            String unidadProducto = null;
+            if (producto.getUnidadMedida() != null) {
+                String simbolo = producto.getUnidadMedida().getSimbolo();
+                unidadProducto = (simbolo != null && !simbolo.isBlank())
+                        ? simbolo
+                        : producto.getUnidadMedida().getNombre();
+            }
             productoDto = ProductoResumenDTO.builder()
                     .id(producto.getId() != null ? producto.getId().longValue() : null)
                     .codigoSku(producto.getCodigoSku())
                     .nombre(producto.getNombre())
+                    .unidadMedida(unidadProducto)
                     .build();
         }
 
