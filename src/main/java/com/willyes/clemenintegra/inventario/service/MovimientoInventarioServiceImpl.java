@@ -3355,6 +3355,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             nuevo.setTemperaturaAlmacenamiento(loteOrigen.getTemperaturaAlmacenamiento());
             nuevo.setLoteOrigen(loteOrigen);
             nuevo.setOrdenProduccion(loteOrigen.getOrdenProduccion());
+            nuevo.setCostoUnitarioMaterial(loteOrigen.getCostoUnitarioMaterial());
+            nuevo.setCostoTotalMaterialIngresado(loteOrigen.getCostoTotalMaterialIngresado());
+            nuevo.setTotalIngresadoMaterial(loteOrigen.getTotalIngresadoMaterial());
             // NO copiar stock: se ajustará por el movimiento
             nuevo.setStockLote(BigDecimal.ZERO);
             nuevo.setStockReservado(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING));
