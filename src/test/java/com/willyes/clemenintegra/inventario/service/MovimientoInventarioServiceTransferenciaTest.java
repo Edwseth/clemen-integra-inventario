@@ -1124,6 +1124,14 @@ class MovimientoInventarioServiceTransferenciaTest {
         given(productoRepository.findById(producto.getId().longValue())).willReturn(Optional.of(producto));
         given(tipoMovimientoDetalleRepository.findById(5L)).willReturn(Optional.of(new TipoMovimientoDetalle()));
         given(loteProductoRepository.findByIdForUpdate(lote.getId())).willReturn(Optional.of(lote));
+        MotivoMovimiento motivoTransferencia = new MotivoMovimiento();
+        motivoTransferencia.setId(5L);
+        motivoTransferencia.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        lenient().when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL))
+                .thenReturn(Optional.of(motivoTransferencia));
+        lenient().when(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION))
+                .thenReturn(Optional.of(motivoTransferencia));
+        lenient().when(motivoMovimientoRepository.findById(5L)).thenReturn(Optional.of(motivoTransferencia));
         lenient().when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
                 lote.getCodigoLote(), producto.getId(), 6)).thenReturn(Optional.empty());
         lenient().when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
@@ -1137,6 +1145,16 @@ class MovimientoInventarioServiceTransferenciaTest {
                 .thenAnswer(invocation -> {
                     Object id = invocation.getArgument(1);
                     return new Almacen(id instanceof Integer ? (Integer) id : ((Long) id).intValue());
+                });
+        lenient().when(mapper.toEntity(any(MovimientoInventarioDTO.class)))
+                .thenAnswer(invocation -> {
+                    MovimientoInventarioDTO dto = invocation.getArgument(0);
+                    MovimientoInventario movimiento = new MovimientoInventario();
+                    movimiento.setTipoMovimiento(dto.tipoMovimiento());
+                    movimiento.setClasificacion(dto.clasificacionMovimientoInventario());
+                    movimiento.setCantidad(dto.cantidad());
+                    movimiento.setDocReferencia(dto.docReferencia());
+                    return movimiento;
                 });
         lenient().when(catalogResolver.decimals(any())).thenReturn(2);
     }
