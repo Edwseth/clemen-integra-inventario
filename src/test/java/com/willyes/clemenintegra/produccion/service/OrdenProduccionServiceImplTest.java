@@ -135,6 +135,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private VidaUtilProductoService vidaUtilProductoService;
     @Mock private ReservaLoteService reservaLoteService;
     @Mock private ReservaLoteRepository reservaLoteRepository;
+    @Mock private LoteCalidadValidator loteCalidadValidator;
     @Mock private DisponibilidadInsumoService disponibilidadInsumoService;
     @Mock private ChecklistEtapaService checklistEtapaService;
     @Mock private CosteoProduccionService costeoProduccionService;
@@ -180,6 +181,7 @@ class OrdenProduccionServiceImplTest {
         lenient().when(catalogResolver.getTipoDetalleSalidaId()).thenReturn(11L);
         lenient().when(catalogResolver.getMotivoSalidaProduccionId()).thenReturn(11L);
         lenient().when(catalogResolver.getAlmacenPreBodegaProduccionId()).thenReturn(6L);
+        lenient().doNothing().when(loteCalidadValidator).validarVencimientoTiempoReal(any(LoteProducto.class));
         lenient().when(loteConsecutivoDiaService.obtenerSiguienteConsecutivo(any(LocalDate.class))).thenReturn(1);
         TipoMovimientoDetalle tipoSalida = new TipoMovimientoDetalle();
         tipoSalida.setId(11L);

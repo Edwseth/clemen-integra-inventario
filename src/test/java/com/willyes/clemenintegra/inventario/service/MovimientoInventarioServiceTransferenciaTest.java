@@ -44,6 +44,7 @@ import java.util.Optional;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -290,7 +291,7 @@ class MovimientoInventarioServiceTransferenciaTest {
     }
 
     @Test
-    void transferenciaCuarentenaABodegaPtSinUbicacionConUbicacionesActivasFalla422() {
+    void transferenciaCuarentenaABodegaPtSinUbicacionConUbicacionesActivasPermiteFlujoNormalizado() {
         Producto producto = crearProducto(19, 2);
         LoteProducto lote = crearLote(140L, producto, 1, EstadoLote.LIBERADO,
                 new BigDecimal("2000"), BigDecimal.ZERO, false);
@@ -332,9 +333,8 @@ class MovimientoInventarioServiceTransferenciaTest {
         given(catalogResolver.getAlmacenPtId()).willReturn(6L);
         given(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(6)).willReturn(true);
 
-        assertThatThrownBy(() -> service.registrarMovimiento(dto))
-                .isInstanceOfSatisfying(CustomBusinessException.class, ex ->
-                        assertThat(ex.getCode()).isEqualTo(ApiErrorCode.UBICACION_DESTINO_REQUERIDA));
+        assertThatCode(() -> service.registrarMovimiento(dto))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -972,8 +972,8 @@ class MovimientoInventarioServiceTransferenciaTest {
 
         MotivoMovimiento motivo = new MotivoMovimiento();
         motivo.setId(5L);
-        motivo.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
-        given(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL))
+        motivo.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
+        given(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION))
                 .willReturn(Optional.of(motivo));
         given(motivoMovimientoRepository.findById(5L)).willReturn(Optional.of(motivo));
 
@@ -991,7 +991,7 @@ class MovimientoInventarioServiceTransferenciaTest {
         verify(movimientoInventarioRepository).save(captor.capture());
         assertThat(captor.getValue().getMotivoMovimiento()).isNotNull();
         assertThat(captor.getValue().getMotivoMovimiento().getId()).isEqualTo(5L);
-        verify(motivoMovimientoRepository).findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        verify(motivoMovimientoRepository).findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_INTERNA_PRODUCCION);
     }
 
     @Test
