@@ -190,6 +190,30 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
     }
 
     @Test
+    void devolucionDesdeProduccion_sincronizaCostoEnDestinoExistenteCuandoEstaIncompleto() {
+        Producto producto = crearProducto(333, "ME0333");
+        LoteProducto loteOrigen = crearLote(4333L, producto, "03A-0003", PRE_BODEGA_ID, "5", EstadoLote.LIBERADO, false);
+        loteOrigen.setCostoUnitarioMaterial(new BigDecimal("11.500000"));
+        loteOrigen.setCostoTotalMaterialIngresado(new BigDecimal("57.500000"));
+        loteOrigen.setTotalIngresadoMaterial(new BigDecimal("5.000000"));
+        LoteProducto loteDestino = crearLote(2333L, producto, "03A-0003", PRINCIPAL_EMPAQUE_ID, "10", EstadoLote.LIBERADO, false);
+        loteDestino.setCostoUnitarioMaterial(null);
+        loteDestino.setCostoTotalMaterialIngresado(BigDecimal.ZERO.setScale(6));
+        loteDestino.setTotalIngresadoMaterial(null);
+
+        stubMovimientoBase(producto);
+        given(loteProductoRepository.findByIdForUpdate(4333L)).willReturn(Optional.of(loteOrigen));
+        given(loteProductoRepository.findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(producto.getId(), "03A-0003", (int) PRINCIPAL_EMPAQUE_ID))
+                .willReturn(Optional.of(loteDestino));
+
+        service.registrarMovimiento(construirDto(producto.getId(), 4333L, "5"));
+
+        assertThat(loteDestino.getCostoUnitarioMaterial()).isEqualByComparingTo(new BigDecimal("11.500000"));
+        assertThat(loteDestino.getCostoTotalMaterialIngresado()).isEqualByComparingTo(new BigDecimal("57.500000"));
+        assertThat(loteDestino.getTotalIngresadoMaterial()).isEqualByComparingTo(new BigDecimal("5.000000"));
+    }
+
+    @Test
     void devolucionDesdeProduccion_creaLoteDestinoSiNoExiste_yLoAcredita() {
         Producto producto = crearProducto(222, "ME0999");
         LoteProducto loteOrigen = crearLote(3999L, producto, "09Z-0003", PRE_BODEGA_ID, "7", EstadoLote.LIBERADO, false);
@@ -212,6 +236,33 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
                 .orElseThrow();
         assertThat(loteCreadoDestino.getCodigoLote()).isEqualTo("09Z-0003");
         assertThat(loteCreadoDestino.getStockLote()).isEqualByComparingTo("7");
+        assertThat(loteCreadoDestino.getCostoUnitarioMaterial()).isNull();
+    }
+
+    @Test
+    void devolucionDesdeProduccion_creaLoteDestinoConContinuidadDeCostosDesdeOrigen() {
+        Producto producto = crearProducto(444, "ME0444");
+        LoteProducto loteOrigen = crearLote(4444L, producto, "04B-0004", PRE_BODEGA_ID, "6", EstadoLote.LIBERADO, false);
+        loteOrigen.setCostoUnitarioMaterial(new BigDecimal("9.250000"));
+        loteOrigen.setCostoTotalMaterialIngresado(new BigDecimal("55.500000"));
+        loteOrigen.setTotalIngresadoMaterial(new BigDecimal("6.000000"));
+
+        stubMovimientoBase(producto);
+        given(loteProductoRepository.findByIdForUpdate(4444L)).willReturn(Optional.of(loteOrigen));
+        given(loteProductoRepository.findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(producto.getId(), "04B-0004", (int) PRINCIPAL_EMPAQUE_ID))
+                .willReturn(Optional.empty());
+
+        service.registrarMovimiento(construirDto(producto.getId(), 4444L, "6"));
+
+        ArgumentCaptor<LoteProducto> saveCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository, org.mockito.Mockito.atLeast(2)).saveAndFlush(saveCaptor.capture());
+        LoteProducto loteCreadoDestino = saveCaptor.getAllValues().stream()
+                .filter(l -> l.getAlmacen() != null && Integer.valueOf((int) PRINCIPAL_EMPAQUE_ID).equals(l.getAlmacen().getId()))
+                .reduce((first, second) -> second)
+                .orElseThrow();
+        assertThat(loteCreadoDestino.getCostoUnitarioMaterial()).isEqualByComparingTo(new BigDecimal("9.250000"));
+        assertThat(loteCreadoDestino.getCostoTotalMaterialIngresado()).isEqualByComparingTo(new BigDecimal("55.500000"));
+        assertThat(loteCreadoDestino.getTotalIngresadoMaterial()).isEqualByComparingTo(new BigDecimal("6.000000"));
     }
 
     private void stubMovimientoBase(Producto producto) {
