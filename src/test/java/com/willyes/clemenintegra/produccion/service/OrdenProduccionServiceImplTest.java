@@ -262,6 +262,34 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("generarCodigoOrden mantiene formato histórico antes del 2026-04-01")
+    void generarCodigoOrden_formatoHistorico_antesDeFechaCorte() {
+        LocalDate fecha = LocalDate.of(2026, 3, 31);
+        String prefijo = "OP-CLEMEN-20260331";
+        when(ordenProduccionRepository.findCodigosByPrefijo(prefijo))
+                .thenReturn(List.of(prefijo + "-01"));
+
+        String codigo = ReflectionTestUtils.invokeMethod(service, "generarCodigoOrden", fecha);
+
+        assertThat(codigo).isEqualTo(prefijo + "-02");
+        verify(ordenProduccionRepository).findCodigosByPrefijo(prefijo);
+    }
+
+    @Test
+    @DisplayName("generarCodigoOrden usa formato nuevo desde el 2026-04-01")
+    void generarCodigoOrden_formatoNuevo_desdeFechaCorte() {
+        LocalDate fecha = LocalDate.of(2026, 4, 1);
+        String prefijo = "OP-20260401";
+        when(ordenProduccionRepository.findCodigosByPrefijo(prefijo))
+                .thenReturn(List.of(prefijo + "-02", prefijo + "-09"));
+
+        String codigo = ReflectionTestUtils.invokeMethod(service, "generarCodigoOrden", fecha);
+
+        assertThat(codigo).isEqualTo(prefijo + "-10");
+        verify(ordenProduccionRepository).findCodigosByPrefijo(prefijo);
+    }
+
+    @Test
     @DisplayName("guardarConValidacionStock retorna faltantes y max producible cuando stock es insuficiente")
     void guardarConValidacionStock_retornaFaltantes() {
         Producto producto = new Producto();

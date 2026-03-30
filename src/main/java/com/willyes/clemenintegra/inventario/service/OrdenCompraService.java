@@ -39,6 +39,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class OrdenCompraService {
 
+    private static final LocalDate FECHA_CAMBIO_CODIGO_ORDEN = LocalDate.of(2026, 4, 1);
+
     private final OrdenCompraRepository ordenCompraRepository;
     private final HistorialEstadoOrdenRepository historialEstadoOrdenRepository;
     private final OcServicioEjecucionRepository ocServicioEjecucionRepository;
@@ -76,8 +78,13 @@ public class OrdenCompraService {
     }
 
     public String generarCodigoOrdenCompra() {
-        String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String prefijo = "OC-CLEMEN-" + fecha;
+        return generarCodigoOrdenCompra(LocalDate.now());
+    }
+
+    String generarCodigoOrdenCompra(LocalDate fechaActual) {
+        String fecha = fechaActual.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefijoBase = fechaActual.isBefore(FECHA_CAMBIO_CODIGO_ORDEN) ? "OC-CLEMEN-" : "OC-";
+        String prefijo = prefijoBase + fecha;
         Long contador = ordenCompraRepository.countByCodigoOrdenStartingWith(prefijo);
         return prefijo + "-" + String.format("%02d", contador + 1);
     }
