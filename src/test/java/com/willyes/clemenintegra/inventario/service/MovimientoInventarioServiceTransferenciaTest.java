@@ -1058,6 +1058,120 @@ class MovimientoInventarioServiceTransferenciaTest {
     }
 
     @Test
+    void transferenciaSincronizaCostoEnDestinoExistenteCuandoEstaIncompleto() {
+        Producto producto = crearProducto(602, 2);
+        LoteProducto loteOrigen = crearLote(5602L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("10.000000"), BigDecimal.ZERO.setScale(6), false);
+        loteOrigen.setCostoUnitarioMaterial(new BigDecimal("12.000000"));
+        loteOrigen.setCostoTotalMaterialIngresado(new BigDecimal("120.000000"));
+        loteOrigen.setTotalIngresadoMaterial(new BigDecimal("10.000000"));
+
+        LoteProducto loteDestinoExistente = crearLote(6602L, producto, 6, EstadoLote.LIBERADO,
+                new BigDecimal("1.000000"), BigDecimal.ZERO.setScale(6), false);
+        loteDestinoExistente.setCodigoLote(loteOrigen.getCodigoLote());
+        loteDestinoExistente.setCostoUnitarioMaterial(BigDecimal.ZERO.setScale(6));
+        loteDestinoExistente.setCostoTotalMaterialIngresado(null);
+        loteDestinoExistente.setTotalIngresadoMaterial(BigDecimal.ZERO.setScale(6));
+
+        MovimientoInventarioDTO dto = buildTransferenciaDTO(
+                new BigDecimal("2.000000"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                "DOC-COSTO-TR-EXISTE-INCOMPLETO",
+                producto.getId(),
+                loteOrigen.getId(),
+                1,
+                6,
+                5L,
+                5L,
+                null,
+                loteOrigen.getCodigoLote()
+        );
+
+        configurarMocksBasicos(producto, loteOrigen);
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                loteOrigen.getCodigoLote(), producto.getId(), 6)).willReturn(Optional.of(loteDestinoExistente));
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(Usuario.builder().id(2L).build());
+
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(5L);
+        motivo.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        given(motivoMovimientoRepository.findById(5L)).willReturn(Optional.of(motivo));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(6102L).build());
+
+        service.registrarMovimiento(dto, null);
+
+        assertThat(loteDestinoExistente.getCostoUnitarioMaterial()).isEqualByComparingTo(new BigDecimal("12.000000"));
+        assertThat(loteDestinoExistente.getCostoTotalMaterialIngresado()).isEqualByComparingTo(new BigDecimal("120.000000"));
+        assertThat(loteDestinoExistente.getTotalIngresadoMaterial()).isEqualByComparingTo(new BigDecimal("10.000000"));
+    }
+
+    @Test
+    void transferenciaNoSobrescribeCostoValidoEnDestinoExistente() {
+        Producto producto = crearProducto(603, 2);
+        LoteProducto loteOrigen = crearLote(5603L, producto, 1, EstadoLote.LIBERADO,
+                new BigDecimal("10.000000"), BigDecimal.ZERO.setScale(6), false);
+        loteOrigen.setCostoUnitarioMaterial(new BigDecimal("12.000000"));
+        loteOrigen.setCostoTotalMaterialIngresado(new BigDecimal("120.000000"));
+        loteOrigen.setTotalIngresadoMaterial(new BigDecimal("10.000000"));
+
+        LoteProducto loteDestinoExistente = crearLote(6603L, producto, 6, EstadoLote.LIBERADO,
+                new BigDecimal("1.000000"), BigDecimal.ZERO.setScale(6), false);
+        loteDestinoExistente.setCodigoLote(loteOrigen.getCodigoLote());
+        loteDestinoExistente.setCostoUnitarioMaterial(new BigDecimal("8.000000"));
+        loteDestinoExistente.setCostoTotalMaterialIngresado(new BigDecimal("80.000000"));
+        loteDestinoExistente.setTotalIngresadoMaterial(new BigDecimal("10.000000"));
+
+        MovimientoInventarioDTO dto = buildTransferenciaDTO(
+                new BigDecimal("2.000000"),
+                TipoMovimiento.TRANSFERENCIA,
+                ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL,
+                "DOC-COSTO-TR-EXISTE-VALIDO",
+                producto.getId(),
+                loteOrigen.getId(),
+                1,
+                6,
+                5L,
+                5L,
+                null,
+                loteOrigen.getCodigoLote()
+        );
+
+        configurarMocksBasicos(producto, loteOrigen);
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId(
+                loteOrigen.getCodigoLote(), producto.getId(), 6)).willReturn(Optional.of(loteDestinoExistente));
+        given(usuarioService.obtenerUsuarioAutenticado()).willReturn(Usuario.builder().id(2L).build());
+
+        MotivoMovimiento motivo = new MotivoMovimiento();
+        motivo.setId(5L);
+        motivo.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        given(motivoMovimientoRepository.findById(5L)).willReturn(Optional.of(motivo));
+
+        MovimientoInventario movimientoEntidad = new MovimientoInventario();
+        movimientoEntidad.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
+        movimientoEntidad.setClasificacion(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
+        movimientoEntidad.setCantidad(dto.cantidad());
+        given(mapper.toEntity(dto)).willReturn(movimientoEntidad);
+        given(movimientoInventarioRepository.save(any(MovimientoInventario.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(mapper.safeToResponseDTO(any(MovimientoInventario.class)))
+                .willReturn(MovimientoInventarioResponseDTO.builder().id(6103L).build());
+
+        service.registrarMovimiento(dto, null);
+
+        assertThat(loteDestinoExistente.getCostoUnitarioMaterial()).isEqualByComparingTo(new BigDecimal("8.000000"));
+        assertThat(loteDestinoExistente.getCostoTotalMaterialIngresado()).isEqualByComparingTo(new BigDecimal("80.000000"));
+        assertThat(loteDestinoExistente.getTotalIngresadoMaterial()).isEqualByComparingTo(new BigDecimal("10.000000"));
+    }
+
+    @Test
     void salidaProduccionAplicaCostoDesdeLotePreBodega() {
         Producto producto = crearProducto(601, 2);
         LoteProducto lotePreBodega = crearLote(5601L, producto, 6, EstadoLote.LIBERADO,

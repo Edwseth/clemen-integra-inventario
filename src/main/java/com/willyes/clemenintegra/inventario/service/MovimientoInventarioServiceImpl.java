@@ -3048,7 +3048,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                         destino.getId());
 
         if (destinoExistente.isPresent()) {
-            return destinoExistente.get();
+            LoteProducto existente = destinoExistente.get();
+            sincronizarCostosDestinoSiIncompleto(existente, loteOrigen);
+            return existente;
         }
 
         LoteProducto nuevoDestino = LoteProducto.builder()
@@ -3058,6 +3060,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 .fechaVencimiento(loteOrigen.getFechaVencimiento())
                 .estado(loteOrigen.getEstado())
                 .almacen(destino)
+                .costoUnitarioMaterial(loteOrigen.getCostoUnitarioMaterial())
+                .costoTotalMaterialIngresado(loteOrigen.getCostoTotalMaterialIngresado())
+                .totalIngresadoMaterial(loteOrigen.getTotalIngresadoMaterial())
                 .stockLote(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING))
                 .stockReservado(BigDecimal.ZERO.setScale(CANTIDAD_SCALE, CANTIDAD_ROUNDING))
                 .build();
@@ -3336,6 +3341,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             if (!Objects.equals(fechaAntes, existente.getFechaVencimiento())) {
                 modificado = true;
             }
+            if (sincronizarCostosDestinoSiIncompleto(existente, loteOrigen)) {
+                modificado = true;
+            }
             if (modificado) {
                 loteProductoRepository.save(existente);
             }
@@ -3371,6 +3379,39 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         log.info("DESTINO_LOTE_CREADO: code={}, prod={}, destinoId={}, loteId={}",
                 codigoLote, prodId, destinoId, guardado.getId());
         return guardado;
+    }
+
+    private boolean sincronizarCostosDestinoSiIncompleto(LoteProducto destino, LoteProducto origen) {
+        if (destino == null || origen == null) {
+            return false;
+        }
+
+        boolean actualizado = false;
+        BigDecimal costoUnitOrigen = safeScale6(origen.getCostoUnitarioMaterial());
+        BigDecimal costoTotalOrigen = safeScale6(origen.getCostoTotalMaterialIngresado());
+        BigDecimal totalIngresadoOrigen = safeScale6(origen.getTotalIngresadoMaterial());
+
+        if (debeSincronizarCampoCosto(destino.getCostoUnitarioMaterial(), costoUnitOrigen)) {
+            destino.setCostoUnitarioMaterial(costoUnitOrigen);
+            actualizado = true;
+        }
+        if (debeSincronizarCampoCosto(destino.getCostoTotalMaterialIngresado(), costoTotalOrigen)) {
+            destino.setCostoTotalMaterialIngresado(costoTotalOrigen);
+            actualizado = true;
+        }
+        if (debeSincronizarCampoCosto(destino.getTotalIngresadoMaterial(), totalIngresadoOrigen)) {
+            destino.setTotalIngresadoMaterial(totalIngresadoOrigen);
+            actualizado = true;
+        }
+
+        return actualizado;
+    }
+
+    private boolean debeSincronizarCampoCosto(BigDecimal valorDestino, BigDecimal valorOrigen) {
+        if (valorOrigen == null || valorOrigen.compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        }
+        return valorDestino == null || valorDestino.compareTo(BigDecimal.ZERO) <= 0;
     }
 
 
