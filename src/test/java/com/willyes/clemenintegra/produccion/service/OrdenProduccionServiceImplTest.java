@@ -209,6 +209,22 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("finalizar delega en registrarCierre TOTAL para mantener costeo PT alineado")
+    void finalizarDelegaEnRegistrarCierreTotal() {
+        OrdenProduccion esperado = crearOrdenBase(999L, new BigDecimal("10"), new BigDecimal("10"), EstadoProduccion.FINALIZADA);
+        doReturn(esperado).when(service).registrarCierre(eq(999L), any(CierreProduccionRequestDTO.class));
+
+        OrdenProduccion resultado = service.finalizar(999L, new BigDecimal("10"));
+
+        assertThat(resultado).isSameAs(esperado);
+        ArgumentCaptor<CierreProduccionRequestDTO> captor = ArgumentCaptor.forClass(CierreProduccionRequestDTO.class);
+        verify(service).registrarCierre(eq(999L), captor.capture());
+        CierreProduccionRequestDTO dto = captor.getValue();
+        assertThat(dto.getTipo()).isEqualTo(TipoCierre.TOTAL);
+        assertThat(dto.getCantidad()).isEqualByComparingTo(new BigDecimal("10"));
+    }
+
+    @Test
     @DisplayName("registrarCierre propaga ubicación destino al movimiento de entrada PT")
     void debePropagarUbicacionDestinoAlMovimientoDeEntradaPt() {
         OrdenProduccion orden = crearOrdenBase(901L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);

@@ -2535,35 +2535,11 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     @Transactional
     public OrdenProduccion finalizar(Long id, BigDecimal cantidadProducida) {
-        OrdenProduccion orden = repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ORDEN_NO_ENCONTRADA"));
-
-        if (orden.getEstado() == EstadoProduccion.FINALIZADA || orden.getEstado() == EstadoProduccion.CANCELADA) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_NO_FINALIZABLE");
-        }
-
-        if (cantidadProducida == null || cantidadProducida.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_INVALIDA");
-        }
-
-        if (cantidadProducida.compareTo(orden.getCantidadProgramada()) > 0) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "CANTIDAD_EXCEDE_PROGRAMADA");
-        }
-
-        if (orden.getProducto() == null || orden.getProducto().getId() == null) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_SIN_PRODUCTO");
-        }
-
-        Usuario usuario = usuarioService.obtenerUsuarioAutenticado();
-
-        Long etapaConsumoId = resolverEtapaPrincipal(orden.getId());
-        movimientoInventarioService.consumirInsumosPorOrden(orden.getId(), etapaConsumoId, usuario.getId());
-
-        orden.setCantidadProducida(cantidadProducida);
-        orden.setEstado(EstadoProduccion.FINALIZADA);
-        orden.setFechaFin(LocalDateTime.now());
-
-        return repository.save(orden);
+        CierreProduccionRequestDTO cierreTotal = CierreProduccionRequestDTO.builder()
+                .cantidad(cantidadProducida)
+                .tipo(TipoCierre.TOTAL)
+                .build();
+        return registrarCierre(id, cierreTotal);
     }
 
     @Override
