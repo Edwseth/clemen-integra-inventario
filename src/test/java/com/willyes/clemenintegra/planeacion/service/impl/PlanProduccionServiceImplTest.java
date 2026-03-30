@@ -165,8 +165,13 @@ class PlanProduccionServiceImplTest {
                 .id(50L)
                 .estado(EstadoPlanProduccion.CONFIRMADO)
                 .build();
+        PlanProduccionSemanal recargado = PlanProduccionSemanal.builder()
+                .id(50L)
+                .estado(EstadoPlanProduccion.CERRADO)
+                .build();
 
-        when(planProduccionSemanalRepository.findById(50L)).thenReturn(Optional.of(existente));
+        when(planProduccionSemanalRepository.findWithDetallesById(50L))
+                .thenReturn(Optional.of(existente), Optional.of(recargado));
         when(planProduccionSemanalRepository.save(any(PlanProduccionSemanal.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -182,7 +187,7 @@ class PlanProduccionServiceImplTest {
                 .estado(EstadoPlanProduccion.BORRADOR)
                 .build();
 
-        when(planProduccionSemanalRepository.findById(60L)).thenReturn(Optional.of(existente));
+        when(planProduccionSemanalRepository.findWithDetallesById(60L)).thenReturn(Optional.of(existente));
 
         assertThrows(IllegalStateException.class, () -> service.cerrar(60L));
     }

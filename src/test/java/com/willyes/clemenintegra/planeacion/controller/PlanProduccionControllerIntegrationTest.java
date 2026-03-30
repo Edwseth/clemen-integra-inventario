@@ -231,6 +231,42 @@ class PlanProduccionControllerIntegrationTest extends IntegrationTestMySqlContai
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void cerrarPlanSemanalDevuelveDetallesYCierra() throws Exception {
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .semanaInicio(LocalDate.now())
+                .semanaFin(LocalDate.now().plusDays(6))
+                .estado(EstadoPlanProduccion.CONFIRMADO)
+                .creadoPor(usuario)
+                .build();
+
+        PlanProduccionDetalle detalle = PlanProduccionDetalle.builder()
+                .plan(plan)
+                .producto(producto)
+                .unidadMedida(producto.getUnidadMedida())
+                .cantidadPlanificada(new BigDecimal("5.00"))
+                .prioridad(1)
+                .origenDemanda("Test")
+                .observacion("Obs")
+                .creadoPor(usuario)
+                .fechaCreacion(LocalDateTime.now())
+                .build();
+        plan.getDetalles().add(detalle);
+
+        plan = planProduccionSemanalRepository.save(plan);
+
+        mockMvc.perform(post("/api/planeacion/planes-semanales/{id}/cerrar", plan.getId())
+                        .with(SecurityMockMvcRequestPostProcessors.user(new CustomUserDetails(usuario))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(EstadoPlanProduccion.CERRADO.name()))
+                .andExpect(jsonPath("$.detalles[0].producto.id").value(producto.getId().longValue()))
+                .andExpect(jsonPath("$.detalles[0].unidadMedida.id").value(producto.getUnidadMedida().getId()));
+
+        PlanProduccionSemanal cerrado = planProduccionSemanalRepository.findById(plan.getId()).orElseThrow();
+        assertThat(cerrado.getEstado()).isEqualTo(EstadoPlanProduccion.CERRADO);
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     void listarPlanesIncluyeFechaConfirmacion() throws Exception {
         PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
                 .semanaInicio(LocalDate.now())
