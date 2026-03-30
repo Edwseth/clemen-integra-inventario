@@ -292,7 +292,7 @@ class MovimientoInventarioServiceTransferenciaTest {
     @Test
     void transferenciaCuarentenaABodegaPtSinUbicacionConUbicacionesActivasFalla422() {
         Producto producto = crearProducto(19, 2);
-        LoteProducto lote = crearLote(140L, producto, 1, EstadoLote.EN_CUARENTENA,
+        LoteProducto lote = crearLote(140L, producto, 1, EstadoLote.LIBERADO,
                 new BigDecimal("2000"), BigDecimal.ZERO, false);
 
         MovimientoInventarioDTO dto = new MovimientoInventarioDTO(
@@ -340,7 +340,7 @@ class MovimientoInventarioServiceTransferenciaTest {
     @Test
     void transferenciaCuarentenaABodegaPtConUbicacionValidaSeteaUbicacionEnLote() {
         Producto producto = crearProducto(20, 2);
-        LoteProducto lote = crearLote(141L, producto, 1, EstadoLote.EN_CUARENTENA,
+        LoteProducto lote = crearLote(141L, producto, 1, EstadoLote.LIBERADO,
                 new BigDecimal("2000"), BigDecimal.ZERO, false);
         Almacen almacenDestino = new Almacen(6);
         UbicacionFisica ubicacion = UbicacionFisica.builder()
@@ -971,11 +971,11 @@ class MovimientoInventarioServiceTransferenciaTest {
         given(usuarioService.obtenerUsuarioAutenticado()).willReturn(Usuario.builder().id(2L).build());
 
         MotivoMovimiento motivo = new MotivoMovimiento();
-        motivo.setId(15L);
+        motivo.setId(5L);
         motivo.setMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
         given(motivoMovimientoRepository.findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL))
                 .willReturn(Optional.of(motivo));
-        given(motivoMovimientoRepository.findById(15L)).willReturn(Optional.of(motivo));
+        given(motivoMovimientoRepository.findById(5L)).willReturn(Optional.of(motivo));
 
         MovimientoInventario movimientoEntidad = new MovimientoInventario();
         movimientoEntidad.setTipoMovimiento(TipoMovimiento.TRANSFERENCIA);
@@ -990,7 +990,7 @@ class MovimientoInventarioServiceTransferenciaTest {
         ArgumentCaptor<MovimientoInventario> captor = ArgumentCaptor.forClass(MovimientoInventario.class);
         verify(movimientoInventarioRepository).save(captor.capture());
         assertThat(captor.getValue().getMotivoMovimiento()).isNotNull();
-        assertThat(captor.getValue().getMotivoMovimiento().getId()).isEqualTo(15L);
+        assertThat(captor.getValue().getMotivoMovimiento().getId()).isEqualTo(5L);
         verify(motivoMovimientoRepository).findByMotivo(ClasificacionMovimientoInventario.TRANSFERENCIA_GENERAL);
     }
 

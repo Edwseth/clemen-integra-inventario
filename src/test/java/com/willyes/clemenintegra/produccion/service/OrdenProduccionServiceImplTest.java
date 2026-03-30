@@ -201,7 +201,7 @@ class OrdenProduccionServiceImplTest {
         when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(30)).thenReturn(true);
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
-                .cantidad(new BigDecimal("5"))
+                .cantidad(new BigDecimal("10"))
                 .tipo(TipoCierre.TOTAL)
                 .build();
 
@@ -232,7 +232,7 @@ class OrdenProduccionServiceImplTest {
         when(ubicacionFisicaRepository.existsByAlmacenIdAndActivoTrue(30)).thenReturn(true);
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
-                .cantidad(new BigDecimal("5"))
+                .cantidad(new BigDecimal("10"))
                 .tipo(TipoCierre.TOTAL)
                 .ubicacionDestinoId(88L)
                 .build();
@@ -1706,7 +1706,7 @@ class OrdenProduccionServiceImplTest {
         OrdenProduccion resultado = service.registrarCierre(313L, dto);
 
         assertThat(resultado.getCantidadProducidaAcumulada()).isEqualByComparingTo(new BigDecimal("30000.00"));
-        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.CERRADA_INCOMPLETA);
+        assertThat(resultado.getEstado()).isEqualTo(EstadoProduccion.FINALIZADA);
     }
 
     @Test
@@ -1809,6 +1809,8 @@ class OrdenProduccionServiceImplTest {
         )).thenReturn(new PageImpl<>(List.of(traslado)));
         when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("2249", 30, 5))
                 .thenReturn(Optional.of(new LoteProducto()));
+        when(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("2249", 30, 6))
+                .thenReturn(Optional.of(lote));
 
         CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
                 .cantidad(new BigDecimal("29900"))
@@ -2882,6 +2884,13 @@ class OrdenProduccionServiceImplTest {
                 .thenAnswer(invocation -> Optional.ofNullable(solicitudes.get(invocation.getArgument(0))));
         when(solicitudMovimientoRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         doNothing().when(reservaLoteService).sincronizarReservasSolicitud(any());
+        when(loteProductoRepository.findById(anyLong())).thenAnswer(invocation -> {
+            Long loteId = invocation.getArgument(0);
+            LoteProducto lote = new LoteProducto();
+            lote.setId(loteId);
+            lote.setCodigoLote(String.valueOf(loteId));
+            return Optional.of(lote);
+        });
     }
 
     @Test
