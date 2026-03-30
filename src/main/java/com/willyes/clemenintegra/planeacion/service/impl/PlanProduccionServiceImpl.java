@@ -68,7 +68,7 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
             dto.getDetalles().forEach(detalleDTO -> {
                 Long productoId = detalleDTO.getProductoId();
                 Producto producto = productoId != null
-                        ? productoRepository.findById(productoId.intValue()).orElse(new Producto(productoId.intValue()))
+                        ? productoRepository.findById(productoId).orElse(new Producto(productoId.intValue()))
                         : null;
                 Long unidadMedidaId = resolveUnidadMedidaId(detalleDTO, producto);
                 PlanProduccionDetalle detalle = PlanProduccionDetalle.builder()
