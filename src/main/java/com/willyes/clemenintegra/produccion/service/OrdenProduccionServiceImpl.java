@@ -172,9 +172,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Value("${inventory.mov.clasificacion.entradaPt}")
     private String clasificacionEntradaPtConf;
 
+    private static final LocalDate FECHA_CAMBIO_CODIGO_ORDEN = LocalDate.of(2026, 4, 1);
+
     private String generarCodigoOrden() {
-        String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String prefijo = "OP-CLEMEN-" + fecha;
+        return generarCodigoOrden(LocalDate.now());
+    }
+
+    private String generarCodigoOrden(LocalDate fechaActual) {
+        String fecha = fechaActual.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefijoBase = fechaActual.isBefore(FECHA_CAMBIO_CODIGO_ORDEN) ? "OP-CLEMEN-" : "OP-";
+        String prefijo = prefijoBase + fecha;
         List<String> codigosDia = repository.findCodigosByPrefijo(prefijo);
 
         int siguienteConsecutivo = codigosDia.stream()

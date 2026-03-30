@@ -266,6 +266,30 @@ class OrdenCompraServiceTransitionTest {
     }
 
     @Test
+    void generarCodigoOrdenCompra_formatoHistorico_antesDeFechaCorte() {
+        LocalDate fecha = LocalDate.of(2026, 3, 31);
+        String prefijo = "OC-CLEMEN-20260331";
+        when(ordenCompraRepository.countByCodigoOrdenStartingWith(prefijo)).thenReturn(4L);
+
+        String codigo = ordenCompraService.generarCodigoOrdenCompra(fecha);
+
+        assertEquals("OC-CLEMEN-20260331-05", codigo);
+        verify(ordenCompraRepository).countByCodigoOrdenStartingWith(prefijo);
+    }
+
+    @Test
+    void generarCodigoOrdenCompra_formatoNuevo_desdeFechaCorte() {
+        LocalDate fecha = LocalDate.of(2026, 4, 1);
+        String prefijo = "OC-20260401";
+        when(ordenCompraRepository.countByCodigoOrdenStartingWith(prefijo)).thenReturn(0L);
+
+        String codigo = ordenCompraService.generarCodigoOrdenCompra(fecha);
+
+        assertEquals("OC-20260401-01", codigo);
+        verify(ordenCompraRepository).countByCodigoOrdenStartingWith(prefijo);
+    }
+
+    @Test
     void ejecutarServicioActualizaCantidadesEstadoEHistorial() {
         OrdenCompra orden = OrdenCompra.builder()
                 .id(10)
