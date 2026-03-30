@@ -25,6 +25,9 @@ import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoDetall
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.TipoMovimientoDetalleRepository;
 import com.willyes.clemenintegra.inventario.repository.UbicacionFisicaRepository;
+import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.model.enums.EstadoEtapa;
 import com.willyes.clemenintegra.produccion.repository.EtapaProduccionRepository;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
@@ -114,6 +117,8 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
         motivo.setMotivo(ClasificacionMovimientoInventario.DEVOLUCION_DESDE_PRODUCCION);
         lenient().when(motivoMovimientoRepository.findById(MOTIVO_DEVOLUCION_ID))
                 .thenReturn(Optional.of(motivo));
+        lenient().when(etapaProduccionRepository.findById(33L))
+                .thenReturn(Optional.of(crearEtapaActiva(33L, 277L)));
 
         lenient().when(entityManager.getReference(eq(Almacen.class), any()))
                 .thenAnswer(invocation -> new Almacen(((Number) invocation.getArgument(1)).intValue()));
@@ -335,5 +340,17 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
         lote.setStockReservado(BigDecimal.ZERO);
         lote.setAgotado(agotado);
         return lote;
+    }
+
+    private EtapaProduccion crearEtapaActiva(Long etapaId, Long ordenProduccionId) {
+        OrdenProduccion ordenProduccion = new OrdenProduccion();
+        ordenProduccion.setId(ordenProduccionId);
+        EtapaProduccion etapa = new EtapaProduccion();
+        etapa.setId(etapaId);
+        etapa.setOrdenProduccion(ordenProduccion);
+        etapa.setEstado(EstadoEtapa.EN_PROCESO);
+        etapa.setFechaInicio(LocalDateTime.now().minusHours(1));
+        etapa.setFechaFin(null);
+        return etapa;
     }
 }
