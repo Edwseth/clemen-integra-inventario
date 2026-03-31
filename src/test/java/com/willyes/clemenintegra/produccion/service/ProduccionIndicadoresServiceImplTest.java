@@ -43,45 +43,39 @@ class ProduccionIndicadoresServiceImplTest {
     void calcularIndicadores_calculaKPIs() {
         OrdenProduccion enTiempo = OrdenProduccion.builder()
                 .id(1L)
-                .codigoOrden("OP1")
+                .codigoOrden("OP-EN-TIEMPO")
                 .fechaFin(ahora.plusHours(1))
                 .fechaCierre(ahora)
                 .estado(EstadoProduccion.FINALIZADA)
-                .cantidadProgramada(new BigDecimal("10"))
-                .cantidadProducidaAcumulada(new BigDecimal("12"))
+                .cantidadProgramada(new BigDecimal("319782"))
+                .cantidadProducidaAcumulada(new BigDecimal("253151"))
                 .build();
 
-        OrdenProduccion cerradaRetrasada = OrdenProduccion.builder()
-                .id(2L)
-                .codigoOrden("OP2")
-                .fechaFin(ahora.minusDays(1))
-                .fechaCierre(ahora)
-                .estado(EstadoProduccion.FINALIZADA)
-                .cantidadProgramada(new BigDecimal("5"))
-                .cantidadProducida(new BigDecimal("4"))
-                .build();
-
-        OrdenProduccion abiertaRetrasada = OrdenProduccion.builder()
-                .id(3L)
-                .codigoOrden("OP3")
-                .fechaFin(ahora.minusDays(2))
-                .estado(EstadoProduccion.EN_PROCESO)
-                .cantidadProgramada(new BigDecimal("8"))
-                .build();
-
-        when(ordenProduccionRepository.findByFechaFinBetween(any(), any()))
-                .thenReturn(List.of(enTiempo, cerradaRetrasada, abiertaRetrasada));
+        when(ordenProduccionRepository.findByFechaFinBetween(any(), any())).thenReturn(
+                java.util.stream.Stream.concat(
+                        java.util.stream.Stream.of(enTiempo),
+                        java.util.stream.Stream.generate(() -> OrdenProduccion.builder()
+                                        .estado(EstadoProduccion.EN_PROCESO)
+                                        .fechaFin(ahora.minusDays(1))
+                                        .cantidadProgramada(BigDecimal.ZERO)
+                                        .cantidadProducida(BigDecimal.ZERO)
+                                        .build())
+                                .limit(200)
+                ).toList()
+        );
 
         IndicadoresProduccionResponseDTO resultado = service.calcularIndicadores(
                 LocalDate.now().minusDays(3), LocalDate.now());
 
-        assertThat(resultado.getTotalOrdenesPeriodo()).isEqualTo(3);
+        assertThat(resultado.getTotalOrdenesPeriodo()).isEqualTo(201);
         assertThat(resultado.getOrdenesEnTiempo()).isEqualTo(1);
-        assertThat(resultado.getOrdenesRetrasadas()).isEqualTo(2);
-        assertThat(resultado.getOrdenesAbiertasConVencimientoVencido()).isEqualTo(1);
-        assertThat(resultado.getCantidadTotalPlanificada()).isEqualByComparingTo("23.00");
-        assertThat(resultado.getCantidadTotalProducida()).isEqualByComparingTo("16.00");
-        assertThat(resultado.getPorcentajeCumplimiento()).isGreaterThan(0);
+        assertThat(resultado.getOrdenesRetrasadas()).isEqualTo(200);
+        assertThat(resultado.getOrdenesAbiertasConVencimientoVencido()).isEqualTo(200);
+        assertThat(resultado.getCantidadTotalPlanificada()).isEqualByComparingTo("319782.00");
+        assertThat(resultado.getCantidadTotalProducida()).isEqualByComparingTo("253151.00");
+        assertThat(resultado.getPorcentajeCumplimiento()).isCloseTo(0.497512, org.assertj.core.data.Offset.offset(0.000001));
+        assertThat(resultado.getPorcentajeOrdenesEnTiempo()).isCloseTo(0.497512, org.assertj.core.data.Offset.offset(0.000001));
+        assertThat(resultado.getPorcentajeCumplimientoProduccion()).isCloseTo(79.161369, org.assertj.core.data.Offset.offset(0.000001));
     }
 
     @Test
@@ -94,8 +88,51 @@ class ProduccionIndicadoresServiceImplTest {
 
         assertThat(resultado.getTotalOrdenesPeriodo()).isZero();
         assertThat(resultado.getPorcentajeCumplimiento()).isZero();
+        assertThat(resultado.getPorcentajeOrdenesEnTiempo()).isZero();
+        assertThat(resultado.getPorcentajeCumplimientoProduccion()).isZero();
         assertThat(resultado.getCantidadTotalPlanificada()).isEqualByComparingTo("0.00");
         assertThat(resultado.getCantidadTotalProducida()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    @DisplayName("calcularIndicadores calcula porcentajes esperados para 40 en tiempo y 200 retrasadas")
+    void calcularIndicadores_porcentajesPuntualidadYProduccion() {
+        List<OrdenProduccion> ordenes = new java.util.ArrayList<>();
+        for (int i = 0; i < 39; i++) {
+            ordenes.add(OrdenProduccion.builder()
+                    .estado(EstadoProduccion.FINALIZADA)
+                    .fechaFin(ahora.plusDays(1))
+                    .fechaCierre(ahora)
+                    .cantidadProgramada(BigDecimal.ZERO)
+                    .cantidadProducida(BigDecimal.ZERO)
+                    .build());
+        }
+        for (int i = 0; i < 200; i++) {
+            ordenes.add(OrdenProduccion.builder()
+                    .estado(EstadoProduccion.EN_PROCESO)
+                    .fechaFin(ahora.minusDays(1))
+                    .cantidadProgramada(BigDecimal.ZERO)
+                    .cantidadProducida(BigDecimal.ZERO)
+                    .build());
+        }
+        ordenes.add(OrdenProduccion.builder()
+                .estado(EstadoProduccion.FINALIZADA)
+                .fechaFin(ahora.plusDays(2))
+                .fechaCierre(ahora)
+                .cantidadProgramada(new BigDecimal("319782"))
+                .cantidadProducidaAcumulada(new BigDecimal("253151"))
+                .build());
+
+        when(ordenProduccionRepository.findByFechaFinBetween(any(), any())).thenReturn(ordenes);
+
+        IndicadoresProduccionResponseDTO resultado = service.calcularIndicadores(
+                LocalDate.now().minusDays(3), LocalDate.now().plusDays(3));
+
+        assertThat(resultado.getOrdenesEnTiempo()).isEqualTo(40);
+        assertThat(resultado.getOrdenesRetrasadas()).isEqualTo(200);
+        assertThat(resultado.getPorcentajeCumplimiento()).isCloseTo(16.666666, org.assertj.core.data.Offset.offset(0.000001));
+        assertThat(resultado.getPorcentajeOrdenesEnTiempo()).isCloseTo(16.666666, org.assertj.core.data.Offset.offset(0.000001));
+        assertThat(resultado.getPorcentajeCumplimientoProduccion()).isCloseTo(79.161369, org.assertj.core.data.Offset.offset(0.000001));
     }
 
     @Test

@@ -15,8 +15,10 @@ public class IndicadoresProduccionResponseDTO {
     private long ordenesEnTiempo;
     private long ordenesRetrasadas;
     private double porcentajeCumplimiento;
+    private double porcentajeOrdenesEnTiempo;
     private BigDecimal cantidadTotalPlanificada;
     private BigDecimal cantidadTotalProducida;
+    private double porcentajeCumplimientoProduccion;
     private long ordenesAbiertasConVencimientoVencido;
 
     /**
