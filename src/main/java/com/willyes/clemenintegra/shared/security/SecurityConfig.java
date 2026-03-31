@@ -204,6 +204,17 @@ public class SecurityConfig {
                             "INV_AJUSTES_WRITE"
                     );
 
+                    auth.requestMatchers(HttpMethod.GET, "/api/inventario/lotes/*/valorizacion/elegibilidad").hasAnyAuthority(
+                            "INV_COSTEO_AJUSTE_READ",
+                            "INV_COSTEO_AJUSTE_WRITE",
+                            "INV_COSTEO_AJUSTE_OVERRIDE"
+                    );
+
+                    auth.requestMatchers(HttpMethod.POST, "/api/inventario/lotes/*/ajuste-valorizacion").hasAnyAuthority(
+                            "INV_COSTEO_AJUSTE_WRITE",
+                            "INV_COSTEO_AJUSTE_OVERRIDE"
+                    );
+
                     auth.requestMatchers(HttpMethod.GET, "/api/movimientos/**").hasAnyAuthority(
                             "INV_MOVIMIENTOS_READ"
                     );
