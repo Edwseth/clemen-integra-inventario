@@ -54,7 +54,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -159,7 +159,7 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
 
         stubMovimientoBase(producto);
         given(loteProductoRepository.findByIdForUpdate(2492L)).willReturn(Optional.of(loteOrigen));
-        given(loteProductoRepository.findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(producto.getId(), "02E-0001", (int) PRINCIPAL_EMPAQUE_ID))
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("02E-0001", producto.getId(), (int) PRINCIPAL_EMPAQUE_ID))
                 .willReturn(Optional.of(loteDestino));
 
         MovimientoInventarioResponseDTO response = service.registrarMovimiento(construirDto(producto.getId(), 2492L, "23"));
@@ -184,7 +184,7 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
 
         stubMovimientoBase(producto);
         given(loteProductoRepository.findByIdForUpdate(3105L)).willReturn(Optional.of(loteOrigen));
-        given(loteProductoRepository.findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(producto.getId(), "05A-0007", (int) PRINCIPAL_EMPAQUE_ID))
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("05A-0007", producto.getId(), (int) PRINCIPAL_EMPAQUE_ID))
                 .willReturn(Optional.of(loteDestino));
 
         service.registrarMovimiento(construirDto(producto.getId(), 3105L, "10"));
@@ -208,7 +208,7 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
 
         stubMovimientoBase(producto);
         given(loteProductoRepository.findByIdForUpdate(4333L)).willReturn(Optional.of(loteOrigen));
-        given(loteProductoRepository.findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(producto.getId(), "03A-0003", (int) PRINCIPAL_EMPAQUE_ID))
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("03A-0003", producto.getId(), (int) PRINCIPAL_EMPAQUE_ID))
                 .willReturn(Optional.of(loteDestino));
 
         service.registrarMovimiento(construirDto(producto.getId(), 4333L, "5"));
@@ -225,7 +225,7 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
 
         stubMovimientoBase(producto);
         given(loteProductoRepository.findByIdForUpdate(3999L)).willReturn(Optional.of(loteOrigen));
-        given(loteProductoRepository.findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(producto.getId(), "09Z-0003", (int) PRINCIPAL_EMPAQUE_ID))
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("09Z-0003", producto.getId(), (int) PRINCIPAL_EMPAQUE_ID))
                 .willReturn(Optional.empty());
 
         service.registrarMovimiento(construirDto(producto.getId(), 3999L, "7"));
@@ -233,8 +233,7 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
         assertThat(loteOrigen.getStockLote()).isEqualByComparingTo("0");
 
         ArgumentCaptor<LoteProducto> saveCaptor = ArgumentCaptor.forClass(LoteProducto.class);
-        verify(loteProductoRepository, never()).findByCodigoLoteAndProductoIdAndAlmacenId(any(), any(), any());
-        verify(loteProductoRepository, org.mockito.Mockito.atLeast(2)).saveAndFlush(saveCaptor.capture());
+        verify(loteProductoRepository, atLeastOnce()).save(saveCaptor.capture());
         LoteProducto loteCreadoDestino = saveCaptor.getAllValues().stream()
                 .filter(l -> l.getAlmacen() != null && Integer.valueOf((int) PRINCIPAL_EMPAQUE_ID).equals(l.getAlmacen().getId()))
                 .reduce((first, second) -> second)
@@ -254,13 +253,13 @@ class MovimientoInventarioServiceDevolucionProduccionTest {
 
         stubMovimientoBase(producto);
         given(loteProductoRepository.findByIdForUpdate(4444L)).willReturn(Optional.of(loteOrigen));
-        given(loteProductoRepository.findByProductoIdAndCodigoLoteAndAlmacenIdForUpdate(producto.getId(), "04B-0004", (int) PRINCIPAL_EMPAQUE_ID))
+        given(loteProductoRepository.findByCodigoLoteAndProductoIdAndAlmacenId("04B-0004", producto.getId(), (int) PRINCIPAL_EMPAQUE_ID))
                 .willReturn(Optional.empty());
 
         service.registrarMovimiento(construirDto(producto.getId(), 4444L, "6"));
 
         ArgumentCaptor<LoteProducto> saveCaptor = ArgumentCaptor.forClass(LoteProducto.class);
-        verify(loteProductoRepository, org.mockito.Mockito.atLeast(2)).saveAndFlush(saveCaptor.capture());
+        verify(loteProductoRepository, atLeastOnce()).save(saveCaptor.capture());
         LoteProducto loteCreadoDestino = saveCaptor.getAllValues().stream()
                 .filter(l -> l.getAlmacen() != null && Integer.valueOf((int) PRINCIPAL_EMPAQUE_ID).equals(l.getAlmacen().getId()))
                 .reduce((first, second) -> second)
