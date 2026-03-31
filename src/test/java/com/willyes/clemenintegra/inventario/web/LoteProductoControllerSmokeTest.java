@@ -24,6 +24,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -62,6 +63,12 @@ class LoteProductoControllerSmokeTest {
                 .id(1L)
                 .codigoLote("L-001")
                 .estado(EstadoLote.DISPONIBLE)
+                .stockLote(new BigDecimal("10.000000"))
+                .totalIngresadoMaterial(new BigDecimal("12.000000"))
+                .costoUnitarioMaterial(new BigDecimal("2.500000"))
+                .valorStock(new BigDecimal("25.000000"))
+                .codigoLotePsOrigen("PS-0001")
+                .ubicacionFisicaCodigo("UBI-A1")
                 .build();
         Pageable pageable = PageRequest.of(0, 10);
         Page<LoteProductoResponseDTO> page = new PageImpl<>(List.of(dto), pageable, 1);
@@ -76,6 +83,10 @@ class LoteProductoControllerSmokeTest {
                 .andExpect(jsonPath("$.content").exists())
                 .andExpect(jsonPath("$.content[0].codigoLote").value("L-001"))
                 .andExpect(jsonPath("$.content[0].estado").value("DISPONIBLE"))
+                .andExpect(jsonPath("$.content[0].totalIngresadoMaterial").value(12.0))
+                .andExpect(jsonPath("$.content[0].valorStock").value(25.0))
+                .andExpect(jsonPath("$.content[0].codigoLotePsOrigen").value("PS-0001"))
+                .andExpect(jsonPath("$.content[0].ubicacionFisicaCodigo").value("UBI-A1"))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
 

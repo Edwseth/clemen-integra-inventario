@@ -7,6 +7,8 @@ import com.willyes.clemenintegra.shared.model.Usuario;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.math.BigDecimal;
+
 @Mapper(componentModel = "spring")
 public interface LoteProductoMapper {
 
@@ -45,6 +47,7 @@ public interface LoteProductoMapper {
     @Mapping(target = "ubicacionFisicaDescripcion", expression = "java(lote.getUbicacionFisica()!=null ? lote.getUbicacionFisica().getDescripcion() : null)")
     @Mapping(target = "ordenProduccionId", expression = "java(lote.getOrdenProduccion()!=null ? lote.getOrdenProduccion().getId() : null)")
     @Mapping(target = "codigoOrdenProduccion", expression = "java(lote.getOrdenProduccion()!=null ? lote.getOrdenProduccion().getCodigoOrden() : null)")
+    @Mapping(target = "valorStock", expression = "java(calcularValorStock(lote.getStockLote(), lote.getCostoUnitarioMaterial()))")
     LoteProductoResponseDTO toResponseDTO(LoteProducto lote);
 
     @Mapping(source = "producto.nombre", target = "nombreProducto")
@@ -75,6 +78,7 @@ public interface LoteProductoMapper {
     @Mapping(target = "ubicacionFisicaDescripcion", expression = "java(entity.getUbicacionFisica()!=null ? entity.getUbicacionFisica().getDescripcion() : null)")
     @Mapping(target = "ordenProduccionId", expression = "java(entity.getOrdenProduccion()!=null ? entity.getOrdenProduccion().getId() : null)")
     @Mapping(target = "codigoOrdenProduccion", expression = "java(entity.getOrdenProduccion()!=null ? entity.getOrdenProduccion().getCodigoOrden() : null)")
+    @Mapping(target = "valorStock", expression = "java(calcularValorStock(entity.getStockLote(), entity.getCostoUnitarioMaterial()))")
     LoteProductoResponseDTO toDto(LoteProducto entity);
 
     default String mapTipoAnalisisCalidadString(com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad valor) {
@@ -86,6 +90,13 @@ public interface LoteProductoMapper {
             case QUIMICO_MICROBIOLOGICO -> "AMBOS";
             default -> valor.name();
         };
+    }
+
+    default BigDecimal calcularValorStock(BigDecimal stockLote, BigDecimal costoUnitarioMaterial) {
+        if (stockLote == null || costoUnitarioMaterial == null) {
+            return null;
+        }
+        return stockLote.multiply(costoUnitarioMaterial);
     }
 
 }
