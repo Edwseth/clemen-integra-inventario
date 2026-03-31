@@ -13,6 +13,7 @@ import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.shared.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -63,10 +64,12 @@ public class AjusteValorizacionLoteServiceImpl implements AjusteValorizacionLote
                 "BLOCKING",
                 "El lote debe tener stock disponible mayor a cero"
         ));
+        boolean costoPositivo = costoUnitarioActual.compareTo(BigDecimal.ZERO) > 0;
+        boolean tieneOverride = tieneAutoridad("INV_COSTEO_AJUSTE_OVERRIDE");
         reglas.add(new ValorizacionElegibilidadResponseDTO.ReglaEvaluada(
                 RULE_COSTO_BASE,
-                costoUnitarioActual.compareTo(BigDecimal.ZERO) <= 0,
-                "WARNING",
+                !costoPositivo || tieneOverride,
+                "BLOCKING",
                 "Si el costo actual es positivo se requerirá override"
         ));
 
@@ -74,11 +77,16 @@ public class AjusteValorizacionLoteServiceImpl implements AjusteValorizacionLote
         if (totalIngresadoActual.compareTo(BigDecimal.ZERO) <= 0 && safeScale(lote.getStockLote()).compareTo(BigDecimal.ZERO) > 0) {
             warnings.add("TOTAL_INGRESADO_INVALIDO_USARA_STOCK_LOTE");
         }
+        if (costoPositivo && !tieneOverride) {
+            warnings.add("LOTE_COSTO_POSITIVO_REQUIERE_OVERRIDE");
+        }
+        if (costoPositivo && tieneOverride) {
+            warnings.add("LOTE_COSTO_POSITIVO_PERMITIDO_POR_OVERRIDE");
+        }
 
         boolean eligible = reglas.stream()
                 .filter(r -> "BLOCKING".equals(r.severity()))
-                .allMatch(ValorizacionElegibilidadResponseDTO.ReglaEvaluada::passed)
-                && costoUnitarioActual.compareTo(BigDecimal.ZERO) <= 0;
+                .allMatch(ValorizacionElegibilidadResponseDTO.ReglaEvaluada::passed);
 
         ValorizacionElegibilidadResponseDTO.Snapshot snapshot = new ValorizacionElegibilidadResponseDTO.Snapshot(
                 lote.getId(),
@@ -155,25 +163,40 @@ public class AjusteValorizacionLoteServiceImpl implements AjusteValorizacionLote
         lote.setCostoTotalMaterialIngresado(costoTotalNuevo);
         loteProductoRepository.save(lote);
 
-        AjusteValorizacionLote ajuste = ajusteRepository.save(AjusteValorizacionLote.builder()
-                .lote(lote)
-                .codigoLote(lote.getCodigoLote())
-                .producto(lote.getProducto())
-                .almacen(lote.getAlmacen())
-                .costoUnitarioAnterior(costoUnitarioAnterior)
-                .costoUnitarioNuevo(costoUnitarioNuevo)
-                .costoTotalAnterior(costoTotalAnterior)
-                .costoTotalNuevo(costoTotalNuevo)
-                .totalIngresadoAnterior(totalIngresadoAnterior)
-                .totalIngresadoNuevo(totalIngresadoNuevo)
-                .motivo(normalizar(request.motivo()))
-                .observacion(normalizar(request.observacion()))
-                .documentoSoporte(normalizar(request.documentoSoporte()))
-                .idempotencyKey(idempotencyKey)
-                .payloadFingerprint(payloadFingerprint)
-                .usuario(usuario)
-                .fechaAjuste(LocalDateTime.now())
-                .build());
+        AjusteValorizacionLote ajuste;
+        try {
+            ajuste = ajusteRepository.save(AjusteValorizacionLote.builder()
+                    .lote(lote)
+                    .codigoLote(lote.getCodigoLote())
+                    .producto(lote.getProducto())
+                    .almacen(lote.getAlmacen())
+                    .costoUnitarioAnterior(costoUnitarioAnterior)
+                    .costoUnitarioNuevo(costoUnitarioNuevo)
+                    .costoTotalAnterior(costoTotalAnterior)
+                    .costoTotalNuevo(costoTotalNuevo)
+                    .totalIngresadoAnterior(totalIngresadoAnterior)
+                    .totalIngresadoNuevo(totalIngresadoNuevo)
+                    .motivo(normalizar(request.motivo()))
+                    .observacion(normalizar(request.observacion()))
+                    .documentoSoporte(normalizar(request.documentoSoporte()))
+                    .idempotencyKey(idempotencyKey)
+                    .payloadFingerprint(payloadFingerprint)
+                    .usuario(usuario)
+                    .fechaAjuste(LocalDateTime.now())
+                    .build());
+        } catch (DataIntegrityViolationException ex) {
+            AjusteValorizacionLote colision = ajusteRepository.findByIdempotencyKey(idempotencyKey).orElse(null);
+            if (colision != null) {
+                if (!Objects.equals(colision.getPayloadFingerprint(), payloadFingerprint)) {
+                    throw new CustomBusinessException(
+                            ApiErrorCode.IDEMPOTENCY_KEY_REUTILIZADA_CON_PAYLOAD_DISTINTO,
+                            "IDEMPOTENCY_KEY_REUTILIZADA_CON_PAYLOAD_DISTINTO"
+                    );
+                }
+                return toResponse(colision);
+            }
+            throw ex;
+        }
 
         registrarBitacora(lote, usuario, ajuste, costoUnitarioAnterior, costoUnitarioNuevo,
                 costoTotalAnterior, costoTotalNuevo, totalIngresadoAnterior, totalIngresadoNuevo);

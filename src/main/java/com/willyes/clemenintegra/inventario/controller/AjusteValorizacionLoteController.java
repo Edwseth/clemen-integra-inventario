@@ -26,7 +26,7 @@ public class AjusteValorizacionLoteController {
     @PostMapping("/{loteId}/ajuste-valorizacion")
     @PreAuthorize("hasAnyAuthority('INV_COSTEO_AJUSTE_WRITE','INV_COSTEO_AJUSTE_OVERRIDE')")
     public ResponseEntity<AjusteValorizacionLoteResponseDTO> ajustar(@PathVariable Long loteId,
-                                                                     @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                                                     @RequestHeader("Idempotency-Key") String idempotencyKey,
                                                                      @RequestBody @Valid AjusteValorizacionLoteRequestDTO request) {
         return ResponseEntity.ok(service.ajustar(loteId, request, idempotencyKey));
     }
