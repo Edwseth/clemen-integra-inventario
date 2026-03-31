@@ -69,17 +69,24 @@ public class ProduccionIndicadoresServiceImpl implements ProduccionIndicadoresSe
 
         long totalOrdenes = ordenes.size();
         long denominador = ordenesEnTiempo + ordenesRetrasadas;
-        double porcentajeCumplimiento = denominador == 0
+        double porcentajeOrdenesEnTiempo = denominador == 0
                 ? 0
                 : (ordenesEnTiempo * 100.0) / denominador;
+        double porcentajeCumplimientoProduccion = cantidadPlanificada.compareTo(BigDecimal.ZERO) == 0
+                ? 0
+                : cantidadProducida.multiply(BigDecimal.valueOf(100))
+                .divide(cantidadPlanificada, 10, RoundingMode.HALF_UP)
+                .doubleValue();
 
         return IndicadoresProduccionResponseDTO.builder()
                 .totalOrdenesPeriodo(totalOrdenes)
                 .ordenesEnTiempo(ordenesEnTiempo)
                 .ordenesRetrasadas(ordenesRetrasadas)
-                .porcentajeCumplimiento(porcentajeCumplimiento)
+                .porcentajeCumplimiento(porcentajeOrdenesEnTiempo)
+                .porcentajeOrdenesEnTiempo(porcentajeOrdenesEnTiempo)
                 .cantidadTotalPlanificada(cantidadPlanificada)
                 .cantidadTotalProducida(cantidadProducida)
+                .porcentajeCumplimientoProduccion(porcentajeCumplimientoProduccion)
                 .ordenesAbiertasConVencimientoVencido(ordenesAbiertasVencidas)
                 .alertas(obtenerOrdenesConAlertas(null, diasAlerta != null ? diasAlerta : 3))
                 .diasAlerta(diasAlerta != null ? diasAlerta : 3)
