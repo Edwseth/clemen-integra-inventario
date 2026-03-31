@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -83,6 +84,32 @@ class AjusteValorizacionLoteServiceImplTest {
 
         assertFalse(response.eligible());
         assertTrue(response.reglas().stream().anyMatch(r -> r.code().equals("STOCK_DISPONIBLE_MAYOR_A_CERO") && !r.passed()));
+    }
+
+    @Test
+    void precheckCostoPositivoSinOverrideNoElegible() {
+        mockAuth("INV_COSTEO_AJUSTE_WRITE");
+        LoteProducto lote = loteBase(new BigDecimal("10"), BigDecimal.ZERO, new BigDecimal("2"), BigDecimal.ZERO);
+        when(loteProductoRepository.findById(1L)).thenReturn(Optional.of(lote));
+
+        ValorizacionElegibilidadResponseDTO response = service.evaluarElegibilidad(1L);
+
+        assertFalse(response.eligible());
+        assertTrue(response.reglas().stream().anyMatch(r -> r.code().equals("LOTE_COSTO_BASE_EN_CERO_O_NULO") && !r.passed()));
+        assertTrue(response.warnings().contains("LOTE_COSTO_POSITIVO_REQUIERE_OVERRIDE"));
+    }
+
+    @Test
+    void precheckCostoPositivoConOverrideElegible() {
+        mockAuth("INV_COSTEO_AJUSTE_OVERRIDE");
+        LoteProducto lote = loteBase(new BigDecimal("10"), BigDecimal.ZERO, new BigDecimal("2"), BigDecimal.ZERO);
+        when(loteProductoRepository.findById(1L)).thenReturn(Optional.of(lote));
+
+        ValorizacionElegibilidadResponseDTO response = service.evaluarElegibilidad(1L);
+
+        assertTrue(response.eligible());
+        assertTrue(response.reglas().stream().anyMatch(r -> r.code().equals("LOTE_COSTO_BASE_EN_CERO_O_NULO") && r.passed()));
+        assertTrue(response.warnings().contains("LOTE_COSTO_POSITIVO_PERMITIDO_POR_OVERRIDE"));
     }
 
     @Test
@@ -193,6 +220,70 @@ class AjusteValorizacionLoteServiceImplTest {
 
         CustomBusinessException ex = assertThrows(CustomBusinessException.class,
                 () -> spyService.ajustar(1L, req, "idem-5"));
+        assertEquals(ApiErrorCode.IDEMPOTENCY_KEY_REUTILIZADA_CON_PAYLOAD_DISTINTO, ex.getCode());
+    }
+
+    @Test
+    void colisionUniqueIdempotencyRetornaReplaySiPayloadCoincide() {
+        mockAuth("INV_COSTEO_AJUSTE_WRITE");
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        LoteProducto lote = loteBase(new BigDecimal("12"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        when(loteProductoRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(lote));
+        when(ajusteRepository.findByIdempotencyKey("idem-8"))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(AjusteValorizacionLote.builder()
+                        .id(88L)
+                        .lote(lote)
+                        .codigoLote("L-1")
+                        .producto(lote.getProducto())
+                        .almacen(lote.getAlmacen())
+                        .costoUnitarioAnterior(BigDecimal.ZERO.setScale(6))
+                        .costoUnitarioNuevo(new BigDecimal("5.500000"))
+                        .costoTotalAnterior(BigDecimal.ZERO.setScale(6))
+                        .costoTotalNuevo(new BigDecimal("66.000000"))
+                        .totalIngresadoAnterior(BigDecimal.ZERO.setScale(6))
+                        .totalIngresadoNuevo(new BigDecimal("12.000000"))
+                        .idempotencyKey("idem-8")
+                        .payloadFingerprint("fp-8")
+                        .usuario(usuario)
+                        .fechaAjuste(LocalDateTime.now())
+                        .build()));
+        when(ajusteRepository.save(any())).thenThrow(new DataIntegrityViolationException("uk_ajuste_val_lote_idem"));
+
+        AjusteValorizacionLoteRequestDTO req = new AjusteValorizacionLoteRequestDTO(
+                new BigDecimal("5.5"), "m", "o", "d", false);
+
+        AjusteValorizacionLoteServiceImpl spyService = spy(service);
+        doReturn("fp-8").when(spyService).calcularFingerprint(1L, req);
+
+        AjusteValorizacionLoteResponseDTO response = spyService.ajustar(1L, req, "idem-8");
+
+        assertEquals(88L, response.ajusteId());
+    }
+
+    @Test
+    void colisionUniqueIdempotencyConPayloadDistintoRetornaConflictoFuncional() {
+        mockAuth("INV_COSTEO_AJUSTE_WRITE");
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+
+        LoteProducto lote = loteBase(new BigDecimal("12"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        when(loteProductoRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(lote));
+        when(ajusteRepository.findByIdempotencyKey("idem-9"))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(AjusteValorizacionLote.builder()
+                        .payloadFingerprint("fp-otro")
+                        .idempotencyKey("idem-9")
+                        .build()));
+        when(ajusteRepository.save(any())).thenThrow(new DataIntegrityViolationException("uk_ajuste_val_lote_idem"));
+
+        AjusteValorizacionLoteRequestDTO req = new AjusteValorizacionLoteRequestDTO(
+                new BigDecimal("5.5"), "m", "o", "d", false);
+        AjusteValorizacionLoteServiceImpl spyService = spy(service);
+        doReturn("fp-nuevo").when(spyService).calcularFingerprint(1L, req);
+
+        CustomBusinessException ex = assertThrows(CustomBusinessException.class,
+                () -> spyService.ajustar(1L, req, "idem-9"));
         assertEquals(ApiErrorCode.IDEMPOTENCY_KEY_REUTILIZADA_CON_PAYLOAD_DISTINTO, ex.getCode());
     }
 
