@@ -312,20 +312,24 @@ class OrdenProduccionServiceImplTest {
     void guardarConValidacionStock_retornaFaltantes() {
         Producto producto = new Producto();
         producto.setId(1);
-        UnidadMedida unidad = new UnidadMedida();
-        unidad.setSimbolo("kg");
-        producto.setUnidadMedida(unidad);
+        UnidadMedida unidadProducto = new UnidadMedida();
+        unidadProducto.setSimbolo("UND");
+        unidadProducto.setNombre("UNIDAD");
+        unidadProducto.setNombrePlural("UNIDADES");
+        producto.setUnidadMedida(unidadProducto);
 
         OrdenProduccion orden = new OrdenProduccion();
         orden.setProducto(producto);
-        orden.setCantidadProgramada(new BigDecimal("10"));
+        orden.setCantidadProgramada(new BigDecimal("300"));
         orden.setEstado(EstadoProduccion.CREADA);
 
         Producto insumo = new Producto();
         insumo.setId(2);
         insumo.setNombre("Extracto X");
         UnidadMedida unidadInsumo = new UnidadMedida();
-        unidadInsumo.setSimbolo("kg");
+        unidadInsumo.setSimbolo("GR");
+        unidadInsumo.setNombre("GRAMO");
+        unidadInsumo.setNombrePlural("GRAMOS");
         insumo.setUnidadMedida(unidadInsumo);
         CategoriaProducto categoriaInsumo = new CategoriaProducto();
         categoriaInsumo.setTipo(TipoCategoria.MATERIA_PRIMA);
@@ -333,7 +337,7 @@ class OrdenProduccionServiceImplTest {
 
         DetalleFormula detalle = new DetalleFormula();
         detalle.setInsumo(insumo);
-        detalle.setCantidadNecesaria(BigDecimal.ONE);
+        detalle.setCantidadNecesaria(new BigDecimal("31.5"));
 
         FormulaProducto formula = new FormulaProducto();
         formula.setDetalles(List.of(detalle));
@@ -346,11 +350,11 @@ class OrdenProduccionServiceImplTest {
 
         DistribucionFefoResult preview = DistribucionFefoResult.builder()
                 .productoInsumoId(2L)
-                .requerido(new BigDecimal("10.000000"))
-                .stockFisicoTotal(new BigDecimal("12.000000"))
-                .stockReservadoTotal(new BigDecimal("4.000000"))
-                .stockLibreTotal(new BigDecimal("8.000000"))
-                .faltante(new BigDecimal("2.000000"))
+                .requerido(new BigDecimal("9450.000000"))
+                .stockFisicoTotal(new BigDecimal("6000.000000"))
+                .stockReservadoTotal(new BigDecimal("159.000000"))
+                .stockLibreTotal(new BigDecimal("5841.000000"))
+                .faltante(new BigDecimal("3609.000000"))
                 .suficiente(false)
                 .almacenesPreferidos(List.of(5L))
                 .build();
@@ -361,11 +365,133 @@ class OrdenProduccionServiceImplTest {
         ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
 
         assertThat(resultado.isEsValida()).isFalse();
-        assertThat(resultado.getUnidadesMaximasProducibles()).isEqualTo(8);
+        assertThat(resultado.getUnidadesMaximasProducibles()).isEqualTo(185);
+        assertThat(resultado.getUnidadProductoFabricableSimbolo()).isEqualTo("UND");
+        assertThat(resultado.getUnidadProductoFabricableNombre()).isEqualTo("UNIDAD");
+        assertThat(resultado.getUnidadProductoFabricableNombrePlural()).isEqualTo("UNIDADES");
         assertThat(resultado.getInsumosFaltantes()).hasSize(1);
         assertThat(resultado.getInsumosFaltantes().get(0).getProductoId()).isEqualTo(2L);
-        assertThat(resultado.getInsumosFaltantes().get(0).getRequerido()).isEqualByComparingTo(new BigDecimal("10"));
-        assertThat(resultado.getInsumosFaltantes().get(0).getDisponible()).isEqualByComparingTo(new BigDecimal("8.000000"));
+        assertThat(resultado.getInsumosFaltantes().get(0).getRequerido()).isEqualByComparingTo(new BigDecimal("9450.0"));
+        assertThat(resultado.getInsumosFaltantes().get(0).getDisponible()).isEqualByComparingTo(new BigDecimal("5841.000000"));
+        assertThat(resultado.getInsumosFaltantes().get(0).getFaltante()).isEqualByComparingTo(new BigDecimal("3609.000000"));
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadInsumoSimbolo()).isEqualTo("GR");
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadInsumoNombre()).isEqualTo("GRAMO");
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadInsumoNombrePlural()).isEqualTo("GRAMOS");
+        assertThat(resultado.getInsumosFaltantes().get(0).getMaximoProducible()).isEqualTo(185);
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadProductoFabricableSimbolo()).isEqualTo("UND");
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadProductoFabricableNombre()).isEqualTo("UNIDAD");
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock mantiene separadas unidades de insumo y fabricable aunque sean iguales")
+    void guardarConValidacionStock_unidadesSeparadasAunqueCoincidan() {
+        Producto producto = new Producto();
+        producto.setId(11);
+        UnidadMedida unidadProducto = new UnidadMedida();
+        unidadProducto.setSimbolo("UNIDAD");
+        unidadProducto.setNombre("UNIDAD");
+        unidadProducto.setNombrePlural("UNIDADES");
+        producto.setUnidadMedida(unidadProducto);
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setProducto(producto);
+        orden.setCantidadProgramada(new BigDecimal("10"));
+        orden.setEstado(EstadoProduccion.CREADA);
+
+        Producto insumo = new Producto();
+        insumo.setId(12);
+        insumo.setNombre("Frasco");
+        UnidadMedida unidadInsumo = new UnidadMedida();
+        unidadInsumo.setSimbolo("UNIDAD");
+        unidadInsumo.setNombre("UNIDAD");
+        unidadInsumo.setNombrePlural("UNIDADES");
+        insumo.setUnidadMedida(unidadInsumo);
+        CategoriaProducto categoriaInsumo = new CategoriaProducto();
+        categoriaInsumo.setTipo(TipoCategoria.MATERIAL_EMPAQUE);
+        insumo.setCategoriaProducto(categoriaInsumo);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("30"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(11L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(any()))
+                .thenReturn(List.of(insumo));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of(7L));
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(12L), any(BigDecimal.class), eq(List.of(7L)), eq(true)))
+                .thenReturn(DistribucionFefoResult.builder()
+                        .productoInsumoId(12L)
+                        .stockLibreTotal(new BigDecimal("300.000000"))
+                        .faltante(BigDecimal.ZERO)
+                        .suficiente(false)
+                        .build());
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertThat(resultado.getInsumosFaltantes()).hasSize(1);
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadInsumoSimbolo()).isEqualTo("UNIDAD");
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadProductoFabricableSimbolo()).isEqualTo("UNIDAD");
+        assertThat(resultado.getInsumosFaltantes().get(0).getMaximoProducible()).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock no reutiliza unidad de insumo para maximo producible cuando son distintas")
+    void guardarConValidacionStock_noReutilizaUnidadInsumoParaMaximo() {
+        Producto producto = new Producto();
+        producto.setId(21);
+        UnidadMedida unidadProducto = new UnidadMedida();
+        unidadProducto.setSimbolo("UND");
+        unidadProducto.setNombre("UNIDAD");
+        unidadProducto.setNombrePlural("UNIDADES");
+        producto.setUnidadMedida(unidadProducto);
+
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setProducto(producto);
+        orden.setCantidadProgramada(new BigDecimal("8"));
+        orden.setEstado(EstadoProduccion.CREADA);
+
+        Producto insumo = new Producto();
+        insumo.setId(22);
+        insumo.setNombre("Esencia");
+        UnidadMedida unidadInsumo = new UnidadMedida();
+        unidadInsumo.setSimbolo("ML");
+        unidadInsumo.setNombre("MILILITRO");
+        unidadInsumo.setNombrePlural("MILILITROS");
+        insumo.setUnidadMedida(unidadInsumo);
+        CategoriaProducto categoriaInsumo = new CategoriaProducto();
+        categoriaInsumo.setTipo(TipoCategoria.MATERIA_PRIMA);
+        insumo.setCategoriaProducto(categoriaInsumo);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("2"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(21L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findAllById(any()))
+                .thenReturn(List.of(insumo));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of(8L));
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(22L), any(BigDecimal.class), eq(List.of(8L)), eq(true)))
+                .thenReturn(DistribucionFefoResult.builder()
+                        .productoInsumoId(22L)
+                        .stockLibreTotal(new BigDecimal("15.000000"))
+                        .faltante(new BigDecimal("1.000000"))
+                        .suficiente(false)
+                        .build());
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertThat(resultado.getInsumosFaltantes()).hasSize(1);
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadInsumoSimbolo()).isEqualTo("ML");
+        assertThat(resultado.getInsumosFaltantes().get(0).getUnidadProductoFabricableSimbolo()).isEqualTo("UND");
+        assertThat(resultado.getUnidadProductoFabricableSimbolo()).isEqualTo("UND");
     }
 
     @Test

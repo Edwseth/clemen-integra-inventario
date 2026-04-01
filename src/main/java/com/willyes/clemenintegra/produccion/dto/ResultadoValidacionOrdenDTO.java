@@ -17,6 +17,9 @@ public class ResultadoValidacionOrdenDTO {
     private boolean esValida;
     private String mensaje;
     private Integer unidadesMaximasProducibles;
+    private String unidadProductoFabricableSimbolo;
+    private String unidadProductoFabricableNombre;
+    private String unidadProductoFabricableNombrePlural;
     private List<InsumoFaltanteDTO> insumosFaltantes;
     private OrdenProduccionResponseDTO orden;
     private BigDecimal unidadesProducidas;
