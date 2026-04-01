@@ -16,6 +16,16 @@ public class InsumoFaltanteDTO {
     private String nombre;
     private BigDecimal requerido;
     private BigDecimal disponible;
+    private BigDecimal faltante;
+    /**
+     * @deprecated usar unidadInsumoSimbolo para evitar ambigüedad semántica.
+     */
     private String unidadSimbolo;
+    private String unidadInsumoSimbolo;
+    private String unidadInsumoNombre;
+    private String unidadInsumoNombrePlural;
+    private Integer maximoProducible;
+    private String unidadProductoFabricableSimbolo;
+    private String unidadProductoFabricableNombre;
+    private String unidadProductoFabricableNombrePlural;
 }
-

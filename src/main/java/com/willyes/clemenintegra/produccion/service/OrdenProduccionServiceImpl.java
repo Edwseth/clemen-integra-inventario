@@ -376,6 +376,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         List<InsumoFaltanteDTO> faltantes = new ArrayList<>();
         boolean stockSuficiente = true;
         Integer maxProducible = null;
+        UnidadMedida unidadProductoFabricable = orden.getProducto() != null
+                ? orden.getProducto().getUnidadMedida()
+                : null;
 
         BigDecimal cantidadProgramada = orden.getCantidadProgramada();
 
@@ -446,14 +449,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
             if (modoControl == ModoControlInventario.CONTROL_STOCK && !distribucionPreview.isSuficiente()) {
                 stockSuficiente = false;
+                UnidadMedida unidadInsumo = productoInsumo.getUnidadMedida();
                 faltantes.add(InsumoFaltanteDTO.builder()
                         .productoId(insumoId)
                         .nombre(productoInsumo.getNombre())
                         .requerido(cantidadRequerida)
                         .disponible(stockLibreFefo)
-                        .unidadSimbolo(productoInsumo.getUnidadMedida() != null
-                                ? productoInsumo.getUnidadMedida().getSimbolo()
-                                : null)
+                        .faltante(faltanteFefo)
+                        .unidadSimbolo(unidadInsumo != null ? unidadInsumo.getSimbolo() : null)
+                        .unidadInsumoSimbolo(unidadInsumo != null ? unidadInsumo.getSimbolo() : null)
+                        .unidadInsumoNombre(unidadInsumo != null ? unidadInsumo.getNombre() : null)
+                        .unidadInsumoNombrePlural(unidadInsumo != null ? unidadInsumo.getNombrePlural() : null)
+                        .maximoProducible(maxProducible)
+                        .unidadProductoFabricableSimbolo(unidadProductoFabricable != null ? unidadProductoFabricable.getSimbolo() : null)
+                        .unidadProductoFabricableNombre(unidadProductoFabricable != null ? unidadProductoFabricable.getNombre() : null)
+                        .unidadProductoFabricableNombrePlural(unidadProductoFabricable != null ? unidadProductoFabricable.getNombrePlural() : null)
                         .build());
             }
         }
@@ -463,6 +473,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     .esValida(false)
                     .mensaje("Stock insuficiente para algunos insumos")
                     .unidadesMaximasProducibles(maxProducible)
+                    .unidadProductoFabricableSimbolo(unidadProductoFabricable != null ? unidadProductoFabricable.getSimbolo() : null)
+                    .unidadProductoFabricableNombre(unidadProductoFabricable != null ? unidadProductoFabricable.getNombre() : null)
+                    .unidadProductoFabricableNombrePlural(unidadProductoFabricable != null ? unidadProductoFabricable.getNombrePlural() : null)
                     .insumosFaltantes(faltantes)
                     .build();
         }
