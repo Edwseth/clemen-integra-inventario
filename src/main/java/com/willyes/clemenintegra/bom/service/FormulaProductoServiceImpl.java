@@ -6,6 +6,7 @@ import com.willyes.clemenintegra.bom.model.*;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.repository.*;
 import com.willyes.clemenintegra.inventario.repository.LoteProductoRepository;
+import com.willyes.clemenintegra.inventario.model.UnidadMedida;
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.produccion.service.DisponibilidadInsumoService;
 import com.willyes.clemenintegra.produccion.service.model.DistribucionFefoResult;
@@ -329,8 +330,10 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
         }
 
         FormulaProductoResponse response = bomMapper.toResponseDTO(formula);
-        response.unidadBaseFormula = formula.getProducto() != null && formula.getProducto().getUnidadMedida() != null
-                ? formula.getProducto().getUnidadMedida().getSimbolo() : null;
+        UnidadMedida unidadProductoFabricable = formula.getProducto() != null
+                ? formula.getProducto().getUnidadMedida()
+                : null;
+        response.unidadBaseFormula = unidadProductoFabricable != null ? unidadProductoFabricable.getSimbolo() : null;
         response.cantidadBaseFormula = BigDecimal.ONE;
 
         BigDecimal cantidadProduccion = (cantidad != null && cantidad.compareTo(BigDecimal.ZERO) > 0)
@@ -434,10 +437,24 @@ public class FormulaProductoServiceImpl implements FormulaProductoService {
                 dto.stockLibreFefo = stockLibre;
                 dto.faltanteFefo = faltanteFefo;
                 dto.maxProducible = maxProducible;
+                dto.maximoProducible = maxProducible;
                 dto.estadoStock = suficiente ? "SUFICIENTE" : "INSUFICIENTE";
                 dto.disponibilidad = disponibilidad;
                 dto.bloqueante = new BloqueanteDTO(!suficiente, motivo);
                 dto.lotes = lotes;
+                UnidadMedida unidadInsumo = entidad.getInsumo() != null ? entidad.getInsumo().getUnidadMedida() : null;
+                dto.unidadInsumoSimbolo = unidadInsumo != null ? unidadInsumo.getSimbolo() : null;
+                dto.unidadInsumoNombre = unidadInsumo != null ? unidadInsumo.getNombre() : null;
+                dto.unidadInsumoNombrePlural = unidadInsumo != null ? unidadInsumo.getNombrePlural() : null;
+                dto.unidadProductoFabricableSimbolo = unidadProductoFabricable != null
+                        ? unidadProductoFabricable.getSimbolo()
+                        : null;
+                dto.unidadProductoFabricableNombre = unidadProductoFabricable != null
+                        ? unidadProductoFabricable.getNombre()
+                        : null;
+                dto.unidadProductoFabricableNombrePlural = unidadProductoFabricable != null
+                        ? unidadProductoFabricable.getNombrePlural()
+                        : null;
 
                 todosSuficientes = todosSuficientes && suficiente;
             }

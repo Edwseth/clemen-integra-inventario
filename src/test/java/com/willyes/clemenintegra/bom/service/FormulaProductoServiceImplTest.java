@@ -277,6 +277,8 @@ class FormulaProductoServiceImplTest {
         producto.setNombre("JVC-JARABE VITAMINA C 200ML");
         UnidadMedida umProducto = new UnidadMedida();
         umProducto.setSimbolo("UND");
+        umProducto.setNombre("UNIDAD");
+        umProducto.setNombrePlural("UNIDADES");
         producto.setUnidadMedida(umProducto);
 
         Producto insumo = new Producto();
@@ -285,6 +287,8 @@ class FormulaProductoServiceImplTest {
         insumo.setCodigoSku("MP-COLRO");
         UnidadMedida umInsumo = new UnidadMedida();
         umInsumo.setSimbolo("MILILITRO");
+        umInsumo.setNombre("MILILITRO");
+        umInsumo.setNombrePlural("MILILITROS");
         insumo.setUnidadMedida(umInsumo);
 
         DetalleFormula detalle = new DetalleFormula();
@@ -340,6 +344,13 @@ class FormulaProductoServiceImplTest {
         assertThat(detalleDto.stockDisponible).isEqualByComparingTo(detalleDto.stockLibreFefo);
         assertThat(detalleDto.faltanteFefo).isEqualByComparingTo(new BigDecimal("47.500000"));
         assertThat(detalleDto.maxProducible).isEqualTo(605);
+        assertThat(detalleDto.maximoProducible).isEqualTo(605);
+        assertThat(detalleDto.unidadInsumoSimbolo).isEqualTo("MILILITRO");
+        assertThat(detalleDto.unidadInsumoNombre).isEqualTo("MILILITRO");
+        assertThat(detalleDto.unidadInsumoNombrePlural).isEqualTo("MILILITROS");
+        assertThat(detalleDto.unidadProductoFabricableSimbolo).isEqualTo("UND");
+        assertThat(detalleDto.unidadProductoFabricableNombre).isEqualTo("UNIDAD");
+        assertThat(detalleDto.unidadProductoFabricableNombrePlural).isEqualTo("UNIDADES");
         assertThat(detalleDto.bloqueante.isInsuficiente()).isTrue();
         assertThat(detalleDto.bloqueante.getMotivo()).isEqualTo("RETENIDO");
     }
@@ -351,6 +362,8 @@ class FormulaProductoServiceImplTest {
         producto.setId(101);
         UnidadMedida um = new UnidadMedida();
         um.setSimbolo("UND");
+        um.setNombre("UNIDAD");
+        um.setNombrePlural("UNIDADES");
         producto.setUnidadMedida(um);
 
         Producto insumo = new Producto();
@@ -358,6 +371,8 @@ class FormulaProductoServiceImplTest {
         insumo.setNombre("ACIDO ASCORBICO");
         UnidadMedida umInsumo = new UnidadMedida();
         umInsumo.setSimbolo("MILILITRO");
+        umInsumo.setNombre("MILILITRO");
+        umInsumo.setNombrePlural("MILILITROS");
         insumo.setUnidadMedida(umInsumo);
 
         DetalleFormula detalle = new DetalleFormula();
@@ -395,7 +410,94 @@ class FormulaProductoServiceImplTest {
         assertThat(detalleDto.estadoStock).isEqualTo("SUFICIENTE");
         assertThat(detalleDto.stockLibreFefo).isEqualByComparingTo(new BigDecimal("120.000000"));
         assertThat(detalleDto.maxProducible).isEqualTo(120);
+        assertThat(detalleDto.maximoProducible).isEqualTo(120);
+        assertThat(detalleDto.unidadProductoFabricableSimbolo).isEqualTo("UND");
         assertThat(detalleDto.bloqueante.isInsuficiente()).isFalse();
+    }
+
+    @Test
+    @DisplayName("obtenerFormulaActivaPorProducto expone unidades separadas de insumo y producto fabricable por detalle")
+    void obtenerFormulaActivaPorProducto_exponeUnidadesSeparadas() {
+        Producto producto = new Producto();
+        producto.setId(102);
+        UnidadMedida unidadProducto = new UnidadMedida();
+        unidadProducto.setSimbolo("UND");
+        unidadProducto.setNombre("UNIDAD");
+        unidadProducto.setNombrePlural("UNIDADES");
+        producto.setUnidadMedida(unidadProducto);
+
+        Producto insumoGr = new Producto();
+        insumoGr.setId(401);
+        UnidadMedida unidadGr = new UnidadMedida();
+        unidadGr.setSimbolo("GR");
+        unidadGr.setNombre("GRAMO");
+        unidadGr.setNombrePlural("GRAMOS");
+        insumoGr.setUnidadMedida(unidadGr);
+
+        Producto insumoUnd = new Producto();
+        insumoUnd.setId(402);
+        UnidadMedida unidadUnd = new UnidadMedida();
+        unidadUnd.setSimbolo("UND");
+        unidadUnd.setNombre("UNIDAD");
+        unidadUnd.setNombrePlural("UNIDADES");
+        insumoUnd.setUnidadMedida(unidadUnd);
+
+        Producto insumoMl = new Producto();
+        insumoMl.setId(403);
+        UnidadMedida unidadMl = new UnidadMedida();
+        unidadMl.setSimbolo("ML");
+        unidadMl.setNombre("MILILITRO");
+        unidadMl.setNombrePlural("MILILITROS");
+        insumoMl.setUnidadMedida(unidadMl);
+
+        DetalleFormula detalleGr = new DetalleFormula();
+        detalleGr.setInsumo(insumoGr);
+        detalleGr.setCantidadNecesaria(new BigDecimal("2"));
+
+        DetalleFormula detalleUnd = new DetalleFormula();
+        detalleUnd.setInsumo(insumoUnd);
+        detalleUnd.setCantidadNecesaria(new BigDecimal("2"));
+
+        DetalleFormula detalleMl = new DetalleFormula();
+        detalleMl.setInsumo(insumoMl);
+        detalleMl.setCantidadNecesaria(new BigDecimal("2"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(52L);
+        formula.setProducto(producto);
+        formula.setDetalles(List.of(detalleGr, detalleUnd, detalleMl));
+
+        when(formulaRepository.findByProductoIdAndEstadoAndActivoTrue(102L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(loteProductoRepository.sumarPorEstado(anyLong())).thenReturn(List.of());
+        when(loteProductoRepository.listarLotesPorProducto(anyLong())).thenReturn(List.of());
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(any(Producto.class))).thenReturn(List.of());
+        when(disponibilidadInsumoService.calcularDisponibilidad(anyLong(), any(BigDecimal.class), eq(List.of()), eq(true)))
+                .thenReturn(DistribucionFefoResult.builder()
+                        .stockLibreTotal(new BigDecimal("10"))
+                        .faltante(BigDecimal.ZERO)
+                        .suficiente(true)
+                        .build());
+
+        FormulaProductoResponse respuesta = service.obtenerFormulaActivaPorProducto(102L, BigDecimal.ONE);
+
+        assertThat(respuesta.detalles).hasSize(3);
+
+        DetalleFormulaResponse casoA = respuesta.detalles.get(0);
+        assertThat(casoA.unidadInsumoSimbolo).isEqualTo("GR");
+        assertThat(casoA.unidadProductoFabricableSimbolo).isEqualTo("UND");
+        assertThat(casoA.unidadProductoFabricableNombrePlural).isEqualTo("UNIDADES");
+        assertThat(casoA.maximoProducible).isEqualTo(5);
+
+        DetalleFormulaResponse casoB = respuesta.detalles.get(1);
+        assertThat(casoB.unidadInsumoSimbolo).isEqualTo("UND");
+        assertThat(casoB.unidadProductoFabricableSimbolo).isEqualTo("UND");
+        assertThat(casoB.maximoProducible).isEqualTo(5);
+
+        DetalleFormulaResponse casoC = respuesta.detalles.get(2);
+        assertThat(casoC.unidadInsumoSimbolo).isEqualTo("ML");
+        assertThat(casoC.unidadProductoFabricableSimbolo).isEqualTo("UND");
+        assertThat(casoC.maximoProducible).isEqualTo(5);
     }
 
     @Test

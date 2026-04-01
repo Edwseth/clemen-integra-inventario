@@ -77,9 +77,10 @@ class FormulaProductoActivaIntegrationTest extends IntegrationTestMySqlContainer
                 .build());
 
         UnidadMedida unidad = unidadMedidaRepository.save(UnidadMedida.builder()
-                .nombre("Kilogramo BOM")
-                .simbolo("KBO")
-                .codigo("KBO")
+                .nombre("UNIDAD")
+                .nombrePlural("UNIDADES")
+                .simbolo("UND")
+                .codigo("UND")
                 .build());
 
         CategoriaProducto categoria = categoriaProductoRepository.save(CategoriaProducto.builder()
@@ -143,6 +144,9 @@ class FormulaProductoActivaIntegrationTest extends IntegrationTestMySqlContainer
                         .param("productoId", formula.getProducto().getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productoNombre").value("Producto Formula"))
-                .andExpect(jsonPath("$.detalles[0].insumoNombre").value("Insumo Formula"));
+                .andExpect(jsonPath("$.detalles[0].insumoNombre").value("Insumo Formula"))
+                .andExpect(jsonPath("$.detalles[0].unidadInsumoSimbolo").value("UND"))
+                .andExpect(jsonPath("$.detalles[0].unidadProductoFabricableSimbolo").value("UND"))
+                .andExpect(jsonPath("$.detalles[0].maximoProducible").exists());
     }
 }
