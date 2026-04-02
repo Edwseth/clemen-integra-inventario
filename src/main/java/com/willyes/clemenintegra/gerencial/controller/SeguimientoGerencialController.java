@@ -12,10 +12,29 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/gerencial/planes-semanales")
 @RequiredArgsConstructor
+/**
+ * Endpoint de lectura para el seguimiento gerencial transversal de un plan semanal.
+ *
+ * <p>Ruta publicada:
+ * {@code GET /api/gerencial/planes-semanales/{planSemanalId}/seguimiento}.
+ *
+ * <p>Propósito funcional:
+ * entregar en una sola respuesta un consolidado de estado para consumo gerencial:
+ * <ul>
+ *   <li>{@code summary}: agregados del plan completo (totales y cumplimiento general).</li>
+ *   <li>{@code items[]}: detalle item a item (1:1 con {@code plan_produccion_detalle}) con semántica operativa.</li>
+ * </ul>
+ */
 public class SeguimientoGerencialController {
 
     private final SeguimientoGerencialService seguimientoGerencialService;
 
+    /**
+     * Obtiene el seguimiento gerencial V1 de un plan semanal existente.
+     *
+     * <p>La respuesta usa el DTO consolidado {@link SeguimientoGerencialResponseDTO}
+     * con estructura {@code summary + items[]}.
+     */
     @GetMapping("/{planSemanalId}/seguimiento")
     public ResponseEntity<SeguimientoGerencialResponseDTO> obtenerSeguimiento(@PathVariable Long planSemanalId) {
         return ResponseEntity.ok(seguimientoGerencialService.obtenerSeguimiento(planSemanalId));

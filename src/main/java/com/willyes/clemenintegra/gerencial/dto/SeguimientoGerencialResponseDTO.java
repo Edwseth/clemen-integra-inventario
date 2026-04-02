@@ -13,6 +13,12 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+/**
+ * Contrato consolidado del seguimiento gerencial V1.
+ *
+ * <p>{@code summary}: vista agregada del plan semanal completo.
+ * <br>{@code items[]}: vista de detalle por ítem de plan (1:1 con plan_produccion_detalle).
+ */
 public class SeguimientoGerencialResponseDTO {
 
     private SummaryDTO summary;
@@ -34,6 +40,7 @@ public class SeguimientoGerencialResponseDTO {
         private int itemsBloqueados;
         private int itemsCompletados;
         private int itemsCerradosConNovedad;
+        /** % global calculado con sumatoria ejecutada / sumatoria planificada de todos los items. */
         private BigDecimal porcentajeCumplimientoGeneral;
         private int totalOpGeneradas;
         private int totalOpCerradas;
@@ -54,6 +61,7 @@ public class SeguimientoGerencialResponseDTO {
         private BigDecimal cantidadPlanificada;
         private String unidadMedida;
         private Integer prioridad;
+        /** Estado semántico gerencial derivado por reglas de bloqueo, ejecución y cierre. */
         private String estadoGerencial;
         private String etapaActual;
         private BloqueoPrincipalDTO bloqueoPrincipal;
@@ -61,6 +69,7 @@ public class SeguimientoGerencialResponseDTO {
         private int opGeneradas;
         private int opCerradas;
         private BigDecimal cantidadEjecutada;
+        /** % cumplimiento por ítem: cantidadEjecutada / cantidadPlanificada * 100. */
         private BigDecimal porcentajeCumplimiento;
         private boolean requiereIntervencion;
         private List<AlertaDTO> alertas;

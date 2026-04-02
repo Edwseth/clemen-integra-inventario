@@ -36,6 +36,22 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+/**
+ * Servicio agregador gerencial (V1).
+ *
+ * <p>Diseño de construcción:
+ * <ul>
+ *   <li>{@code items[]} se construye 1:1 desde {@link PlanProduccionDetalle} del plan semanal.</li>
+ *   <li>{@code summary} se deriva exclusivamente de los {@code items[]} calculados.</li>
+ *   <li>Consolida señales de Planeación, BOM, MRP, Compras, Producción, Inventario y Calidad.</li>
+ * </ul>
+ *
+ * <p>Limitación explícita V1:
+ * la trazabilidad exacta por {@code plan_detalle_id} existe en Producción (OP/lotes vinculados),
+ * pero MRP y Compras/Recepciones operan como señales derivadas por producto. Por tanto,
+ * esas señales no representan correspondencia exacta por ítem cuando un mismo producto aparece
+ * en múltiples detalles del plan.
+ */
 public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialService {
 
     private static final List<EstadoProduccion> ESTADOS_OP_CERRADOS = List.of(
@@ -52,6 +68,17 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
     private final LoteProductoRepository loteProductoRepository;
 
     @Override
+    /**
+     * Orquesta la respuesta consolidada de seguimiento gerencial para un plan semanal.
+     *
+     * <p>Flujo:
+     * <ol>
+     *   <li>Carga plan + detalles.</li>
+     *   <li>Resuelve trazabilidad base por detalle hacia OP/lotes.</li>
+     *   <li>Calcula contexto semántico por ítem (estado, etapa, bloqueo, responsable, métricas).</li>
+     *   <li>Construye {@code summary} como agregado de {@code items[]}.</li>
+     * </ol>
+     */
     public SeguimientoGerencialResponseDTO obtenerSeguimiento(Long planSemanalId) {
         PlanProduccionSemanal plan = planProduccionSemanalRepository.findWithDetallesById(planSemanalId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PLAN_SEMANAL_NO_ENCONTRADO"));
@@ -182,6 +209,8 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
         int opGeneradas = opsDetalle.size();
         int opCerradas = (int) opsDetalle.stream().filter(op -> op.getEstado() != null && ESTADOS_OP_CERRADOS.contains(op.getEstado())).count();
 
+        // cantidadEjecutada:
+        // suma por ítem de OP, priorizando cantidadProducidaAcumulada; si no existe, usa cantidadProducida.
         BigDecimal cantidadEjecutada = opsDetalle.stream()
                 .map(op -> op.getCantidadProducidaAcumulada() != null ? op.getCantidadProducidaAcumulada()
                         : Optional.ofNullable(op.getCantidadProducida()).orElse(BigDecimal.ZERO))
@@ -322,6 +351,9 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
     }
 
     private BigDecimal calcularPorcentaje(BigDecimal numerador, BigDecimal denominador) {
+        // porcentajeCumplimiento:
+        // (numerador / denominador) * 100 con escala 2 y HALF_UP.
+        // Si denominador <= 0 o nulo, retorna 0.00 para evitar divisiones inválidas.
         if (numerador == null || denominador == null || denominador.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
@@ -339,6 +371,14 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
                                        int opCerradas,
                                        boolean loteFinalUtilizable,
                                        List<OrdenProduccion> opsDetalle) {
+        // Regla semántica de etapaActual (orden de precedencia):
+        // 1) PLAN en BORRADOR -> PLANEACION.
+        // 2) Sin fórmula aprobada -> BOM_FORMULA.
+        // 3) Sin OP generadas -> se usa señal derivada confiable por producto para ubicar
+        //    en ABASTECIMIENTO_COMPRAS o RECEPCION_INVENTARIO; en otro caso PRODUCCION.
+        // 4) Con OP activas o sin cierre total -> PRODUCCION.
+        // 5) Con lotes bloqueados por calidad -> CALIDAD.
+        // 6) Con OP cerradas -> LIBERACION_FINAL (con/sin lote final utilizable).
         if (plan.getEstado() == null || plan.getEstado().name().equals("BORRADOR")) {
             return "PLANEACION";
         }
@@ -379,6 +419,8 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
                                                                                           boolean loteBloqueadoCalidad,
                                                                                           boolean opRetrasada,
                                                                                           boolean batchRechazado) {
+        // Regla semántica de bloqueoPrincipal:
+        // se retorna el primer bloqueo aplicable por severidad de negocio en este orden.
         if (sinFormulaAprobada) {
             return bloqueo("SIN_FORMULA_APROBADA", "No existe fórmula aprobada activa para el producto");
         }
@@ -411,6 +453,8 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
                                            BigDecimal cantidadPlanificada,
                                            boolean loteFinalUtilizable,
                                            boolean enVentanaCriticaSinOp) {
+        // Regla semántica de estadoGerencial (precedencia):
+        // BLOQUEADO > CERRADO_CON_NOVEDAD > COMPLETADO > EN_RIESGO > EN_PROCESO > NO_INICIADO.
 
         boolean bloqueado = bloqueo != null && bloqueo.getCodigo() != null && !"NONE".equals(bloqueo.getCodigo());
         if (bloqueado) {
@@ -496,6 +540,10 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
             List<OrdenProduccion> opsDetalle,
             PlanProduccionDetalle detalle,
             boolean opRetrasada) {
+        // Regla semántica de responsableActual:
+        // 1) Si existe bloqueo funcional, se asigna área responsable por tipo de bloqueo.
+        // 2) Si hay OP y responsable de OP, se informa ese usuario.
+        // 3) Fallback operativo: área Producción o Planeación según contexto.
         String codigoBloqueo = bloqueo != null ? bloqueo.getCodigo() : "NONE";
         if ("SIN_FORMULA_APROBADA".equals(codigoBloqueo)) {
             return area("BOM / Desarrollo");
