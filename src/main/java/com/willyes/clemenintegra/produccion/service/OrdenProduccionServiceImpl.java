@@ -59,6 +59,9 @@ import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoReposi
 import com.willyes.clemenintegra.inventario.model.enums.EstadoLote;
 import com.willyes.clemenintegra.inventario.model.enums.TipoAnalisisCalidad;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
+import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
+import com.willyes.clemenintegra.planeacion.repository.PlanProduccionDetalleRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
@@ -145,6 +148,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     private final UmValidator umValidator;
     private final LoteCalidadValidator loteCalidadValidator;
     private final VidaUtilProductoService vidaUtilProductoService;
+    private final PlanProduccionDetalleRepository planProduccionDetalleRepository;
     private final ReservaLoteService reservaLoteService;
     private final ReservaLoteRepository reservaLoteRepository;
     private final DisponibilidadInsumoService disponibilidadInsumoService;
@@ -350,6 +354,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     @Transactional
     public ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden) {
+        validarPlanDetalleSiExiste(orden, false);
         if (orden.getCantidadProducida() == null) {
             orden.setCantidadProducida(BigDecimal.ZERO);
         }
@@ -507,6 +512,10 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     @Transactional
     public ResultadoValidacionOrdenDTO crearOrden(CrearOrdenProduccionRequestDTO dto) {
+        if (dto.getPlanDetalleId() == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "planDetalleId es obligatorio para crear órdenes de producción");
+        }
         Producto producto = productoRepository.findById(dto.getProductoId())
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
         Usuario responsable = usuarioRepository.findById(dto.getResponsableId())
@@ -537,6 +546,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 unidadProducto);
 
         OrdenProduccion orden = ProduccionMapper.toEntity(dto, producto, responsable);
+        validarPlanDetalleSiExiste(orden, true);
         orden.setCantidadProgramada(cantidadConvertida);
         orden.setCantidadProducida(BigDecimal.ZERO);
         orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
@@ -554,6 +564,41 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             resultado.getOrden().unidadesProducidas = unidadesProducidas;
         }
         return resultado;
+    }
+
+    private void validarPlanDetalleSiExiste(OrdenProduccion orden, boolean obligatorio) {
+        Long planDetalleId = Optional.ofNullable(orden)
+                .map(OrdenProduccion::getPlanProduccionDetalle)
+                .map(PlanProduccionDetalle::getId)
+                .orElse(null);
+        if (planDetalleId == null) {
+            if (obligatorio) {
+                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "planDetalleId es obligatorio para crear órdenes de producción");
+            }
+            return;
+        }
+
+        PlanProduccionDetalle planDetalle = planProduccionDetalleRepository.findById(planDetalleId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "No existe el plan de producción detalle indicado"));
+
+        Long productoIdOrden = Optional.ofNullable(orden.getProducto()).map(Producto::getId).map(Integer::longValue).orElse(null);
+        Long productoIdPlan = Optional.ofNullable(planDetalle.getProducto()).map(Producto::getId).map(Integer::longValue).orElse(null);
+        if (productoIdOrden != null && productoIdPlan != null && !productoIdOrden.equals(productoIdPlan)) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El plan detalle no corresponde al producto de la orden");
+        }
+
+        EstadoPlanProduccion estadoPlan = Optional.ofNullable(planDetalle.getPlan())
+                .map(com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal::getEstado)
+                .orElse(null);
+        if (estadoPlan != EstadoPlanProduccion.CONFIRMADO) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El plan asociado debe estar en estado CONFIRMADO");
+        }
+
+        orden.setPlanProduccionDetalle(planDetalle);
     }
 
     private boolean requiereOverrideHomeopatico(Integer semanasVigencia, BigDecimal cantidadSolicitada) {
