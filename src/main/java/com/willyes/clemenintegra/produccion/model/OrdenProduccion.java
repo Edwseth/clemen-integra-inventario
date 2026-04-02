@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.produccion.model;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoBatchRecord;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.TipoCierre;
@@ -71,6 +72,10 @@ public class OrdenProduccion {
     @ManyToOne
     @JoinColumn(name = "responsable_id")
     private Usuario responsable;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_detalle_id")
+    private PlanProduccionDetalle planProduccionDetalle;
 
     @OneToMany(mappedBy = "ordenProduccion")
     private List<EtapaProduccion> etapas;

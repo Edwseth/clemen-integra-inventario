@@ -36,6 +36,8 @@ public class OrdenProduccionRequestDTO {
     @NotNull
     private Long responsableId;
 
+    private Long planDetalleId;
+
     private Long lotePsId;
 
     /**

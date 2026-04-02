@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 public class OrdenProduccionResponseDTO {
     public Long id;
     public String codigoOrden;
+    public Long planDetalleId;
     public String loteProduccion;
     public Long loteId;
     public LocalDateTime fechaInicio;

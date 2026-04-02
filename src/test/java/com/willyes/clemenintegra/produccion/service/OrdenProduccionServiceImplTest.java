@@ -35,6 +35,10 @@ import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
 import com.willyes.clemenintegra.calidad.service.VidaUtilProductoService;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
+import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
+import com.willyes.clemenintegra.planeacion.repository.PlanProduccionDetalleRepository;
 import com.willyes.clemenintegra.produccion.model.EtapaPlantilla;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
@@ -133,6 +137,7 @@ class OrdenProduccionServiceImplTest {
     @Mock private InventoryCatalogResolver catalogResolver;
     @Mock private UmValidator umValidator;
     @Mock private VidaUtilProductoService vidaUtilProductoService;
+    @Mock private PlanProduccionDetalleRepository planProduccionDetalleRepository;
     @Mock private ReservaLoteService reservaLoteService;
     @Mock private ReservaLoteRepository reservaLoteRepository;
     @Mock private LoteCalidadValidator loteCalidadValidator;
@@ -495,6 +500,37 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("crearOrden exige planDetalleId")
+    void crearOrden_sinPlanDetalleId_rechaza() {
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
+        dto.setProductoId(20L);
+        dto.setResponsableId(5L);
+        dto.setCantidadProgramada(new BigDecimal("10"));
+        dto.setUnidadMedidaSimbolo("UND");
+
+        assertThatThrownBy(() -> service.crearOrden(dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock valida coherencia de plan detalle y producto")
+    void guardarConValidacionStock_planDetalleProductoInconsistente_rechaza() {
+        OrdenProduccion orden = new OrdenProduccion();
+        Producto producto = new Producto();
+        producto.setId(20);
+        orden.setProducto(producto);
+        orden.setPlanProduccionDetalle(PlanProduccionDetalle.builder().id(800L).build());
+        when(planProduccionDetalleRepository.findById(800L)).thenReturn(Optional.of(planDetalle(800L, 99)));
+
+        assertThatThrownBy(() -> service.guardarConValidacionStock(orden))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
+    }
+
+    @Test
     @DisplayName("crearOrden valida rendimiento obligatorio para PS")
     void crearOrden_conPsSinRendimientoLanzaExcepcion() {
         Producto producto = new Producto();
@@ -513,8 +549,10 @@ class OrdenProduccionServiceImplTest {
         CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(20L);
         dto.setResponsableId(5L);
+        dto.setPlanDetalleId(1000L);
         dto.setCantidadProgramada(new BigDecimal("10"));
         dto.setUnidadMedidaSimbolo("UND");
+        when(planProduccionDetalleRepository.findById(1000L)).thenReturn(Optional.of(planDetalle(1000L, 20)));
 
         assertThatThrownBy(() -> service.crearOrden(dto))
                 .isInstanceOf(CustomBusinessException.class)
@@ -546,8 +584,10 @@ class OrdenProduccionServiceImplTest {
         CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(21L);
         dto.setResponsableId(6L);
+        dto.setPlanDetalleId(1001L);
         dto.setCantidadProgramada(new BigDecimal("10"));
         dto.setUnidadMedidaSimbolo("UND");
+        when(planProduccionDetalleRepository.findById(1001L)).thenReturn(Optional.of(planDetalle(1001L, 21)));
 
         service.crearOrden(dto);
 
@@ -573,8 +613,10 @@ class OrdenProduccionServiceImplTest {
         CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(31L);
         dto.setResponsableId(9L);
+        dto.setPlanDetalleId(1002L);
         dto.setCantidadProgramada(new BigDecimal("200"));
         dto.setUnidadMedidaSimbolo("UND");
+        when(planProduccionDetalleRepository.findById(1002L)).thenReturn(Optional.of(planDetalle(1002L, 31)));
 
         assertThatThrownBy(() -> service.crearOrden(dto))
                 .isInstanceOf(CustomBusinessException.class)
@@ -624,10 +666,12 @@ class OrdenProduccionServiceImplTest {
         CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(32L);
         dto.setResponsableId(10L);
+        dto.setPlanDetalleId(1003L);
         dto.setCantidadProgramada(new BigDecimal("200"));
         dto.setUnidadMedidaSimbolo("UND");
         dto.setConfirmacionHomeopatico(true);
         dto.setMotivoOverrideHomeopatico("Se requiere este lote para cubrir pedido regulatorio urgente");
+        when(planProduccionDetalleRepository.findById(1003L)).thenReturn(Optional.of(planDetalle(1003L, 32)));
 
         ResultadoValidacionOrdenDTO respuesta = service.crearOrden(dto);
         assertThat(respuesta.isEsValida()).isTrue();
@@ -661,10 +705,12 @@ class OrdenProduccionServiceImplTest {
         CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(33L);
         dto.setResponsableId(11L);
+        dto.setPlanDetalleId(1004L);
         dto.setCantidadProgramada(new BigDecimal("200"));
         dto.setUnidadMedidaSimbolo("UND");
         dto.setConfirmacionHomeopatico(true);
         dto.setMotivoOverrideHomeopatico("motivo corto");
+        when(planProduccionDetalleRepository.findById(1004L)).thenReturn(Optional.of(planDetalle(1004L, 33)));
 
         assertThatThrownBy(() -> service.crearOrden(dto))
                 .isInstanceOf(CustomBusinessException.class)
@@ -696,8 +742,10 @@ class OrdenProduccionServiceImplTest {
         CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
         dto.setProductoId(34L);
         dto.setResponsableId(12L);
+        dto.setPlanDetalleId(1005L);
         dto.setCantidadProgramada(new BigDecimal("200"));
         dto.setUnidadMedidaSimbolo("UND");
+        when(planProduccionDetalleRepository.findById(1005L)).thenReturn(Optional.of(planDetalle(1005L, 34)));
 
         ResultadoValidacionOrdenDTO respuesta = service.crearOrden(dto);
         assertThat(respuesta.isEsValida()).isTrue();
@@ -716,6 +764,20 @@ class OrdenProduccionServiceImplTest {
         producto.setUnidadMedida(um);
         producto.setRendimientoUnidad(BigDecimal.ONE);
         return producto;
+    }
+
+    private PlanProduccionDetalle planDetalle(Long id, int productoId) {
+        PlanProduccionSemanal plan = new PlanProduccionSemanal();
+        plan.setId(500L + id);
+        plan.setEstado(EstadoPlanProduccion.CONFIRMADO);
+        Producto producto = new Producto();
+        producto.setId(productoId);
+        return PlanProduccionDetalle.builder()
+                .id(id)
+                .plan(plan)
+                .producto(producto)
+                .cantidadPlanificada(BigDecimal.ONE)
+                .build();
     }
 
     @Test

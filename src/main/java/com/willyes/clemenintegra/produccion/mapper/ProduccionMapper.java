@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.produccion.dto.*;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import com.willyes.clemenintegra.produccion.model.*;
 import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
 import java.math.BigDecimal;
 
@@ -19,6 +20,9 @@ public class ProduccionMapper {
                 .producto(producto)
                 .unidadMedida(producto.getUnidadMedida())
                 .responsable(responsable)
+                .planProduccionDetalle(dto.getPlanDetalleId() != null
+                        ? PlanProduccionDetalle.builder().id(dto.getPlanDetalleId()).build()
+                        : null)
                 .lotePsId(dto.getLotePsId())
                 .confirmacionHomeopatico(Boolean.TRUE.equals(dto.getConfirmacionHomeopatico()))
                 .motivoOverrideHomeopatico(dto.getMotivoOverrideHomeopatico() != null ? dto.getMotivoOverrideHomeopatico().trim() : null)
@@ -34,6 +38,9 @@ public class ProduccionMapper {
                 .producto(producto)
                 .unidadMedida(producto.getUnidadMedida())
                 .responsable(responsable)
+                .planProduccionDetalle(dto.getPlanDetalleId() != null
+                        ? PlanProduccionDetalle.builder().id(dto.getPlanDetalleId()).build()
+                        : null)
                 .lotePsId(dto.getLotePsId())
                 .confirmacionHomeopatico(Boolean.TRUE.equals(dto.getConfirmacionHomeopatico()))
                 .motivoOverrideHomeopatico(dto.getMotivoOverrideHomeopatico() != null ? dto.getMotivoOverrideHomeopatico().trim() : null)
@@ -44,6 +51,7 @@ public class ProduccionMapper {
         OrdenProduccionResponseDTO dto = new OrdenProduccionResponseDTO();
         dto.id = entidad.getId();
         dto.codigoOrden = entidad.getCodigoOrden();
+        dto.planDetalleId = entidad.getPlanProduccionDetalle() != null ? entidad.getPlanProduccionDetalle().getId() : null;
         dto.loteProduccion = entidad.getLoteProduccion();
         dto.loteId = entidad.getLoteId();
         dto.fechaInicio = entidad.getFechaInicio();
@@ -144,4 +152,3 @@ public class ProduccionMapper {
         return dto;
     }
 }
-

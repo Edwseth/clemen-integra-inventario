@@ -179,6 +179,15 @@ public class OrdenProduccionController {
                     OrdenProduccion entidad = ProduccionMapper.toEntity(request, producto, responsable);
                     entidad.setId(existente.getId());
                     entidad.setCodigoOrden(existente.getCodigoOrden());
+                    if (request.getPlanDetalleId() == null) {
+                        entidad.setPlanProduccionDetalle(existente.getPlanProduccionDetalle());
+                    } else {
+                        entidad.setPlanProduccionDetalle(
+                                com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle.builder()
+                                        .id(request.getPlanDetalleId())
+                                        .build()
+                        );
+                    }
                     ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(entidad);
                     HttpStatus status = resultado.isEsValida() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
                     return new ResponseEntity<>(resultado, status);

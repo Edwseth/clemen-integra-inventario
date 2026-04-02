@@ -35,6 +35,8 @@ public class CrearOrdenProduccionRequestDTO {
     @NotNull
     private Long responsableId;
 
+    private Long planDetalleId;
+
     private Long lotePsId;
 
     private String unidadMedidaSimbolo;
