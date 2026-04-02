@@ -129,6 +129,40 @@ class SeguimientoGerencialServiceImplTest {
     }
 
     @Test
+    void senalesDerivadasNoConfiablesNoDebenForzarEtapaAbastecimiento() {
+        PlanProduccionSemanal plan = planConDosDetallesMismoProducto(EstadoPlanProduccion.CONFIRMADO, LocalDate.now().plusDays(6));
+        when(planProduccionSemanalRepository.findWithDetallesById(1L)).thenReturn(Optional.of(plan));
+        when(ordenProduccionRepository.findByPlanProduccionDetalleIdIn(anySet())).thenReturn(List.of());
+        when(formulaProductoRepository.findByProductoIdInAndEstadoAndActivoTrue(anyCollection(), any()))
+                .thenReturn(List.of(formulaAprobada(plan.getDetalles().get(0).getProducto().getId().longValue())));
+        when(corridaMrpRepository.findTopByPlanProduccionSemanalAndEstadoOrderByFechaEjecucionDesc(any(), any())).thenReturn(Optional.empty());
+        when(ordenCompraDetalleRepository.sumarCantidadPendientePorProductoYEstados(anyLong(), any())).thenReturn(BigDecimal.TEN);
+
+        SeguimientoGerencialResponseDTO.ItemDTO item = service.obtenerSeguimiento(1L).getItems().getFirst();
+
+        assertEquals("PRODUCCION", item.getEtapaActual());
+        assertEquals("BLOQUEADO", item.getEstadoGerencial());
+        assertEquals("RECEPCION_INSUFICIENTE", item.getBloqueoPrincipal().getCodigo());
+    }
+
+    @Test
+    void reglaSinOpDebeMantenerseConsistenteConEstadoYBloqueo() {
+        PlanProduccionSemanal plan = planConUnDetalle(EstadoPlanProduccion.CONFIRMADO, LocalDate.now().plusDays(1));
+        when(planProduccionSemanalRepository.findWithDetallesById(1L)).thenReturn(Optional.of(plan));
+        when(ordenProduccionRepository.findByPlanProduccionDetalleIdIn(anySet())).thenReturn(List.of());
+        when(formulaProductoRepository.findByProductoIdInAndEstadoAndActivoTrue(anyCollection(), any()))
+                .thenReturn(List.of(formulaAprobada(plan.getDetalles().get(0).getProducto().getId().longValue())));
+        when(corridaMrpRepository.findTopByPlanProduccionSemanalAndEstadoOrderByFechaEjecucionDesc(any(), any())).thenReturn(Optional.empty());
+        when(ordenCompraDetalleRepository.sumarCantidadPendientePorProductoYEstados(anyLong(), any())).thenReturn(BigDecimal.ZERO);
+
+        SeguimientoGerencialResponseDTO.ItemDTO item = service.obtenerSeguimiento(1L).getItems().getFirst();
+
+        assertEquals("PRODUCCION", item.getEtapaActual());
+        assertEquals("EN_RIESGO", item.getEstadoGerencial());
+        assertEquals("NONE", item.getBloqueoPrincipal().getCodigo());
+    }
+
+    @Test
     void summaryDebeAgregarConteosDeEstados() {
         PlanProduccionSemanal plan = planConDosDetalles(EstadoPlanProduccion.CONFIRMADO, LocalDate.now().plusDays(6));
         when(planProduccionSemanalRepository.findWithDetallesById(1L)).thenReturn(Optional.of(plan));
@@ -177,6 +211,19 @@ class SeguimientoGerencialServiceImplTest {
                 .build();
         PlanProduccionDetalle d1 = detalle(11L, 101, plan, BigDecimal.TEN);
         PlanProduccionDetalle d2 = detalle(12L, 102, plan, BigDecimal.TEN);
+        plan.setDetalles(List.of(d1, d2));
+        return plan;
+    }
+
+    private PlanProduccionSemanal planConDosDetallesMismoProducto(EstadoPlanProduccion estado, LocalDate semanaFin) {
+        PlanProduccionSemanal plan = PlanProduccionSemanal.builder()
+                .id(1L)
+                .semanaInicio(LocalDate.now())
+                .semanaFin(semanaFin)
+                .estado(estado)
+                .build();
+        PlanProduccionDetalle d1 = detalle(11L, 101, plan, BigDecimal.TEN);
+        PlanProduccionDetalle d2 = detalle(12L, 101, plan, BigDecimal.ONE);
         plan.setDetalles(List.of(d1, d2));
         return plan;
     }

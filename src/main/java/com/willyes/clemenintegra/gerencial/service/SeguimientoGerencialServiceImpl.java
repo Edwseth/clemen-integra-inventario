@@ -71,6 +71,10 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
                 .map(d -> d.getProducto() != null && d.getProducto().getId() != null ? d.getProducto().getId().longValue() : null)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+        Map<Long, Long> detallesPorProducto = detalles.stream()
+                .map(d -> d.getProducto() != null && d.getProducto().getId() != null ? d.getProducto().getId().longValue() : null)
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
         Map<Long, FormulaProducto> formulaPorProducto = formulaProductoRepository
                 .findByProductoIdInAndEstadoAndActivoTrue(productoIds, EstadoFormula.APROBADA)
@@ -113,7 +117,8 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
         for (PlanProduccionDetalle detalle : detalles) {
             Long detalleId = detalle.getId();
             List<OrdenProduccion> opsDetalle = detalleId != null ? ordenesPorDetalle.getOrDefault(detalleId, List.of()) : List.of();
-            ItemContext context = construirContexto(plan, detalle, opsDetalle, formulaPorProducto, sugerenciasPendientesPorProducto, lotesPorOp, hoy, corridaOpt.orElse(null));
+            ItemContext context = construirContexto(plan, detalle, opsDetalle, formulaPorProducto, sugerenciasPendientesPorProducto,
+                    detallesPorProducto, lotesPorOp, hoy, corridaOpt.orElse(null));
             items.add(construirItem(plan, detalle, context));
         }
 
@@ -128,6 +133,7 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
                                           List<OrdenProduccion> opsDetalle,
                                           Map<Long, FormulaProducto> formulaPorProducto,
                                           Map<Long, Long> sugerenciasPendientesPorProducto,
+                                          Map<Long, Long> detallesPorProducto,
                                           Map<Long, List<LoteProducto>> lotesPorOp,
                                           LocalDate hoy,
                                           CorridaMrp corridaMrp) {
@@ -140,7 +146,7 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
         boolean sinFormulaAprobada = formula == null;
 
         long sugerenciasPendientes = productoId != null ? sugerenciasPendientesPorProducto.getOrDefault(productoId, 0L) : 0L;
-        boolean abastecimientoPendienteCritico = sugerenciasPendientes > 0;
+        boolean senalDerivadaMrpPendiente = sugerenciasPendientes > 0;
 
         BigDecimal pendientesRecepcion = BigDecimal.ZERO;
         if (productoId != null) {
@@ -149,7 +155,8 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
                     List.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.PARCIALMENTE_RECIBIDA)
             )).orElse(BigDecimal.ZERO);
         }
-        boolean recepcionInsuficiente = pendientesRecepcion.compareTo(BigDecimal.ZERO) > 0;
+        boolean senalDerivadaRecepcionPendiente = pendientesRecepcion.compareTo(BigDecimal.ZERO) > 0;
+        boolean senalesDerivadasConfiables = productoId != null && detallesPorProducto.getOrDefault(productoId, 0L) == 1;
 
         boolean batchRechazado = opsDetalle.stream().anyMatch(op -> op.getBatchRecordEstado() == EstadoBatchRecord.RECHAZADO);
 
@@ -182,11 +189,12 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
 
         BigDecimal porcentajeCumplimiento = calcularPorcentaje(cantidadEjecutada, detalle.getCantidadPlanificada());
 
-        String etapaActual = calcularEtapaActual(plan, sinFormulaAprobada, abastecimientoPendienteCritico,
-                recepcionInsuficiente, loteBloqueadoCalidad, opGeneradas, opCerradas, loteFinalUtilizable, opsDetalle);
+        String etapaActual = calcularEtapaActual(plan, sinFormulaAprobada, senalDerivadaMrpPendiente,
+                senalDerivadaRecepcionPendiente, senalesDerivadasConfiables, loteBloqueadoCalidad, opGeneradas,
+                opCerradas, loteFinalUtilizable, opsDetalle);
 
         SeguimientoGerencialResponseDTO.BloqueoPrincipalDTO bloqueo = calcularBloqueoPrincipal(sinFormulaAprobada,
-                abastecimientoPendienteCritico, recepcionInsuficiente, loteBloqueadoCalidad, opRetrasada, batchRechazado);
+                senalDerivadaMrpPendiente, senalDerivadaRecepcionPendiente, loteBloqueadoCalidad, opRetrasada, batchRechazado);
 
         boolean enVentanaCriticaSinOp = opGeneradas == 0 && plan.getSemanaFin() != null
                 && !plan.getSemanaFin().isBefore(hoy)
@@ -202,8 +210,8 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
                 enVentanaCriticaSinOp
         );
 
-        List<SeguimientoGerencialResponseDTO.AlertaDTO> alertas = construirAlertas(sinFormulaAprobada, abastecimientoPendienteCritico,
-                recepcionInsuficiente, loteBloqueadoCalidad, opRetrasada, batchRechazado, opGeneradas == 0, enVentanaCriticaSinOp);
+        List<SeguimientoGerencialResponseDTO.AlertaDTO> alertas = construirAlertas(sinFormulaAprobada, senalDerivadaMrpPendiente,
+                senalDerivadaRecepcionPendiente, loteBloqueadoCalidad, opRetrasada, batchRechazado, opGeneradas == 0, enVentanaCriticaSinOp);
 
         SeguimientoGerencialResponseDTO.ResponsableActualDTO responsableActual = calcularResponsableActual(bloqueo, opsDetalle, detalle, opRetrasada);
 
@@ -323,8 +331,9 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
 
     private String calcularEtapaActual(PlanProduccionSemanal plan,
                                        boolean sinFormulaAprobada,
-                                       boolean abastecimientoPendienteCritico,
-                                       boolean recepcionInsuficiente,
+                                       boolean senalDerivadaMrpPendiente,
+                                       boolean senalDerivadaRecepcionPendiente,
+                                       boolean senalesDerivadasConfiables,
                                        boolean loteBloqueadoCalidad,
                                        int opGeneradas,
                                        int opCerradas,
@@ -336,14 +345,14 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
         if (sinFormulaAprobada) {
             return "BOM_FORMULA";
         }
-        if (opGeneradas == 0 && abastecimientoPendienteCritico) {
-            return "ABASTECIMIENTO_COMPRAS";
-        }
-        if (opGeneradas == 0 && recepcionInsuficiente) {
-            return "RECEPCION_INVENTARIO";
-        }
-        if (loteBloqueadoCalidad) {
-            return "CALIDAD";
+        if (opGeneradas == 0) {
+            if (senalesDerivadasConfiables && senalDerivadaMrpPendiente) {
+                return "ABASTECIMIENTO_COMPRAS";
+            }
+            if (senalesDerivadasConfiables && senalDerivadaRecepcionPendiente) {
+                return "RECEPCION_INVENTARIO";
+            }
+            return "PRODUCCION";
         }
 
         boolean hayOpActiva = opsDetalle.stream().anyMatch(op -> op.getEstado() == EstadoProduccion.EN_PROCESO
@@ -352,29 +361,32 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
         if (hayOpActiva || (opGeneradas > 0 && opCerradas < opGeneradas)) {
             return "PRODUCCION";
         }
+        if (loteBloqueadoCalidad) {
+            return "CALIDAD";
+        }
         if (opGeneradas > 0 && opCerradas == opGeneradas && !loteFinalUtilizable) {
             return "LIBERACION_FINAL";
         }
         if (opGeneradas > 0) {
             return "LIBERACION_FINAL";
         }
-        return "PLANEACION";
+        return "PRODUCCION";
     }
 
     private SeguimientoGerencialResponseDTO.BloqueoPrincipalDTO calcularBloqueoPrincipal(boolean sinFormulaAprobada,
-                                                                                          boolean abastecimientoPendienteCritico,
-                                                                                          boolean recepcionInsuficiente,
+                                                                                          boolean senalDerivadaMrpPendiente,
+                                                                                          boolean senalDerivadaRecepcionPendiente,
                                                                                           boolean loteBloqueadoCalidad,
                                                                                           boolean opRetrasada,
                                                                                           boolean batchRechazado) {
         if (sinFormulaAprobada) {
             return bloqueo("SIN_FORMULA_APROBADA", "No existe fórmula aprobada activa para el producto");
         }
-        if (abastecimientoPendienteCritico) {
-            return bloqueo("ABASTECIMIENTO_PENDIENTE_CRITICO", "Hay sugerencias MRP pendientes para abastecimiento");
+        if (senalDerivadaMrpPendiente) {
+            return bloqueo("ABASTECIMIENTO_PENDIENTE_CRITICO", "Hay señal derivada MRP pendiente por producto para abastecimiento");
         }
-        if (recepcionInsuficiente) {
-            return bloqueo("RECEPCION_INSUFICIENTE", "Hay recepciones pendientes para abastecer el ítem");
+        if (senalDerivadaRecepcionPendiente) {
+            return bloqueo("RECEPCION_INSUFICIENTE", "Hay señal derivada de compras/recepción pendiente por producto");
         }
         if (loteBloqueadoCalidad) {
             return bloqueo("LOTE_BLOQUEADO_CALIDAD", "Hay lotes en cuarentena, retenidos o rechazados");
@@ -438,8 +450,8 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
     }
 
     private List<SeguimientoGerencialResponseDTO.AlertaDTO> construirAlertas(boolean sinFormulaAprobada,
-                                                                              boolean abastecimientoPendienteCritico,
-                                                                              boolean recepcionInsuficiente,
+                                                                              boolean senalDerivadaMrpPendiente,
+                                                                              boolean senalDerivadaRecepcionPendiente,
                                                                               boolean loteBloqueadoCalidad,
                                                                               boolean opRetrasada,
                                                                               boolean batchRechazado,
@@ -449,11 +461,11 @@ public class SeguimientoGerencialServiceImpl implements SeguimientoGerencialServ
         if (sinFormulaAprobada) {
             alertas.add(alerta("SIN_FORMULA_APROBADA", "ALTA", "BOM", "Falta fórmula aprobada activa"));
         }
-        if (abastecimientoPendienteCritico) {
-            alertas.add(alerta("ABASTECIMIENTO_PENDIENTE", "MEDIA", "MRP", "Hay sugerencias MRP pendientes"));
+        if (senalDerivadaMrpPendiente) {
+            alertas.add(alerta("ABASTECIMIENTO_PENDIENTE", "MEDIA", "MRP", "Hay señal derivada MRP pendiente por producto"));
         }
-        if (recepcionInsuficiente) {
-            alertas.add(alerta("RECEPCION_INSUFICIENTE", "MEDIA", "COMPRAS", "Hay compras pendientes de recibir"));
+        if (senalDerivadaRecepcionPendiente) {
+            alertas.add(alerta("RECEPCION_INSUFICIENTE", "MEDIA", "COMPRAS", "Hay señal derivada de compras pendientes por producto"));
         }
         if (loteBloqueadoCalidad) {
             alertas.add(alerta("LOTE_BLOQUEADO_CALIDAD", "ALTA", "CALIDAD", "Existe lote bloqueado por calidad"));
