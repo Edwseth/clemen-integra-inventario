@@ -354,7 +354,15 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     @Transactional
     public ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden) {
-        validarPlanDetalleSiExiste(orden, false);
+        boolean esOrdenNueva = orden.getId() == null;
+        if (!esOrdenNueva) {
+            repository.findById(orden.getId()).ifPresent(existente -> {
+                if (orden.getPlanProduccionDetalle() == null && existente.getPlanProduccionDetalle() != null) {
+                    orden.setPlanProduccionDetalle(existente.getPlanProduccionDetalle());
+                }
+            });
+        }
+        validarPlanDetalleSiExiste(orden, esOrdenNueva);
         if (orden.getCantidadProducida() == null) {
             orden.setCantidadProducida(BigDecimal.ZERO);
         }
@@ -364,7 +372,6 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         Long productoId = orden.getProducto().getId().longValue();
 
         List<EtapaPlantilla> plantilla = cargarPlantillaEtapas(orden.getProducto().getId());
-        boolean esOrdenNueva = orden.getId() == null;
         if (esOrdenNueva && (plantilla == null || plantilla.isEmpty())) {
             String codigoProducto = Optional.ofNullable(orden.getProducto().getCodigoSku())
                     .orElseGet(() -> Optional.ofNullable(orden.getProducto().getNombre()).orElse(""));

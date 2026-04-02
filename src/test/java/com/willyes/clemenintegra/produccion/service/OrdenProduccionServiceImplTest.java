@@ -531,6 +531,71 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("guardarConValidacionStock exige planDetalleId para OP nueva aunque no use crearOrden")
+    void guardarConValidacionStock_nuevaSinPlanDetalle_rechaza() {
+        OrdenProduccion orden = new OrdenProduccion();
+        Producto producto = new Producto();
+        producto.setId(20);
+        orden.setProducto(producto);
+
+        assertThatThrownBy(() -> service.guardarConValidacionStock(orden))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock en update conserva plan detalle persistido y valida coherencia de producto")
+    void guardarConValidacionStock_updateConPlanPersistidoYProductoInconsistente_rechaza() {
+        OrdenProduccion existente = new OrdenProduccion();
+        existente.setId(900L);
+        existente.setPlanProduccionDetalle(PlanProduccionDetalle.builder().id(801L).build());
+        when(ordenProduccionRepository.findById(900L)).thenReturn(Optional.of(existente));
+        when(planProduccionDetalleRepository.findById(801L)).thenReturn(Optional.of(planDetalle(801L, 77)));
+
+        OrdenProduccion ordenUpdate = new OrdenProduccion();
+        ordenUpdate.setId(900L);
+        Producto producto = new Producto();
+        producto.setId(20);
+        ordenUpdate.setProducto(producto);
+
+        assertThatThrownBy(() -> service.guardarConValidacionStock(ordenUpdate))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock permite update legacy sin plan detalle")
+    void guardarConValidacionStock_updateLegacySinPlanDetalle_permite() {
+        OrdenProduccion existente = new OrdenProduccion();
+        existente.setId(901L);
+        when(ordenProduccionRepository.findById(901L)).thenReturn(Optional.of(existente));
+
+        Producto producto = new Producto();
+        producto.setId(25);
+        UnidadMedida um = new UnidadMedida();
+        um.setSimbolo("UND");
+        producto.setUnidadMedida(um);
+
+        OrdenProduccion ordenUpdate = new OrdenProduccion();
+        ordenUpdate.setId(901L);
+        ordenUpdate.setProducto(producto);
+        ordenUpdate.setCantidadProgramada(new BigDecimal("10"));
+        ordenUpdate.setEstado(EstadoProduccion.CREADA);
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setProducto(producto);
+        formula.setDetalles(List.of());
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(25L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(ordenUpdate);
+        assertThat(resultado.isEsValida()).isTrue();
+        assertThat(resultado.getOrden()).isNotNull();
+    }
+
+    @Test
     @DisplayName("crearOrden valida rendimiento obligatorio para PS")
     void crearOrden_conPsSinRendimientoLanzaExcepcion() {
         Producto producto = new Producto();
