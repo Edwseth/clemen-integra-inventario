@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.List;
+import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -58,5 +59,8 @@ public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion
     List<OrdenProduccion> findByEstadoNotInAndFechaFinBetween(Collection<EstadoProduccion> estados, LocalDateTime inicio, LocalDateTime fin);
 
     List<OrdenProduccion> findByEstadoNotInAndFechaFinBefore(Collection<EstadoProduccion> estados, LocalDateTime limite);
+
+    @EntityGraph(attributePaths = {"producto", "unidadMedida", "responsable"})
+    List<OrdenProduccion> findByPlanProduccionDetalleIdIn(Set<Long> planDetalleIds);
 
 }

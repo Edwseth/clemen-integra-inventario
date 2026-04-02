@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 public interface FormulaProductoRepository extends JpaRepository<FormulaProducto, Long> {
     @EntityGraph(attributePaths = {
@@ -37,6 +38,8 @@ public interface FormulaProductoRepository extends JpaRepository<FormulaProducto
             "creadoPor"
     })
     Optional<FormulaProducto> findByProductoIdAndEstadoAndActivoTrue(Long productoId, EstadoFormula estado);
+
+    List<FormulaProducto> findByProductoIdInAndEstadoAndActivoTrue(Collection<Long> productoIds, EstadoFormula estado);
 
     @EntityGraph(attributePaths = {
             "producto",

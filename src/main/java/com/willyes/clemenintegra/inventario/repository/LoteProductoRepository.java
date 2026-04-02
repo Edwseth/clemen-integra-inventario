@@ -144,6 +144,9 @@ WHERE lp.codigoLote = :codigoLote
     @EntityGraph(attributePaths = {"producto", "almacen"})
     List<LoteProducto> findByOrdenProduccionId(Long ordenProduccionId);
 
+    @EntityGraph(attributePaths = {"producto", "almacen", "ordenProduccion"})
+    List<LoteProducto> findByOrdenProduccionIdIn(Collection<Long> ordenProduccionIds);
+
     @EntityGraph(attributePaths = {"producto"})
     @Query("""
        SELECT lp
