@@ -100,4 +100,38 @@ class UsuarioAuthoritiesServiceTest {
         assertTrue(values.contains("INV_CONTEOS_READ"));
         assertEquals(3, values.size());
     }
+
+    @Test
+    void rolGerencialIncluyePermisoGerencialYNoIncluyePermisosWrite() {
+        Usuario usuario = Usuario.builder()
+                .id(13L)
+                .nombreUsuario("usuario.gerencial")
+                .rol(RolUsuario.ROL_GERENCIAL)
+                .build();
+
+        when(rolRepository.findCodigosByUsuarioId(13L)).thenReturn(List.of("ROL_GERENCIAL"));
+        when(permisoRepository.findByRolesCodigoAndActivoTrue("ROL_GERENCIAL"))
+                .thenReturn(List.of(
+                        PermisoEntity.builder().codigo("GER_SEGUIMIENTO_READ").build(),
+                        PermisoEntity.builder().codigo("PO_PLAN_SEMANAL_READ").build(),
+                        PermisoEntity.builder().codigo("PO_MRP_READ").build(),
+                        PermisoEntity.builder().codigo("PO_READ").build(),
+                        PermisoEntity.builder().codigo("BOM_FORMULA_READ").build(),
+                        PermisoEntity.builder().codigo("PROD_OP_READ").build(),
+                        PermisoEntity.builder().codigo("PROD_BATCH_RECORD_READ").build(),
+                        PermisoEntity.builder().codigo("INV_LOTES_READ").build(),
+                        PermisoEntity.builder().codigo("QC_READ").build()
+                ));
+
+        Collection<? extends GrantedAuthority> authorities = usuarioAuthoritiesService.buildAuthorities(usuario);
+        List<String> values = authorities.stream().map(GrantedAuthority::getAuthority).toList();
+
+        assertTrue(values.contains("ROL_GERENCIAL"));
+        assertTrue(values.contains("GER_SEGUIMIENTO_READ"));
+        assertTrue(values.contains("PO_PLAN_SEMANAL_READ"));
+        assertFalse(values.contains("PO_WRITE"));
+        assertFalse(values.contains("PROD_WRITE"));
+        assertFalse(values.contains("INV_WRITE"));
+        assertFalse(values.contains("QC_WRITE"));
+    }
 }
