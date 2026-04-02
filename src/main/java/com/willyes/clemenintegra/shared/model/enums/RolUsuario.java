@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.shared.model.enums;
 
 public enum RolUsuario {
+    ROL_GERENCIAL,
     ROL_MICROBIOLOGO,
     ROL_JEFE_CALIDAD,
     ROL_ANALISTA_CALIDAD,

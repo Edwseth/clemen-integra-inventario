@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.gerencial.dto.SeguimientoGerencialResponseDTO;
 import com.willyes.clemenintegra.gerencial.service.SeguimientoGerencialService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +37,7 @@ public class SeguimientoGerencialController {
      * con estructura {@code summary + items[]}.
      */
     @GetMapping("/{planSemanalId}/seguimiento")
+    @PreAuthorize("hasAuthority('GER_SEGUIMIENTO_READ')")
     public ResponseEntity<SeguimientoGerencialResponseDTO> obtenerSeguimiento(@PathVariable Long planSemanalId) {
         return ResponseEntity.ok(seguimientoGerencialService.obtenerSeguimiento(planSemanalId));
     }

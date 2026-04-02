@@ -255,6 +255,9 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/planeacion/planes-semanales/**").hasAuthority(
                             "PO_PLAN_SEMANAL_WRITE"
                     );
+                    auth.requestMatchers(HttpMethod.GET, "/api/gerencial/**").hasAuthority(
+                            "GER_SEGUIMIENTO_READ"
+                    );
 
                     auth.requestMatchers(HttpMethod.GET, "/api/mrp/**").hasAnyAuthority(
                             "PO_MRP_READ",
