@@ -14,6 +14,7 @@ import com.willyes.clemenintegra.inventario.model.enums.TipoMovimiento;
 import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
+import com.willyes.clemenintegra.planeacion.repository.PlanProduccionDetalleRepository;
 import com.willyes.clemenintegra.produccion.model.EtapaProduccion;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.model.enums.EstadoProduccion;
@@ -103,6 +104,7 @@ class OrdenProduccionServiceCierreTotalTest {
         umValidator = mock(UmValidator.class);
         loteCalidadValidator = mock(LoteCalidadValidator.class);
         vidaUtilProductoService = mock(com.willyes.clemenintegra.calidad.service.VidaUtilProductoService.class);
+        PlanProduccionDetalleRepository planProduccionDetalleRepository = mock(PlanProduccionDetalleRepository.class);
         reservaLoteService = mock(ReservaLoteService.class);
         reservaLoteRepository = mock(ReservaLoteRepository.class);
         disponibilidadInsumoService = mock(DisponibilidadInsumoService.class);
@@ -139,6 +141,7 @@ class OrdenProduccionServiceCierreTotalTest {
                 umValidator,
                 loteCalidadValidator,
                 vidaUtilProductoService,
+                planProduccionDetalleRepository,
                 reservaLoteService,
                 reservaLoteRepository,
                 disponibilidadInsumoService,
