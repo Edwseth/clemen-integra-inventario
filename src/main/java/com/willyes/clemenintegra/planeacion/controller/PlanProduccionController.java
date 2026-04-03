@@ -10,7 +10,11 @@ import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
+import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +35,7 @@ import java.util.List;
 public class PlanProduccionController {
 
     private final PlanProduccionService planProduccionService;
+    private final OrdenProduccionService ordenProduccionService;
 
     @PostMapping
     @PreAuthorize("hasAuthority('PO_PLAN_SEMANAL_WRITE')")
@@ -55,6 +60,17 @@ public class PlanProduccionController {
     public ResponseEntity<PlanProduccionSemanalDTO> cerrar(@PathVariable Long id) {
         PlanProduccionSemanal plan = planProduccionService.cerrar(id);
         return ResponseEntity.ok(toDto(plan));
+    }
+
+    @PostMapping("/{planId}/detalles/{planDetalleId}/generar-op")
+    @PreAuthorize("hasAnyAuthority('PO_PLAN_SEMANAL_WRITE','PROD_WRITE','PROD_OP_CREATE')")
+    public ResponseEntity<ResultadoValidacionOrdenDTO> generarOrdenProduccionDesdeDetalle(
+            @PathVariable Long planId,
+            @PathVariable Long planDetalleId,
+            @Valid @RequestBody CrearOrdenProduccionRequestDTO request) {
+        ResultadoValidacionOrdenDTO resultado = ordenProduccionService
+                .crearOrdenDesdePlanSemanal(planId, planDetalleId, request);
+        return ResponseEntity.status(resultado.isEsValida() ? 201 : 400).body(resultado);
     }
 
     @GetMapping

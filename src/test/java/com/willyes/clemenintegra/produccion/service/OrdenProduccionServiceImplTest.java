@@ -596,6 +596,80 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("crearOrdenDesdePlanSemanal crea OP cuando plan y detalle son coherentes y confirmados")
+    void crearOrdenDesdePlanSemanal_planYDetalleCoherentes_crea() {
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
+        dto.setProductoId(20L);
+        dto.setResponsableId(5L);
+        dto.setCantidadProgramada(new BigDecimal("10"));
+        dto.setUnidadMedidaSimbolo("UND");
+
+        when(planProduccionDetalleRepository.findById(800L)).thenReturn(Optional.of(planDetalle(800L, 20)));
+        when(ordenProduccionRepository.countByPlanProduccionDetalleId(800L)).thenReturn(0L);
+        doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).mensaje("Orden de producción creada correctamente").build())
+                .when(service).crearOrden(any(CrearOrdenProduccionRequestDTO.class));
+
+        ResultadoValidacionOrdenDTO resultado = service.crearOrdenDesdePlanSemanal(1300L, 800L, dto);
+
+        assertThat(resultado.isEsValida()).isTrue();
+        verify(service).crearOrden(argThat(request -> request.getPlanDetalleId() != null && request.getPlanDetalleId().equals(800L)));
+    }
+
+    @Test
+    @DisplayName("crearOrdenDesdePlanSemanal rechaza cuando planDetalle no pertenece al planId")
+    void crearOrdenDesdePlanSemanal_detalleDeOtroPlan_rechaza() {
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
+        dto.setProductoId(20L);
+        when(planProduccionDetalleRepository.findById(801L)).thenReturn(Optional.of(planDetalle(801L, 20)));
+
+        assertThatThrownBy(() -> service.crearOrdenDesdePlanSemanal(9999L, 801L, dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
+    }
+
+    @Test
+    @DisplayName("crearOrdenDesdePlanSemanal rechaza si plan no está confirmado")
+    void crearOrdenDesdePlanSemanal_planNoConfirmado_rechaza() {
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
+        dto.setProductoId(20L);
+
+        PlanProduccionDetalle detalleBorrador = planDetalleConEstado(802L, 20, EstadoPlanProduccion.BORRADOR);
+        when(planProduccionDetalleRepository.findById(802L)).thenReturn(Optional.of(detalleBorrador));
+        assertThatThrownBy(() -> service.crearOrdenDesdePlanSemanal(detalleBorrador.getPlan().getId(), 802L, dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
+
+        PlanProduccionDetalle detalleCerrado = planDetalleConEstado(803L, 20, EstadoPlanProduccion.CERRADO);
+        when(planProduccionDetalleRepository.findById(803L)).thenReturn(Optional.of(detalleCerrado));
+        assertThatThrownBy(() -> service.crearOrdenDesdePlanSemanal(detalleCerrado.getPlan().getId(), 803L, dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .satisfies(ex -> assertThat(((CustomBusinessException) ex).getCode())
+                        .isEqualTo(ApiErrorCode.SOLICITUD_INVALIDA));
+    }
+
+    @Test
+    @DisplayName("crearOrdenDesdePlanSemanal aplica política explícita de duplicidad permitida")
+    void crearOrdenDesdePlanSemanal_duplicidadPermitida_mensajeExplicito() {
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
+        dto.setProductoId(20L);
+        dto.setResponsableId(5L);
+        dto.setCantidadProgramada(new BigDecimal("10"));
+        dto.setUnidadMedidaSimbolo("UND");
+
+        when(planProduccionDetalleRepository.findById(804L)).thenReturn(Optional.of(planDetalle(804L, 20)));
+        when(ordenProduccionRepository.countByPlanProduccionDetalleId(804L)).thenReturn(2L);
+        doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).mensaje("Orden de producción creada correctamente").build())
+                .when(service).crearOrden(any(CrearOrdenProduccionRequestDTO.class));
+
+        ResultadoValidacionOrdenDTO resultado = service.crearOrdenDesdePlanSemanal(1304L, 804L, dto);
+
+        assertThat(resultado.isEsValida()).isTrue();
+        assertThat(resultado.getMensaje()).contains("Política duplicidad: permitida");
+    }
+
+    @Test
     @DisplayName("crearOrden valida rendimiento obligatorio para PS")
     void crearOrden_conPsSinRendimientoLanzaExcepcion() {
         Producto producto = new Producto();
@@ -835,6 +909,20 @@ class OrdenProduccionServiceImplTest {
         PlanProduccionSemanal plan = new PlanProduccionSemanal();
         plan.setId(500L + id);
         plan.setEstado(EstadoPlanProduccion.CONFIRMADO);
+        Producto producto = new Producto();
+        producto.setId(productoId);
+        return PlanProduccionDetalle.builder()
+                .id(id)
+                .plan(plan)
+                .producto(producto)
+                .cantidadPlanificada(BigDecimal.ONE)
+                .build();
+    }
+
+    private PlanProduccionDetalle planDetalleConEstado(Long id, int productoId, EstadoPlanProduccion estado) {
+        PlanProduccionSemanal plan = new PlanProduccionSemanal();
+        plan.setId(500L + id);
+        plan.setEstado(estado);
         Producto producto = new Producto();
         producto.setId(productoId);
         return PlanProduccionDetalle.builder()

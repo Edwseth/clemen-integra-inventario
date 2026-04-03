@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 public interface OrdenProduccionService {
     ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden);
     ResultadoValidacionOrdenDTO crearOrden(CrearOrdenProduccionRequestDTO dto);
+    ResultadoValidacionOrdenDTO crearOrdenDesdePlanSemanal(Long planId, Long planDetalleId, CrearOrdenProduccionRequestDTO dto);
     List<OrdenProduccion> listarTodas();
     Optional<OrdenProduccion> buscarPorId(Long id);
     void eliminar(Long id);
