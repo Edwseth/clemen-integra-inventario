@@ -573,6 +573,59 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return resultado;
     }
 
+    @Override
+    @Transactional
+    public ResultadoValidacionOrdenDTO crearOrdenDesdePlanSemanal(Long planId, Long planDetalleId, CrearOrdenProduccionRequestDTO dto) {
+        if (planId == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "planId es obligatorio para generar una OP desde planeación");
+        }
+        if (planDetalleId == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "planDetalleId es obligatorio para generar una OP desde planeación");
+        }
+        if (dto.getPlanDetalleId() != null && !planDetalleId.equals(dto.getPlanDetalleId())) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El planDetalleId del path no coincide con el planDetalleId del payload");
+        }
+
+        PlanProduccionDetalle planDetalle = planProduccionDetalleRepository.findById(planDetalleId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "No existe el plan de producción detalle indicado"));
+
+        Long planIdDetalle = Optional.ofNullable(planDetalle.getPlan()).map(com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal::getId).orElse(null);
+        if (!planId.equals(planIdDetalle)) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El plan detalle indicado no pertenece al plan semanal enviado");
+        }
+
+        EstadoPlanProduccion estadoPlan = Optional.ofNullable(planDetalle.getPlan())
+                .map(com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal::getEstado)
+                .orElse(null);
+        if (estadoPlan != EstadoPlanProduccion.CONFIRMADO) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El plan asociado debe estar en estado CONFIRMADO");
+        }
+
+        Long productoIdPlan = Optional.ofNullable(planDetalle.getProducto()).map(Producto::getId).map(Integer::longValue).orElse(null);
+        if (dto.getProductoId() == null || productoIdPlan == null || !productoIdPlan.equals(dto.getProductoId())) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El producto del payload debe coincidir con el producto del plan detalle");
+        }
+
+        long opsExistentes = repository.countByPlanProduccionDetalleId(planDetalleId);
+        log.info("Política duplicidad OP por planDetalleId={}, existentes={}, decision=PERMITIR_MULTIPLES",
+                planDetalleId, opsExistentes);
+
+        dto.setPlanDetalleId(planDetalleId);
+        ResultadoValidacionOrdenDTO resultado = crearOrden(dto);
+        if (resultado.isEsValida() && opsExistentes > 0) {
+            resultado.setMensaje(String.format("Orden de producción creada correctamente. Política duplicidad: permitida; ya existían %d OP asociadas al planDetalleId %d.",
+                    opsExistentes, planDetalleId));
+        }
+        return resultado;
+    }
+
     private void validarPlanDetalleSiExiste(OrdenProduccion orden, boolean obligatorio) {
         Long planDetalleId = Optional.ofNullable(orden)
                 .map(OrdenProduccion::getPlanProduccionDetalle)

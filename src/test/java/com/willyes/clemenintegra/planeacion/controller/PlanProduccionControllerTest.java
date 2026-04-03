@@ -7,6 +7,8 @@ import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
+import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -45,6 +47,8 @@ class PlanProduccionControllerTest {
 
     @MockBean
     private PlanProduccionService planProduccionService;
+    @MockBean
+    private OrdenProduccionService ordenProduccionService;
 
     @MockBean
     private com.willyes.clemenintegra.shared.security.JwtAuthenticationProvider jwtAuthenticationProvider;
@@ -71,6 +75,32 @@ class PlanProduccionControllerTest {
                         .content("{}")
                         .contentType(APPLICATION_JSON))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_WRITE")
+    void generarOrdenDesdeDetallePermiteWritePlanSemanal() throws Exception {
+        ResultadoValidacionOrdenDTO response = ResultadoValidacionOrdenDTO.builder()
+                .esValida(true)
+                .mensaje("ok")
+                .build();
+        when(ordenProduccionService.crearOrdenDesdePlanSemanal(eq(10L), eq(20L), any()))
+                .thenReturn(response);
+
+        String payload = """
+                {
+                  "productoId": 99,
+                  "cantidadProgramada": 10,
+                  "fechaProgramada": "2030-01-01T10:00:00",
+                  "responsableId": 7
+                }
+                """;
+
+        mockMvc.perform(post("/api/planeacion/planes-semanales/10/detalles/20/generar-op")
+                        .contentType(APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.esValida").value(true));
     }
 
     @Test

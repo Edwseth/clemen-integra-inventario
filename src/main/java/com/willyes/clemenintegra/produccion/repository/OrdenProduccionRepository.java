@@ -63,4 +63,6 @@ public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion
     @EntityGraph(attributePaths = {"producto", "unidadMedida", "responsable"})
     List<OrdenProduccion> findByPlanProduccionDetalleIdIn(Set<Long> planDetalleIds);
 
+    long countByPlanProduccionDetalleId(Long planDetalleId);
+
 }
