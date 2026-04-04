@@ -541,7 +541,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         Integer semanasVigencia = vidaUtilProductoService.buscarPorProductoId(producto.getId())
                 .map(VidaUtilProducto::getSemanasVigencia)
                 .orElse(null);
-        boolean requiereOverrideHomeopatico = requiereOverrideHomeopatico(semanasVigencia, cantidadConvertida);
+        boolean requiereOverrideHomeopatico = requiereOverrideHomeopatico(producto, semanasVigencia, cantidadConvertida);
         if (requiereOverrideHomeopatico) {
             validarHandshakeHomeopatico(dto, producto, semanasVigencia, cantidadConvertida);
         }
@@ -661,8 +661,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         orden.setPlanProduccionDetalle(planDetalle);
     }
 
-    private boolean requiereOverrideHomeopatico(Integer semanasVigencia, BigDecimal cantidadSolicitada) {
+    private boolean requiereOverrideHomeopatico(Producto producto,
+                                                Integer semanasVigencia,
+                                                BigDecimal cantidadSolicitada) {
+        TipoCategoria tipoCategoria = obtenerTipoCategoriaProducto(producto);
         return Objects.equals(semanasVigencia, SEMANAS_HOMEOPATICO)
+                && tipoCategoria == TipoCategoria.PRODUCTO_TERMINADO
                 && cantidadSolicitada != null
                 && cantidadSolicitada.compareTo(CANTIDAD_MAXIMA_HOMEOPATICO) > 0;
     }

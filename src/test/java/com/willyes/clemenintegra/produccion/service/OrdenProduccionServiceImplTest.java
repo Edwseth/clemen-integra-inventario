@@ -863,6 +863,36 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("crearOrden PS homeopático con cantidad > 30 no exige confirmación")
+    void crearOrden_psHomeopaticoNoExigeConfirmacion() {
+        Producto producto = productoFabricable(331, TipoCategoria.PRODUCTO_SEMI_ELABORADO, "UND");
+        when(productoRepository.findById(331L)).thenReturn(Optional.of(producto));
+        when(usuarioRepository.findById(111L)).thenReturn(Optional.of(new Usuario()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenReturn(new BigDecimal("200"));
+        when(unidadConversionService.dividirNormalizado(any(BigDecimal.class), any(), any(), any()))
+                .thenReturn(new BigDecimal("200"));
+        when(vidaUtilProductoService.buscarPorProductoId(331)).thenReturn(Optional.of(VidaUtilProducto.builder()
+                .productoId(331)
+                .semanasVigencia(78)
+                .build()));
+        doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).build())
+                .when(service).guardarConValidacionStock(any(OrdenProduccion.class));
+
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
+        dto.setProductoId(331L);
+        dto.setResponsableId(111L);
+        dto.setPlanDetalleId(10041L);
+        dto.setCantidadProgramada(new BigDecimal("200"));
+        dto.setUnidadMedidaSimbolo("UND");
+        when(planProduccionDetalleRepository.findById(10041L)).thenReturn(Optional.of(planDetalle(10041L, 331)));
+
+        ResultadoValidacionOrdenDTO respuesta = service.crearOrden(dto);
+        assertThat(respuesta.isEsValida()).isTrue();
+        verify(service).guardarConValidacionStock(any(OrdenProduccion.class));
+        verify(opHomeopaticoOverrideRepository, never()).save(any(OpHomeopaticoOverride.class));
+    }
+
+    @Test
     @DisplayName("crearOrden normal no exige confirmación y no audita")
     void crearOrden_noHomeopatico_noExigeConfirmacion() {
         Producto producto = productoFabricable(34, TipoCategoria.PRODUCTO_TERMINADO, "UND");
@@ -873,7 +903,7 @@ class OrdenProduccionServiceImplTest {
                 .thenReturn(new BigDecimal("200"));
         when(vidaUtilProductoService.buscarPorProductoId(34)).thenReturn(Optional.of(VidaUtilProducto.builder()
                 .productoId(34)
-                .semanasVigencia(12)
+                .semanasVigencia(104)
                 .build()));
         doReturn(ResultadoValidacionOrdenDTO.builder().esValida(true).build())
                 .when(service).guardarConValidacionStock(any(OrdenProduccion.class));
