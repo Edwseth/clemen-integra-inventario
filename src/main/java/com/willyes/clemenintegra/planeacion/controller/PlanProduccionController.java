@@ -4,11 +4,16 @@ import com.willyes.clemenintegra.inventario.dto.ProductoResumenDTO;
 import com.willyes.clemenintegra.inventario.dto.UnidadMedidaResponseDTO;
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.VidaUtilProducto;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
+import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionSemanalDTO;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionDetalle;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
+import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
+import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
@@ -26,16 +31,26 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/planeacion/planes-semanales")
 @RequiredArgsConstructor
 public class PlanProduccionController {
+    private static final int SEMANAS_HOMEOPATICO = 78;
 
     private final PlanProduccionService planProduccionService;
     private final OrdenProduccionService ordenProduccionService;
+    private final OrdenProduccionRepository ordenProduccionRepository;
+    private final VidaUtilProductoRepository vidaUtilProductoRepository;
 
     @PostMapping
     @PreAuthorize("hasAuthority('PO_PLAN_SEMANAL_WRITE')")
@@ -93,8 +108,12 @@ public class PlanProduccionController {
     }
 
     private PlanProduccionSemanalDTO toDto(PlanProduccionSemanal plan) {
+        Map<Long, List<OrdenProduccion>> opsPorDetalle = obtenerOpsPorDetalle(plan);
+        Map<Integer, Integer> semanasVigenciaPorProducto = obtenerSemanasVigenciaPorProducto(plan);
         List<PlanProduccionSemanalDTO.PlanProduccionDetalleDTO> detalles = plan.getDetalles().stream()
-                .map(this::toDetalleDto)
+                .map(detalle -> toDetalleDto(detalle,
+                        opsPorDetalle.getOrDefault(detalle.getId(), List.of()),
+                        semanasVigenciaPorProducto))
                 .toList();
         return PlanProduccionSemanalDTO.builder()
                 .id(plan.getId())
@@ -107,7 +126,10 @@ public class PlanProduccionController {
                 .build();
     }
 
-    private PlanProduccionSemanalDTO.PlanProduccionDetalleDTO toDetalleDto(PlanProduccionDetalle detalle) {
+    private PlanProduccionSemanalDTO.PlanProduccionDetalleDTO toDetalleDto(
+            PlanProduccionDetalle detalle,
+            List<OrdenProduccion> opsDetalle,
+            Map<Integer, Integer> semanasVigenciaPorProducto) {
         Producto producto = detalle.getProducto();
         UnidadMedida unidad = detalle.getUnidadMedida();
         ProductoResumenDTO productoDto = null;
@@ -135,6 +157,34 @@ public class PlanProduccionController {
                     .simbolo(unidad.getSimbolo())
                     .build();
         }
+
+        TipoCategoria tipoCategoria = producto != null && producto.getCategoriaProducto() != null
+                ? producto.getCategoriaProducto().getTipo()
+                : null;
+        String tipoProducto = mapTipoProducto(tipoCategoria);
+        Integer semanasVigencia = producto != null ? semanasVigenciaPorProducto.get(producto.getId()) : null;
+        boolean esHomeopatico = "PT".equals(tipoProducto) && Objects.equals(semanasVigencia, SEMANAS_HOMEOPATICO);
+        int totalOpAsociadas = opsDetalle != null ? opsDetalle.size() : 0;
+        BigDecimal cantidadProgramadaEnOp = opsDetalle == null ? BigDecimal.ZERO : opsDetalle.stream()
+                .map(OrdenProduccion::getCantidadProgramada)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal cantidadPlanificada = detalle.getCantidadPlanificada() != null ? detalle.getCantidadPlanificada() : BigDecimal.ZERO;
+        BigDecimal cantidadPendiente = cantidadPlanificada.subtract(cantidadProgramadaEnOp);
+        if (cantidadPendiente.compareTo(BigDecimal.ZERO) < 0) {
+            cantidadPendiente = BigDecimal.ZERO;
+        }
+        List<Long> opIds = opsDetalle == null ? List.of() : opsDetalle.stream()
+                .map(OrdenProduccion::getId)
+                .filter(Objects::nonNull)
+                .sorted()
+                .toList();
+        List<String> opCodigos = opsDetalle == null ? List.of() : opsDetalle.stream()
+                .map(OrdenProduccion::getCodigoOrden)
+                .filter(codigo -> codigo != null && !codigo.isBlank())
+                .sorted(Comparator.naturalOrder())
+                .toList();
+
         return PlanProduccionSemanalDTO.PlanProduccionDetalleDTO.builder()
                 .id(detalle.getId())
                 .productoId(producto != null && producto.getId() != null ? producto.getId().longValue() : null)
@@ -145,6 +195,68 @@ public class PlanProduccionController {
                 .observacion(detalle.getObservacion())
                 .producto(productoDto)
                 .unidadMedida(unidadDto)
+                .tipoProducto(tipoProducto)
+                .esHomeopatico(esHomeopatico)
+                .totalOpAsociadas(totalOpAsociadas)
+                .cantidadTotalProgramadaEnOp(cantidadProgramadaEnOp)
+                .cantidadPendiente(cantidadPendiente)
+                .opIds(opIds)
+                .opCodigos(opCodigos)
+                .modoAccionSugerido(determinarModoAccion(tipoProducto, esHomeopatico, totalOpAsociadas, cantidadPendiente))
                 .build();
+    }
+
+    private String determinarModoAccion(String tipoProducto, boolean esHomeopatico, int totalOpAsociadas, BigDecimal cantidadPendiente) {
+        boolean hayPendiente = cantidadPendiente != null && cantidadPendiente.compareTo(BigDecimal.ZERO) > 0;
+        if ("PS".equals(tipoProducto)) {
+            return totalOpAsociadas == 0 ? "UNICA" : "BLOQUEADA";
+        }
+        if ("PT".equals(tipoProducto) && !esHomeopatico) {
+            return totalOpAsociadas == 0 ? "UNICA" : "BLOQUEADA";
+        }
+        if ("PT".equals(tipoProducto) && esHomeopatico) {
+            return hayPendiente ? "CORRIDA" : "BLOQUEADA";
+        }
+        return "BLOQUEADA";
+    }
+
+    private String mapTipoProducto(TipoCategoria tipoCategoria) {
+        if (tipoCategoria == TipoCategoria.PRODUCTO_TERMINADO) {
+            return "PT";
+        }
+        if (tipoCategoria == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+            return "PS";
+        }
+        return tipoCategoria != null ? tipoCategoria.name() : null;
+    }
+
+    private Map<Long, List<OrdenProduccion>> obtenerOpsPorDetalle(PlanProduccionSemanal plan) {
+        Set<Long> detalleIds = plan.getDetalles().stream()
+                .map(PlanProduccionDetalle::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (detalleIds.isEmpty()) {
+            return Map.of();
+        }
+        return ordenProduccionRepository.findByPlanProduccionDetalleIdIn(detalleIds).stream()
+                .filter(op -> op.getPlanProduccionDetalle() != null && op.getPlanProduccionDetalle().getId() != null)
+                .collect(Collectors.groupingBy(op -> op.getPlanProduccionDetalle().getId()));
+    }
+
+    private Map<Integer, Integer> obtenerSemanasVigenciaPorProducto(PlanProduccionSemanal plan) {
+        Set<Integer> productoIds = plan.getDetalles().stream()
+                .map(PlanProduccionDetalle::getProducto)
+                .filter(Objects::nonNull)
+                .map(Producto::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (productoIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Integer, Integer> result = new HashMap<>();
+        for (VidaUtilProducto vidaUtil : vidaUtilProductoRepository.findAllById(productoIds)) {
+            result.put(vidaUtil.getProductoId(), vidaUtil.getSemanasVigencia());
+        }
+        return result;
     }
 }

@@ -34,6 +34,7 @@ import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepos
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.SolicitudMovimientoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
+import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
 import com.willyes.clemenintegra.inventario.service.AjusteInventarioService;
 import com.willyes.clemenintegra.inventario.service.AlertaInventarioService;
 import com.willyes.clemenintegra.inventario.service.CategoriaProductoService;
@@ -58,6 +59,7 @@ import com.willyes.clemenintegra.documental.dto.DocumentoVersionDTO;
 import com.willyes.clemenintegra.documental.service.ControlDocumentalService;
 import com.willyes.clemenintegra.produccion.controller.IndicadoresProduccionController;
 import com.willyes.clemenintegra.produccion.dto.IndicadoresProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.service.ProduccionIndicadoresService;
 import com.willyes.clemenintegra.produccion.service.ReporteIndicadoresProduccionService;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
@@ -153,6 +155,10 @@ class ContadorRoleSecurityTest {
     private ReporteInventarioService reporteInventarioService;
     @MockBean
     private PlanProduccionService planProduccionService;
+    @MockBean
+    private OrdenProduccionRepository ordenProduccionRepository;
+    @MockBean
+    private VidaUtilProductoRepository vidaUtilProductoRepository;
     @MockBean
     private MrpService mrpService;
     @MockBean

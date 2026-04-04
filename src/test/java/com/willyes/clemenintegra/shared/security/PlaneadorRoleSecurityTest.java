@@ -4,6 +4,7 @@ import com.willyes.clemenintegra.inventario.controller.ProductoController;
 import com.willyes.clemenintegra.inventario.repository.MovimientoInventarioRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.inventario.repository.UnidadMedidaRepository;
+import com.willyes.clemenintegra.inventario.repository.VidaUtilProductoRepository;
 import com.willyes.clemenintegra.inventario.service.ProductoService;
 import com.willyes.clemenintegra.planeacion.controller.MrpController;
 import com.willyes.clemenintegra.planeacion.controller.PlanProduccionController;
@@ -11,6 +12,7 @@ import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.service.MrpReporteService;
 import com.willyes.clemenintegra.planeacion.service.MrpService;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
+import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.shared.logging.RequestIdFilter;
 import com.willyes.clemenintegra.shared.performance.RequestTimingFilter;
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
@@ -77,6 +79,10 @@ class PlaneadorRoleSecurityTest {
     private UsuarioRepository usuarioRepository;
     @MockBean
     private PlanProduccionService planProduccionService;
+    @MockBean
+    private OrdenProduccionRepository ordenProduccionRepository;
+    @MockBean
+    private VidaUtilProductoRepository vidaUtilProductoRepository;
     @MockBean
     private MrpService mrpService;
     @MockBean
