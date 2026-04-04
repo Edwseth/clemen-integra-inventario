@@ -1,6 +1,8 @@
 package com.willyes.clemenintegra.produccion.service;
 
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CorridaOrdenProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.EjecutarCorridaOpHomeopaticaRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
@@ -26,6 +28,9 @@ public interface OrdenProduccionService {
     ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden);
     ResultadoValidacionOrdenDTO crearOrden(CrearOrdenProduccionRequestDTO dto);
     ResultadoValidacionOrdenDTO crearOrdenDesdePlanSemanal(Long planId, Long planDetalleId, CrearOrdenProduccionRequestDTO dto);
+    CorridaOrdenProduccionResponseDTO ejecutarCorridaHomeopaticaDesdePlanSemanal(Long planId,
+                                                                                  Long planDetalleId,
+                                                                                  EjecutarCorridaOpHomeopaticaRequestDTO dto);
     List<OrdenProduccion> listarTodas();
     Optional<OrdenProduccion> buscarPorId(Long id);
     void eliminar(Long id);

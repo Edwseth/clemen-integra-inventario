@@ -12,6 +12,8 @@ import com.willyes.clemenintegra.inventario.repository.UbicacionFisicaRepository
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CorridaOrdenProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.EjecutarCorridaOpHomeopaticaRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
@@ -576,41 +578,22 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
     @Override
     @Transactional
     public ResultadoValidacionOrdenDTO crearOrdenDesdePlanSemanal(Long planId, Long planDetalleId, CrearOrdenProduccionRequestDTO dto) {
-        if (planId == null) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "planId es obligatorio para generar una OP desde planeación");
-        }
-        if (planDetalleId == null) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "planDetalleId es obligatorio para generar una OP desde planeación");
-        }
-        if (dto.getPlanDetalleId() != null && !planDetalleId.equals(dto.getPlanDetalleId())) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "El planDetalleId del path no coincide con el planDetalleId del payload");
-        }
-
-        PlanProduccionDetalle planDetalle = planProduccionDetalleRepository.findById(planDetalleId)
-                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                        "No existe el plan de producción detalle indicado"));
-
-        Long planIdDetalle = Optional.ofNullable(planDetalle.getPlan()).map(com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal::getId).orElse(null);
-        if (!planId.equals(planIdDetalle)) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "El plan detalle indicado no pertenece al plan semanal enviado");
-        }
-
-        EstadoPlanProduccion estadoPlan = Optional.ofNullable(planDetalle.getPlan())
-                .map(com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal::getEstado)
-                .orElse(null);
-        if (estadoPlan != EstadoPlanProduccion.CONFIRMADO) {
-            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
-                    "El plan asociado debe estar en estado CONFIRMADO");
-        }
+        PlanProduccionDetalle planDetalle = resolverPlanDetalleDesdePlaneacion(planId, planDetalleId, dto.getPlanDetalleId());
 
         Long productoIdPlan = Optional.ofNullable(planDetalle.getProducto()).map(Producto::getId).map(Integer::longValue).orElse(null);
         if (dto.getProductoId() == null || productoIdPlan == null || !productoIdPlan.equals(dto.getProductoId())) {
             throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
                     "El producto del payload debe coincidir con el producto del plan detalle");
+        }
+        Producto producto = planDetalle.getProducto();
+        BigDecimal cantidadSolicitadaConvertida = convertirCantidadSolicitadaAUnidadProducto(dto, producto);
+        Integer semanasVigencia = vidaUtilProductoService.buscarPorProductoId(producto.getId())
+                .map(VidaUtilProducto::getSemanasVigencia)
+                .orElse(null);
+        if (esPtHomeopatico(producto, semanasVigencia)
+                && cantidadSolicitadaConvertida.compareTo(CANTIDAD_MAXIMA_HOMEOPATICO) > 0) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "Para PT homeopáticos con cantidad mayor a 30 use el endpoint de corrida automática.");
         }
 
         long opsExistentes = repository.countByPlanProduccionDetalleId(planDetalleId);
@@ -624,6 +607,164 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     opsExistentes, planDetalleId));
         }
         return resultado;
+    }
+
+    @Override
+    @Transactional
+    public CorridaOrdenProduccionResponseDTO ejecutarCorridaHomeopaticaDesdePlanSemanal(Long planId,
+                                                                                         Long planDetalleId,
+                                                                                         EjecutarCorridaOpHomeopaticaRequestDTO dto) {
+        PlanProduccionDetalle planDetalle = resolverPlanDetalleDesdePlaneacion(planId, planDetalleId, null);
+        Producto producto = Optional.ofNullable(planDetalle.getProducto())
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "El plan detalle no tiene producto asociado"));
+
+        Integer semanasVigencia = vidaUtilProductoService.buscarPorProductoId(producto.getId())
+                .map(VidaUtilProducto::getSemanasVigencia)
+                .orElse(null);
+        if (!esPtHomeopatico(producto, semanasVigencia)) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "La corrida automática solo aplica a PT homeopáticos (78 semanas).");
+        }
+
+        String unidadProducto = Optional.ofNullable(producto.getUnidadMedida())
+                .map(UnidadMedida::getSimbolo)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "El producto no tiene unidad de medida configurada"));
+        String unidadPlan = Optional.ofNullable(planDetalle.getUnidadMedida())
+                .map(UnidadMedida::getSimbolo)
+                .filter(simbolo -> !simbolo.isBlank())
+                .orElse(unidadProducto);
+        BigDecimal cantidadPlanificada = unidadConversionService.convertir(planDetalle.getCantidadPlanificada(), unidadPlan, unidadProducto);
+        BigDecimal cantidadProgramadaPrevia = Optional.ofNullable(repository.sumCantidadProgramadaByPlanProduccionDetalleId(planDetalleId))
+                .orElse(BigDecimal.ZERO);
+        BigDecimal cantidadPendiente = cantidadPlanificada.subtract(cantidadProgramadaPrevia);
+        if (cantidadPendiente.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    String.format("El planDetalleId %d ya no tiene pendiente por programar.", planDetalleId));
+        }
+
+        List<BigDecimal> bloques = partirCantidadEnBloques(cantidadPendiente, CANTIDAD_MAXIMA_HOMEOPATICO);
+        int totalOpPrevias = Math.toIntExact(repository.countByPlanProduccionDetalleId(planDetalleId));
+        List<Long> opIds = new ArrayList<>();
+        List<String> opCodigos = new ArrayList<>();
+        BigDecimal cantidadProgramadaEnCorrida = BigDecimal.ZERO;
+
+        for (BigDecimal bloque : bloques) {
+            CrearOrdenProduccionRequestDTO crearDto = CrearOrdenProduccionRequestDTO.builder()
+                    .productoId(producto.getId().longValue())
+                    .cantidadProgramada(bloque)
+                    .fechaProgramada(dto.getFechaProgramada())
+                    .responsableId(dto.getResponsableId())
+                    .planDetalleId(planDetalleId)
+                    .unidadMedidaSimbolo(unidadProducto)
+                    .build();
+            ResultadoValidacionOrdenDTO resultado = crearOrden(crearDto);
+            if (!resultado.isEsValida() || resultado.getOrden() == null || resultado.getOrden().id == null) {
+                throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "No fue posible completar la corrida automática por validaciones de inventario o configuración.");
+            }
+            opIds.add(resultado.getOrden().id);
+            opCodigos.add(resultado.getOrden().codigoOrden);
+            cantidadProgramadaEnCorrida = cantidadProgramadaEnCorrida.add(bloque);
+        }
+
+        BigDecimal cantidadTotalProgramada = cantidadProgramadaPrevia.add(cantidadProgramadaEnCorrida);
+        BigDecimal pendienteRestante = cantidadPlanificada.subtract(cantidadTotalProgramada);
+        if (pendienteRestante.compareTo(BigDecimal.ZERO) < 0) {
+            pendienteRestante = BigDecimal.ZERO;
+        }
+
+        return CorridaOrdenProduccionResponseDTO.builder()
+                .planId(planId)
+                .planDetalleId(planDetalleId)
+                .productoId(producto.getId().longValue())
+                .semanasVigencia(semanasVigencia)
+                .maximoPorOp(CANTIDAD_MAXIMA_HOMEOPATICO)
+                .cantidadPlanificada(cantidadPlanificada)
+                .cantidadProgramadaPrevia(cantidadProgramadaPrevia)
+                .cantidadProgramadaEnCorrida(cantidadProgramadaEnCorrida)
+                .cantidadTotalProgramadaEnOp(cantidadTotalProgramada)
+                .cantidadPendienteRestante(pendienteRestante)
+                .totalOpPrevias(totalOpPrevias)
+                .totalOpCreadas(opIds.size())
+                .totalOpAsociadas(totalOpPrevias + opIds.size())
+                .opIdsCreadas(opIds)
+                .opCodigosCreadas(opCodigos)
+                .idempotencyKey(dto.getIdempotencyKey())
+                .mensaje(String.format("Corrida de OP creada: %d OP para planDetalleId %d.", opIds.size(), planDetalleId))
+                .build();
+    }
+
+    private PlanProduccionDetalle resolverPlanDetalleDesdePlaneacion(Long planId,
+                                                                     Long planDetalleId,
+                                                                     Long planDetalleIdPayload) {
+        if (planId == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "planId es obligatorio para generar una OP desde planeación");
+        }
+        if (planDetalleId == null) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "planDetalleId es obligatorio para generar una OP desde planeación");
+        }
+        if (planDetalleIdPayload != null && !planDetalleId.equals(planDetalleIdPayload)) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El planDetalleId del path no coincide con el planDetalleId del payload");
+        }
+
+        PlanProduccionDetalle planDetalle = planProduccionDetalleRepository.findById(planDetalleId)
+                .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                        "No existe el plan de producción detalle indicado"));
+
+        Long planIdDetalle = Optional.ofNullable(planDetalle.getPlan())
+                .map(com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal::getId)
+                .orElse(null);
+        if (!planId.equals(planIdDetalle)) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El plan detalle indicado no pertenece al plan semanal enviado");
+        }
+
+        EstadoPlanProduccion estadoPlan = Optional.ofNullable(planDetalle.getPlan())
+                .map(com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal::getEstado)
+                .orElse(null);
+        if (estadoPlan != EstadoPlanProduccion.CONFIRMADO) {
+            throw new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                    "El plan asociado debe estar en estado CONFIRMADO");
+        }
+        return planDetalle;
+    }
+
+    private BigDecimal convertirCantidadSolicitadaAUnidadProducto(CrearOrdenProduccionRequestDTO dto, Producto producto) {
+        BigDecimal cantidadBase = Optional.ofNullable(dto.getCantidadProgramada()).orElse(BigDecimal.ZERO);
+        String unidadBase = dto.getUnidadMedidaSimbolo();
+        String unidadProducto = producto.getUnidadMedida() != null ? producto.getUnidadMedida().getSimbolo() : unidadBase;
+        if (unidadBase == null || unidadBase.isBlank()) {
+            unidadBase = unidadProducto;
+        }
+        return unidadConversionService.convertir(cantidadBase, unidadBase, unidadProducto);
+    }
+
+    private boolean esPtHomeopatico(Producto producto, Integer semanasVigencia) {
+        TipoCategoria tipoCategoria = obtenerTipoCategoriaProducto(producto);
+        return Objects.equals(semanasVigencia, SEMANAS_HOMEOPATICO)
+                && tipoCategoria == TipoCategoria.PRODUCTO_TERMINADO;
+    }
+
+    private List<BigDecimal> partirCantidadEnBloques(BigDecimal cantidadPendiente, BigDecimal maximoPorOp) {
+        if (cantidadPendiente == null || cantidadPendiente.compareTo(BigDecimal.ZERO) <= 0) {
+            return List.of();
+        }
+        if (maximoPorOp == null || maximoPorOp.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("maximoPorOp debe ser mayor que cero");
+        }
+        List<BigDecimal> bloques = new ArrayList<>();
+        BigDecimal restante = cantidadPendiente;
+        while (restante.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal bloque = restante.min(maximoPorOp);
+            bloques.add(bloque);
+            restante = restante.subtract(bloque);
+        }
+        return bloques;
     }
 
     private void validarPlanDetalleSiExiste(OrdenProduccion orden, boolean obligatorio) {

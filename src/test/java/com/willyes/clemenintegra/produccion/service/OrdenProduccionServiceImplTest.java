@@ -31,6 +31,8 @@ import com.willyes.clemenintegra.inventario.repository.*;
 import com.willyes.clemenintegra.inventario.regularizacion.repository.RegularizacionTrazabilidadRepository;
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CorridaOrdenProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.EjecutarCorridaOpHomeopaticaRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CierreProduccionRequestDTO;
@@ -670,6 +672,159 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("crearOrdenDesdePlanSemanal rechaza PT homeopático > 30 y dirige a corrida")
+    void crearOrdenDesdePlanSemanal_ptHomeopaticoMayor30_rechazaParaCorrida() {
+        PlanProduccionDetalle detalle = planDetalleConCantidad(805L, 46, TipoCategoria.PRODUCTO_TERMINADO, new BigDecimal("300"));
+        when(planProduccionDetalleRepository.findById(805L)).thenReturn(Optional.of(detalle));
+        when(vidaUtilProductoService.buscarPorProductoId(46)).thenReturn(Optional.of(VidaUtilProducto.builder().productoId(46).semanasVigencia(78).build()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CrearOrdenProduccionRequestDTO dto = new CrearOrdenProduccionRequestDTO();
+        dto.setProductoId(46L);
+        dto.setResponsableId(5L);
+        dto.setCantidadProgramada(new BigDecimal("200"));
+        dto.setUnidadMedidaSimbolo("UND");
+
+        assertThatThrownBy(() -> service.crearOrdenDesdePlanSemanal(detalle.getPlan().getId(), 805L, dto))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("endpoint de corrida");
+    }
+
+    @Test
+    @DisplayName("corrida homeopática 300 crea 10 OP de 30")
+    void corridaHomeopatica_300_creaDiezOps() {
+        PlanProduccionDetalle detalle = planDetalleConCantidad(810L, 40, TipoCategoria.PRODUCTO_TERMINADO, new BigDecimal("300"));
+        when(planProduccionDetalleRepository.findById(810L)).thenReturn(Optional.of(detalle));
+        when(vidaUtilProductoService.buscarPorProductoId(40)).thenReturn(Optional.of(VidaUtilProducto.builder().productoId(40).semanasVigencia(78).build()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(ordenProduccionRepository.sumCantidadProgramadaByPlanProduccionDetalleId(810L)).thenReturn(BigDecimal.ZERO);
+        when(ordenProduccionRepository.countByPlanProduccionDetalleId(810L)).thenReturn(0L);
+
+        AtomicInteger seq = new AtomicInteger(1);
+        List<BigDecimal> cantidades = new ArrayList<>();
+        List<Long> detalleIds = new ArrayList<>();
+        doAnswer(invocation -> {
+            CrearOrdenProduccionRequestDTO req = invocation.getArgument(0);
+            cantidades.add(req.getCantidadProgramada());
+            detalleIds.add(req.getPlanDetalleId());
+            int i = seq.getAndIncrement();
+            OrdenProduccionResponseDTO orden = new OrdenProduccionResponseDTO();
+            orden.id = 1000L + i;
+            orden.codigoOrden = "OP-RUN-" + i;
+            return ResultadoValidacionOrdenDTO.builder().esValida(true).orden(orden).build();
+        }).when(service).crearOrden(any(CrearOrdenProduccionRequestDTO.class));
+
+        CorridaOrdenProduccionResponseDTO respuesta = service.ejecutarCorridaHomeopaticaDesdePlanSemanal(
+                detalle.getPlan().getId(), 810L, corridaRequest());
+
+        assertThat(respuesta.getTotalOpCreadas()).isEqualTo(10);
+        assertThat(cantidades).hasSize(10).allMatch(v -> v.compareTo(new BigDecimal("30")) == 0);
+        assertThat(detalleIds).allMatch(id -> id.equals(810L));
+        assertThat(respuesta.getCantidadTotalProgramadaEnOp()).isEqualByComparingTo(new BigDecimal("300"));
+        assertThat(respuesta.getCantidadPendienteRestante()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("corrida homeopática 200 crea 6 OP de 30 y una de 20")
+    void corridaHomeopatica_200_creaSeisMasResiduo() {
+        PlanProduccionDetalle detalle = planDetalleConCantidad(811L, 41, TipoCategoria.PRODUCTO_TERMINADO, new BigDecimal("200"));
+        when(planProduccionDetalleRepository.findById(811L)).thenReturn(Optional.of(detalle));
+        when(vidaUtilProductoService.buscarPorProductoId(41)).thenReturn(Optional.of(VidaUtilProducto.builder().productoId(41).semanasVigencia(78).build()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(ordenProduccionRepository.sumCantidadProgramadaByPlanProduccionDetalleId(811L)).thenReturn(BigDecimal.ZERO);
+        when(ordenProduccionRepository.countByPlanProduccionDetalleId(811L)).thenReturn(0L);
+
+        List<BigDecimal> cantidades = new ArrayList<>();
+        AtomicInteger seq = new AtomicInteger(1);
+        doAnswer(invocation -> {
+            CrearOrdenProduccionRequestDTO req = invocation.getArgument(0);
+            cantidades.add(req.getCantidadProgramada());
+            int i = seq.getAndIncrement();
+            OrdenProduccionResponseDTO orden = new OrdenProduccionResponseDTO();
+            orden.id = 2000L + i;
+            orden.codigoOrden = "OP-RUN-B-" + i;
+            return ResultadoValidacionOrdenDTO.builder().esValida(true).orden(orden).build();
+        }).when(service).crearOrden(any(CrearOrdenProduccionRequestDTO.class));
+
+        CorridaOrdenProduccionResponseDTO respuesta = service.ejecutarCorridaHomeopaticaDesdePlanSemanal(
+                detalle.getPlan().getId(), 811L, corridaRequest());
+
+        assertThat(respuesta.getTotalOpCreadas()).isEqualTo(7);
+        assertThat(cantidades).containsExactly(
+                new BigDecimal("30"), new BigDecimal("30"), new BigDecimal("30"),
+                new BigDecimal("30"), new BigDecimal("30"), new BigDecimal("30"),
+                new BigDecimal("20"));
+        assertThat(respuesta.getCantidadTotalProgramadaEnOp()).isEqualByComparingTo(new BigDecimal("200"));
+    }
+
+    @Test
+    @DisplayName("corrida homeopática con OP previas solo crea faltantes")
+    void corridaHomeopatica_conOpPrevias_creaSoloPendiente() {
+        PlanProduccionDetalle detalle = planDetalleConCantidad(812L, 42, TipoCategoria.PRODUCTO_TERMINADO, new BigDecimal("300"));
+        when(planProduccionDetalleRepository.findById(812L)).thenReturn(Optional.of(detalle));
+        when(vidaUtilProductoService.buscarPorProductoId(42)).thenReturn(Optional.of(VidaUtilProducto.builder().productoId(42).semanasVigencia(78).build()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(ordenProduccionRepository.sumCantidadProgramadaByPlanProduccionDetalleId(812L)).thenReturn(new BigDecimal("90"));
+        when(ordenProduccionRepository.countByPlanProduccionDetalleId(812L)).thenReturn(3L);
+
+        AtomicInteger seq = new AtomicInteger(1);
+        doAnswer(invocation -> {
+            int i = seq.getAndIncrement();
+            OrdenProduccionResponseDTO orden = new OrdenProduccionResponseDTO();
+            orden.id = 3000L + i;
+            orden.codigoOrden = "OP-RUN-C-" + i;
+            return ResultadoValidacionOrdenDTO.builder().esValida(true).orden(orden).build();
+        }).when(service).crearOrden(any(CrearOrdenProduccionRequestDTO.class));
+
+        CorridaOrdenProduccionResponseDTO respuesta = service.ejecutarCorridaHomeopaticaDesdePlanSemanal(
+                detalle.getPlan().getId(), 812L, corridaRequest());
+
+        assertThat(respuesta.getTotalOpPrevias()).isEqualTo(3);
+        assertThat(respuesta.getTotalOpCreadas()).isEqualTo(7);
+        assertThat(respuesta.getTotalOpAsociadas()).isEqualTo(10);
+        assertThat(respuesta.getCantidadTotalProgramadaEnOp()).isEqualByComparingTo(new BigDecimal("300"));
+        assertThat(respuesta.getCantidadPendienteRestante()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("corrida homeopática completa rechaza cuando no hay pendiente")
+    void corridaHomeopatica_sinPendiente_rechaza() {
+        PlanProduccionDetalle detalle = planDetalleConCantidad(813L, 43, TipoCategoria.PRODUCTO_TERMINADO, new BigDecimal("300"));
+        when(planProduccionDetalleRepository.findById(813L)).thenReturn(Optional.of(detalle));
+        when(vidaUtilProductoService.buscarPorProductoId(43)).thenReturn(Optional.of(VidaUtilProducto.builder().productoId(43).semanasVigencia(78).build()));
+        when(unidadConversionService.convertir(any(BigDecimal.class), any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(ordenProduccionRepository.sumCantidadProgramadaByPlanProduccionDetalleId(813L)).thenReturn(new BigDecimal("300"));
+
+        assertThatThrownBy(() -> service.ejecutarCorridaHomeopaticaDesdePlanSemanal(detalle.getPlan().getId(), 813L, corridaRequest()))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("ya no tiene pendiente");
+    }
+
+    @Test
+    @DisplayName("corrida homeopática rechaza PS con 78 semanas")
+    void corridaHomeopatica_ps_rechaza() {
+        PlanProduccionDetalle detalle = planDetalleConCantidad(814L, 44, TipoCategoria.PRODUCTO_SEMI_ELABORADO, new BigDecimal("200"));
+        when(planProduccionDetalleRepository.findById(814L)).thenReturn(Optional.of(detalle));
+        when(vidaUtilProductoService.buscarPorProductoId(44)).thenReturn(Optional.of(VidaUtilProducto.builder().productoId(44).semanasVigencia(78).build()));
+
+        assertThatThrownBy(() -> service.ejecutarCorridaHomeopaticaDesdePlanSemanal(detalle.getPlan().getId(), 814L, corridaRequest()))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("solo aplica a PT homeopáticos");
+    }
+
+    @Test
+    @DisplayName("corrida homeopática rechaza PT no homeopático")
+    void corridaHomeopatica_ptNoHomeopatico_rechaza() {
+        PlanProduccionDetalle detalle = planDetalleConCantidad(815L, 45, TipoCategoria.PRODUCTO_TERMINADO, new BigDecimal("200"));
+        when(planProduccionDetalleRepository.findById(815L)).thenReturn(Optional.of(detalle));
+        when(vidaUtilProductoService.buscarPorProductoId(45)).thenReturn(Optional.of(VidaUtilProducto.builder().productoId(45).semanasVigencia(104).build()));
+
+        assertThatThrownBy(() -> service.ejecutarCorridaHomeopaticaDesdePlanSemanal(detalle.getPlan().getId(), 815L, corridaRequest()))
+                .isInstanceOf(CustomBusinessException.class)
+                .hasMessageContaining("solo aplica a PT homeopáticos");
+    }
+
+    @Test
     @DisplayName("crearOrden valida rendimiento obligatorio para PS")
     void crearOrden_conPsSinRendimientoLanzaExcepcion() {
         Producto producto = new Producto();
@@ -946,6 +1101,36 @@ class OrdenProduccionServiceImplTest {
                 .plan(plan)
                 .producto(producto)
                 .cantidadPlanificada(BigDecimal.ONE)
+                .build();
+    }
+
+    private PlanProduccionDetalle planDetalleConCantidad(Long id, int productoId, TipoCategoria tipoCategoria, BigDecimal cantidadPlanificada) {
+        PlanProduccionSemanal plan = new PlanProduccionSemanal();
+        plan.setId(500L + id);
+        plan.setEstado(EstadoPlanProduccion.CONFIRMADO);
+        UnidadMedida unidad = new UnidadMedida();
+        unidad.setSimbolo("UND");
+        Producto producto = new Producto();
+        producto.setId(productoId);
+        producto.setUnidadMedida(unidad);
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(tipoCategoria);
+        producto.setCategoriaProducto(categoria);
+        return PlanProduccionDetalle.builder()
+                .id(id)
+                .plan(plan)
+                .producto(producto)
+                .unidadMedida(unidad)
+                .cantidadPlanificada(cantidadPlanificada)
+                .build();
+    }
+
+    private EjecutarCorridaOpHomeopaticaRequestDTO corridaRequest() {
+        return EjecutarCorridaOpHomeopaticaRequestDTO.builder()
+                .responsableId(999L)
+                .fechaProgramada(LocalDateTime.now().plusDays(1))
+                .idempotencyKey("idem-123")
+                .observacion("corrida automatica de prueba")
                 .build();
     }
 
