@@ -13,6 +13,7 @@ import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.LockModeType;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.List;
@@ -62,6 +63,9 @@ public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion
 
     @EntityGraph(attributePaths = {"producto", "unidadMedida", "responsable"})
     List<OrdenProduccion> findByPlanProduccionDetalleIdIn(Set<Long> planDetalleIds);
+
+    @Query("select coalesce(sum(op.cantidadProgramada), 0) from OrdenProduccion op where op.planProduccionDetalle.id = :planDetalleId")
+    BigDecimal sumCantidadProgramadaByPlanProduccionDetalleId(@Param("planDetalleId") Long planDetalleId);
 
     long countByPlanProduccionDetalleId(Long planDetalleId);
 

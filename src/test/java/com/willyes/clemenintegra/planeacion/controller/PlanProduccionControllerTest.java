@@ -14,6 +14,7 @@ import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
 import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
+import com.willyes.clemenintegra.produccion.dto.CorridaOrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,6 +113,32 @@ class PlanProduccionControllerTest {
                         .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.esValida").value(true));
+    }
+
+    @Test
+    @WithMockUser(authorities = "PO_PLAN_SEMANAL_WRITE")
+    void generarCorridaDesdeDetallePermiteWritePlanSemanal() throws Exception {
+        CorridaOrdenProduccionResponseDTO response = CorridaOrdenProduccionResponseDTO.builder()
+                .planId(10L)
+                .planDetalleId(20L)
+                .totalOpCreadas(2)
+                .build();
+        when(ordenProduccionService.ejecutarCorridaHomeopaticaDesdePlanSemanal(eq(10L), eq(20L), any()))
+                .thenReturn(response);
+
+        String payload = """
+                {
+                  "responsableId": 7,
+                  "fechaProgramada": "2030-01-01T10:00:00",
+                  "idempotencyKey": "idem-1"
+                }
+                """;
+
+        mockMvc.perform(post("/api/planeacion/planes-semanales/10/detalles/20/generar-op-corrida")
+                        .contentType(APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.totalOpCreadas").value(2));
     }
 
     @Test

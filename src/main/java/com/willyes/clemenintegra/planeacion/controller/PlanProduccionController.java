@@ -16,6 +16,8 @@ import com.willyes.clemenintegra.produccion.model.OrdenProduccion;
 import com.willyes.clemenintegra.produccion.repository.OrdenProduccionRepository;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.CorridaOrdenProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.EjecutarCorridaOpHomeopaticaRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
 import com.willyes.clemenintegra.produccion.service.OrdenProduccionService;
 import com.willyes.clemenintegra.shared.security.service.CustomUserDetails;
@@ -86,6 +88,17 @@ public class PlanProduccionController {
         ResultadoValidacionOrdenDTO resultado = ordenProduccionService
                 .crearOrdenDesdePlanSemanal(planId, planDetalleId, request);
         return ResponseEntity.status(resultado.isEsValida() ? 201 : 400).body(resultado);
+    }
+
+    @PostMapping("/{planId}/detalles/{planDetalleId}/generar-op-corrida")
+    @PreAuthorize("hasAnyAuthority('PO_PLAN_SEMANAL_WRITE','PROD_WRITE','PROD_OP_CREATE')")
+    public ResponseEntity<CorridaOrdenProduccionResponseDTO> ejecutarCorridaHomeopaticaDesdeDetalle(
+            @PathVariable Long planId,
+            @PathVariable Long planDetalleId,
+            @Valid @RequestBody EjecutarCorridaOpHomeopaticaRequestDTO request) {
+        CorridaOrdenProduccionResponseDTO response = ordenProduccionService
+                .ejecutarCorridaHomeopaticaDesdePlanSemanal(planId, planDetalleId, request);
+        return ResponseEntity.status(201).body(response);
     }
 
     @GetMapping
