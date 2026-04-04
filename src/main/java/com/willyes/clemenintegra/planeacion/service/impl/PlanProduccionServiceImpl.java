@@ -2,6 +2,7 @@ package com.willyes.clemenintegra.planeacion.service.impl;
 
 import com.willyes.clemenintegra.inventario.model.Producto;
 import com.willyes.clemenintegra.inventario.model.UnidadMedida;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionSemanalDTO;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
@@ -10,6 +11,8 @@ import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.repository.PlanProduccionSemanalRepository;
 import com.willyes.clemenintegra.planeacion.service.PlanProduccionService;
+import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -68,8 +71,11 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
             dto.getDetalles().forEach(detalleDTO -> {
                 Long productoId = detalleDTO.getProductoId();
                 Producto producto = productoId != null
-                        ? productoRepository.findById(productoId).orElse(new Producto(productoId.intValue()))
+                        ? productoRepository.findById(productoId)
+                        .orElseThrow(() -> new CustomBusinessException(ApiErrorCode.SOLICITUD_INVALIDA,
+                                "El producto indicado no existe: " + productoId))
                         : null;
+                validarProductoFabricable(producto, productoId);
                 Long unidadMedidaId = resolveUnidadMedidaId(detalleDTO, producto);
                 PlanProduccionDetalle detalle = PlanProduccionDetalle.builder()
                         .plan(plan)
@@ -169,5 +175,23 @@ public class PlanProduccionServiceImpl implements PlanProduccionService {
             return producto.getUnidadMedida().getId();
         }
         return null;
+    }
+
+    private void validarProductoFabricable(Producto producto, Long productoId) {
+        TipoCategoria tipoCategoria = Optional.ofNullable(producto)
+                .map(Producto::getCategoriaProducto)
+                .map(com.willyes.clemenintegra.inventario.model.CategoriaProducto::getTipo)
+                .orElse(null);
+
+        if (tipoCategoria == TipoCategoria.PRODUCTO_TERMINADO
+                || tipoCategoria == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+            return;
+        }
+
+        throw new CustomBusinessException(
+                ApiErrorCode.SOLICITUD_INVALIDA,
+                "El producto " + (productoId != null ? productoId : "(sin id)")
+                        + " no es fabricable. Solo se permiten PRODUCTO_TERMINADO o PRODUCTO_SEMI_ELABORADO."
+        );
     }
 }
