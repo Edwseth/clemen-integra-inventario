@@ -43,5 +43,13 @@ public class PlanProduccionSemanalDTO {
         private String observacion;
         private ProductoResumenDTO producto;
         private UnidadMedidaResponseDTO unidadMedida;
+        private String tipoProducto;
+        private Boolean esHomeopatico;
+        private Integer totalOpAsociadas;
+        private BigDecimal cantidadTotalProgramadaEnOp;
+        private BigDecimal cantidadPendiente;
+        private List<Long> opIds;
+        private List<String> opCodigos;
+        private String modoAccionSugerido;
     }
 }
