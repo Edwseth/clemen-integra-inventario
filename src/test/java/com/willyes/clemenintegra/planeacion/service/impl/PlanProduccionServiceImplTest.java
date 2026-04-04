@@ -1,11 +1,15 @@
 package com.willyes.clemenintegra.planeacion.service.impl;
 
+import com.willyes.clemenintegra.inventario.model.CategoriaProducto;
+import com.willyes.clemenintegra.inventario.model.Producto;
+import com.willyes.clemenintegra.inventario.model.enums.TipoCategoria;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionSemanalDTO;
 import com.willyes.clemenintegra.planeacion.dto.PlanProduccionResumenDTO;
 import com.willyes.clemenintegra.planeacion.model.PlanProduccionSemanal;
 import com.willyes.clemenintegra.planeacion.model.enums.EstadoPlanProduccion;
 import com.willyes.clemenintegra.planeacion.repository.PlanProduccionSemanalRepository;
 import com.willyes.clemenintegra.inventario.repository.ProductoRepository;
+import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import com.willyes.clemenintegra.shared.model.Usuario;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,6 +70,68 @@ class PlanProduccionServiceImplTest {
         PlanProduccionSemanalDTO dto = new PlanProduccionSemanalDTO();
 
         assertThrows(IllegalArgumentException.class, () -> service.crearOActualizar(dto));
+    }
+
+    @Test
+    void crearPlanPermiteProductoTerminado() {
+        Long productoId = 100L;
+        PlanProduccionSemanalDTO.PlanProduccionDetalleDTO detalle = PlanProduccionSemanalDTO.PlanProduccionDetalleDTO.builder()
+                .productoId(productoId)
+                .build();
+        PlanProduccionSemanalDTO dto = PlanProduccionSemanalDTO.builder()
+                .semanaInicio(LocalDate.of(2026, 4, 6))
+                .semanaFin(LocalDate.of(2026, 4, 12))
+                .detalles(List.of(detalle))
+                .build();
+
+        when(productoRepository.findById(productoId)).thenReturn(Optional.of(productoConTipo(productoId, TipoCategoria.PRODUCTO_TERMINADO)));
+        when(planProduccionSemanalRepository.save(any(PlanProduccionSemanal.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PlanProduccionSemanal plan = service.crearOActualizar(dto);
+
+        assertNotNull(plan);
+        assertEquals(1, plan.getDetalles().size());
+    }
+
+    @Test
+    void crearPlanPermiteProductoSemiElaborado() {
+        Long productoId = 101L;
+        PlanProduccionSemanalDTO.PlanProduccionDetalleDTO detalle = PlanProduccionSemanalDTO.PlanProduccionDetalleDTO.builder()
+                .productoId(productoId)
+                .build();
+        PlanProduccionSemanalDTO dto = PlanProduccionSemanalDTO.builder()
+                .semanaInicio(LocalDate.of(2026, 4, 6))
+                .semanaFin(LocalDate.of(2026, 4, 12))
+                .detalles(List.of(detalle))
+                .build();
+
+        when(productoRepository.findById(productoId)).thenReturn(Optional.of(productoConTipo(productoId, TipoCategoria.PRODUCTO_SEMI_ELABORADO)));
+        when(planProduccionSemanalRepository.save(any(PlanProduccionSemanal.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PlanProduccionSemanal plan = service.crearOActualizar(dto);
+
+        assertNotNull(plan);
+        assertEquals(1, plan.getDetalles().size());
+    }
+
+    @Test
+    void crearPlanRechazaProductoNoFabricable() {
+        Long productoId = 102L;
+        PlanProduccionSemanalDTO.PlanProduccionDetalleDTO detalle = PlanProduccionSemanalDTO.PlanProduccionDetalleDTO.builder()
+                .productoId(productoId)
+                .build();
+        PlanProduccionSemanalDTO dto = PlanProduccionSemanalDTO.builder()
+                .semanaInicio(LocalDate.of(2026, 4, 6))
+                .semanaFin(LocalDate.of(2026, 4, 12))
+                .detalles(List.of(detalle))
+                .build();
+
+        when(productoRepository.findById(productoId)).thenReturn(Optional.of(productoConTipo(productoId, TipoCategoria.MATERIA_PRIMA)));
+
+        CustomBusinessException ex = assertThrows(CustomBusinessException.class, () -> service.crearOActualizar(dto));
+        assertTrue(ex.getMessage().contains("no es fabricable"));
     }
 
     @Test
@@ -328,5 +394,15 @@ class PlanProduccionServiceImplTest {
         List<LocalDate> capturedDates = fechaCaptor.getAllValues();
         assertEquals(desde, capturedDates.get(0));
         assertEquals(hasta, capturedDates.get(1));
+    }
+
+    private Producto productoConTipo(Long id, TipoCategoria tipoCategoria) {
+        CategoriaProducto categoria = new CategoriaProducto();
+        categoria.setTipo(tipoCategoria);
+
+        Producto producto = new Producto();
+        producto.setId(id.intValue());
+        producto.setCategoriaProducto(categoria);
+        return producto;
     }
 }
