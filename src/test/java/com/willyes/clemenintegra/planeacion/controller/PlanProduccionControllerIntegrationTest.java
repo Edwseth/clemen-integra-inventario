@@ -189,7 +189,15 @@ class PlanProduccionControllerIntegrationTest extends IntegrationTestMySqlContai
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.detalles[0].producto.id").value(producto.getId().longValue()))
                 .andExpect(jsonPath("$.detalles[0].producto.unidadMedida").value(producto.getUnidadMedida().getSimbolo()))
-                .andExpect(jsonPath("$.detalles[0].unidadMedida.id").value(producto.getUnidadMedida().getId()));
+                .andExpect(jsonPath("$.detalles[0].unidadMedida.id").value(producto.getUnidadMedida().getId()))
+                .andExpect(jsonPath("$.detalles[0].tipoProducto").value("PT"))
+                .andExpect(jsonPath("$.detalles[0].esHomeopatico").value(false))
+                .andExpect(jsonPath("$.detalles[0].totalOpAsociadas").value(0))
+                .andExpect(jsonPath("$.detalles[0].cantidadTotalProgramadaEnOp").value(0))
+                .andExpect(jsonPath("$.detalles[0].cantidadPendiente").value(5.00))
+                .andExpect(jsonPath("$.detalles[0].opIds").isArray())
+                .andExpect(jsonPath("$.detalles[0].opCodigos").isArray())
+                .andExpect(jsonPath("$.detalles[0].modoAccionSugerido").value("UNICA"));
     }
 
     @Test
