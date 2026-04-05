@@ -7,7 +7,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 
 public interface DetalleFormulaService {
-    Page<DetalleFormula> listarTodas(Long formulaId, String insumo, Pageable pageable);
+    Page<DetalleFormula> listarTodas(Long formulaId, String formulaNombre, String insumo, Pageable pageable);
     Optional<DetalleFormula> buscarPorId(Long id);
     DetalleFormula guardar(DetalleFormula detalle);
     void eliminar(Long id);

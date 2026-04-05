@@ -45,15 +45,15 @@ class DetalleFormulaServiceImplTest {
     @DisplayName("listarTodas aplica filtros y recibe paginación estándar")
     void listarTodasConPaginacion() {
         PageRequest pageable = PageRequest.of(1, 10);
-        when(detalleRepository.findByFiltros(eq(7L), eq("chontaduro"), eq(pageable)))
+        when(detalleRepository.findByFiltros(eq(7L), eq("gnx"), eq("chontaduro"), eq(pageable)))
                 .thenReturn(new PageImpl<>(List.of(new DetalleFormula()), pageable, 11));
 
-        var pagina = service.listarTodas(7L, "  chontaduro  ", pageable);
+        var pagina = service.listarTodas(7L, "  gnx  ", "  chontaduro  ", pageable);
 
         assertThat(pagina.getNumber()).isEqualTo(1);
         assertThat(pagina.getSize()).isEqualTo(10);
         assertThat(pagina.getTotalElements()).isEqualTo(11);
-        verify(detalleRepository).findByFiltros(7L, "chontaduro", pageable);
+        verify(detalleRepository).findByFiltros(7L, "gnx", "chontaduro", pageable);
     }
 
     @Test

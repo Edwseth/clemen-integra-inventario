@@ -15,11 +15,15 @@ public interface DetalleFormulaRepository extends JpaRepository<DetalleFormula, 
     @Query("""
             SELECT d
             FROM DetalleFormula d
+            JOIN d.formula f
+            JOIN f.producto p
             JOIN d.insumo i
             WHERE (:formulaId IS NULL OR d.formula.id = :formulaId)
+              AND (:formulaNombre IS NULL OR LOWER(p.nombre) LIKE LOWER(CONCAT('%', :formulaNombre, '%')))
               AND (:insumo IS NULL OR LOWER(i.nombre) LIKE LOWER(CONCAT('%', :insumo, '%')))
             """)
     Page<DetalleFormula> findByFiltros(@Param("formulaId") Long formulaId,
+                                       @Param("formulaNombre") String formulaNombre,
                                        @Param("insumo") String insumo,
                                        Pageable pageable);
 

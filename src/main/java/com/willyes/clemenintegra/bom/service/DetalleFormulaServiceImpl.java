@@ -22,12 +22,16 @@ public class DetalleFormulaServiceImpl implements DetalleFormulaService {
     private final FormulaProductoRepository formulaRepository;
 
     @Override
-    public Page<DetalleFormula> listarTodas(Long formulaId, String insumo, Pageable pageable) {
+    public Page<DetalleFormula> listarTodas(Long formulaId, String formulaNombre, String insumo, Pageable pageable) {
+        String formulaNombreNormalizado = formulaNombre != null ? formulaNombre.trim() : null;
+        if (formulaNombreNormalizado != null && formulaNombreNormalizado.isBlank()) {
+            formulaNombreNormalizado = null;
+        }
         String insumoNormalizado = insumo != null ? insumo.trim() : null;
         if (insumoNormalizado != null && insumoNormalizado.isBlank()) {
             insumoNormalizado = null;
         }
-        return detalleRepository.findByFiltros(formulaId, insumoNormalizado, pageable);
+        return detalleRepository.findByFiltros(formulaId, formulaNombreNormalizado, insumoNormalizado, pageable);
     }
 
     @Override
