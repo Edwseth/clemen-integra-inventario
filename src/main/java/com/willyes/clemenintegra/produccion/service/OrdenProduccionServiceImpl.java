@@ -222,6 +222,177 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return prefijo + String.format("%03d", consecutivo) + "-" + iniciales;
     }
 
+    private record LoteDestino(Almacen almacen, EstadoLote estado) {}
+
+    private Producto resolverProductoCompleto(OrdenProduccion orden) {
+        if (orden == null || orden.getProducto() == null || orden.getProducto().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_NO_TERMINADO");
+        }
+        Producto producto = orden.getProducto();
+        boolean incompleto = producto.getCategoriaProducto() == null
+                || producto.getTipoAnalisis() == null;
+        if (!incompleto) {
+            return producto;
+        }
+        Producto productoCompleto = productoRepository.findById(producto.getId().longValue())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "PRODUCTO_NO_ENCONTRADO"));
+        orden.setProducto(productoCompleto);
+        if (orden.getUnidadMedida() == null && productoCompleto.getUnidadMedida() != null) {
+            orden.setUnidadMedida(productoCompleto.getUnidadMedida());
+        }
+        return productoCompleto;
+    }
+
+    private LoteDestino resolverDestinoLoteFabricado(Producto producto) {
+        if (producto == null || producto.getTipoAnalisis() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
+        }
+
+        Long almacenPtId = catalogResolver.getAlmacenPtId();
+        Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
+
+        Almacen almacenPt = almacenRepository.findById(almacenPtId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
+        Almacen almacenCuarentena = almacenRepository.findById(almacenCuarentenaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
+
+        TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(producto);
+        boolean requiereAnalisis = requiereFisico(producto)
+                || requiereQuimico(producto)
+                || requiereMicro(producto);
+        if (tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
+            return new LoteDestino(almacenCuarentena, EstadoLote.EN_CUARENTENA);
+        }
+        if (requiereAnalisis) {
+            return new LoteDestino(almacenCuarentena, EstadoLote.EN_CUARENTENA);
+        }
+        return new LoteDestino(almacenPt, EstadoLote.DISPONIBLE);
+    }
+
+    private LocalDateTime resolverFechaVencimientoLoteFabricado(OrdenProduccion orden,
+                                                                Producto producto,
+                                                                @Nullable LocalDateTime fechaFabricacion,
+                                                                @Nullable LocalDateTime fechaVencimientoPreferida) {
+        if (fechaVencimientoPreferida != null) {
+            return fechaVencimientoPreferida;
+        }
+        Integer semanasVigencia = obtenerSemanasVigenciaProductoTerminado(producto);
+        LocalDateTime fechaVencimiento = (fechaFabricacion != null && semanasVigencia != null)
+                ? fechaFabricacion.plusWeeks(semanasVigencia)
+                : null;
+
+        if (producto.getCategoriaProducto() != null
+                && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO
+                && Objects.equals(semanasVigencia, SEMANAS_HERENCIA_PS_PT)) {
+            LoteProducto lotePsOrigen = obtenerLotePsReservado(orden.getId());
+            if (lotePsOrigen != null && lotePsOrigen.getFechaVencimiento() != null) {
+                return lotePsOrigen.getFechaVencimiento();
+            }
+            if (lotePsOrigen != null && semanasVigencia == null) {
+                throw new CustomBusinessException(ApiErrorCode.VIDA_UTIL_NO_CONFIGURADA,
+                        "El lote semielaborado consumido no tiene fecha de vencimiento configurada");
+            }
+        }
+        return fechaVencimiento;
+    }
+
+    private LoteProducto asegurarLoteProduccion(OrdenProduccion orden,
+                                                @Nullable String codigoLotePreferido,
+                                                @Nullable LocalDateTime fechaFabricacionPreferida,
+                                                @Nullable LocalDateTime fechaVencimientoPreferida) {
+        if (orden == null || orden.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ORDEN_PRODUCCION_OBLIGATORIA");
+        }
+
+        Producto producto = resolverProductoCompleto(orden);
+        TipoCategoria tipoCategoria = obtenerTipoCategoriaProducto(producto);
+        if (!esProductoFabricable(tipoCategoria)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "PRODUCTO_NO_TERMINADO");
+        }
+
+        Optional<LoteProducto> loteExistenteOpt = loteProductoRepository
+                .findByOrdenProduccionIdAndProductoId(orden.getId(), producto.getId().longValue());
+
+        LocalDateTime fechaFabricacion = fechaFabricacionPreferida != null ? fechaFabricacionPreferida : LocalDateTime.now();
+        LocalDateTime fechaVencimiento = resolverFechaVencimientoLoteFabricado(
+                orden,
+                producto,
+                fechaFabricacion,
+                fechaVencimientoPreferida
+        );
+        LoteDestino loteDestino = resolverDestinoLoteFabricado(producto);
+
+        if (loteExistenteOpt.isPresent()) {
+            LoteProducto loteExistente = loteExistenteOpt.get();
+            if (loteExistente.getFechaFabricacion() == null) {
+                loteExistente.setFechaFabricacion(fechaFabricacion);
+            }
+            if (loteExistente.getFechaVencimiento() == null && fechaVencimiento != null) {
+                loteExistente.setFechaVencimiento(fechaVencimiento);
+            }
+            if (loteExistente.getCodigoLote() == null && codigoLotePreferido != null && !codigoLotePreferido.isBlank()) {
+                if (loteProductoRepository.existsByCodigoLote(codigoLotePreferido)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
+                }
+                loteExistente.setCodigoLote(codigoLotePreferido);
+            }
+
+            String codigoReal = loteExistente.getCodigoLote();
+            if (codigoReal == null || codigoReal.isBlank()) {
+                codigoReal = Optional.ofNullable(codigoLotePreferido)
+                        .filter(c -> !c.isBlank())
+                        .orElseGet(() -> Optional.ofNullable(orden.getLoteProduccion())
+                                .filter(c -> !c.isBlank())
+                                .orElseGet(() -> generarCodigoLote(producto)));
+                if (loteProductoRepository.existsByCodigoLote(codigoReal)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
+                }
+                loteExistente.setCodigoLote(codigoReal);
+            }
+
+            orden.setLoteId(loteExistente.getId());
+            orden.setLoteProduccion(codigoReal);
+            return loteProductoRepository.save(loteExistente);
+        }
+
+        String codigoLote = Optional.ofNullable(codigoLotePreferido)
+                .filter(c -> !c.isBlank())
+                .orElseGet(() -> Optional.ofNullable(orden.getLoteProduccion())
+                        .filter(c -> !c.isBlank())
+                        .orElseGet(() -> generarCodigoLote(producto)));
+        if (loteProductoRepository.existsByCodigoLote(codigoLote)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
+        }
+
+        LoteProducto lotePsOrigen = null;
+        if (producto.getCategoriaProducto() != null
+                && producto.getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO
+                && Objects.equals(
+                vidaUtilProductoService.buscarPorProductoId(producto.getId())
+                        .map(VidaUtilProducto::getSemanasVigencia).orElse(null),
+                SEMANAS_HERENCIA_PS_PT
+        )) {
+            lotePsOrigen = obtenerLotePsReservado(orden.getId());
+        }
+
+        LoteProducto lote = LoteProducto.builder()
+                .codigoLote(codigoLote)
+                .producto(producto)
+                .almacen(loteDestino.almacen())
+                .estado(loteDestino.estado())
+                .stockLote(BigDecimal.ZERO)
+                .fechaFabricacion(fechaFabricacion)
+                .fechaVencimiento(fechaVencimiento)
+                .ordenProduccion(orden)
+                .lotePsOrigen(lotePsOrigen)
+                .build();
+
+        LoteProducto guardado = loteProductoRepository.save(lote);
+        orden.setLoteId(guardado.getId());
+        orden.setLoteProduccion(guardado.getCodigoLote());
+        return guardado;
+    }
+
     private List<EstadoSolicitudMovimiento> parseEstados(String raw) {
         if (raw == null || raw.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ESTADOS_SOLICITUD_NO_CONFIGURADOS");
@@ -502,6 +673,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             orden.setCodigoOrden(repository.findById(orden.getId())
                     .map(OrdenProduccion::getCodigoOrden)
                     .orElse(generarCodigoOrden()));
+        }
+
+        if (!esOrdenNueva
+                && orden.getEstado() == EstadoProduccion.EN_PROCESO
+                && esProductoFabricable(obtenerTipoCategoriaProducto(resolverProductoCompleto(orden)))) {
+            asegurarLoteProduccion(orden, null, LocalDateTime.now(), null);
         }
 
         OrdenProduccion guardada = repository.save(orden);
@@ -1833,87 +2010,21 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 orden.setFechaCierre(LocalDateTime.now());
             }
 
-            if (orden.getProducto() == null || orden.getProducto().getTipoAnalisis() == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
+            LoteDestino destinoLote = resolverDestinoLoteFabricado(resolverProductoCompleto(orden));
+            lote = asegurarLoteProduccion(
+                    orden,
+                    dto.getCodigoLote(),
+                    fechaFabricacion,
+                    fechaVencimiento
+            );
+            if (!Objects.equals(lote.getAlmacen().getId(), destinoLote.almacen().getId())
+                    || lote.getEstado() != destinoLote.estado()) {
+                log.warn("Lote PT incompatible op={}, producto={}, loteId={}, almacenId={}, estadoLote={}, destino={}, estadoDestino={}",
+                        orden.getId(), orden.getProducto().getId(), lote.getId(), lote.getAlmacen().getId(),
+                        lote.getEstado(), destinoLote.almacen().getId(), destinoLote.estado());
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_PT_INCOMPATIBLE");
             }
-
-            Long almacenPtId = catalogResolver.getAlmacenPtId();
-            Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
-
-            Almacen almacenPt = almacenRepository.findById(almacenPtId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
-            Almacen almacenCuarentena = almacenRepository.findById(almacenCuarentenaId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
-
-            Almacen destino;
-            EstadoLote estadoLote;
-            TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
-            boolean requiereAnalisis = requiereFisico(orden.getProducto())
-                    || requiereQuimico(orden.getProducto())
-                    || requiereMicro(orden.getProducto());
-            if (tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
-                destino = almacenCuarentena;
-                estadoLote = EstadoLote.EN_CUARENTENA;
-            } else {
-                if (requiereAnalisis) {
-                    destino = almacenCuarentena;
-                    estadoLote = EstadoLote.EN_CUARENTENA;
-                } else {
-                    destino = almacenPt;
-                    estadoLote = EstadoLote.DISPONIBLE;
-                }
-            }
-
-            String codigoLote = dto.getCodigoLote();
-            if (lote == null) {
-                if (codigoLote != null && !codigoLote.isBlank()) {
-                    boolean existeCodigo = loteProductoRepository.existsByCodigoLote(codigoLote);
-                    if (existeCodigo) {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
-                    }
-                    orden.setLoteProduccion(codigoLote);
-                } else {
-                    codigoLote = Optional.ofNullable(orden.getLoteProduccion())
-                            .orElseGet(() -> {
-                                String gen = generarCodigoLote(orden.getProducto());
-                                orden.setLoteProduccion(gen);
-                                return gen;
-                            });
-                }
-
-                lote = LoteProducto.builder()
-                        .codigoLote(codigoLote)
-                        .producto(orden.getProducto())
-                        .almacen(destino)
-                        .estado(estadoLote)
-                        .stockLote(BigDecimal.ZERO)
-                        .fechaFabricacion(fechaFabricacion)
-                        .fechaVencimiento(fechaVencimiento)
-                        .ordenProduccion(orden)
-                        .build();
-            } else {
-                if (!lote.getAlmacen().getId().equals(destino.getId()) || lote.getEstado() != estadoLote) {
-                    log.warn("Lote PT incompatible op={}, producto={}, loteId={}, almacenId={}, estadoLote={}, destino={}, estadoDestino={}",
-                            orden.getId(), orden.getProducto().getId(), lote.getId(), lote.getAlmacen().getId(), lote.getEstado(), destino.getId(), estadoLote);
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_PT_INCOMPATIBLE");
-                }
-                if (codigoLote != null && lote.getCodigoLote() != null && !lote.getCodigoLote().equals(codigoLote)) {
-                    boolean existeCodigo = loteProductoRepository.existsByCodigoLote(codigoLote);
-                    if (existeCodigo) {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "CODIGO_LOTE_DUPLICADO");
-                    }
-                } else if (lote.getCodigoLote() == null && codigoLote != null) {
-                    lote.setCodigoLote(codigoLote);
-                }
-                if (lote.getFechaFabricacion() == null) {
-                    lote.setFechaFabricacion(fechaFabricacion);
-                }
-                if (fechaVencimiento != null) {
-                    lote.setFechaVencimiento(fechaVencimiento);
-                }
-                codigoLote = lote.getCodigoLote();
-            }
-            loteProductoRepository.save(lote);
+            String codigoLote = lote.getCodigoLote();
             if (dto.getTipo() == TipoCierre.TOTAL) {
                 BigDecimal costoTotalMaterialRealOp = Optional.ofNullable(
                                 movimientoInventarioRepository.sumarCostoMaterialRealOp(orden.getId()))
@@ -1931,7 +2042,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 }
             }
             log.info("OP-cierre lote op={}, producto={}, loteId={}, codigoLote={}, cantidad={}, fechaFabricacion={}, fechaVencimiento={}, almacenId={}, estado={}, usuario={}",
-                    orden.getId(), orden.getProducto().getId(), lote.getId(), codigoLote, cantidad, fechaFabricacion, fechaVencimiento, destino.getId(), estadoLote, usuario.getId());
+                    orden.getId(), orden.getProducto().getId(), lote.getId(), codigoLote, cantidad,
+                    lote.getFechaFabricacion(), lote.getFechaVencimiento(),
+                    lote.getAlmacen().getId(), lote.getEstado(), usuario.getId());
 
             MovimientoInventarioDTO movDto = new MovimientoInventarioDTO(
                     null,
@@ -1946,7 +2059,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     orden.getProducto().getId(),
                     lote.getId(),
                     null,
-                    destino.getId().intValue(),
+                    lote.getAlmacen().getId().intValue(),
                     null,
                     null,
                     motivoEntrada.getId(),
@@ -1978,7 +2091,8 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     movDto.cantidad());
             movimientoInventarioService.registrarMovimiento(movDto);
             log.info("OP-cierre entrada PT op={}, producto={}, lote={}, cantidad={}, usuario={}, destino={}, motivoId={}, tipoDetalleId={}",
-                    orden.getId(), orden.getProducto().getId(), lote.getId(), cantidad, usuario.getId(), destino.getId(), motivoEntrada.getId(), tipoDetalleEntrada.getId());
+                    orden.getId(), orden.getProducto().getId(), lote.getId(), cantidad, usuario.getId(),
+                    lote.getAlmacen().getId(), motivoEntrada.getId(), tipoDetalleEntrada.getId());
 
             return repository.save(orden);
         } catch (OptimisticLockException e) {
@@ -2410,75 +2524,9 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
             orden.setEstado(EstadoProduccion.EN_PROCESO);
             actualizarOrden = true;
         }
-        if ((etapa.getSecuencia() != null && etapa.getSecuencia() == 1) && orden.getLoteProduccion() == null) {
-            String codigoLote = generarCodigoLote(orden.getProducto());
-            orden.setLoteProduccion(codigoLote);
-
-            if (orden.getProducto() == null || orden.getProducto().getTipoAnalisis() == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_SIN_TIPO_ANALISIS");
-            }
-
-            Long almacenPtId = catalogResolver.getAlmacenPtId();
-            Long almacenCuarentenaId = catalogResolver.getAlmacenCuarentenaId();
-
-            Almacen almacenPt = almacenRepository.findById(almacenPtId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
-            Almacen almacenCuarentena = almacenRepository.findById(almacenCuarentenaId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ALMACEN_INEXISTENTE"));
-
-            Almacen destino;
-            EstadoLote estadoLote;
-            TipoCategoria tipoProducto = obtenerTipoCategoriaProducto(orden.getProducto());
-            boolean requiereAnalisis = requiereFisico(orden.getProducto())
-                    || requiereQuimico(orden.getProducto())
-                    || requiereMicro(orden.getProducto());
-            if (tipoProducto == TipoCategoria.PRODUCTO_SEMI_ELABORADO) {
-                destino = almacenCuarentena;
-                estadoLote = EstadoLote.EN_CUARENTENA;
-            } else {
-                if (requiereAnalisis) {
-                    destino = almacenCuarentena;
-                    estadoLote = EstadoLote.EN_CUARENTENA;
-                } else {
-                    destino = almacenPt;
-                    estadoLote = EstadoLote.DISPONIBLE;
-                }
-            }
-
-            LocalDateTime fechaFabricacion = LocalDateTime.now();
-            Integer semanasVigencia = obtenerSemanasVigenciaProductoTerminado(orden.getProducto());
-            LocalDateTime fechaVencimientoBase = semanasVigencia != null
-                    ? fechaFabricacion.plusWeeks(semanasVigencia)
-                    : null;
-            LocalDateTime fechaVencimiento = fechaVencimientoBase;
-
-            LoteProducto lotePsOrigen = null;
-            if (orden.getProducto().getCategoriaProducto() != null
-                    && orden.getProducto().getCategoriaProducto().getTipo() == TipoCategoria.PRODUCTO_TERMINADO
-                    && Objects.equals(semanasVigencia, SEMANAS_HERENCIA_PS_PT)) {
-                lotePsOrigen = obtenerLotePsReservado(orden.getId());
-                if (lotePsOrigen != null && lotePsOrigen.getFechaVencimiento() != null) {
-                    fechaVencimiento = lotePsOrigen.getFechaVencimiento();
-                } else if (lotePsOrigen != null && semanasVigencia == null) {
-                    throw new CustomBusinessException(ApiErrorCode.VIDA_UTIL_NO_CONFIGURADA,
-                            "El lote semielaborado consumido no tiene fecha de vencimiento configurada");
-                }
-            }
-
-            LoteProducto lote = LoteProducto.builder()
-                    .codigoLote(codigoLote)
-                    .producto(orden.getProducto())
-                    .almacen(destino)
-                    .estado(estadoLote)
-                    .stockLote(BigDecimal.ZERO)
-                    .fechaFabricacion(fechaFabricacion)
-                    .fechaVencimiento(fechaVencimiento)
-                    .ordenProduccion(orden)
-                    .lotePsOrigen(lotePsOrigen)
-                    .build();
-
-            lote = loteProductoRepository.save(lote);
-            orden.setLoteId(lote.getId());
+        if (orden.getEstado() == EstadoProduccion.EN_PROCESO
+                && esProductoFabricable(obtenerTipoCategoriaProducto(resolverProductoCompleto(orden)))) {
+            asegurarLoteProduccion(orden, null, LocalDateTime.now(), null);
             actualizarOrden = true;
         }
         if (actualizarOrden) {
