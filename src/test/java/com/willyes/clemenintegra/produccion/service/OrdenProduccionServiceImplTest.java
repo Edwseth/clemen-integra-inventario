@@ -86,6 +86,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -252,6 +253,66 @@ class OrdenProduccionServiceImplTest {
         verify(movimientoInventarioService, atLeast(1)).registrarMovimiento(movimientoCaptor.capture());
         assertThat(movimientoCaptor.getAllValues())
                 .anyMatch(m -> m.tipoMovimiento() == TipoMovimiento.ENTRADA && Long.valueOf(88L).equals(m.ubicacionDestinoId()));
+    }
+
+    @Test
+    @DisplayName("registrarCierre reutiliza lote existente y no crea lote duplicado")
+    void registrarCierre_reutilizaLoteExistente() {
+        OrdenProduccion orden = crearOrdenBase(902L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        LoteProducto existente = new LoteProducto();
+        existente.setId(777L);
+        existente.setCodigoLote("LOTE-777");
+        existente.setProducto(orden.getProducto());
+        existente.setOrdenProduccion(orden);
+        existente.setFechaFabricacion(LocalDateTime.now().minusHours(2));
+        existente.setFechaVencimiento(LocalDateTime.now().plusWeeks(4));
+        Almacen almacenDestino = new Almacen();
+        almacenDestino.setId(30);
+        existente.setAlmacen(almacenDestino);
+        existente.setEstado(EstadoLote.DISPONIBLE);
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue()))
+                .thenReturn(Optional.of(existente));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("10"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        service.registrarCierre(902L, dto);
+
+        ArgumentCaptor<LoteProducto> loteCaptor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository, atLeastOnce()).save(loteCaptor.capture());
+        assertThat(loteCaptor.getAllValues())
+                .allMatch(l -> Objects.equals(l.getId(), 777L));
+    }
+
+    @Test
+    @DisplayName("registrarCierre sincroniza referencias de lote cuando el lote se crea en fallback")
+    void registrarCierre_sincronizaReferenciasLoteEnFallback() {
+        OrdenProduccion orden = crearOrdenBase(903L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        AtomicLong loteId = new AtomicLong(0L);
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            if (lote.getId() == null) {
+                lote.setId(9903L);
+                loteId.set(9903L);
+            }
+            return lote;
+        });
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("10"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        service.registrarCierre(903L, dto);
+
+        assertThat(loteId.get()).isEqualTo(9903L);
+        assertThat(orden.getLoteId()).isEqualTo(9903L);
+        assertThat(orden.getLoteProduccion()).isNotBlank();
     }
 
     @Test
@@ -1369,13 +1430,62 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("guardarConValidacionStock asegura lote cuando una OP existente queda EN_PROCESO")
+    void guardarConValidacionStock_enProceso_aseguraLoteProduccion() {
+        Producto producto = crearProductoTerminado();
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(1400L);
+        orden.setProducto(producto);
+        orden.setEstado(EstadoProduccion.EN_PROCESO);
+        orden.setCantidadProgramada(new BigDecimal("5"));
+        orden.setCantidadProducida(BigDecimal.ZERO);
+        orden.setCantidadProducidaAcumulada(BigDecimal.ZERO);
+        orden.setFechaInicio(LocalDateTime.now().minusHours(1));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setDetalles(List.of());
+
+        when(ordenProduccionRepository.findById(1400L)).thenReturn(Optional.of(orden));
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(producto.getId().longValue(), EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);
+        Almacen almacenPt = new Almacen();
+        almacenPt.setId(30);
+        Almacen almacenCuarentena = new Almacen();
+        almacenCuarentena.setId(31);
+        when(almacenRepository.findById(30L)).thenReturn(Optional.of(almacenPt));
+        when(almacenRepository.findById(31L)).thenReturn(Optional.of(almacenCuarentena));
+        when(vidaUtilProductoService.buscarPorProductoId(producto.getId()))
+                .thenReturn(Optional.of(VidaUtilProducto.builder()
+                        .productoId(producto.getId())
+                        .producto(producto)
+                        .semanasVigencia(4)
+                        .build()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1400L, producto.getId().longValue()))
+                .thenReturn(Optional.empty());
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            lote.setId(91400L);
+            return lote;
+        });
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(orden);
+
+        assertThat(resultado.isEsValida()).isTrue();
+        assertThat(orden.getLoteId()).isEqualTo(91400L);
+        assertThat(orden.getLoteProduccion()).isNotBlank();
+    }
+
+    @Test
     @DisplayName("iniciarEtapa inicia la primera etapa cuando las solicitudes de movimiento están concluidas")
     void iniciarEtapa_conSolicitudesConcluidas() {
         OrdenProduccion orden = new OrdenProduccion();
         orden.setId(1L);
         orden.setEstado(EstadoProduccion.CREADA);
         orden.setCodigoOrden("OP-001");
-        orden.setLoteProduccion("L-001");
+        orden.setProducto(crearProductoTerminado());
 
         EtapaProduccion etapa = EtapaProduccion.builder()
                 .id(10L)
@@ -1398,6 +1508,27 @@ class OrdenProduccionServiceImplTest {
         when(etapaProduccionRepository.findById(10L)).thenReturn(Optional.of(etapa));
         when(solicitudMovimientoRepository.findByOrdenProduccionId(1L)).thenReturn(List.of(solicitud));
         when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);
+        Almacen almacenPt = new Almacen();
+        almacenPt.setId(30);
+        Almacen almacenCuarentena = new Almacen();
+        almacenCuarentena.setId(31);
+        when(almacenRepository.findById(30L)).thenReturn(Optional.of(almacenPt));
+        when(almacenRepository.findById(31L)).thenReturn(Optional.of(almacenCuarentena));
+        when(vidaUtilProductoService.buscarPorProductoId(orden.getProducto().getId()))
+                .thenReturn(Optional.of(VidaUtilProducto.builder()
+                        .productoId(orden.getProducto().getId())
+                        .producto(orden.getProducto())
+                        .semanasVigencia(4)
+                        .build()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(1L, orden.getProducto().getId().longValue()))
+                .thenReturn(Optional.empty());
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            lote.setId(1001L);
+            return lote;
+        });
         when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -1408,8 +1539,140 @@ class OrdenProduccionServiceImplTest {
         assertThat(resultado.getUsuarioId()).isEqualTo(usuario.getId());
         assertThat(resultado.getUsuarioNombre()).isEqualTo(usuario.getNombreCompleto());
         assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+        assertThat(orden.getLoteId()).isEqualTo(1001L);
+        assertThat(orden.getLoteProduccion()).isNotBlank();
         verify(ordenProduccionRepository).save(orden);
         verify(movimientoInventarioService).consumirInsumosPorOrden(1L, 10L, usuario.getId());
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa crea lote aunque la etapa iniciada no sea secuencia 1")
+    void iniciarEtapa_etapaNoPrimera_creaLoteAlPasarEnProceso() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(11L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-011");
+        Producto productoPs = crearProducto(611, TipoCategoria.PRODUCTO_SEMI_ELABORADO);
+        productoPs.setRequiereAnalisisFisico(true);
+        productoPs.setRequiereAnalisisQuimico(false);
+        productoPs.setRequiereAnalisisMicrobiologico(false);
+        productoPs.recomputarTipoAnalisisDesdeBanderas();
+        orden.setProducto(productoPs);
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(110L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(2)
+                .build();
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(1100L)
+                .ordenProduccion(orden)
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .build();
+
+        Usuario usuario = new Usuario();
+        usuario.setId(33L);
+        usuario.setNombreCompleto("Operario PS");
+
+        when(ordenProduccionRepository.findById(11L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(110L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(11L)).thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);
+        Almacen almacenPt = new Almacen();
+        almacenPt.setId(30);
+        Almacen almacenCuarentena = new Almacen();
+        almacenCuarentena.setId(31);
+        when(almacenRepository.findById(30L)).thenReturn(Optional.of(almacenPt));
+        when(almacenRepository.findById(31L)).thenReturn(Optional.of(almacenCuarentena));
+        when(vidaUtilProductoService.buscarPorProductoId(611))
+                .thenReturn(Optional.of(VidaUtilProducto.builder()
+                        .productoId(611)
+                        .producto(productoPs)
+                        .semanasVigencia(5)
+                        .build()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(11L, 611L))
+                .thenReturn(Optional.empty());
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> {
+            LoteProducto lote = invocation.getArgument(0);
+            lote.setId(6110L);
+            return lote;
+        });
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.iniciarEtapa(11L, 110L);
+
+        assertThat(orden.getEstado()).isEqualTo(EstadoProduccion.EN_PROCESO);
+        assertThat(orden.getLoteId()).isEqualTo(6110L);
+        assertThat(orden.getLoteProduccion()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa no duplica lote cuando ya existe uno real para OP/producto")
+    void iniciarEtapa_conLoteExistente_noDuplica() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(12L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-012");
+        orden.setProducto(crearProductoTerminado());
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(120L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(1200L)
+                .ordenProduccion(orden)
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .build();
+        LoteProducto loteExistente = new LoteProducto();
+        loteExistente.setId(8120L);
+        loteExistente.setCodigoLote("LOT-8120");
+        loteExistente.setProducto(orden.getProducto());
+        loteExistente.setOrdenProduccion(orden);
+        loteExistente.setEstado(EstadoLote.DISPONIBLE);
+        Almacen almacen = new Almacen();
+        almacen.setId(30);
+        loteExistente.setAlmacen(almacen);
+
+        Usuario usuario = new Usuario();
+        usuario.setId(44L);
+        usuario.setNombreCompleto("Operario lote existente");
+
+        when(ordenProduccionRepository.findById(12L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(120L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(12L)).thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuario);
+        when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);
+        when(almacenRepository.findById(30L)).thenReturn(Optional.of(almacen));
+        Almacen almacenCuarentena = new Almacen();
+        almacenCuarentena.setId(31);
+        when(almacenRepository.findById(31L)).thenReturn(Optional.of(almacenCuarentena));
+        when(vidaUtilProductoService.buscarPorProductoId(orden.getProducto().getId()))
+                .thenReturn(Optional.of(VidaUtilProducto.builder()
+                        .productoId(orden.getProducto().getId())
+                        .producto(orden.getProducto())
+                        .semanasVigencia(4)
+                        .build()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(12L, orden.getProducto().getId().longValue()))
+                .thenReturn(Optional.of(loteExistente));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(ordenProduccionRepository.save(any(OrdenProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etapaProduccionRepository.save(any(EtapaProduccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.iniciarEtapa(12L, 120L);
+
+        assertThat(orden.getLoteId()).isEqualTo(8120L);
+        assertThat(orden.getLoteProduccion()).isEqualTo("LOT-8120");
+        ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository, atLeastOnce()).save(captor.capture());
+        assertThat(captor.getAllValues()).allMatch(l -> Objects.equals(l.getId(), 8120L));
     }
 
     @Test
