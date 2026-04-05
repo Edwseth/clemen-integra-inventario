@@ -33,7 +33,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -76,8 +75,10 @@ class DetalleFormulaFiltrosIntegrationTest extends IntegrationTestMySqlContainer
         mockMvc.perform(get("/api/bom/detalles")
                         .param("formulaId", String.valueOf(datos.formulaConChontaduro.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThan(0))))
-                .andExpect(jsonPath("$[*].formulaId", everyItem(org.hamcrest.Matchers.is(datos.formulaConChontaduro.getId().intValue()))));
+                .andExpect(jsonPath("$.content", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.content[*].formulaId", everyItem(org.hamcrest.Matchers.is(datos.formulaConChontaduro.getId().intValue()))))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.number").value(0));
     }
 
     @Test
@@ -88,8 +89,10 @@ class DetalleFormulaFiltrosIntegrationTest extends IntegrationTestMySqlContainer
         mockMvc.perform(get("/api/bom/detalles")
                         .param("insumo", "  ChOnTaDuRo  "))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThan(0))))
-                .andExpect(jsonPath("$[*].insumoNombre", everyItem(containsStringIgnoringCase("chontaduro"))));
+                .andExpect(jsonPath("$.content", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.content[*].insumoNombre", everyItem(containsStringIgnoringCase("chontaduro"))))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.number").value(0));
     }
 
     @Test
@@ -101,9 +104,11 @@ class DetalleFormulaFiltrosIntegrationTest extends IntegrationTestMySqlContainer
                         .param("formulaId", String.valueOf(datos.formulaConChontaduro.getId()))
                         .param("insumo", "chontaduro"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThan(0))))
-                .andExpect(jsonPath("$[*].formulaId", everyItem(org.hamcrest.Matchers.is(datos.formulaConChontaduro.getId().intValue()))))
-                .andExpect(jsonPath("$[*].insumoNombre", everyItem(containsStringIgnoringCase("chontaduro"))));
+                .andExpect(jsonPath("$.content", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.content[*].formulaId", everyItem(org.hamcrest.Matchers.is(datos.formulaConChontaduro.getId().intValue()))))
+                .andExpect(jsonPath("$.content[*].insumoNombre", everyItem(containsStringIgnoringCase("chontaduro"))))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.number").value(0));
     }
 
     private DatosPrueba sembrarDatos(String sufijo) {
