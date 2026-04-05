@@ -32,6 +32,7 @@ import com.willyes.clemenintegra.inventario.regularizacion.repository.Regulariza
 import com.willyes.clemenintegra.inventario.service.*;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.CorridaOrdenProduccionResponseDTO;
+import com.willyes.clemenintegra.produccion.dto.DiagnosticoInsumosOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.EjecutarCorridaOpHomeopaticaRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
@@ -482,6 +483,111 @@ class OrdenProduccionServiceImplTest {
         assertThat(resultado.getInsumosFaltantes().get(0).getMaximoProducible()).isEqualTo(185);
         assertThat(resultado.getInsumosFaltantes().get(0).getUnidadProductoFabricableSimbolo()).isEqualTo("UND");
         assertThat(resultado.getInsumosFaltantes().get(0).getUnidadProductoFabricableNombre()).isEqualTo("UNIDAD");
+    }
+
+    @Test
+    @DisplayName("diagnosticarInsumosParaOrden retorna disponibilidad suficiente y detalle por insumo")
+    void diagnosticarInsumosParaOrden_suficiente() {
+        Producto producto = new Producto();
+        producto.setId(101);
+        UnidadMedida unidadProducto = new UnidadMedida();
+        unidadProducto.setSimbolo("UND");
+        unidadProducto.setNombre("UNIDAD");
+        unidadProducto.setNombrePlural("UNIDADES");
+        producto.setUnidadMedida(unidadProducto);
+
+        Producto insumo = new Producto();
+        insumo.setId(102);
+        insumo.setNombre("Alcohol");
+        UnidadMedida unidadInsumo = new UnidadMedida();
+        unidadInsumo.setSimbolo("ML");
+        unidadInsumo.setNombre("MILILITRO");
+        unidadInsumo.setNombrePlural("MILILITROS");
+        insumo.setUnidadMedida(unidadInsumo);
+        insumo.setModoControlInventario(ModoControlInventario.CONTROL_STOCK);
+        CategoriaProducto categoriaInsumo = new CategoriaProducto();
+        categoriaInsumo.setTipo(TipoCategoria.MATERIA_PRIMA);
+        insumo.setCategoriaProducto(categoriaInsumo);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("2"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(501L);
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(101L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findById(101L)).thenReturn(Optional.of(producto));
+        when(productoRepository.findAllById(any())).thenReturn(List.of(insumo));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of(1L));
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(102L), any(BigDecimal.class), eq(List.of(1L)), eq(true)))
+                .thenReturn(DistribucionFefoResult.builder()
+                        .stockLibreTotal(new BigDecimal("100.000000"))
+                        .faltante(BigDecimal.ZERO)
+                        .suficiente(true)
+                        .build());
+
+        DiagnosticoInsumosOrdenDTO diagnostico = service.diagnosticarInsumosParaOrden(101L, new BigDecimal("10"));
+
+        assertThat(diagnostico.isDisponibilidadSuficiente()).isTrue();
+        assertThat(diagnostico.getFormulaId()).isEqualTo(501L);
+        assertThat(diagnostico.getDetalleInsumos()).hasSize(1);
+        assertThat(diagnostico.getDetalleInsumos().get(0).getRequerido()).isEqualByComparingTo(new BigDecimal("20"));
+        assertThat(diagnostico.getInsumosFaltantes()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("diagnosticarInsumosParaOrden retorna faltantes cuando FEFO no cubre lo requerido")
+    void diagnosticarInsumosParaOrden_conFaltantes() {
+        Producto producto = new Producto();
+        producto.setId(201);
+        UnidadMedida unidadProducto = new UnidadMedida();
+        unidadProducto.setSimbolo("UND");
+        unidadProducto.setNombre("UNIDAD");
+        unidadProducto.setNombrePlural("UNIDADES");
+        producto.setUnidadMedida(unidadProducto);
+
+        Producto insumo = new Producto();
+        insumo.setId(202);
+        insumo.setNombre("Extracto");
+        UnidadMedida unidadInsumo = new UnidadMedida();
+        unidadInsumo.setSimbolo("GR");
+        unidadInsumo.setNombre("GRAMO");
+        unidadInsumo.setNombrePlural("GRAMOS");
+        insumo.setUnidadMedida(unidadInsumo);
+        insumo.setModoControlInventario(ModoControlInventario.CONTROL_STOCK);
+        CategoriaProducto categoriaInsumo = new CategoriaProducto();
+        categoriaInsumo.setTipo(TipoCategoria.MATERIA_PRIMA);
+        insumo.setCategoriaProducto(categoriaInsumo);
+
+        DetalleFormula detalle = new DetalleFormula();
+        detalle.setInsumo(insumo);
+        detalle.setCantidadNecesaria(new BigDecimal("5"));
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setId(777L);
+        formula.setDetalles(List.of(detalle));
+
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(201L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(productoRepository.findById(201L)).thenReturn(Optional.of(producto));
+        when(productoRepository.findAllById(any())).thenReturn(List.of(insumo));
+        when(disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo)).thenReturn(List.of(9L));
+        when(disponibilidadInsumoService.calcularDisponibilidad(eq(202L), any(BigDecimal.class), eq(List.of(9L)), eq(true)))
+                .thenReturn(DistribucionFefoResult.builder()
+                        .stockLibreTotal(new BigDecimal("40.000000"))
+                        .faltante(new BigDecimal("10.000000"))
+                        .suficiente(false)
+                        .build());
+
+        DiagnosticoInsumosOrdenDTO diagnostico = service.diagnosticarInsumosParaOrden(201L, new BigDecimal("10"));
+
+        assertThat(diagnostico.isDisponibilidadSuficiente()).isFalse();
+        assertThat(diagnostico.getUnidadesMaximasProducibles()).isEqualTo(8);
+        assertThat(diagnostico.getInsumosFaltantes()).hasSize(1);
+        assertThat(diagnostico.getInsumosFaltantes().get(0).getFaltante()).isEqualByComparingTo("10.000000");
     }
 
     @Test

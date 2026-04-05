@@ -1,6 +1,7 @@
 package com.willyes.clemenintegra.produccion.service;
 
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.DiagnosticoInsumosOrdenDTO;
 import com.willyes.clemenintegra.produccion.dto.CorridaOrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.EjecutarCorridaOpHomeopaticaRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.OrdenProduccionResponseDTO;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.math.BigDecimal;
 
 public interface OrdenProduccionService {
+    DiagnosticoInsumosOrdenDTO diagnosticarInsumosParaOrden(Long productoId, BigDecimal cantidadProgramada);
     ResultadoValidacionOrdenDTO guardarConValidacionStock(OrdenProduccion orden);
     ResultadoValidacionOrdenDTO crearOrden(CrearOrdenProduccionRequestDTO dto);
     ResultadoValidacionOrdenDTO crearOrdenDesdePlanSemanal(Long planId, Long planDetalleId, CrearOrdenProduccionRequestDTO dto);
