@@ -289,6 +289,39 @@ class OrdenProduccionServiceImplTest {
     }
 
     @Test
+    @DisplayName("registrarCierre falla cuando lote existente es incompatible con destino esperado")
+    void registrarCierre_loteExistenteIncompatible_rechaza() {
+        OrdenProduccion orden = crearOrdenBase(904L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
+        stubInfraCierre(orden, 1L);
+        LoteProducto existente = new LoteProducto();
+        existente.setId(778L);
+        existente.setCodigoLote("LOTE-778");
+        existente.setProducto(orden.getProducto());
+        existente.setOrdenProduccion(orden);
+        existente.setFechaFabricacion(LocalDateTime.now().minusHours(2));
+        existente.setFechaVencimiento(LocalDateTime.now().plusWeeks(4));
+        Almacen almacenCuarentena = new Almacen();
+        almacenCuarentena.setId(31);
+        existente.setAlmacen(almacenCuarentena);
+        existente.setEstado(EstadoLote.EN_CUARENTENA);
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(orden.getId(), orden.getProducto().getId().longValue()))
+                .thenReturn(Optional.of(existente));
+
+        CierreProduccionRequestDTO dto = CierreProduccionRequestDTO.builder()
+                .cantidad(new BigDecimal("10"))
+                .tipo(TipoCierre.TOTAL)
+                .build();
+
+        assertThatThrownBy(() -> service.registrarCierre(904L, dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(rse.getReason()).isEqualTo("LOTE_PT_INCOMPATIBLE");
+                });
+    }
+
+    @Test
     @DisplayName("registrarCierre sincroniza referencias de lote cuando el lote se crea en fallback")
     void registrarCierre_sincronizaReferenciasLoteEnFallback() {
         OrdenProduccion orden = crearOrdenBase(903L, new BigDecimal("10"), BigDecimal.ZERO, EstadoProduccion.EN_PROCESO);
@@ -656,6 +689,102 @@ class OrdenProduccionServiceImplTest {
         ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(ordenUpdate);
         assertThat(resultado.isEsValida()).isTrue();
         assertThat(resultado.getOrden()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock en EN_PROCESO falla si el lote existente tiene estado incompatible")
+    void guardarConValidacionStock_enProcesoLoteEstadoIncompatible_rechaza() {
+        OrdenProduccion existente = new OrdenProduccion();
+        existente.setId(910L);
+        when(ordenProduccionRepository.findById(910L)).thenReturn(Optional.of(existente));
+
+        Producto producto = crearProductoTerminado();
+        producto.setId(910);
+
+        OrdenProduccion ordenUpdate = new OrdenProduccion();
+        ordenUpdate.setId(910L);
+        ordenUpdate.setProducto(producto);
+        ordenUpdate.setCantidadProgramada(new BigDecimal("10"));
+        ordenUpdate.setEstado(EstadoProduccion.EN_PROCESO);
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setProducto(producto);
+        formula.setDetalles(List.of());
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(910L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);
+        when(almacenRepository.findById(30L)).thenReturn(Optional.of(new Almacen(30)));
+        when(almacenRepository.findById(31L)).thenReturn(Optional.of(new Almacen(31)));
+        when(vidaUtilProductoService.buscarPorProductoId(910))
+                .thenReturn(Optional.of(VidaUtilProducto.builder().productoId(910).semanasVigencia(4).build()));
+
+        LoteProducto loteExistente = new LoteProducto();
+        loteExistente.setId(9910L);
+        loteExistente.setCodigoLote("LOT-9910");
+        loteExistente.setProducto(producto);
+        loteExistente.setOrdenProduccion(ordenUpdate);
+        loteExistente.setAlmacen(new Almacen(30));
+        loteExistente.setEstado(EstadoLote.EN_CUARENTENA);
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(910L, 910L))
+                .thenReturn(Optional.of(loteExistente));
+
+        assertThatThrownBy(() -> service.guardarConValidacionStock(ordenUpdate))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(rse.getReason()).isEqualTo("LOTE_PT_INCOMPATIBLE");
+                });
+    }
+
+    @Test
+    @DisplayName("guardarConValidacionStock en EN_PROCESO reutiliza lote compatible sin duplicar")
+    void guardarConValidacionStock_enProcesoLoteCompatible_reutiliza() {
+        OrdenProduccion existente = new OrdenProduccion();
+        existente.setId(911L);
+        when(ordenProduccionRepository.findById(911L)).thenReturn(Optional.of(existente));
+
+        Producto producto = crearProductoTerminado();
+        producto.setId(911);
+
+        OrdenProduccion ordenUpdate = new OrdenProduccion();
+        ordenUpdate.setId(911L);
+        ordenUpdate.setProducto(producto);
+        ordenUpdate.setCantidadProgramada(new BigDecimal("10"));
+        ordenUpdate.setEstado(EstadoProduccion.EN_PROCESO);
+
+        FormulaProducto formula = new FormulaProducto();
+        formula.setProducto(producto);
+        formula.setDetalles(List.of());
+        when(formulaProductoRepository.findByProductoIdAndEstadoAndActivoTrue(911L, EstadoFormula.APROBADA))
+                .thenReturn(Optional.of(formula));
+        when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);
+        when(almacenRepository.findById(30L)).thenReturn(Optional.of(new Almacen(30)));
+        when(almacenRepository.findById(31L)).thenReturn(Optional.of(new Almacen(31)));
+        when(vidaUtilProductoService.buscarPorProductoId(911))
+                .thenReturn(Optional.of(VidaUtilProducto.builder().productoId(911).semanasVigencia(4).build()));
+
+        LoteProducto loteExistente = new LoteProducto();
+        loteExistente.setId(9911L);
+        loteExistente.setCodigoLote("LOT-9911");
+        loteExistente.setProducto(producto);
+        loteExistente.setOrdenProduccion(ordenUpdate);
+        loteExistente.setAlmacen(new Almacen(30));
+        loteExistente.setEstado(EstadoLote.DISPONIBLE);
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(911L, 911L))
+                .thenReturn(Optional.of(loteExistente));
+        when(loteProductoRepository.save(any(LoteProducto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResultadoValidacionOrdenDTO resultado = service.guardarConValidacionStock(ordenUpdate);
+
+        assertThat(resultado.isEsValida()).isTrue();
+        assertThat(ordenUpdate.getLoteId()).isEqualTo(9911L);
+        assertThat(ordenUpdate.getLoteProduccion()).isEqualTo("LOT-9911");
+        ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
+        verify(loteProductoRepository, atLeastOnce()).save(captor.capture());
+        assertThat(captor.getAllValues()).allMatch(l -> Objects.equals(l.getId(), 9911L));
     }
 
     @Test
@@ -1673,6 +1802,63 @@ class OrdenProduccionServiceImplTest {
         ArgumentCaptor<LoteProducto> captor = ArgumentCaptor.forClass(LoteProducto.class);
         verify(loteProductoRepository, atLeastOnce()).save(captor.capture());
         assertThat(captor.getAllValues()).allMatch(l -> Objects.equals(l.getId(), 8120L));
+    }
+
+    @Test
+    @DisplayName("iniciarEtapa falla cuando el lote existente tiene almacén incompatible")
+    void iniciarEtapa_loteExistenteConAlmacenIncompatible_rechaza() {
+        OrdenProduccion orden = new OrdenProduccion();
+        orden.setId(13L);
+        orden.setEstado(EstadoProduccion.CREADA);
+        orden.setCodigoOrden("OP-013");
+        orden.setProducto(crearProductoTerminado());
+
+        EtapaProduccion etapa = EtapaProduccion.builder()
+                .id(130L)
+                .ordenProduccion(orden)
+                .estado(EstadoEtapa.PENDIENTE)
+                .secuencia(1)
+                .build();
+        SolicitudMovimiento solicitud = SolicitudMovimiento.builder()
+                .id(1300L)
+                .ordenProduccion(orden)
+                .estado(EstadoSolicitudMovimiento.EJECUTADA)
+                .build();
+
+        LoteProducto loteExistente = new LoteProducto();
+        loteExistente.setId(8130L);
+        loteExistente.setCodigoLote("LOT-8130");
+        loteExistente.setProducto(orden.getProducto());
+        loteExistente.setOrdenProduccion(orden);
+        loteExistente.setEstado(EstadoLote.DISPONIBLE);
+        Almacen almacenIncompatible = new Almacen();
+        almacenIncompatible.setId(31);
+        loteExistente.setAlmacen(almacenIncompatible);
+
+        when(ordenProduccionRepository.findById(13L)).thenReturn(Optional.of(orden));
+        when(etapaProduccionRepository.findById(130L)).thenReturn(Optional.of(etapa));
+        when(solicitudMovimientoRepository.findByOrdenProduccionId(13L)).thenReturn(List.of(solicitud));
+        when(usuarioService.obtenerUsuarioAutenticado()).thenReturn(usuarioBasico());
+        when(catalogResolver.getAlmacenPtId()).thenReturn(30L);
+        when(catalogResolver.getAlmacenCuarentenaId()).thenReturn(31L);
+        when(almacenRepository.findById(30L)).thenReturn(Optional.of(new Almacen(30)));
+        when(almacenRepository.findById(31L)).thenReturn(Optional.of(new Almacen(31)));
+        when(vidaUtilProductoService.buscarPorProductoId(orden.getProducto().getId()))
+                .thenReturn(Optional.of(VidaUtilProducto.builder()
+                        .productoId(orden.getProducto().getId())
+                        .producto(orden.getProducto())
+                        .semanasVigencia(4)
+                        .build()));
+        when(loteProductoRepository.findByOrdenProduccionIdAndProductoId(13L, orden.getProducto().getId().longValue()))
+                .thenReturn(Optional.of(loteExistente));
+
+        assertThatThrownBy(() -> service.iniciarEtapa(13L, 130L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(rse.getReason()).isEqualTo("LOTE_PT_INCOMPATIBLE");
+                });
     }
 
     @Test

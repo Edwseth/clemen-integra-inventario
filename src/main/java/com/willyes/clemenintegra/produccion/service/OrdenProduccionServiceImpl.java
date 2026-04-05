@@ -226,7 +226,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
     private Producto resolverProductoCompleto(OrdenProduccion orden) {
         if (orden == null || orden.getProducto() == null || orden.getProducto().getId() == null) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_NO_TERMINADO");
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCTO_OBLIGATORIO");
         }
         Producto producto = orden.getProducto();
         boolean incompleto = producto.getCategoriaProducto() == null
@@ -296,6 +296,30 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
         return fechaVencimiento;
     }
 
+    private void validarCompatibilidadLoteExistente(LoteProducto loteExistente,
+                                                    LoteDestino loteDestino,
+                                                    OrdenProduccion orden,
+                                                    Producto producto) {
+        Long almacenActualId = Optional.ofNullable(loteExistente.getAlmacen())
+                .map(Almacen::getId)
+                .map(Integer::longValue)
+                .orElse(null);
+        Long almacenEsperadoId = Optional.ofNullable(loteDestino.almacen())
+                .map(Almacen::getId)
+                .map(Integer::longValue)
+                .orElse(null);
+        EstadoLote estadoActual = loteExistente.getEstado();
+        EstadoLote estadoEsperado = loteDestino.estado();
+
+        if (!Objects.equals(almacenActualId, almacenEsperadoId)
+                || estadoActual != estadoEsperado) {
+            log.warn("Lote PT incompatible op={}, producto={}, loteId={}, almacenId={}, estadoLote={}, destino={}, estadoDestino={}",
+                    orden.getId(), producto.getId(), loteExistente.getId(), almacenActualId, estadoActual,
+                    almacenEsperadoId, estadoEsperado);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_PT_INCOMPATIBLE");
+        }
+    }
+
     private LoteProducto asegurarLoteProduccion(OrdenProduccion orden,
                                                 @Nullable String codigoLotePreferido,
                                                 @Nullable LocalDateTime fechaFabricacionPreferida,
@@ -324,6 +348,7 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
 
         if (loteExistenteOpt.isPresent()) {
             LoteProducto loteExistente = loteExistenteOpt.get();
+            validarCompatibilidadLoteExistente(loteExistente, loteDestino, orden, producto);
             if (loteExistente.getFechaFabricacion() == null) {
                 loteExistente.setFechaFabricacion(fechaFabricacion);
             }
@@ -2010,20 +2035,12 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 orden.setFechaCierre(LocalDateTime.now());
             }
 
-            LoteDestino destinoLote = resolverDestinoLoteFabricado(resolverProductoCompleto(orden));
             lote = asegurarLoteProduccion(
                     orden,
                     dto.getCodigoLote(),
                     fechaFabricacion,
                     fechaVencimiento
             );
-            if (!Objects.equals(lote.getAlmacen().getId(), destinoLote.almacen().getId())
-                    || lote.getEstado() != destinoLote.estado()) {
-                log.warn("Lote PT incompatible op={}, producto={}, loteId={}, almacenId={}, estadoLote={}, destino={}, estadoDestino={}",
-                        orden.getId(), orden.getProducto().getId(), lote.getId(), lote.getAlmacen().getId(),
-                        lote.getEstado(), destinoLote.almacen().getId(), destinoLote.estado());
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "LOTE_PT_INCOMPATIBLE");
-            }
             String codigoLote = lote.getCodigoLote();
             if (dto.getTipo() == TipoCierre.TOTAL) {
                 BigDecimal costoTotalMaterialRealOp = Optional.ofNullable(
