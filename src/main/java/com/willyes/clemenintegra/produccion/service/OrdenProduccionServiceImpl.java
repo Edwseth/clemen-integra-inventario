@@ -12,6 +12,8 @@ import com.willyes.clemenintegra.inventario.repository.UbicacionFisicaRepository
 import com.willyes.clemenintegra.shared.repository.UsuarioRepository;
 import com.willyes.clemenintegra.produccion.dto.InsumoFaltanteDTO;
 import com.willyes.clemenintegra.produccion.dto.CrearOrdenProduccionRequestDTO;
+import com.willyes.clemenintegra.produccion.dto.DiagnosticoInsumosOrdenDTO;
+import com.willyes.clemenintegra.produccion.dto.DetalleDiagnosticoInsumoDTO;
 import com.willyes.clemenintegra.produccion.dto.CorridaOrdenProduccionResponseDTO;
 import com.willyes.clemenintegra.produccion.dto.EjecutarCorridaOpHomeopaticaRequestDTO;
 import com.willyes.clemenintegra.produccion.dto.ResultadoValidacionOrdenDTO;
@@ -579,114 +581,16 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                     "ORDEN_PRODUCTO_SIN_ETAPAS: No se puede crear la orden porque el producto no tiene etapas de producción configuradas. Configure la plantilla de etapas y vuelva a intentarlo.");
         }
 
-        FormulaProducto formula = formulaProductoRepository
-                .findByProductoIdAndEstadoAndActivoTrue(productoId, EstadoFormula.APROBADA)
-                .orElseThrow(() -> new IllegalArgumentException("No existe una fórmula activa y aprobada para el producto"));
-
-        List<InsumoFaltanteDTO> faltantes = new ArrayList<>();
-        boolean stockSuficiente = true;
-        Integer maxProducible = null;
-        UnidadMedida unidadProductoFabricable = orden.getProducto() != null
-                ? orden.getProducto().getUnidadMedida()
-                : null;
-
-        BigDecimal cantidadProgramada = orden.getCantidadProgramada();
-
-        List<DetalleFormula> detallesFormula = obtenerDetallesFormulaSeguro(formula);
-
-        // Cargar todos los productos de los insumos en una sola consulta para evitar N+1
-        List<Long> insumoIds = detallesFormula.stream()
-                .map(DetalleFormula::getInsumo)
-                .filter(Objects::nonNull)
-                .map(p -> p.getId().longValue())
-                .toList();
-        Map<Long, Producto> productosInsumo = productoRepository.findAllById(insumoIds).stream()
-                .collect(Collectors.toMap(p -> p.getId().longValue(), p -> p));
-
-        for (DetalleFormula insumo : detallesFormula) {
-            if (insumo == null || insumo.getInsumo() == null) {
-                continue;
-            }
-            Long insumoId = insumo.getInsumo().getId().longValue();
-            Producto productoInsumo = productosInsumo.get(insumoId);
-            if (productoInsumo == null) {
-                throw new IllegalArgumentException("Insumo no encontrado: ID " + insumoId);
-            }
-
-            ModoControlInventario modoControl = Optional.ofNullable(productoInsumo.getModoControlInventario())
-                    .orElse(ModoControlInventario.CONTROL_STOCK);
-
-            BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
-
-            List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
-            if (almacenesValidos.isEmpty()) {
-                TipoCategoria tipoCategoria = Optional.ofNullable(productoInsumo.getCategoriaProducto())
-                        .map(CategoriaProducto::getTipo)
-                        .orElse(null);
-                log.warn("No se encontraron almacenes de origen configurados para insumo {} (categoría: {})",
-                        insumoId, tipoCategoria);
-            }
-
-            // ---- FEFO: preview por insumo ----
-            DistribucionFefoResult distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
-                    insumoId,
-                    cantidadRequerida,
-                    almacenesValidos,
-                    true               // modoPreview
-            );
-
-            BigDecimal stockLibreFefo = Optional.ofNullable(distribucionPreview.getStockLibreTotal())
-                    .orElse(BigDecimal.ZERO);
-            BigDecimal faltanteFefo = Optional.ofNullable(distribucionPreview.getFaltante())
-                    .orElse(BigDecimal.ZERO);
-
-            int producibleConEste = 0;
-            if (insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
-                producibleConEste = stockLibreFefo
-                        .divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN)
-                        .intValue();
-            }
-            if (maxProducible == null || producibleConEste < maxProducible) {
-                maxProducible = producibleConEste;
-            }
-
-            log.debug("OP-VALIDACION insumoId={} requerido={} stockLibreFefo={} faltanteFefo={} maxProducible={}",
-                    insumoId,
-                    cantidadRequerida,
-                    stockLibreFefo,
-                    faltanteFefo,
-                    maxProducible);
-
-            if (modoControl == ModoControlInventario.CONTROL_STOCK && !distribucionPreview.isSuficiente()) {
-                stockSuficiente = false;
-                UnidadMedida unidadInsumo = productoInsumo.getUnidadMedida();
-                faltantes.add(InsumoFaltanteDTO.builder()
-                        .productoId(insumoId)
-                        .nombre(productoInsumo.getNombre())
-                        .requerido(cantidadRequerida)
-                        .disponible(stockLibreFefo)
-                        .faltante(faltanteFefo)
-                        .unidadSimbolo(unidadInsumo != null ? unidadInsumo.getSimbolo() : null)
-                        .unidadInsumoSimbolo(unidadInsumo != null ? unidadInsumo.getSimbolo() : null)
-                        .unidadInsumoNombre(unidadInsumo != null ? unidadInsumo.getNombre() : null)
-                        .unidadInsumoNombrePlural(unidadInsumo != null ? unidadInsumo.getNombrePlural() : null)
-                        .maximoProducible(maxProducible)
-                        .unidadProductoFabricableSimbolo(unidadProductoFabricable != null ? unidadProductoFabricable.getSimbolo() : null)
-                        .unidadProductoFabricableNombre(unidadProductoFabricable != null ? unidadProductoFabricable.getNombre() : null)
-                        .unidadProductoFabricableNombrePlural(unidadProductoFabricable != null ? unidadProductoFabricable.getNombrePlural() : null)
-                        .build());
-            }
-        }
-
-        if (!stockSuficiente) {
+        DiagnosticoInsumosOrdenDTO diagnostico = diagnosticarInsumosParaOrden(productoId, orden.getCantidadProgramada());
+        if (!diagnostico.isDisponibilidadSuficiente()) {
             return ResultadoValidacionOrdenDTO.builder()
                     .esValida(false)
                     .mensaje("Stock insuficiente para algunos insumos")
-                    .unidadesMaximasProducibles(maxProducible)
-                    .unidadProductoFabricableSimbolo(unidadProductoFabricable != null ? unidadProductoFabricable.getSimbolo() : null)
-                    .unidadProductoFabricableNombre(unidadProductoFabricable != null ? unidadProductoFabricable.getNombre() : null)
-                    .unidadProductoFabricableNombrePlural(unidadProductoFabricable != null ? unidadProductoFabricable.getNombrePlural() : null)
-                    .insumosFaltantes(faltantes)
+                    .unidadesMaximasProducibles(diagnostico.getUnidadesMaximasProducibles())
+                    .unidadProductoFabricableSimbolo(diagnostico.getUnidadProductoFabricableSimbolo())
+                    .unidadProductoFabricableNombre(diagnostico.getUnidadProductoFabricableNombre())
+                    .unidadProductoFabricableNombrePlural(diagnostico.getUnidadProductoFabricableNombrePlural())
+                    .insumosFaltantes(diagnostico.getInsumosFaltantes())
                     .build();
         }
 
@@ -718,6 +622,125 @@ public class OrdenProduccionServiceImpl implements OrdenProduccionService {
                 .esValida(true)
                 .mensaje("Orden de producción creada correctamente")
                 .orden(ordenResp)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DiagnosticoInsumosOrdenDTO diagnosticarInsumosParaOrden(Long productoId, BigDecimal cantidadProgramada) {
+        FormulaProducto formula = formulaProductoRepository
+                .findByProductoIdAndEstadoAndActivoTrue(productoId, EstadoFormula.APROBADA)
+                .orElseThrow(() -> new IllegalArgumentException("No existe una fórmula activa y aprobada para el producto"));
+
+        Producto productoFabricable = productoRepository.findById(productoId)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado: ID " + productoId));
+        UnidadMedida unidadProductoFabricable = productoFabricable.getUnidadMedida();
+
+        List<InsumoFaltanteDTO> faltantes = new ArrayList<>();
+        List<DetalleDiagnosticoInsumoDTO> detalleInsumos = new ArrayList<>();
+        boolean stockSuficiente = true;
+        Integer maxProducible = null;
+
+        List<DetalleFormula> detallesFormula = obtenerDetallesFormulaSeguro(formula);
+        List<Long> insumoIds = detallesFormula.stream()
+                .map(DetalleFormula::getInsumo)
+                .filter(Objects::nonNull)
+                .map(p -> p.getId().longValue())
+                .toList();
+        Map<Long, Producto> productosInsumo = productoRepository.findAllById(insumoIds).stream()
+                .collect(Collectors.toMap(p -> p.getId().longValue(), p -> p));
+
+        for (DetalleFormula insumo : detallesFormula) {
+            if (insumo == null || insumo.getInsumo() == null) {
+                continue;
+            }
+
+            Long insumoId = insumo.getInsumo().getId().longValue();
+            Producto productoInsumo = productosInsumo.get(insumoId);
+            if (productoInsumo == null) {
+                throw new IllegalArgumentException("Insumo no encontrado: ID " + insumoId);
+            }
+
+            ModoControlInventario modoControl = Optional.ofNullable(productoInsumo.getModoControlInventario())
+                    .orElse(ModoControlInventario.CONTROL_STOCK);
+
+            BigDecimal cantidadRequerida = insumo.getCantidadNecesaria().multiply(cantidadProgramada);
+            List<Long> almacenesValidos = disponibilidadInsumoService.resolverAlmacenesPreferidos(insumo.getInsumo());
+            if (almacenesValidos.isEmpty()) {
+                TipoCategoria tipoCategoria = Optional.ofNullable(productoInsumo.getCategoriaProducto())
+                        .map(CategoriaProducto::getTipo)
+                        .orElse(null);
+                log.warn("No se encontraron almacenes de origen configurados para insumo {} (categoría: {})",
+                        insumoId, tipoCategoria);
+            }
+
+            DistribucionFefoResult distribucionPreview = disponibilidadInsumoService.calcularDisponibilidad(
+                    insumoId,
+                    cantidadRequerida,
+                    almacenesValidos,
+                    true
+            );
+
+            BigDecimal stockLibreFefo = Optional.ofNullable(distribucionPreview.getStockLibreTotal())
+                    .orElse(BigDecimal.ZERO);
+            BigDecimal faltanteFefo = Optional.ofNullable(distribucionPreview.getFaltante())
+                    .orElse(BigDecimal.ZERO);
+
+            int producibleConEste = 0;
+            if (insumo.getCantidadNecesaria() != null && insumo.getCantidadNecesaria().compareTo(BigDecimal.ZERO) > 0) {
+                producibleConEste = stockLibreFefo
+                        .divide(insumo.getCantidadNecesaria(), 0, RoundingMode.DOWN)
+                        .intValue();
+            }
+            if (maxProducible == null || producibleConEste < maxProducible) {
+                maxProducible = producibleConEste;
+            }
+
+            UnidadMedida unidadInsumo = productoInsumo.getUnidadMedida();
+            detalleInsumos.add(DetalleDiagnosticoInsumoDTO.builder()
+                    .productoId(insumoId)
+                    .nombre(productoInsumo.getNombre())
+                    .requerido(cantidadRequerida)
+                    .stockLibreFefo(stockLibreFefo)
+                    .faltante(faltanteFefo)
+                    .suficiente(distribucionPreview.isSuficiente())
+                    .maximoProducible(maxProducible)
+                    .unidadInsumoSimbolo(unidadInsumo != null ? unidadInsumo.getSimbolo() : null)
+                    .unidadInsumoNombre(unidadInsumo != null ? unidadInsumo.getNombre() : null)
+                    .unidadInsumoNombrePlural(unidadInsumo != null ? unidadInsumo.getNombrePlural() : null)
+                    .almacenesPreferidos(almacenesValidos)
+                    .build());
+
+            if (modoControl == ModoControlInventario.CONTROL_STOCK && !distribucionPreview.isSuficiente()) {
+                stockSuficiente = false;
+                faltantes.add(InsumoFaltanteDTO.builder()
+                        .productoId(insumoId)
+                        .nombre(productoInsumo.getNombre())
+                        .requerido(cantidadRequerida)
+                        .disponible(stockLibreFefo)
+                        .faltante(faltanteFefo)
+                        .unidadSimbolo(unidadInsumo != null ? unidadInsumo.getSimbolo() : null)
+                        .unidadInsumoSimbolo(unidadInsumo != null ? unidadInsumo.getSimbolo() : null)
+                        .unidadInsumoNombre(unidadInsumo != null ? unidadInsumo.getNombre() : null)
+                        .unidadInsumoNombrePlural(unidadInsumo != null ? unidadInsumo.getNombrePlural() : null)
+                        .maximoProducible(maxProducible)
+                        .unidadProductoFabricableSimbolo(unidadProductoFabricable != null ? unidadProductoFabricable.getSimbolo() : null)
+                        .unidadProductoFabricableNombre(unidadProductoFabricable != null ? unidadProductoFabricable.getNombre() : null)
+                        .unidadProductoFabricableNombrePlural(unidadProductoFabricable != null ? unidadProductoFabricable.getNombrePlural() : null)
+                        .build());
+            }
+        }
+
+        return DiagnosticoInsumosOrdenDTO.builder()
+                .productoId(productoId)
+                .formulaId(formula.getId())
+                .disponibilidadSuficiente(stockSuficiente)
+                .unidadesMaximasProducibles(maxProducible)
+                .unidadProductoFabricableSimbolo(unidadProductoFabricable != null ? unidadProductoFabricable.getSimbolo() : null)
+                .unidadProductoFabricableNombre(unidadProductoFabricable != null ? unidadProductoFabricable.getNombre() : null)
+                .unidadProductoFabricableNombrePlural(unidadProductoFabricable != null ? unidadProductoFabricable.getNombrePlural() : null)
+                .detalleInsumos(detalleInsumos)
+                .insumosFaltantes(faltantes)
                 .build();
     }
 
