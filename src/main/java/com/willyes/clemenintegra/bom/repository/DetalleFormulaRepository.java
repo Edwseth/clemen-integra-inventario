@@ -4,6 +4,8 @@ import com.willyes.clemenintegra.bom.dto.FormulaImpactoReferenciaDTO;
 import com.willyes.clemenintegra.bom.model.enums.EstadoFormula;
 import com.willyes.clemenintegra.bom.model.DetalleFormula;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,7 +19,9 @@ public interface DetalleFormulaRepository extends JpaRepository<DetalleFormula, 
             WHERE (:formulaId IS NULL OR d.formula.id = :formulaId)
               AND (:insumo IS NULL OR LOWER(i.nombre) LIKE LOWER(CONCAT('%', :insumo, '%')))
             """)
-    List<DetalleFormula> findByFiltros(@Param("formulaId") Long formulaId, @Param("insumo") String insumo);
+    Page<DetalleFormula> findByFiltros(@Param("formulaId") Long formulaId,
+                                       @Param("insumo") String insumo,
+                                       Pageable pageable);
 
     @Query("""
             SELECT DISTINCT new com.willyes.clemenintegra.bom.dto.FormulaImpactoReferenciaDTO(

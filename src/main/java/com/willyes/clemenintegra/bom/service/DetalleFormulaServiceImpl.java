@@ -8,9 +8,10 @@ import com.willyes.clemenintegra.bom.repository.FormulaProductoRepository;
 import com.willyes.clemenintegra.shared.exception.ApiErrorCode;
 import com.willyes.clemenintegra.shared.exception.CustomBusinessException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -21,12 +22,12 @@ public class DetalleFormulaServiceImpl implements DetalleFormulaService {
     private final FormulaProductoRepository formulaRepository;
 
     @Override
-    public List<DetalleFormula> listarTodas(Long formulaId, String insumo) {
+    public Page<DetalleFormula> listarTodas(Long formulaId, String insumo, Pageable pageable) {
         String insumoNormalizado = insumo != null ? insumo.trim() : null;
         if (insumoNormalizado != null && insumoNormalizado.isBlank()) {
             insumoNormalizado = null;
         }
-        return detalleRepository.findByFiltros(formulaId, insumoNormalizado);
+        return detalleRepository.findByFiltros(formulaId, insumoNormalizado, pageable);
     }
 
     @Override

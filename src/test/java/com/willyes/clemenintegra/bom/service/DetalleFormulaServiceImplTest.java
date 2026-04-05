@@ -14,13 +14,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +40,21 @@ class DetalleFormulaServiceImplTest {
 
     @InjectMocks
     private DetalleFormulaServiceImpl service;
+
+    @Test
+    @DisplayName("listarTodas aplica filtros y recibe paginación estándar")
+    void listarTodasConPaginacion() {
+        PageRequest pageable = PageRequest.of(1, 10);
+        when(detalleRepository.findByFiltros(eq(7L), eq("chontaduro"), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(new DetalleFormula()), pageable, 11));
+
+        var pagina = service.listarTodas(7L, "  chontaduro  ", pageable);
+
+        assertThat(pagina.getNumber()).isEqualTo(1);
+        assertThat(pagina.getSize()).isEqualTo(10);
+        assertThat(pagina.getTotalElements()).isEqualTo(11);
+        verify(detalleRepository).findByFiltros(7L, "chontaduro", pageable);
+    }
 
     @Test
     @DisplayName("guardar permite crear detalle cuando la fórmula está en BORRADOR")
