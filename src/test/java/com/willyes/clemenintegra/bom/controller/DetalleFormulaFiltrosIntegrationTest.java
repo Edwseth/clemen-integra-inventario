@@ -97,6 +97,24 @@ class DetalleFormulaFiltrosIntegrationTest extends IntegrationTestMySqlContainer
 
     @Test
     @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
+    void listarDetalles_filtraPorFormulaNombreCaseInsensitiveConTrim() throws Exception {
+        DatosPrueba datos = sembrarDatos("formulaNombre");
+
+        String terminoFormula = extraerTerminoFormula(datos.formulaConChontaduro.getProducto().getNombre());
+
+        mockMvc.perform(get("/api/bom/detalles")
+                        .param("formulaNombre", "  " + terminoFormula.toUpperCase() + "  "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.content[*].formulaNombre", everyItem(containsStringIgnoringCase(terminoFormula))))
+                .andExpect(jsonPath("$.content[*].formulaNombre", everyItem(org.hamcrest.Matchers.not(containsStringIgnoringCase(
+                        datos.formulaSinChontaduro.getProducto().getNombre())))))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.number").value(0));
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROL_JEFE_PRODUCCION")
     void listarDetalles_filtraPorFormulaEInsumo() throws Exception {
         DatosPrueba datos = sembrarDatos("ambos");
 
@@ -203,6 +221,14 @@ class DetalleFormulaFiltrosIntegrationTest extends IntegrationTestMySqlContainer
                 .requiereAnalisisMicrobiologico(false)
                 .activo(true)
                 .build();
+    }
+
+    private String extraerTerminoFormula(String nombreFormula) {
+        String prefijo = "Producto Formula Uno ";
+        if (nombreFormula != null && nombreFormula.startsWith(prefijo)) {
+            return nombreFormula.substring(0, prefijo.length() + 8);
+        }
+        return "Formula Uno";
     }
 
     private record DatosPrueba(FormulaProducto formulaConChontaduro, FormulaProducto formulaSinChontaduro) {

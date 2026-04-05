@@ -26,10 +26,11 @@ public class DetalleFormulaController {
     @PreAuthorize("hasAnyAuthority('BOM_READ','BOM_FORMULA_READ')")
     public Page<DetalleFormulaResponse> listarTodas(
             @RequestParam(required = false) Long formulaId,
+            @RequestParam(required = false) String formulaNombre,
             @RequestParam(required = false) String insumo,
             @PageableDefault(size = 20, sort = "id") Pageable pageable
     ) {
-        return detalleService.listarTodas(formulaId, insumo, pageable)
+        return detalleService.listarTodas(formulaId, formulaNombre, insumo, pageable)
                 .map(bomMapper::toResponseDTO);
     }
 
